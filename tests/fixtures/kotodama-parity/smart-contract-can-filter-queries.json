@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "id": "smart-contract-can-filter-queries",
+  "source_name": "smart_contract_can_filter_queries.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/smart_contract_can_filter_queries.ko",
+  "source": "// Minimal sample ensuring a contract can execute a benign metadata write.\nseiyaku FilterQueriesSample {\n  kotoage fn run() permission(Admin) {\n    set_account_detail(authority(), name!(\"noop\"), json!(\"1\"));\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSiQEAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAYQEAAAAAAABw48xd4/dVrgIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAegF4PAIAAAAAAAAAHx5hY2NvdW50LmRldGFpbDokYXV0aG9yaXR5Om5vb3ATEmFjY291bnQ6JGF1dGhvcml0eSgBAAAAAAAAAB8eYWNjb3VudC5kZXRhaWw6JGF1dGhvcml0eTpub29wCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAArQEBAAAAAAAAAKMBBANydW4EAAAAAAgAAAAAAAAAAAEACAEGBUFkbWluPAIAAAAAAAAAExJhY2NvdW50OiRhdXRob3JpdHkfHmFjY291bnQuZGV0YWlsOiRhdXRob3JpdHk6bm9vcCgBAAAAAAAAAB8eYWNjb3VudC5kZXRhaWw6JGF1dGhvcml0eTpub29wAwEBAQgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAExUTEICAAAAAQAAAKYAAAAgAAAAAAAAAHQAAAAAAAAAAAMBAAAALU5SVDAAALc6a/TSnltnvHNg19xepbkABQAAAAAAAADbCEeUXDz7IQIEbm9vcMg7V4a3/oxJJ1eeXOmg9f9cucvHrWuKd2V6S+cpBUMHAAQBAAAAK05SVDAAANtASnKM2Mk/fkSoiBM/ZxkAAwAAAAAAAABpBC/+N0uF9QICATEyj2NAqg8jrkNvWGEYMkBSbLFTnbClFwNxQHWxnShNiQDgHx8gpAAAYAAKGCAAGAogAAALIAAAGiAHABogAwALIBoLCwYxCwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAAMIAAAGiAHABogBAAMIBoMDAYFDAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwg4AAAYAAKDSAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQogGgAAYAAACSAAAABJ",
+    "manifest": {
+      "code_hash": "hash:5CB6068606242A3A71F292E9F307766C10E5833AC2981293208201A26BF1DECD#B7D2",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account.detail:$authority:noop",
+          "account:$authority"
+        ],
+        "write_keys": [
+          "account.detail:$authority:noop"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "run",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "account:$authority",
+            "account.detail:$authority:noop"
+          ],
+          "write_keys": [
+            "account.detail:$authority:noop"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "run",
+        "line": 3,
+        "pc_end": 256,
+        "pc_start": 0,
+        "source_path": "smart_contract_can_filter_queries.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 256,
+        "bytecode_words": 64,
+        "column": 14,
+        "frame_bytes": 32,
+        "function_name": "run",
+        "jump_range_risk": false,
+        "jump_span_words": 64,
+        "line": 3,
+        "pc_end": 256,
+        "pc_start": 0,
+        "source_path": "smart_contract_can_filter_queries.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

@@ -7,7 +7,7 @@
       <slot name="header" />
     </div>
     <div
-      v-else-if="props.loading"
+      v-else-if="showInitialLoading"
       class="content-row content-row_empty"
     >
       <BaseLoading />
@@ -19,13 +19,21 @@
       {{ $t('noData') }}
     </div>
 
+    <div
+      v-if="showRefreshLoading"
+      class="base-table__refresh-indicator"
+      aria-hidden="true"
+    >
+      <BaseLoading />
+    </div>
+
     <div :class="containerClass">
       <template
-        v-for="(item, i) in items"
-        :key="i"
+        v-for="(item, i) in props.items"
+        :key="props.rowKey ? props.rowKey(item, i) : i"
       >
         <div
-          v-if="item && (width >= props.breakpoint || !$slots['mobile-card'])"
+          v-if="width >= props.breakpoint || !$slots['mobile-card']"
           class="content-row content-row--with-hover"
           :style="{ cursor: props.rowPointer ? 'pointer' : 'default' }"
           @click="emit('click:row', item)"
@@ -37,7 +45,7 @@
         </div>
 
         <div
-          v-else-if="$slots['mobile-card'] && item && width < props.breakpoint"
+          v-else
           class="base-table__mobile-card"
         >
           <slot
@@ -45,11 +53,6 @@
             :item
           />
         </div>
-
-        <div
-          v-else
-          class="content-row content-row_empty"
-        />
       </template>
     </div>
 
@@ -76,10 +79,11 @@ import type { Pagination } from '@/shared/api/schemas';
 interface Props {
   loading: boolean
   total?: number
-  payloadPagination?: Pagination
+  payloadPagination?: Pagination | null
   disablePagination?: boolean
   paginationBreakpoint?: number
   items: T[]
+  rowKey?: (item: T, index: number) => string | number
   containerClass: string
   breakpoint?: number
   reversed?: boolean
@@ -94,6 +98,10 @@ const props = withDefaults(defineProps<Props>(), {
   breakpoint: 1200,
   disablePagination: false,
   rowPointer: false,
+  rowKey: undefined,
+  total: 0,
+  payloadPagination: null,
+  paginationBreakpoint: 960,
 });
 
 const page = defineModel<number>('page', { default: 1 });
@@ -101,15 +109,9 @@ const pageSize = defineModel<number>('pageSize', { default: 10 });
 
 const { width } = useWindowSize();
 
-const items = computed(() => {
-  if (!props.loading) return props.items;
-
-  if (!props.items.length) return [];
-
-  return Array.from({ length: pageSize.value }, () => null);
-});
-
-const isEmpty = computed(() => !items.value.some((i) => i));
+const isEmpty = computed(() => props.items.length === 0);
+const showInitialLoading = computed(() => props.loading && props.items.length === 0);
+const showRefreshLoading = computed(() => props.loading && props.items.length > 0);
 </script>
 
 <style lang="scss">
@@ -118,6 +120,20 @@ const isEmpty = computed(() => !items.value.some((i) => i));
 .base-table {
   display: grid;
   grid-auto-rows: auto;
+  position: relative;
+
+  &__refresh-indicator {
+    position: absolute;
+    top: size(1.25);
+    right: size(1.5);
+    pointer-events: none;
+    opacity: 0.75;
+
+    .base-loading {
+      width: size(3.5);
+      height: size(3.5);
+    }
+  }
 
   &__mobile-card {
     border-top: 1px solid theme-color('border-primary');

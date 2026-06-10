@@ -4,7 +4,8 @@ import { toZonedTime } from 'date-fns-tz';
 
 export function countTimeDifference(now: number, dateString: string | Date, isDetailed?: boolean): TimeAgo {
   const date = new Date(dateString);
-  const diff = now - date.getTime();
+  const dateMs = date.getTime();
+  const diff = Number.isFinite(dateMs) ? Math.max(0, now - dateMs) : 0;
 
   const minutes = Math.floor(diff / 1000 / 60);
   const hours = Math.floor(minutes / 60);

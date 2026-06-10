@@ -1,8 +1,8 @@
 <template>
   <div class="base-hash">
     <BaseLink
-      v-if="props.link"
-      :to="props.link"
+      v-if="displayLink"
+      :to="displayLink"
       monospace
     >
       <span v-if="content.t === 'two-line'">{{ content.first }}<br>{{ content.second }}</span>
@@ -31,6 +31,8 @@ import { useI18n } from 'vue-i18n';
 import { useNotifications } from '@/shared/ui/composables/notifications';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import type { HashType } from '@/shared/ui/composables/useAdaptiveHash';
+import { getToriiBaseUrl } from '@/shared/api';
+import { getDisplayedAccountId, normalizeAccountRoutePath } from '@/shared/lib/account-id';
 
 interface Props {
   hash: string
@@ -43,10 +45,12 @@ const props = defineProps<Props>();
 const clipboard = useClipboard();
 const notifications = useNotifications();
 const { t } = useI18n({ useScope: 'global' });
+const displayHash = computed(() => getDisplayedAccountId(props.hash, getToriiBaseUrl()));
+const displayLink = computed(() => (props.link ? normalizeAccountRoutePath(props.link, getToriiBaseUrl()) : undefined));
 
 async function copyHash() {
   if (clipboard.isSupported) {
-    await clipboard.copy(props.hash);
+    await clipboard.copy(displayHash.value);
     notifications.success(t('clipboard.success'));
   } else {
     notifications.error(t('clipboard.error'));
@@ -65,33 +69,65 @@ function shortenHash(str: string, n: number) {
   return shortenAuthority + '@' + domain;
 }
 
+function splitTwoLineHash(value: string): { first: string, second: string } {
+  const [authority, domain] = value.split('@');
+  if (domain) {
+    return {
+      first: authority,
+      second: `@${domain}`,
+    };
+  }
+
+  const ellipsisIndex = value.indexOf('...');
+  if (ellipsisIndex > 0 && ellipsisIndex + 3 < value.length) {
+    return {
+      first: value.slice(0, ellipsisIndex + 3),
+      second: value.slice(ellipsisIndex + 3),
+    };
+  }
+
+  const midpoint = Math.ceil(value.length / 2);
+  return {
+    first: value.slice(0, midpoint),
+    second: value.slice(midpoint),
+  };
+}
+
 const content = computed<Content>(() => {
+  const hash = displayHash.value;
   switch (props.type) {
     case 'full': {
       return {
         t: 'plain',
-        value: props.hash,
+        value: hash,
       };
     }
     case 'short': {
       return {
         t: 'plain',
-        value: shortenHash(props.hash, 4),
+        value: shortenHash(hash, 4),
       };
     }
     case 'medium': {
       return {
         t: 'plain',
-        value: shortenHash(props.hash, 10),
+        value: shortenHash(hash, 10),
       };
     }
     case 'two-line': {
-      const [authority, domain] = shortenHash(props.hash, 4).split('@');
+      const shortened = shortenHash(hash, 4);
+      const { first, second } = splitTwoLineHash(shortened);
+      if (!second) {
+        return {
+          t: 'plain',
+          value: shortened,
+        };
+      }
 
       return {
         t: 'two-line',
-        first: authority,
-        second: domain ? `@${domain}` : '',
+        first,
+        second,
       };
     }
     default: {

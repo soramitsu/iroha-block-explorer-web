@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-16-register-domain",
+  "source_name": "16_register_domain.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/16_register_domain.ko",
+  "source": "// Register a domain using the DomainId constructor.\nseiyaku RegisterDomain {\n  hajimari() {\n    register_domain(domain!(\"wonderland\"));\n  }\n}\n",
+  "rust": {
+    "kind": "failure",
+    "diagnostics": [
+      {
+        "severity": "error",
+        "message": "compile error: E_ACCESS_INCOMPLETE: entrypoint `hajimari` has incomplete compiler-derived access metadata: opaque ISI access is not compiler-resolved",
+        "code": null,
+        "phase": null
+      }
+    ],
+    "compiler_stderr": [
+      "compile error: E_ACCESS_INCOMPLETE: entrypoint `hajimari` has incomplete compiler-derived access metadata: opaque ISI access is not compiler-resolved"
+    ]
+  }
+}

@@ -36,12 +36,13 @@ const isLoading = computed(() => NFTScope.value.expose.isLoading);
 const NFT = computed(() =>
   NFTScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? NFTScope.value.expose.data.data : undefined
 );
+const nftDisplayName = computed(() => NFTId.value.split('$')[0] ?? NFTId.value);
 </script>
 
 <template>
   <div class="nft-details">
     <BaseContentBlock
-      :title="NFTId.name.value"
+      :title="nftDisplayName"
       class="nft-details__section"
     >
       <template #default>
@@ -64,7 +65,7 @@ const NFT = computed(() =>
               class="nft-details__section-information-nft-content"
               :title="$t('content')"
               :metadata="{ display: 'full' }"
-              :value="parseMetadata(NFT.content)"
+              :value="parseMetadata(NFT.metadata)"
             />
           </div>
         </div>

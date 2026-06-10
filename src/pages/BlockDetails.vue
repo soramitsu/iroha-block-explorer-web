@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import * as http from '@/shared/api';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
@@ -12,11 +12,12 @@ import TransactionsTable from '@/shared/ui/components/TransactionsTable.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
-import type { NetworkMetrics } from '@/shared/api/schemas';
-import { streamTelemetryMetrics } from '@/shared/api';
+import { useTelemetryMetrics } from '@/shared/ui/composables/useTelemetryMetrics';
 import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
+import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 
 const router = useRouter();
+const navigation = useScopedExplorerNavigation();
 
 const metricsHashType = useAdaptiveHash({ sm: 'short', xs: 'short', xxs: 'short' }, 'full');
 
@@ -37,31 +38,10 @@ const block = computed(() => {
   return null;
 });
 const isBlockNotFound = computed(() => blockScope.value?.expose.data?.status === NOT_FOUND);
-// TODO: display unknown error with i18n
 const isOtherError = computed(() => blockScope.value?.expose.data?.status === UNKNOWN_ERROR);
 const isBlockEmpty = computed(() => !block.value?.transactions_hash);
 
-const metrics = ref<NetworkMetrics | null>(null);
-
-const { data: streamedMetrics } = streamTelemetryMetrics();
-
-watch(
-  () => streamedMetrics.value,
-  () => {
-    if (!streamedMetrics.value) return;
-
-    switch (streamedMetrics.value.kind) {
-      case 'first': {
-        metrics.value = streamedMetrics.value.network_status;
-        break;
-      }
-      case 'network_status': {
-        metrics.value = streamedMetrics.value;
-        break;
-      }
-    }
-  }
-);
+const { metrics } = useTelemetryMetrics();
 
 const totalBlocks = computed(() => metrics.value?.block ?? 0);
 const isNextBlockExists = computed(() => block.value && block.value.height < totalBlocks.value);
@@ -70,13 +50,13 @@ const isPreviousBlockExists = computed(() => block.value && block.value.height >
 function handlePreviousBlockClick() {
   if (!block.value) return;
 
-  router.push({ name: 'blocks-details', params: { heightOrHash: block.value.height - 1 } });
+  navigation.push({ name: 'blocks-details', params: { heightOrHash: block.value.height - 1 } }).catch(() => {});
 }
 
 function handleNextBlockClick() {
   if (!block.value) return;
 
-  router.push({ name: 'blocks-details', params: { heightOrHash: block.value.height + 1 } });
+  navigation.push({ name: 'blocks-details', params: { heightOrHash: block.value.height + 1 } }).catch(() => {});
 }
 
 const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
@@ -241,7 +221,7 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
       }
 
       [data-testid='nextBlock'] {
-        transform: scaleX(-1);
+        transform: rotateY(180deg);
       }
 
       &-block {
@@ -284,7 +264,8 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
   }
 
   &__transactions_empty {
-    margin-left: size(4);
+    display: block;
+    padding-inline: size(4);
   }
 }
 </style>

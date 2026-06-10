@@ -19,10 +19,38 @@
 
       <hr>
 
-      <div v-if="!isLoading">
+      <div
+        v-if="showAvailabilityNotice"
+        class="latest-transactions__availability"
+        :class="`latest-transactions__availability_${availability.state.value}`"
+      >
+        <span>{{ $t(availabilityNoticeKey) }}</span>
+        <BaseButton
+          size="xs"
+          variant="secondary"
+          @click="retryAvailabilityFailover"
+        >
+          {{ $t('settings.retryFailover') }}
+        </BaseButton>
+      </div>
+      <div
+        class="latest-transactions__freshness"
+        :data-tone="latestSampleTone"
+        data-test="latest-transactions-freshness"
+      >
+        <span>{{ $t('telemetry.dataTrustSampleAge') }}:</span>
+        <TimeStamp
+          v-if="latestSampleDate"
+          :value="latestSampleDate"
+        />
+        <span v-else>{{ $t('telemetry.dataUnknown') }}</span>
+        <span>({{ $t(latestSampleToneKey) }})</span>
+      </div>
+
+      <div v-if="!isInitialLoading">
         <div
-          v-for="(transaction, i) in transactions"
-          :key="i"
+          v-for="transaction in transactions"
+          :key="transaction.hash"
           class="latest-transactions__row"
         >
           <TransactionStatus
@@ -62,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import TimeIcon from '@/shared/ui/icons/clock.svg';
 import { TransactionStatusFilter } from '@/features/filter/transactions';
 import TransactionStatus from '@/entities/transaction/TransactionStatus.vue';
@@ -76,18 +104,73 @@ import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import { useIntervalFn, useThrottleFn } from '@vueuse/core';
+import { Transaction as TransactionSchema } from '@/shared/api/schemas';
+import type { Transaction as TransactionDto, TransactionStatus as TransactionStatusType } from '@/shared/api/schemas';
+import {
+  buildLatestTransactionsCachePayload,
+  LATEST_TRANSACTIONS_CACHE_KEY,
+  mergeLatestTransactions,
+  parseLatestTransactionsCache,
+} from '@/widgets/latest-transactions/model';
+import { classifySampleFreshness } from '@/shared/lib/freshness';
+import { useExplorerTransactionsEvents } from '@/shared/ui/composables/useExplorerTransactionsEvents';
 
 const listState = reactive({
   per_page: 5,
-  status: null,
+  status: null as TransactionStatusType | null,
 });
 
 async function fetchTransactions(params: typeof listState) {
+  const latest = await http.fetchLatestTransactions({
+    ...params,
+    status: params.status ?? undefined,
+  });
+  if (latest.status === SUCCESSFUL_FETCHING) {
+    return {
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        pagination: {
+          page: 1,
+          per_page: params.per_page,
+          total_pages: latest.data.items.length > 0 ? 1 : 0,
+          total_items: latest.data.items.length,
+        },
+        items: latest.data.items,
+      },
+    } as const;
+  }
+
   return await http.fetchTransactions({
     ...params,
     status: params.status ?? undefined,
   });
 }
+
+function readTransactionsCache(status: TransactionStatusType | null): TransactionDto[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return parseLatestTransactionsCache(window.localStorage.getItem(LATEST_TRANSACTIONS_CACHE_KEY), {
+      status,
+      limit: listState.per_page,
+    });
+  } catch {
+    return [];
+  }
+}
+
+function writeTransactionsCache(items: readonly TransactionDto[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LATEST_TRANSACTIONS_CACHE_KEY, buildLatestTransactionsCachePayload(items));
+  } catch {
+    // ignore storage quota/privacy mode failures
+  }
+}
+
+const hashType = useAdaptiveHash({ lg: 'short', xxs: 'short' }, 'medium');
+
+const transactionsStream = useExplorerTransactionsEvents();
 
 const scope = useParamScope(
   () => {
@@ -96,15 +179,102 @@ const scope = useParamScope(
       payload: listState,
     };
   },
-  ({ payload }) => setupAsyncData(() => fetchTransactions(payload))
+  ({ payload }) =>
+    setupAsyncData(() => fetchTransactions(payload), {
+      interval: 5000,
+      pollWhen: () => transactionsStream.status.value !== 'OPEN',
+    })
 );
 
-const isLoading = computed(() => scope.value?.expose.isLoading);
-const transactions = computed(() =>
+const isLoading = computed(() => scope.value?.expose.isLoading ?? false);
+const fetchedTransactions = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
 );
+const streamedTransactions = ref<TransactionDto[]>([]);
+const cachedTransactions = ref<TransactionDto[]>(readTransactionsCache(listState.status));
+const transactions = computed(() =>
+  mergeLatestTransactions([streamedTransactions.value, fetchedTransactions.value, cachedTransactions.value], listState.per_page)
+);
+const isInitialLoading = computed(() => isLoading.value && transactions.value.length === 0);
+const availability = http.useToriiAvailability();
+const showAvailabilityNotice = computed(() => availability.state.value !== 'healthy');
+const availabilityNoticeKey = computed(() => `settings.nodeHealth.${availability.state.value}`);
+const nowMs = ref(Date.now());
 
-const hashType = useAdaptiveHash({ lg: 'short', xxs: 'short' }, 'medium');
+const latestTransaction = computed<TransactionDto | null>(() => {
+  const raw = transactionsStream.data.value;
+  if (!raw) return null;
+  try {
+    return TransactionSchema.parse(JSON.parse(raw));
+  } catch (error) {
+    console.warn('[LatestTransactions] Failed to parse transaction stream payload', error);
+    return null;
+  }
+});
+const latestSampleDate = computed<Date | null>(() => {
+  if (!transactions.value.length) return null;
+  return transactions.value.reduce(
+    (latest, transaction) => (transaction.created_at > latest ? transaction.created_at : latest),
+    transactions.value[0].created_at
+  );
+});
+const latestSampleTone = computed(() => classifySampleFreshness(latestSampleDate.value?.getTime() ?? null, nowMs.value));
+const latestSampleToneKeyMap = {
+  fresh: 'telemetry.dataFresh',
+  delayed: 'telemetry.dataDelayed',
+  stale: 'telemetry.dataStale',
+  unknown: 'telemetry.dataUnknown',
+} as const;
+const latestSampleToneKey = computed(() => latestSampleToneKeyMap[latestSampleTone.value]);
+
+const scheduleTransactionsReload = useThrottleFn(() => {
+  if (isLoading.value) return;
+  scope.value?.expose.refetch?.();
+}, 1000);
+
+useIntervalFn(() => {
+  nowMs.value = Date.now();
+}, 1000);
+
+watch(
+  () => listState.status,
+  (status) => {
+    streamedTransactions.value = [];
+    cachedTransactions.value = readTransactionsCache(status);
+  }
+);
+
+watch(
+  () => fetchedTransactions.value,
+  (items) => {
+    if (!items.length) return;
+
+    cachedTransactions.value = mergeLatestTransactions([items], listState.per_page);
+
+    if (!listState.status) {
+      writeTransactionsCache(items);
+    }
+
+    if (!streamedTransactions.value.length) return;
+    const fetchedHashes = new Set(items.map((item) => item.hash));
+    streamedTransactions.value = streamedTransactions.value.filter((item) => !fetchedHashes.has(item.hash));
+  },
+  { immediate: true }
+);
+
+watch(
+  () => latestTransaction.value,
+  (transaction) => {
+    if (!transaction) return;
+    if (listState.status && transaction.status !== listState.status) return;
+    streamedTransactions.value = mergeLatestTransactions([[transaction], streamedTransactions.value], listState.per_page);
+    scheduleTransactionsReload();
+  }
+);
+
+async function retryAvailabilityFailover() {
+  await http.retryToriiFailover();
+}
 </script>
 
 <style lang="scss">
@@ -191,6 +361,52 @@ const hashType = useAdaptiveHash({ lg: 'short', xxs: 'short' }, 'medium');
 
   &__status {
     grid-row: 1 / -1;
+  }
+
+  &__availability {
+    margin: size(1) size(2) size(2);
+    border-radius: size(1);
+    border: 1px solid theme-color('border-primary');
+    background: theme-color('surface-variant');
+    padding: size(1) size(1.5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: size(1);
+    @include tpg-s4;
+  }
+
+  &__availability_degraded {
+    border-color: color-mix(in srgb, theme-color('warning') 45%, theme-color('border-primary'));
+  }
+
+  &__availability_failing_over,
+  &__availability_outage {
+    border-color: color-mix(in srgb, theme-color('error') 45%, theme-color('border-primary'));
+  }
+
+  &__freshness {
+    margin: 0 size(2) size(1.5);
+    padding: size(0.75) size(1.25);
+    border-radius: size(1);
+    border: 1px solid theme-color('border-primary');
+    background: theme-color('surface-variant');
+    display: inline-flex;
+    align-items: center;
+    gap: size(0.75);
+    @include tpg-s5;
+
+    &[data-tone='fresh'] {
+      border-color: color-mix(in srgb, theme-color('success') 40%, theme-color('border-primary'));
+    }
+
+    &[data-tone='delayed'] {
+      border-color: color-mix(in srgb, theme-color('warning') 45%, theme-color('border-primary'));
+    }
+
+    &[data-tone='stale'] {
+      border-color: color-mix(in srgb, theme-color('error') 45%, theme-color('border-primary'));
+    }
   }
 }
 </style>

@@ -46,7 +46,11 @@ function toggle() {
 
 .base-inner-block {
   border-radius: size(4);
-  background: theme-color('background');
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, theme-color('surface') 96%, white),
+    color-mix(in srgb, theme-color('surface-variant') 92%, white)
+  );
   padding: size(3) size(4);
   margin: size(3) size(4);
 
@@ -80,5 +84,13 @@ function toggle() {
       transform: rotate(90deg);
     }
   }
+}
+
+html:not(.dark) .base-inner-block {
+  border: 1px solid color-mix(in srgb, theme-color('border-primary') 72%, white);
+  box-shadow:
+    theme-shadow('elevated-1'),
+    theme-shadow('elevated-2'),
+    theme-shadow('elevated-3');
 }
 </style>

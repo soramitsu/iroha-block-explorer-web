@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "id": "subscription-billing-trigger",
+  "source_name": "subscription_billing_trigger.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/subscription_billing_trigger.ko",
+  "source": "// Subscription billing trigger wrapper (uses subscription_ref metadata).\nseiyaku SubscriptionBilling {\n  kotoage fn run() {\n    subscription_bill();\n  }\n}\n",
+  "rust": {
+    "kind": "failure",
+    "diagnostics": [
+      {
+        "severity": "error",
+        "message": "compile error: semantic error: public function `run` calls privileged operations but is missing `permission(...)`",
+        "code": null,
+        "phase": null
+      }
+    ],
+    "compiler_stderr": [
+      "compile error: semantic error: public function `run` calls privileged operations but is missing `permission(...)`"
+    ]
+  }
+}

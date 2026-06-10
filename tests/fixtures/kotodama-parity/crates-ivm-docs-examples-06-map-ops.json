@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-06-map-ops",
+  "source_name": "06_map_ops.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/06_map_ops.ko",
+  "source": "// Map allocation, set and get wrapped in a contract.\nseiyaku MapOps {\n  kotoage fn map_example() -> int {\n    let m = Map::new();\n    m[1] = 42;\n    let v = m[1];\n    return v;\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSvgAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAlgAAAAAAAADHM75hPOVkBgIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAAQAIAAAAAAAAAABcAQAAAAAAAABTDAttYXBfZXhhbXBsZQQAAAAACAAAAAAAAAAABgEEA2ludAEACAAAAAAAAAAACAAAAAAAAAAAAQAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAADgHx8gAAAKIBgKCiDwAABgBwoKIPgKCiEAABsgABsKMQgbCjEAChggAAAXIAEXFyAAAAkgKgkJIAAXGDEICRgxAAAJIAEJCSAAGBswCRsbDggYFzAbFxcQABcKIAAAAEkAAABJ",
+    "manifest": {
+      "code_hash": "hash:719A975494A20465334CFEC8843C7500B94C17104D5B43A17B1081E6A50180A7#AABA",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "map_example",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": "int",
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": null,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "map_example",
+        "line": 3,
+        "pc_end": 100,
+        "pc_start": 0,
+        "source_path": "06_map_ops.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 100,
+        "bytecode_words": 25,
+        "column": 14,
+        "frame_bytes": 32,
+        "function_name": "map_example",
+        "jump_range_risk": false,
+        "jump_span_words": 25,
+        "line": 3,
+        "pc_end": 100,
+        "pc_start": 0,
+        "source_path": "06_map_ops.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

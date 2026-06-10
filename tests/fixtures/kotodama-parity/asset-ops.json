@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "id": "asset-ops",
+  "source_name": "asset_ops.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/asset_ops.ko",
+  "source": "seiyaku AssetOps {\n  kotoage fn execute() permission(Admin) {\n    // Typed pointer‑ABI arguments via constructors\n    let alice = authority();\n    let bob = authority();\n    let coin = asset_definition!(\"6pEP9RjNoZ7beWkT3pLfKoM1dyfi\");\n    mint_asset(\n      alice,\n      coin,\n      1000\n    );\n    transfer_asset(\n      alice,\n      bob,\n      coin,\n      500\n    );\n    burn_asset(\n      bob,\n      coin,\n      100\n    );\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSawIAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAQwIAAAAAAADXaq0kCfIGuwIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAA6QEB5gFzAwAAAAAAAAATEmFjY291bnQ6JGF1dGhvcml0eS4tYXNzZXQ6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaTokYXV0aG9yaXR5JyZhc3NldF9kZWY6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaV8CAAAAAAAAAC4tYXNzZXQ6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaTokYXV0aG9yaXR5JyZhc3NldF9kZWY6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaQgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAJ8CAQAAAAAAAACVAggHZXhlY3V0ZQQAAAAACAAAAAAAAAAAAQAIAQYFQWRtaW5zAwAAAAAAAAAuLWFzc2V0OjZwRVA5UmpOb1o3YmVXa1QzcExmS29NMWR5Zmk6JGF1dGhvcml0eRMSYWNjb3VudDokYXV0aG9yaXR5JyZhc3NldF9kZWY6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaV8CAAAAAAAAAC4tYXNzZXQ6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaTokYXV0aG9yaXR5JyZhc3NldF9kZWY6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaQMBAQEIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAABMVExCAQAAAAIAAABvAAAAGAAAAAAAAAAAAgEAAABITlJUMAAAhE9KzVp9TzAJqliLoIoyDwAgAAAAAAAAAKUu0qjltLHbAgGhAVgBawGbAeEBZAFLAQQBiAGaAYgBwAGOAUABFQFEbDZrLmI1tRLp++G5xSWEPhH8DyU8nR4XZBp/MNCbh4cAANAfHyCkAABgAAoYIKQAAGAAChcgAAAaIAsaGiAAAAggfwgIIH8ICCB/CAggfwgIIH8ICCB/CAggfwgIIG8ICCAACAogaQAAYAAKByAAGAogAAALIAAAGiAHABogBQALIBoLCwYLCwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAcMIOAAAGAACg0gAAsKIOAAAGAACgsgAAwKIOAAAGAACgwgAA0KICIAAGAAAAcgAAAaIAsaGiAAAAcgfwcHIH8HByB/BwcgdwcHIAAHCiBpAABgAAoIIAAYCiAAFwsgAAAMIAAAGiAHABogBQAMIBoMDAYLDAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAgNIOAAAGAACg4gAAsKIOAAAGAACgsgAAwKIOAAAGAACgwgAA0KIOAAAGAACg0gAA4KICQAAGAAAAggAAAIIGQICCAACAogaQAAYAAKGCAAFwogAAALIAAAGiAHABogBQALIBoLCwYLCwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgABgMIOAAAGAACg0gAAsKIOAAAGAACgsgAAwKIOAAAGAACgwgAA0KICMAAGAAABggAAAASQ==",
+    "manifest": {
+      "code_hash": "hash:0D5C0B320FD38506820C0FA7A6F8243A38E2C901EB51739038245DC72E194051#E73D",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account:$authority",
+          "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi:$authority",
+          "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+        ],
+        "write_keys": [
+          "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi:$authority",
+          "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "execute",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi:$authority",
+            "account:$authority",
+            "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+          ],
+          "write_keys": [
+            "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi:$authority",
+            "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "execute",
+        "line": 2,
+        "pc_end": 600,
+        "pc_start": 0,
+        "source_path": "asset_ops.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 600,
+        "bytecode_words": 150,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "execute",
+        "jump_range_risk": false,
+        "jump_span_words": 150,
+        "line": 2,
+        "pc_end": 600,
+        "pc_start": 0,
+        "source_path": "asset_ops.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "id": "domain-ops",
+  "source_name": "domain_ops.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/domain_ops.ko",
+  "source": "// Domain operations sample (Kotodama).\n// Demonstrates domain builtins using pointer constructors and CoreHost bridging.\nseiyaku DomainOps {\n  kotoage fn run() permission(Admin) {\n    // Register a new domain by id\n    let domain_id = domain!(\"wonder.universal\");\n    register_domain(domain_id);\n\n    // Transfer domain ownership from the current authority (demo no-op self transfer).\n    transfer_domain(\n      authority(),\n      domain_id,\n      authority()\n    );\n\n    // Optionally unregister the domain (for demo purposes)\n    unregister_domain(domain_id);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSbQEAAE5SVDAAAJxFYTLfthcec01NMFJ73cwARQEAAAAAAADERxFplDzDggIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAbAFqNQIAAAAAAAAAExJhY2NvdW50OiRhdXRob3JpdHkYF2RvbWFpbjp3b25kZXIudW5pdmVyc2FsIQEAAAAAAAAAGBdkb21haW46d29uZGVyLnVuaXZlcnNhbAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAJ8BAQAAAAAAAACVAQQDcnVuBAAAAAAIAAAAAAAAAAABAAgBBgVBZG1pbjUCAAAAAAAAABgXZG9tYWluOndvbmRlci51bml2ZXJzYWwTEmFjY291bnQ6JGF1dGhvcml0eSEBAAAAAAAAABgXZG9tYWluOndvbmRlci51bml2ZXJzYWwDAQEBCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAATFRMQgEAAAABAAAAYgAAABgAAAAAAAAAAAgBAAAAO05SVDAAAARMIluD0BPaZ+mFgJyEq8wAEwAAAAAAAACNUeDSm5JwMQIHBndvbmRlcgoJdW5pdmVyc2Fsx9WbplJy2JKik7d0emlwPLXuJM3OeyPJGdsUffeoKEUA6B8fIAAACiAAABogBwAaIAMACiAaCgoGDQoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAQAABgAAAXIKQAAGAAChcgAAAKIAAAGiAHABogAwAKIBoKCgYNCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKDCAAFwsgAAsKIOAAAGAACgsgAAwKIBIAAGAAABcgAAAKIAAAGiAHABogAwAKIBoKCgYNCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYBEAAGAAABggAAAASQ==",
+    "manifest": {
+      "code_hash": "hash:3C8D7C99F8F93DA0A667C206218267850A9BFC5BCDCFD8842DFB81DAD1A755CB#95D6",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account:$authority",
+          "domain:wonder.universal"
+        ],
+        "write_keys": [
+          "domain:wonder.universal"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "run",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "domain:wonder.universal",
+            "account:$authority"
+          ],
+          "write_keys": [
+            "domain:wonder.universal"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "run",
+        "line": 4,
+        "pc_end": 364,
+        "pc_start": 0,
+        "source_path": "domain_ops.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 364,
+        "bytecode_words": 91,
+        "column": 14,
+        "frame_bytes": 24,
+        "function_name": "run",
+        "jump_range_risk": false,
+        "jump_span_words": 91,
+        "line": 4,
+        "pc_end": 364,
+        "pc_start": 0,
+        "source_path": "domain_ops.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

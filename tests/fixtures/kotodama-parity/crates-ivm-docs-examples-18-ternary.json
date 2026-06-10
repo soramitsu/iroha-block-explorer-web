@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-18-ternary",
+  "source_name": "18_ternary.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/18_ternary.ko",
+  "source": "// Ternary conditional example (choose the smaller value).\nseiyaku TernaryDemo {\n  kotoage fn choose_min(a: int, b: int) -> int {\n    let value = (a < b) ? a : b;\n    return value;\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSzwAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwApwAAAAAAAACTHKRynatIJgIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAAQAIAAAAAAAAAABtAQAAAAAAAABkCwpjaG9vc2VfbWluBAAAAAAaAgAAAAAAAAAIAgFhBANpbnQIAgFiBANpbnQGAQQDaW50AQAIAAAAAAAAAAAIAAAAAAAAAAABAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAExUTEIDAAAAAQAAAAQBAAAoAAAAAAAAAIoAAAAAAAAA2wAAAAAAAAAAAwEAAAA7TlJUMAAAtzpr9NKeW2e8c2DX3F6luQATAAAAAAAAAB36Vp/2yFlkAhJ0cmlnZ2VyX2V2ZW50X2pzb27XH70vqGCWRwLLwXd2mxL5UMe/Tolh+4sOnSLg3XKzCwADAQAAACpOUlQwAAC3Omv00p5bZ7xzYNfcXqW5AAIAAAAAAAAA1r+YRwERVjoCAWF1AV7Zm+YYXylc7S+zY0hOBzad4l0O+WegcvpaFF51xQADAQAAACpOUlQwAAC3Omv00p5bZ7xzYNfcXqW5AAIAAAAAAAAA4kB/7Ohr/H0CAWIPm7gMhUzDzneiPbeIoQlELH8szXUr3AnBuSjBcvPGLQDYHx8gAAAKIAAAGiAHABogAQAKIBoKCgZ/CgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYPEAAGAAChggABgKIOAAAGAAChwgAAAKIAAAGiAHABogAgAKIBoKCgZhCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKCSAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiADAAogGgoKBjIKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoIIAAJCiAACAsgHAABRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAKFyAAFwogAAAAScgfHyAAAR8xCAgfMRAJHzEYFx8xIBgfMSgKHzEwCx8xKB8YMDAfFzAXGAwCPwANIA0MCQgBCQkhGgAJQU0AAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAZAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAJIAAYCCA0AABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAJIAAXCCAZAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAgKIAgfCDAQHwkwGB8XMCAfGDAAHwEwOB8fIAABAEgIHwgwEB8JMBgfFzAgHxgwAB8BMDgfHyAAAQBIev8BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEk=",
+    "manifest": {
+      "code_hash": "hash:370B74BD4046BDA63A1184D7188DE884D00DFA969CEA21183BF641F16BED18DD#C837",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "choose_min",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "a",
+              "type_name": "int"
+            },
+            {
+              "name": "b",
+              "type_name": "int"
+            }
+          ],
+          "return_type": "int",
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": null,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "choose_min",
+        "line": 3,
+        "pc_end": 488,
+        "pc_start": 0,
+        "source_path": "18_ternary.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__choose_min",
+        "line": 3,
+        "pc_end": 1128,
+        "pc_start": 488,
+        "source_path": "18_ternary.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 488,
+        "bytecode_words": 122,
+        "column": 14,
+        "frame_bytes": 40,
+        "function_name": "choose_min",
+        "jump_range_risk": false,
+        "jump_span_words": 122,
+        "line": 3,
+        "pc_end": 488,
+        "pc_start": 0,
+        "source_path": "18_ternary.ko"
+      },
+      {
+        "bytecode_bytes": 640,
+        "bytecode_words": 160,
+        "column": 14,
+        "frame_bytes": 56,
+        "function_name": "__entrypoint_impl__choose_min",
+        "jump_range_risk": false,
+        "jump_span_words": 160,
+        "line": 3,
+        "pc_end": 1128,
+        "pc_start": 488,
+        "source_path": "18_ternary.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

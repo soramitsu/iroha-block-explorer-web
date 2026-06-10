@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "id": "native-escrow",
+  "source_name": "native_escrow.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/native_escrow.ko",
+  "source": "// Native asset escrow sample for off-chain fiat settlement flows.\n// Custody is held by the ledger-managed escrow ISIs, not by a contract account.\nseiyaku NativeEscrowAitai {\n  meta { abi_version: 1; }\n\n  kotoage fn main() {}\n  kotoage fn open_offer(offer: Name,\n                         asset_definition: AssetDefinitionId,\n                         amount: int) permission(Admin) {\n    assert(amount > 0, \"amount must be positive\");\n    escrow_open_offer(offer, asset_definition, amount);\n  }\n  kotoage fn accept(offer: Name) permission(Admin) {\n    escrow_accept(offer);\n  }\n  kotoage fn mark_payment_sent(offer: Name) permission(Admin) {\n    escrow_mark_payment_sent(offer);\n  }\n  kotoage fn release(offer: Name) permission(Admin) {\n    escrow_release(offer);\n  }\n  kotoage fn cancel(offer: Name) permission(Admin) {\n    escrow_cancel(offer);\n  }\n  kotoage fn dispute(offer: Name) permission(Admin) {\n    escrow_open_dispute(offer);\n  }\n  kotoage fn resolve_dispute(offer: Name,\n                             buyer_amount: int,\n                             seller_amount: int) permission(Admin) {\n    escrow_resolve_dispute(offer, buyer_amount, seller_amount);\n  }\n}\n",
+  "rust": {
+    "kind": "failure",
+    "diagnostics": [
+      {
+        "severity": "error",
+        "message": "compile error: E_ACCESS_INCOMPLETE: entrypoint `open_offer` has incomplete compiler-derived access metadata: opaque ISI access is not compiler-resolved",
+        "code": null,
+        "phase": null
+      }
+    ],
+    "compiler_stderr": [
+      "compile error: E_ACCESS_INCOMPLETE: entrypoint `open_offer` has incomplete compiler-derived access metadata: opaque ISI access is not compiler-resolved"
+    ]
+  }
+}

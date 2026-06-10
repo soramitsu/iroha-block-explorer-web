@@ -18,8 +18,13 @@ const props = withDefaults(
     monospace?: boolean
   }>(),
   {
+    value: null,
+    hash: '',
+    link: '',
+    copy: false,
     type: 'full',
     metadata: null,
+    tooltip: '',
     monospace: false,
   }
 );
@@ -29,8 +34,9 @@ const props = withDefaults(
   <div class="data-field">
     <span class="data-field__title h-sm">{{ title }}</span>
     <div class="data-field__value">
+      <slot v-if="$slots.default" />
       <BaseHash
-        v-if="hash"
+        v-else-if="hash"
         :hash
         :link
         :copy

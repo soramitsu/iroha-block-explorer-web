@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "id": "tuple-return-demo",
+  "source_name": "tuple_return_demo.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/tuple_return_demo.ko",
+  "source": "// Tuple return and destructuring demo.\nseiyaku TupleReturnDemo {\n  fn pair(a: int, b: int) -> (int, int) {\n    let t = (a + 1, b + 1);\n    return t;\n  }\n\n  kotoage fn compute() -> (int, int) {\n    let p = pair(3, 5);\n    // Destructure using numeric field access\n    return (p.0, p.1);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSwQAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAmQAAAAAAAAB9It/ccjvm0AIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAAQAIAAAAAAAAAABfAQAAAAAAAABWCAdjb21wdXRlBAAAAAAIAAAAAAAAAAANAQsKKGludCwgaW50KQEACAAAAAAAAAAACAAAAAAAAAAAAQAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAADQHx8gAAAYIAMYGCAAABcgBRcXIAAYCiAAFwsgZQABRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAKCSAACwggAAAXIAMXFyAAAAggBQgIIAAXCiAACAsgRAABRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAKCSAACxggAAkXIAAACCADCAggAAAYIAUYGCAACAogABgLICIAAUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAACgkgAAsHIAAHCCAAFwcgAAgJIAAHCiAACQsgAAAASQAAAEmwHx8gAAEfMQgFHzEQBh8xGAcfMSAIHzEoCR8xMBcfMTgYHzFACh8xSAsfMUAfGDBIHxcwAAAJIAEJCSAJGAgBAAAJIAEJCSAJFwcBAAAGIAEGBiAGGAUBAAAFIAEFBSAFFwYBAAgGIAAHBSAABgogAAULIAgfBTAQHwYwGB8HMCAfCDAoHwkwMB8XMDgfGDAAHwEwUB8fIAABAEgIHwUwEB8GMBgfBzAgHwgwKB8JMDAfFzA4HxgwAB8BMFAfHyAAAQBIz/8BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEk=",
+    "manifest": {
+      "code_hash": "hash:5654D850B391178E8A481E8B8DAF7DEC19EB46D24C5D1CC135558BA294D9886F#9CEE",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "compute",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": "(int, int)",
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": null,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "compute",
+        "line": 8,
+        "pc_end": 432,
+        "pc_start": 0,
+        "source_path": "tuple_return_demo.ko"
+      },
+      {
+        "column": 6,
+        "function_name": "pair",
+        "line": 3,
+        "pc_end": 732,
+        "pc_start": 432,
+        "source_path": "tuple_return_demo.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 432,
+        "bytecode_words": 108,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "compute",
+        "jump_range_risk": false,
+        "jump_span_words": 108,
+        "line": 8,
+        "pc_end": 432,
+        "pc_start": 0,
+        "source_path": "tuple_return_demo.ko"
+      },
+      {
+        "bytecode_bytes": 300,
+        "bytecode_words": 75,
+        "column": 6,
+        "frame_bytes": 80,
+        "function_name": "pair",
+        "jump_range_risk": false,
+        "jump_span_words": 75,
+        "line": 3,
+        "pc_end": 732,
+        "pc_start": 432,
+        "source_path": "tuple_return_demo.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

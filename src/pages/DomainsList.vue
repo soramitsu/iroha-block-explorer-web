@@ -9,6 +9,7 @@
       :loading="isLoading"
       :total="totalDomains"
       :items="domains"
+      :row-key="domainRowKey"
       container-class="domains-list-page__container"
     >
       <template #header>
@@ -86,6 +87,7 @@ import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import type { Domain } from '@/shared/api/schemas';
 
 const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full', sm: 'medium', xxs: 'two-line' });
 
@@ -118,6 +120,8 @@ const totalDomains = computed(() =>
 const domains = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
 );
+
+const domainRowKey = (item: Domain) => item.id;
 </script>
 
 <style lang="scss">

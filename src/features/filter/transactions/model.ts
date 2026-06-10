@@ -2,12 +2,13 @@ import type { InstructionKind, TransactionStatus } from '@/shared/api/schemas';
 import type { TabItem } from '../index';
 
 export type Status = TransactionStatus | null;
-export type TabAccountTransactions = 'transactions' | 'instructions';
+export type TabAccountTransactions = 'transactions' | 'instructions' | 'tracing';
 export type TabInstructions = 'All' | InstructionKind;
 
 export const ACCOUNT_TRANSACTIONS_OPTIONS: TabItem<TabAccountTransactions>[] = [
   { i18nKey: 'transactions.transactions', value: 'transactions' },
   { i18nKey: 'transactions.instructions', value: 'instructions' },
+  { i18nKey: 'tracing.nav', value: 'tracing' },
 ];
 
 export const INSTRUCTION_OPTIONS: TabItem<TabInstructions>[] = [

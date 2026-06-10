@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "id": "trigger-cat-and-mouse",
+  "source_name": "trigger_cat_and_mouse.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/trigger_cat_and_mouse.ko",
+  "source": "// Increase SmartContract execution depth to 111 in one call.\nseiyaku TriggerCatAndMouse {\n  kotoage fn run() {\n    set_execution_depth(111);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSsQAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAiQAAAAAAAABm8bjUjat8lwIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAAQAIAAAAAAAAAABPAQAAAAAAAABGBANydW4EAAAAAAgAAAAAAAAAAAEAAQAIAAAAAAAAAAAIAAAAAAAAAAABAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAPAfHyAAABggbxgYIAAYCiCjAABgAAAYIAAAAEk=",
+    "manifest": {
+      "code_hash": "hash:2E5CB9FCBAD8FD3265792A8E83A995D188CA00BD916C09146440198126F5F76B#464C",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "run",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": null,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "run",
+        "line": 3,
+        "pc_end": 28,
+        "pc_start": 0,
+        "source_path": "trigger_cat_and_mouse.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 28,
+        "bytecode_words": 7,
+        "column": 14,
+        "frame_bytes": 16,
+        "function_name": "run",
+        "jump_range_risk": false,
+        "jump_span_words": 7,
+        "line": 3,
+        "pc_end": 28,
+        "pc_start": 0,
+        "source_path": "trigger_cat_and_mouse.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

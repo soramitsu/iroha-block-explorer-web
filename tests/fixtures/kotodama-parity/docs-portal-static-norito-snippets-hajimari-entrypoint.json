@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "id": "docs-portal-static-norito-snippets-hajimari-entrypoint",
+  "source_name": "hajimari-entrypoint.ko",
+  "compiler_source_path": "docs/portal/static/norito-snippets/hajimari-entrypoint.ko",
+  "source": "// Minimal initializer-style function inside a contract.\nseiyaku HajimariExample {\n  hajimari() {\n    info(\"Hello from hajimari\");\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRStgAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAjgAAAAAAAADinpgC7VbIHQIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAAQAIAAAAAAAAAABUAQAAAAAAAABLCQhoYWppbWFyaQQCAAAACAAAAAAAAAAAAQABAAgAAAAAAAAAAAgAAAAAAAAAAAEACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAATFRMQgEAAAAAAAAAOgAAABgAAAAAAAAAAAYBAAAAE0hlbGxvIGZyb20gaGFqaW1hcmlvOKQGNBJEIVWEkVHkZ/jmcCIh1//zj40EFWjWYEITQfAfHyAAABggAAAaIAcAGiABABggGhgYBlYYGCAAGBggABgYIAAYGCAAGBggABgYIAAYGCAAGBggABgYIAAYGCAAGBggABgYIAAYGCAAGBggABgYIAAYGCAAGBggABgYIAAYGCAAGAogAwAAYAAAGCAAAABJ",
+    "manifest": {
+      "code_hash": "hash:B75090DFC0B192FDDC46CD4FEB02F0ED4A4020AFFD1CC001A2074B349B748307#BD8B",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "hajimari",
+          "kind": {
+            "kind": "Hajimari",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": null,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 3,
+        "function_name": "hajimari",
+        "line": 3,
+        "pc_end": 116,
+        "pc_start": 0,
+        "source_path": "hajimari-entrypoint.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 116,
+        "bytecode_words": 29,
+        "column": 3,
+        "frame_bytes": 16,
+        "function_name": "hajimari",
+        "jump_range_risk": false,
+        "jump_span_words": 29,
+        "line": 3,
+        "pc_end": 116,
+        "pc_start": 0,
+        "source_path": "hajimari-entrypoint.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

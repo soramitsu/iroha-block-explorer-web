@@ -1,0 +1,206 @@
+{
+  "version": 1,
+  "id": "perp-funding",
+  "source_name": "perp_funding.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/perp_funding.ko",
+  "source": "// Perpetual swap funding and simple liquidation check utilities.\nseiyaku PerpFunding {\n  // Compute funding payment: position_size * (mark - index) * funding_bps / 10_000\n  fn funding_payment(position_size: int, mark_price: int, index_price: int, funding_bps: int) -> int {\n    let delta = mark_price - index_price;\n    let num = position_size * delta * funding_bps;\n    let pay = num / 10_000;\n    return pay;\n  }\n\n  // Update position balance by transferring funding between trader and insurance_fund.\n  // Positive payment means trader pays; negative means trader receives.\n  kotoage fn settle_funding(trader: AccountId,\n                            insurance_fund: AccountId,\n                            stable_asset: AssetDefinitionId,\n                            position_size: int,\n                            mark_price: int,\n                            index_price: int,\n                            funding_bps: int) permission(Admin) {\n    let pay = funding_payment(position_size, mark_price, index_price, funding_bps);\n    if pay > 0 {\n      transfer_asset(trader, insurance_fund, stable_asset, pay);\n    } else {\n      let receive = 0 - pay; // absolute value\n      transfer_asset(insurance_fund, trader, stable_asset, receive);\n    }\n  }\n\n  // Basic liquidation check: equity_bps = (equity * 10_000) / notional\n  kotoage fn is_liquidatable(equity: int, notional: int, maintenance_bps: int) -> int {\n    if notional == 0 { return 0; } // not liquidatable if no position\n    let equity_bps = (equity * 10_000) / notional;\n    let liq = (equity_bps < maintenance_bps);\n    return liq; // returns 1 if true, 0 if false\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "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IAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogewAAYAAKCSAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAGAAogGgoKBh8KCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB7AABgAAoIIAAYCiDgAABgAAocIAAACiAAABogBwAaIAYACiAaCgoGfQoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIIAAAGAACgcgABgKIOAAAGAAChwgAAAKIAAAGiAHABogBwAKIBoKCgZZCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKBiAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAIAAogGgoKBjYKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoFIAAYCiDgAABgAAocIAAACiAAABogBwAaIAkACiAaCgoGEAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIHgAAGAACgQgABgKIOAAAGAAChwgAAAKIAAAGiAHABogCQAKIBoKCgZrCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKAyAACQogAAgLIAAHDCAABg0gAAUOIAAEDyAAAxAgUgABRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAA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",
+    "manifest": {
+      "code_hash": "hash:EBAAD948CBEC7F4D771DD753E3F17A984FD9388C52F37D443E2BECAF045C8A13#181A",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "settle_funding",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "trader",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "insurance_fund",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "stable_asset",
+              "type_name": "AssetDefinitionId"
+            },
+            {
+              "name": "position_size",
+              "type_name": "int"
+            },
+            {
+              "name": "mark_price",
+              "type_name": "int"
+            },
+            {
+              "name": "index_price",
+              "type_name": "int"
+            },
+            {
+              "name": "funding_bps",
+              "type_name": "int"
+            }
+          ],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "is_liquidatable",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "equity",
+              "type_name": "int"
+            },
+            {
+              "name": "notional",
+              "type_name": "int"
+            },
+            {
+              "name": "maintenance_bps",
+              "type_name": "int"
+            }
+          ],
+          "return_type": "int",
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "settle_funding",
+        "line": 13,
+        "pc_end": 1140,
+        "pc_start": 0,
+        "source_path": "perp_funding.ko"
+      },
+      {
+        "column": 6,
+        "function_name": "funding_payment",
+        "line": 4,
+        "pc_end": 1364,
+        "pc_start": 1140,
+        "source_path": "perp_funding.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__settle_funding",
+        "line": 13,
+        "pc_end": 2228,
+        "pc_start": 1364,
+        "source_path": "perp_funding.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__is_liquidatable",
+        "line": 30,
+        "pc_end": 2904,
+        "pc_start": 2228,
+        "source_path": "perp_funding.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "is_liquidatable",
+        "line": 30,
+        "pc_end": 3992,
+        "pc_start": 2904,
+        "source_path": "perp_funding.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 1140,
+        "bytecode_words": 285,
+        "column": 14,
+        "frame_bytes": 80,
+        "function_name": "settle_funding",
+        "jump_range_risk": false,
+        "jump_span_words": 285,
+        "line": 13,
+        "pc_end": 1140,
+        "pc_start": 0,
+        "source_path": "perp_funding.ko"
+      },
+      {
+        "bytecode_bytes": 224,
+        "bytecode_words": 56,
+        "column": 6,
+        "frame_bytes": 80,
+        "function_name": "funding_payment",
+        "jump_range_risk": false,
+        "jump_span_words": 56,
+        "line": 4,
+        "pc_end": 1364,
+        "pc_start": 1140,
+        "source_path": "perp_funding.ko"
+      },
+      {
+        "bytecode_bytes": 864,
+        "bytecode_words": 216,
+        "column": 14,
+        "frame_bytes": 128,
+        "function_name": "__entrypoint_impl__settle_funding",
+        "jump_range_risk": false,
+        "jump_span_words": 216,
+        "line": 13,
+        "pc_end": 2228,
+        "pc_start": 1364,
+        "source_path": "perp_funding.ko"
+      },
+      {
+        "bytecode_bytes": 676,
+        "bytecode_words": 169,
+        "column": 14,
+        "frame_bytes": 72,
+        "function_name": "__entrypoint_impl__is_liquidatable",
+        "jump_range_risk": false,
+        "jump_span_words": 169,
+        "line": 30,
+        "pc_end": 2904,
+        "pc_start": 2228,
+        "source_path": "perp_funding.ko"
+      },
+      {
+        "bytecode_bytes": 1088,
+        "bytecode_words": 272,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "is_liquidatable",
+        "jump_range_risk": false,
+        "jump_span_words": 272,
+        "line": 30,
+        "pc_end": 3992,
+        "pc_start": 2904,
+        "source_path": "perp_funding.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

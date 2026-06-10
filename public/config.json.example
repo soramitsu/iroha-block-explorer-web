@@ -1,0 +1,18 @@
+{
+  "toriiBaseUrl": "https://nexus.mof3.sora.org:18080",
+  "sorafsPublicBaseUrl": "https://taira.sora.org",
+  "toriiEconometricsEndpointsEnabled": true,
+  "toriiFailoverEnabled": true,
+  "toriiFailoverNodes": [
+    "https://nexus-backup-1.example.org:18080",
+    "https://nexus-backup-2.example.org:18080"
+  ],
+  "toriiFailoverFailureThreshold": 5,
+  "toriiFailoverWindowMs": 60000,
+  "toriiFailoverProbeTimeoutMs": 1500,
+  "toriiFailoverPersistSwitch": true,
+  "toriiFailoverMaxPeerCandidates": 16,
+  "toriiRequestTimeoutMs": 5000,
+  "toriiRequestRetryCount": 1,
+  "toriiRequestRetryBaseDelayMs": 200
+}

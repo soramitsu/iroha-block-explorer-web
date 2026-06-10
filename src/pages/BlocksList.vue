@@ -3,6 +3,20 @@
     :title="$t('blocks.blocks')"
     class="blocks-list-page"
   >
+    <div
+      v-if="pendingRefresh"
+      class="blocks-list-page__pending content-row"
+      data-test="pending-refresh"
+    >
+      <span class="row-text">{{ $t('table.newDataAvailable') }}</span>
+      <BaseButton
+        bordered
+        data-test="pending-refresh-load"
+        @click="applyPendingRefresh"
+      >
+        {{ $t('table.load') }}
+      </BaseButton>
+    </div>
     <BaseTable
       v-model:page="listState.page"
       v-model:page-size="listState.per_page"
@@ -10,8 +24,8 @@
       :total="payloadPagination?.total_items"
       :payload-pagination
       :items="blocks"
+      :row-key="blockRowKey"
       container-class="blocks-list-page__container"
-      reversed
     >
       <template #header>
         <div class="blocks-list-page__row">
@@ -102,31 +116,49 @@
 </template>
 
 <script setup lang="ts">
+import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import * as http from '@/shared/api';
 import BaseHash from '@/shared/ui/components/BaseHash.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import TimeStamp from '@/shared/ui/components/TimeStamp.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import { useBlockStream } from '@/shared/ui/composables/useBlockStream';
+import type { Block } from '@/shared/api/schemas';
+import { useWindowScroll } from '@vueuse/core';
 
 const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full', xxs: 'short' }, 'medium');
 
 const listState = reactive({
-  page: 0,
+  page: 1,
   per_page: 10,
 });
 
 watch(
   () => listState.per_page,
   () => {
-    listState.page = 0;
+    listState.page = 1;
   }
 );
+
+const { y: windowScrollY } = useWindowScroll();
+const isScrolledDown = computed(() => windowScrollY.value > 80);
+const pendingRefresh = ref(false);
+
+let refetchLatestBlocks: (() => void) | null = null;
+const blockStream = useBlockStream(() => {
+  if (listState.page !== 1) return;
+  if (isScrolledDown.value) {
+    pendingRefresh.value = true;
+    return;
+  }
+  refetchLatestBlocks?.();
+});
 
 const scope = useParamScope(
   () => {
@@ -135,8 +167,16 @@ const scope = useParamScope(
       payload: listState,
     };
   },
-  ({ payload }) => setupAsyncData(() => http.fetchBlocks(payload))
+  ({ payload }) =>
+    setupAsyncData(() => http.fetchBlocks(payload), {
+      interval: payload.page === 1 ? 5000 : undefined,
+      pollWhen: () =>
+        windowScrollY.value <= 80 &&
+        (!blockStream.isSupported || !blockStream.isStreaming.value),
+    })
 );
+
+refetchLatestBlocks = () => scope.value?.expose.refetch?.();
 
 const isLoading = computed(() => scope.value?.expose.isLoading);
 const payloadPagination = computed(() =>
@@ -145,12 +185,108 @@ const payloadPagination = computed(() =>
 const blocks = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
 );
+
+const blockRowKey = (item: Block) => item.height;
+
+const latestBlockProbe = setupAsyncData(() => http.fetchBlocks({ page: 1, per_page: 1 }), {
+  interval: 10_000,
+  immediate: false,
+  pollWhen: () =>
+    isScrolledDown.value &&
+    listState.page === 1 &&
+    (!blockStream.isSupported || !blockStream.isStreaming.value),
+  onError: () => {
+    // Background probe while scrolling should not spam toasts; the main table fetch handles errors.
+  },
+});
+
+const latestRemoteHeight = computed(() => {
+  const response = latestBlockProbe.data;
+  if (response?.status !== SUCCESSFUL_FETCHING) return undefined;
+  return response.data.items[0]?.height;
+});
+
+const maxDisplayedHeight = computed(() => {
+  if (!blocks.value.length) return undefined;
+  return blocks.value.reduce((max, block) => (block.height > max ? block.height : max), blocks.value[0].height);
+});
+
+watch(
+  () => [latestRemoteHeight.value, maxDisplayedHeight.value, isScrolledDown.value, listState.page] as const,
+  ([remoteHeight, localHeight, scrolledDown, page]) => {
+    if (!scrolledDown || page !== 1) {
+      pendingRefresh.value = false;
+      return;
+    }
+    if (remoteHeight === undefined || localHeight === undefined) return;
+    pendingRefresh.value = remoteHeight > localHeight;
+  },
+  { immediate: true }
+);
+
+watch(
+  () => [isScrolledDown.value, listState.page] as const,
+  ([scrolledDown, page], previous) => {
+    const [prevScrolledDown, prevPage] = previous ?? [false, page];
+    if (page !== 1) {
+      pendingRefresh.value = false;
+      return;
+    }
+
+    if (scrolledDown) {
+      if (blockStream.isSupported && blockStream.isStreaming.value) return;
+      if (!prevScrolledDown || prevPage !== page) {
+        latestBlockProbe.refetch();
+      }
+      return;
+    }
+
+    if (pendingRefresh.value) {
+      pendingRefresh.value = false;
+      scope.value?.expose.refetch?.();
+    }
+  },
+  { immediate: true }
+);
+
+async function applyPendingRefresh() {
+  pendingRefresh.value = false;
+  // Make the refresh action intentional and avoid inserting rows above the viewport.
+  if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+    window.scrollTo({ top: 0 });
+  }
+  await scope.value?.expose.refetch?.();
+}
+
+watch(
+  () => blocks.value,
+  (items) => {
+    if (!blockStream.isSupported) return;
+    if (!items.length) return;
+    const maxHeight = Math.max(...items.map((block) => block.height));
+    blockStream.connectFrom(maxHeight + 1);
+  },
+  { immediate: true }
+);
 </script>
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
 
 .blocks-list-page {
+  &__pending {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: size(2);
+    padding: size(1.5) size(4);
+    border-bottom: 1px solid theme-color('border-primary');
+    background: color-mix(in srgb, theme-color('surface') 70%, transparent);
+  }
+
   &__row {
     width: 100%;
     display: grid;

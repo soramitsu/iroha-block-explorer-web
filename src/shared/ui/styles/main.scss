@@ -15,8 +15,8 @@ $home-content-width-tablet: 860px;
 
 /* Adds custom focus styles for better accessibility */
 :focus-visible {
-  outline: 1px solid theme-color('content-primary');
-  border-radius: 4px;
+  outline: 2px solid color-mix(in srgb, theme-color('primary') 36%, white);
+  outline-offset: 3px;
   transition:
     outline-color 0.2s ease-in-out,
     outline-offset 0.2s ease-in-out;

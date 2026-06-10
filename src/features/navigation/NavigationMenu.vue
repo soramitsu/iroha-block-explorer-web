@@ -1,8 +1,8 @@
 <template>
   <nav class="navigation-menu">
     <BaseButton
-      v-for="(item, i) in translatedMenu"
-      :key="i"
+      v-for="item in translatedMenu"
+      :key="item.to"
       :to="item.to"
       :class="{ 'base-button_active': item.names.includes(String(router.currentRoute.value.name)) }"
     >
@@ -28,14 +28,11 @@ const translatedMenu = computed(() => menu.map((item) => ({ ...item, label: t(it
 @use '@/shared/ui/styles/main' as *;
 
 .navigation-menu {
-  display: none;
-  grid-auto-flow: column;
-  grid-template-columns: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   align-items: center;
-  grid-gap: size(1);
-
-  @include lg {
-    display: grid;
-  }
+  gap: size(1);
+  min-width: 0;
 }
 </style>

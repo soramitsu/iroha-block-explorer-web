@@ -44,6 +44,10 @@ const totalPages = computed(() => {
 const activePage = computed(() => {
   if (!props.payloadPagination) return 0;
 
+  if (props.reversed && props.payloadPagination.page === 0) {
+    return totalPages.value;
+  }
+
   if (isLengthBiggerThanPerPage.value && props.items > pageSize.value) {
     return props.payloadPagination.page - 1;
   }
@@ -70,7 +74,14 @@ const { displayRange, numbers } = usePagination({
 });
 
 const segmentInfo = computed(() => {
-  return t('table.pageOf', [displayRange.value.start, displayRange.value.end, displayRange.value.total]);
+  const from = props.reversed
+    ? Math.min(displayRange.value.start, displayRange.value.end)
+    : displayRange.value.start;
+  const to = props.reversed
+    ? Math.max(displayRange.value.start, displayRange.value.end)
+    : displayRange.value.end;
+
+  return t('table.pageOf', [from, to, displayRange.value.total]);
 });
 const sizeOptions = [
   {
@@ -91,21 +102,32 @@ const sizeOptions = [
   },
 ];
 
-function nextPage() {
-  if (props.reversed && activePage.value > 1) page.value = activePage.value - 1;
-  else if (!props.reversed && page.value < totalPages.value) page.value++;
-}
-
-function prevPage() {
-  if (props.reversed) {
-    if (totalPages.value === activePage.value + 1) page.value = 0;
-    else if (activePage.value < totalPages.value) page.value = activePage.value + 1;
-  } else if (page.value > 1) page.value--;
-}
-
 function setPage(i: number) {
   if (props.reversed && totalPages.value === i) page.value = 0;
   else if (i !== page.value) page.value = i;
+}
+
+const displayNumbers = computed(() => {
+  if (!props.reversed) return numbers.value;
+  return [...numbers.value].toReversed();
+});
+
+const currentPageNumber = computed(() => {
+  if (props.reversed) return activePage.value;
+  return page.value;
+});
+
+const canGoPrev = computed(() => currentPageNumber.value > 1);
+const canGoNext = computed(() => currentPageNumber.value < totalPages.value);
+
+function goPrev() {
+  if (!canGoPrev.value) return;
+  setPage(currentPageNumber.value - 1);
+}
+
+function goNext() {
+  if (!canGoNext.value) return;
+  setPage(currentPageNumber.value + 1);
 }
 
 function isPageActive(item: string | number) {
@@ -116,12 +138,6 @@ function isPageActive(item: string | number) {
 
 const shouldShowDropdown = computed(
   () => (props.reversed && props.totalItems > 19) || (!props.reversed && props.totalItems > 10)
-);
-const shouldShowPrevArrow = computed(
-  () => (props.reversed && activePage.value !== numbers.value.length) || (!props.reversed && page.value !== 1)
-);
-const shouldShowNextArrow = computed(
-  () => (props.reversed && activePage.value !== 1) || (!props.reversed && page.value !== numbers.value.length)
 );
 </script>
 
@@ -151,13 +167,14 @@ const shouldShowNextArrow = computed(
     >
       <div class="base-pagination__item-numbers">
         <span
-          v-for="(item, i) in numbers"
+          v-for="(item, i) in displayNumbers"
           :key="i"
           class="base-pagination__item-numbers-number"
           :data-active="isPageActive(item)"
-          role="button"
-          :aria-pressed="!!isPageActive(item)"
-          tabindex="0"
+          :data-ellipsis="!Number.isInteger(item) || null"
+          :role="Number.isInteger(item) ? 'button' : undefined"
+          :aria-pressed="Number.isInteger(item) ? !!isPageActive(item) : undefined"
+          :tabindex="Number.isInteger(item) ? 0 : -1"
           @click="Number.isInteger(item) && setPage(Number(item))"
           @keydown.enter.space="Number.isInteger(item) && setPage(Number(item))"
         >
@@ -167,20 +184,20 @@ const shouldShowNextArrow = computed(
 
       <div class="base-pagination__arrows">
         <ArrowIcon
-          v-if="shouldShowPrevArrow"
           data-testid="prev"
           role="button"
           tabindex="0"
-          @click="prevPage"
-          @keydown.enter.space="prevPage"
+          :aria-disabled="!canGoPrev"
+          @click="goPrev"
+          @keydown.enter.space="goPrev"
         />
         <ArrowIcon
-          v-if="shouldShowNextArrow"
           data-testid="next"
           role="button"
           tabindex="0"
-          @click="nextPage"
-          @keydown.enter.space="nextPage"
+          :aria-disabled="!canGoNext"
+          @click="goNext"
+          @keydown.enter.space="goNext"
         />
       </div>
     </div>
@@ -219,17 +236,39 @@ const shouldShowNextArrow = computed(
 
       &-number {
         @include tpg-s5-bold;
-        color: theme-color('content-primary');
-        padding: 0 size(0.75);
-        margin-right: size(0.25);
+        color: theme-color('content-secondary');
+        min-width: size(3);
+        height: size(3);
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: size(0.5);
         cursor: pointer;
+        transition: all 180ms ease;
 
         @include xs {
-          padding: 0 size(1);
+          min-width: size(3.5);
+          height: size(3.5);
+        }
+
+        &[data-ellipsis] {
+          color: theme-color('content-tertiary');
+          cursor: default;
+          min-width: auto;
+          height: auto;
+          margin-right: size(0.25);
+          padding: 0 size(0.25);
+        }
+
+        &:hover:not([data-active]):not([data-ellipsis]) {
+          color: theme-color('content-primary');
+          background: theme-color('background-hover');
         }
 
         &[data-active] {
           color: theme-color('primary');
+          background: color-mix(in srgb, theme-color('primary') 14%, transparent);
           cursor: default;
         }
       }
@@ -249,19 +288,34 @@ const shouldShowNextArrow = computed(
 
   &__arrows {
     display: flex;
+    gap: size(0.5);
 
     & > svg {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: size(3);
-      width: size(3);
-      padding: 4px;
-      color: theme-color('content-primary');
+      height: size(3.5);
+      width: size(3.5);
+      padding: size(0.75);
+      color: theme-color('content-secondary');
+      background: theme-color('background');
+      border: 1px solid theme-color('border-primary');
+      border-radius: 999px;
       cursor: pointer;
+      transition: all 180ms ease;
 
       &[data-testid='prev'] {
         transform: rotateY(180deg);
+      }
+
+      &:hover:not([aria-disabled='true']) {
+        color: theme-color('content-primary');
+        background: theme-color('background-hover');
+      }
+
+      &[aria-disabled='true'] {
+        opacity: 0.35;
+        cursor: default;
       }
     }
   }
