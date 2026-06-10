@@ -1,6 +1,10 @@
+@use 'sass:string';
+
 @mixin t-factory($size, $height, $weight: 400, $family: 'Sora') {
+  $resolved-family: if($family == 'Sora', string.unquote("var(--app-font-family, 'Sora')"), $family);
+
   font: {
-    family: $family;
+    family: $resolved-family;
     size: $size;
     weight: $weight;
   }

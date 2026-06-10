@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-10-meta-header",
+  "source_name": "10_meta_header.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/10_meta_header.ko",
+  "source": "// Demonstrates seiyaku-level metadata controlling the IVM header.\n// - abi_version: syscall policy selection\n// - vector_length: logical SIMD width hint\n// - max_cycles: optional cap for cycle padding/enforcement\n// - zk/vector: set mode bits explicitly\n\nseiyaku MetaDemo {\n  meta {\n    abi_version: 1;\n    vector_length: 8;\n    max_cycles: 2000;\n    zk: true;\n    vector: true;\n  }\n\n  // Contract initializer (run on deploy by the runtime)\n  hajimari() {\n    // Emit vector/zk opcodes so the meta flags are exercised.\n    setvl(8);\n    let _digest = poseidon2(1, 2);\n    let a = 1;\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAwjQBwAAAAAAAAFDTlRStgAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAjgAAAAAAAACyXkE9aNge+wIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAMAAAAAAAAAAQAIAAAAAAAAAABUAQAAAAAAAABLCQhoYWppbWFyaQQCAAAACAAAAAAAAAAAAQABAAgAAAAAAAAAAAgAAAAAAAAAAAEACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAA4B8fIAAAGCAIGBggCAAAdgAAGCAAABggARgYIAAAFyACFxcgFxgJggAACSABCQkgAAAASQ==",
+    "manifest": {
+      "code_hash": "hash:530E4AC4127C527EB0B58EED0D34945A58B2E2AF27F6FD35CD59A3E5149922AB#B333",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 3,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "hajimari",
+          "kind": {
+            "kind": "Hajimari",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": null,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 3,
+        "function_name": "hajimari",
+        "line": 17,
+        "pc_end": 52,
+        "pc_start": 0,
+        "source_path": "10_meta_header.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 52,
+        "bytecode_words": 13,
+        "column": 3,
+        "frame_bytes": 32,
+        "function_name": "hajimari",
+        "jump_range_risk": false,
+        "jump_span_words": 13,
+        "line": 17,
+        "pc_end": 52,
+        "pc_start": 0,
+        "source_path": "10_meta_header.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

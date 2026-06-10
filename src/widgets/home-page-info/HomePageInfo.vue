@@ -3,7 +3,7 @@
     <div class="home-page-info__search">
       <SearchField
         size="lg"
-        :placeholder="$t('homePage.searchPlaceholder')"
+        :placeholder="$t('homePage.search.placeholder')"
         large
       />
     </div>
@@ -18,8 +18,8 @@
       class="home-page-info__grid"
     >
       <div
-        v-for="(item, i) in firstSection"
-        :key="i"
+        v-for="item in firstSection"
+        :key="item.i18nKey"
         class="home-page-info__item"
       >
         <span class="home-page-info__item-value">
@@ -37,8 +37,8 @@
       class="home-page-info__grid"
     >
       <div
-        v-for="(item, i) in secondSection"
-        :key="i"
+        v-for="item in secondSection"
+        :key="item.i18nKey"
         class="home-page-info__item"
       >
         <span class="home-page-info__item-value">
@@ -55,10 +55,9 @@
 
 <script setup lang="ts">
 import { SearchField } from '@/features/search';
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
-import type { NetworkMetrics } from '@/shared/api/schemas';
-import { streamTelemetryMetrics } from '@/shared/api';
+import { useTelemetryMetrics } from '@/shared/ui/composables/useTelemetryMetrics';
 
 const firstSection = computed(() => {
   return [
@@ -79,28 +78,7 @@ const secondSection = computed(() => {
   ];
 });
 
-const metrics = ref<NetworkMetrics | null>(null);
-
-const { data: streamedMetrics, status: streamStatus } = streamTelemetryMetrics();
-const isMetricsLoading = computed(() => streamStatus.value === 'CONNECTING');
-
-watch(
-  () => streamedMetrics.value,
-  () => {
-    if (!streamedMetrics.value) return;
-
-    switch (streamedMetrics.value.kind) {
-      case 'first': {
-        metrics.value = streamedMetrics.value.network_status;
-        break;
-      }
-      case 'network_status': {
-        metrics.value = streamedMetrics.value;
-        break;
-      }
-    }
-  }
-);
+const { metrics, isLoading: isMetricsLoading } = useTelemetryMetrics();
 </script>
 
 <style lang="scss">
@@ -114,6 +92,8 @@ watch(
   justify-items: center;
   margin-top: 0;
   z-index: 1;
+  position: relative;
+  isolation: isolate;
 
   @include xs {
     margin-top: size(3);
@@ -219,6 +199,26 @@ watch(
         @include tpg-s4;
       }
     }
+  }
+}
+
+html:not(.dark) {
+  .home-page-info {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, theme-color('surface') 98%, white),
+      color-mix(in srgb, theme-color('surface-variant') 92%, white)
+    );
+    border-top: 1px solid color-mix(in srgb, theme-color('border-secondary') 75%, white);
+    border-bottom: 1px solid color-mix(in srgb, theme-color('border-secondary') 60%, white);
+  }
+
+  .home-page-info__item-value {
+    color: theme-color('primary');
+  }
+
+  .home-page-info__item-label {
+    color: theme-color('content-secondary');
   }
 }
 </style>

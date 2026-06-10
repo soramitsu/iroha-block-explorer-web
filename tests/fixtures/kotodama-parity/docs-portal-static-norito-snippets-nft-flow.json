@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "id": "docs-portal-static-norito-snippets-nft-flow",
+  "source_name": "nft-flow.ko",
+  "compiler_source_path": "docs/portal/static/norito-snippets/nft-flow.ko",
+  "source": "// Mint an NFT, transfer it, update metadata, and burn it using typed IDs.\nseiyaku NftFlow {\n  kotoage fn nft_issue_and_transfer() permission(NftAuthority) {\n    let owner = account!(\"sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB\");\n    let nft = nft_id!(\"n0$wonderland.universal\");\n    nft_mint_asset(nft, owner);\n\n    let to = account!(\"sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76\");\n    nft_transfer_asset(owner, nft, to);\n    nft_set_metadata(nft, name!(\"issued\"), json!{ issued: \"demo\" });\n    nft_burn_asset(nft);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSwwMAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAmwMAAAAAAAA4Bddk+F3W3wIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAigMBhwOdAgUAAAAAAAAAZWRhY2NvdW50OnNvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2YWBhY2NvdW50OnNvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEIEA25mdCopbmZ0LmRldGFpbDpuMCR3b25kZXJsYW5kLnVuaXZlcnNhbDppc3N1ZWQcG25mdDpuMCR3b25kZXJsYW5kLnVuaXZlcnNhbFUDAAAAAAAAAAQDbmZ0KiluZnQuZGV0YWlsOm4wJHdvbmRlcmxhbmQudW5pdmVyc2FsOmlzc3VlZBwbbmZ0Om4wJHdvbmRlcmxhbmQudW5pdmVyc2FsCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAA1gMBAAAAAAAAAMwDFxZuZnRfaXNzdWVfYW5kX3RyYW5zZmVyBAAAAAAIAAAAAAAAAAABAA8BDQxOZnRBdXRob3JpdHmdAgUAAAAAAAAAYWBhY2NvdW50OnNvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEIEA25mdBwbbmZ0Om4wJHdvbmRlcmxhbmQudW5pdmVyc2FsZWRhY2NvdW50OnNvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2KiluZnQuZGV0YWlsOm4wJHdvbmRlcmxhbmQudW5pdmVyc2FsOmlzc3VlZFUDAAAAAAAAAAQDbmZ0HBtuZnQ6bjAkd29uZGVybGFuZC51bml2ZXJzYWwqKW5mdC5kZXRhaWw6bjAkd29uZGVybGFuZC51bml2ZXJzYWw6aXNzdWVkAwEBAQgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAExUTEIFAAAAAgAAAF8CAAA4AAAAAAAAAKMAAAAAAAAAQQEAAAAAAADfAQAAAAAAADUCAAAAAAAAAAUBAAAARE5SVDAAAIsSNAye/QUbyf1eJceYfzEAHAAAAAAAAABEMIMn0iuKmAIXCwp3b25kZXJsYW5kCgl1bml2ZXJzYWwDAm4wMqm/x0PxX3++uSSwfNli6kU8iRGj/MoZMaBK7hBCIDUAAQEAAAB3TlJUMAAAYOgUc67QoSdvHFd20PacOABPAAAAAAAAAFrypJuzkFPJAgAAAABKIQAAAAAAAAABAAERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERARGhE7m9XFQ2SluamwTgZfD646XbjygIfzCKpi5GntoxDwABAQAAAHdOUlQwAABg6BRzrtChJ28cV3bQ9pw4AE8AAAAAAAAArkfXFXGTVbUCAAAAAEohAAAAAAAAAAEAAQQB/wFbAYEBBAFtAdwBzwEZAeIB5AFRAcQBXQH7AW8BUwF1AZ0BTgGzAQ8BogHvAagBBwEoAU0BHAHDATABFq79Ds1vkE4Tpsv8KC0Kx4SpgtrkLydFCDfgePev2zaFAAMBAAAAL05SVDAAALc6a/TSnltnvHNg19xepbkABwAAAAAAAAAM4Gp4VB1zJQIGaXNzdWVkQlYGpAk3LRNtGkZkCDCL6nnL0bI6+FOjAnzzjEpPnu0ABAEAAAA7TlJUMAAA20BKcozYyT9+RKiIEz9nGQATAAAAAAAAABChtqnmsVEaAhIReyJpc3N1ZWQiOiJkZW1vIn1NL0BmJtO8uKjJuzZNIPlDmKqWwetS1iw2f0twugqBlQAA4B8fIAAACiAAABogBwAaIAgACiAaCgoGAwoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAACyAAABogBwAaIAgACyAaCwsGbgsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIOAAAGAACgwgAAsKIOAAAGAACgsgAAwKICUAAGAAAAkgAAAKIAAAGiAHABogCAAKIBoKCgZuCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAALIAAAGiAHABogCAALIBoLCwYDCwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAAMIAAAGiAHABogCgAMIBoMDAYMDAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwg4AAAYAAKDSAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQogJgAAYAAACSAAAAogAAAaIAcAGiAIAAogGgoKBgMKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAAAAsgAAAaIAcAGiALAAsgGgsLBioLCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAAAAwgAAAaIAcAGiAMAAwgGgwMBgAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCDgAABgAAobIAALCiDgAABgAAocIAAMCiDgAABgAAoMIAAbCiAAHAsgJwAAYAAAGCAAAAogAAAaIAcAGiAIAAogGgoKBgMKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgKAAAYAAAFyAAAABJ",
+    "manifest": {
+      "code_hash": "hash:89F7CEC10472AD6FF328D7D357C6C88C05AC848D07101CB6106B30616167BB7F#86C5",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "nft",
+          "nft.detail:n0$wonderland.universal:issued",
+          "nft:n0$wonderland.universal"
+        ],
+        "write_keys": [
+          "nft",
+          "nft.detail:n0$wonderland.universal:issued",
+          "nft:n0$wonderland.universal"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "nft_issue_and_transfer",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "NftAuthority",
+          "read_keys": [
+            "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "nft",
+            "nft:n0$wonderland.universal",
+            "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "nft.detail:n0$wonderland.universal:issued"
+          ],
+          "write_keys": [
+            "nft",
+            "nft:n0$wonderland.universal",
+            "nft.detail:n0$wonderland.universal:issued"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "nft_issue_and_transfer",
+        "line": 3,
+        "pc_end": 1008,
+        "pc_start": 0,
+        "source_path": "nft-flow.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 1008,
+        "bytecode_words": 252,
+        "column": 14,
+        "frame_bytes": 32,
+        "function_name": "nft_issue_and_transfer",
+        "jump_range_risk": false,
+        "jump_span_words": 252,
+        "line": 3,
+        "pc_end": 1008,
+        "pc_start": 0,
+        "source_path": "nft-flow.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

@@ -1,35 +1,39 @@
-<script setup lang="ts">
-import IrohaLogo from '@/assets/iroha-logo.png';
-</script>
-
 <template>
   <RouterLink
     to="/"
     class="header-logo"
   >
     <img
-      :src="IrohaLogo"
-      class="header-logo"
-      alt="iroha"
+      :src="logoSrc"
+      class="header-logo__img"
+      alt="Hyperledger Iroha"
     >
   </RouterLink>
 </template>
+
+<script setup lang="ts">
+import logoSrc from '/hyperledger_iroha_final.svg?url';
+</script>
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
 
 .header-logo {
-  width: 140px;
-  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
-  @include xxs {
-    width: 160px;
-    height: 46px;
-  }
+  &__img {
+    width: 140px;
+    height: auto;
 
-  @include xl {
-    width: 192px;
-    height: 52px;
+    @include xs {
+      width: 160px;
+    }
+
+    @include xl {
+      width: 200px;
+    }
   }
 }
 </style>

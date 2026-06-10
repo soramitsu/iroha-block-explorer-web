@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "id": "mint-rose-trigger",
+  "source_name": "mint_rose_trigger.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/mint_rose_trigger.ko",
+  "source": "// Mint `6pEP9RjNoZ7beWkT3pLfKoM1dyfi` (canonical asset-definition address below) for the trigger authority.\n// Amount is taken from trigger args (MintRoseArgs.val) when available.\nseiyaku MintRoseTrigger {\n  kotoage fn run() permission(Admin) {\n    // Mint using typed arguments: authority and explicit asset; amount from trigger args when 0\n    mint_asset(authority(), asset_definition!(\"6pEP9RjNoZ7beWkT3pLfKoM1dyfi\"), 0);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSZwIAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAPwIAAAAAAADNf+K0OBeTzgIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAA6QEB5gFzAwAAAAAAAAATEmFjY291bnQ6JGF1dGhvcml0eS4tYXNzZXQ6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaTokYXV0aG9yaXR5JyZhc3NldF9kZWY6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaV8CAAAAAAAAAC4tYXNzZXQ6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaTokYXV0aG9yaXR5JyZhc3NldF9kZWY6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaQgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAJsCAQAAAAAAAACRAgQDcnVuBAAAAAAIAAAAAAAAAAABAAgBBgVBZG1pbnMDAAAAAAAAAC4tYXNzZXQ6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaTokYXV0aG9yaXR5ExJhY2NvdW50OiRhdXRob3JpdHknJmFzc2V0X2RlZjo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpXwIAAAAAAAAALi1hc3NldDo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpOiRhdXRob3JpdHknJmFzc2V0X2RlZjo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpAwEBAQgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAExUTEIBAAAAAgAAAG8AAAAYAAAAAAAAAAACAQAAAEhOUlQwAACET0rNWn1PMAmqWIugijIPACAAAAAAAAAApS7SqOW0sdsCAaEBWAFrAZsB4QFkAUsBBAGIAZoBiAHAAY4BQAEVAURsNmsuYjW1Eun74bnFJYQ+EfwPJTydHhdkGn8w0JuHhwAA4B8fIKQAAGAAChggAAAJIAAYCiAAAAsgAAAaIAcAGiAFAAsgGgsLBgcLCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACQwg4AAAYAAKDSAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQogIgAAYAAACSAAAABJ",
+    "manifest": {
+      "code_hash": "hash:1BE16F8F97550AD2439217B5BE92EAA96D8C0572CF8F75BFDB4D50C3A76A818D#D2A4",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account:$authority",
+          "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi:$authority",
+          "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+        ],
+        "write_keys": [
+          "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi:$authority",
+          "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "run",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi:$authority",
+            "account:$authority",
+            "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+          ],
+          "write_keys": [
+            "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi:$authority",
+            "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "run",
+        "line": 4,
+        "pc_end": 168,
+        "pc_start": 0,
+        "source_path": "mint_rose_trigger.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 168,
+        "bytecode_words": 42,
+        "column": 14,
+        "frame_bytes": 32,
+        "function_name": "run",
+        "jump_range_risk": false,
+        "jump_span_words": 42,
+        "line": 4,
+        "pc_end": 168,
+        "pc_start": 0,
+        "source_path": "mint_rose_trigger.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

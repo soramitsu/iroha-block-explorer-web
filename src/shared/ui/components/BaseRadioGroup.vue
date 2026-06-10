@@ -4,8 +4,8 @@
     role="radiogroup"
   >
     <div
-      v-for="(item, i) in props.items"
-      :key="i"
+      v-for="item in props.items"
+      :key="item.value"
       class="base-radio-group__item"
       :data-active="item.value === props.modelValue || null"
       :aria-checked="item.value === props.modelValue"

@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "id": "crates-ivm-tests-data-mfc",
+  "source_name": "mfc.ko",
+  "compiler_source_path": "crates/ivm/tests/data/mfc.ko",
+  "source": "// Operations for Makoto Free Cash (MFC) token.\n// Provides a simple transfer function and a looped\n// transfer across a range of quantities.\n\nfn send_mfc(from_account: AccountId, to_account: AccountId, amount: int) {\n    // Use constant asset id 1 representing the Makoto Free Cash token\n    let mfc = mfc_asset();\n    transfer_asset(from_account, to_account, mfc, amount);\n}\n\nfn loop_mfc(from_account: AccountId, to_account: AccountId) {\n    let mfc = mfc_asset();\n    for let qty = 369; qty <= 1337; qty++ {\n        transfer_asset(from_account, to_account, mfc, qty);\n    }\n}\n\n// Example entry routine demonstrating asset creation and usage.\n// It first registers the Makoto Free Cash asset, mints some\n// quantity to the caller, then performs the transfers.\nfn main(from: AccountId, to: AccountId) { // `to` is optional and defaults to `from`\n    // Register the asset definition before minting any tokens.\n    let mfc = mfc_asset();\n    register_asset(mfc, \"MFC\", 0, 1);\n    let mfc = mfc_asset();\n    mint_asset(from, mfc, 1337);\n    let dest = to; // caller may omit `to` by passing the same account\n    send_mfc(from, dest, 369);\n    loop_mfc(from, dest);\n}\n\nfn mfc_asset() -> AssetDefinitionId {\n    let mfc = asset_definition!(\"62Fk4FPcMuLvW5QjDGNF2a4jAmjM\");\n    return mfc;\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "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IAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAYgAQYGIAYJFwEAFwkgiP8ARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAgfBjAQHwcwGB8IMCAfCTAoHxcwMB8YMAAfATBIHx8gAAEASPAfHyAAAR8xCBgfMQAACiAAABogBwAaIAMACiAaCgoGbwoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAgfGDAAHwEwEB8fIAABAEgIHxgwAB8BMBAfHyAAAQBIiP4BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEnJ/gFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAASan/AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJ",
+    "manifest": {
+      "code_hash": "hash:2A054AF9DF84D93F20B9321D928BE31995ABC56381FE409D2DDC42B413464337#BCD1",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+        ],
+        "write_keys": [
+          "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "main",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "from",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "to",
+              "type_name": "AccountId"
+            }
+          ],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [
+            "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+          ],
+          "write_keys": [
+            "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 4,
+        "function_name": "main",
+        "line": 21,
+        "pc_end": 940,
+        "pc_start": 0,
+        "source_path": "mfc.ko"
+      },
+      {
+        "column": 4,
+        "function_name": "send_mfc",
+        "line": 5,
+        "pc_end": 1304,
+        "pc_start": 940,
+        "source_path": "mfc.ko"
+      },
+      {
+        "column": 4,
+        "function_name": "loop_mfc",
+        "line": 11,
+        "pc_end": 2304,
+        "pc_start": 1304,
+        "source_path": "mfc.ko"
+      },
+      {
+        "column": 4,
+        "function_name": "mfc_asset",
+        "line": 32,
+        "pc_end": 2756,
+        "pc_start": 2304,
+        "source_path": "mfc.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 940,
+        "bytecode_words": 235,
+        "column": 4,
+        "frame_bytes": 72,
+        "function_name": "main",
+        "jump_range_risk": false,
+        "jump_span_words": 235,
+        "line": 21,
+        "pc_end": 940,
+        "pc_start": 0,
+        "source_path": "mfc.ko"
+      },
+      {
+        "bytecode_bytes": 364,
+        "bytecode_words": 91,
+        "column": 4,
+        "frame_bytes": 72,
+        "function_name": "send_mfc",
+        "jump_range_risk": false,
+        "jump_span_words": 91,
+        "line": 5,
+        "pc_end": 1304,
+        "pc_start": 940,
+        "source_path": "mfc.ko"
+      },
+      {
+        "bytecode_bytes": 1000,
+        "bytecode_words": 250,
+        "column": 4,
+        "frame_bytes": 72,
+        "function_name": "loop_mfc",
+        "jump_range_risk": false,
+        "jump_span_words": 250,
+        "line": 11,
+        "pc_end": 2304,
+        "pc_start": 1304,
+        "source_path": "mfc.ko"
+      },
+      {
+        "bytecode_bytes": 452,
+        "bytecode_words": 113,
+        "column": 4,
+        "frame_bytes": 16,
+        "function_name": "mfc_asset",
+        "jump_range_risk": false,
+        "jump_span_words": 113,
+        "line": 32,
+        "pc_end": 2756,
+        "pc_start": 2304,
+        "source_path": "mfc.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

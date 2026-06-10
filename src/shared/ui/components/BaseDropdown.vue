@@ -41,8 +41,8 @@
         role="listbox"
       >
         <li
-          v-for="(item, i) in items"
-          :key="i"
+          v-for="item in items"
+          :key="item.value"
           role="option"
           tabindex="0"
           :aria-selected="props.modelValue === item.value || false"

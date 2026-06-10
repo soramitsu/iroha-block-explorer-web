@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-07-set-detail-authority",
+  "source_name": "07_set_detail_authority.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/07_set_detail_authority.ko",
+  "source": "// Using authority() in a metadata call inside a contract.\nseiyaku DetailAuthority {\n  kotoage fn write_cursor() permission(Admin) {\n    set_account_detail(\n      authority(),\n      name!(\"cursor\"),\n      json!{ query: \"sc_dummy\", cursor: 1 }\n    );\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSmgEAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAcgEAAAAAAAB0WDMSTzYs5wIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAfgF8PgIAAAAAAAAAISBhY2NvdW50LmRldGFpbDokYXV0aG9yaXR5OmN1cnNvchMSYWNjb3VudDokYXV0aG9yaXR5KgEAAAAAAAAAISBhY2NvdW50LmRldGFpbDokYXV0aG9yaXR5OmN1cnNvcggAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAALoBAQAAAAAAAACwAQ0Md3JpdGVfY3Vyc29yBAAAAAAIAAAAAAAAAAABAAgBBgVBZG1pbj4CAAAAAAAAABMSYWNjb3VudDokYXV0aG9yaXR5ISBhY2NvdW50LmRldGFpbDokYXV0aG9yaXR5OmN1cnNvcioBAAAAAAAAACEgYWNjb3VudC5kZXRhaWw6JGF1dGhvcml0eTpjdXJzb3IDAQEBCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAATFRMQgIAAAAAAAAAxgAAACAAAAAAAAAAdgAAAAAAAAAAAwEAAAAvTlJUMAAAtzpr9NKeW2e8c2DX3F6luQAHAAAAAAAAAEHvzrjtiDNBAgZjdXJzb3L/jlQdOJ3sY2jXD/vMPVOCvym1sJx0tcAHf1qfokYzXQAEAQAAAElOUlQwAADbQEpyjNjJP35EqIgTP2cZACEAAAAAAAAAQXYKcbhqu5sCIB97ImN1cnNvciI6MSwicXVlcnkiOiJzY19kdW1teSJ9zrwJ7OAbyqqkDyIFjeKZeEPVv4prd0oKp95xljC+BXngHx8gpAAAYAAKGCAAGAogAAALIAAAGiAHABogAwALIBoLCwZCCwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAAMIAAAGiAHABogBAAMIBoMDAYYDAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwg4AAAYAAKDSAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQogGgAAYAAACSAAAABJ",
+    "manifest": {
+      "code_hash": "hash:DC456FF75732897691F1F3FEBC703653197C3E3362C71F160796408BEBE5F08B#0AF0",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account.detail:$authority:cursor",
+          "account:$authority"
+        ],
+        "write_keys": [
+          "account.detail:$authority:cursor"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "write_cursor",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "account:$authority",
+            "account.detail:$authority:cursor"
+          ],
+          "write_keys": [
+            "account.detail:$authority:cursor"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "write_cursor",
+        "line": 3,
+        "pc_end": 256,
+        "pc_start": 0,
+        "source_path": "07_set_detail_authority.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 256,
+        "bytecode_words": 64,
+        "column": 14,
+        "frame_bytes": 32,
+        "function_name": "write_cursor",
+        "jump_range_risk": false,
+        "jump_span_words": 64,
+        "line": 3,
+        "pc_end": 256,
+        "pc_start": 0,
+        "source_path": "07_set_detail_authority.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

@@ -8,12 +8,21 @@
       :placeholder="$t('search')"
     />
 
-    <NavigationMenu class="app-header__nav" />
+    <div class="app-header__nav">
+      <NavigationMenu />
+    </div>
 
     <div class="app-header__buttons">
-      <ThemeSwitcher />
-      <LangDropdown />
-      <MobileMenu />
+      <ScopedExplorerControl
+        v-if="currentScope"
+        class="app-header__button app-header__button_node"
+      />
+      <NodeSettings
+        v-else
+        class="app-header__button app-header__button_node"
+      />
+      <ThemeSwitcher class="app-header__button app-header__button_icon" />
+      <LangDropdown class="app-header__button app-header__button_lang" />
     </div>
 
     <div
@@ -26,102 +35,148 @@
 <script setup lang="ts">
 import HeaderLogo from './HeaderLogo.vue';
 import { NavigationMenu } from '@/features/navigation';
-import { MobileMenu } from '@/features/mobile-menu';
 import { LangDropdown } from '@/features/switch-lang';
 import { ThemeSwitcher } from '@/features/switch-theme';
 import { SearchField } from '@/features/search';
+import { NodeSettings, ScopedExplorerControl } from '@/features/node-settings';
 import { PORTAL_ID } from '@/shared/ui/consts';
+import { useCurrentExplorerScope } from '@/shared/ui/composables/useExplorerScopeNavigation';
+
+const currentScope = useCurrentExplorerScope();
 </script>
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
 
 .app-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'logo controls'
+    'nav nav';
   align-items: center;
-  height: $header-height-mobile;
-  padding: 0 size(1);
+  column-gap: size(1);
+  row-gap: size(1);
+  min-height: $header-height-mobile;
+  padding: size(1) size(1);
   margin: 0 auto;
-  max-width: 100%;
+  max-width: 1180px;
   position: relative;
+  z-index: 20;
+  isolation: isolate;
+  background: color-mix(in srgb, theme-color('surface') 88%, transparent);
+  border: 1px solid color-mix(in srgb, theme-color('border-primary') 70%, transparent);
+  border-radius: size(2.5);
+  box-shadow:
+    0 12px 30px color-mix(in srgb, theme-color('primary') 8%, transparent),
+    0 2px 8px color-mix(in srgb, theme-color('background') 30%, transparent);
+  backdrop-filter: blur(10px);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: calc(size(2.5) - 1px);
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.12), transparent 30%),
+      radial-gradient(circle at 86% 14%, color-mix(in srgb, theme-color('primary') 6%, transparent), transparent 32%);
+    opacity: 0.7;
+  }
 
   @include xs {
-    padding: 0 size(2);
-    height: $header-height-landscape-mobile;
+    padding: size(1) size(2);
+    min-height: $header-height-landscape-mobile;
   }
 
   @include md {
-    padding: 0 size(3);
-    height: $header-height;
+    padding: size(1.5) size(3);
+    min-height: $header-height;
   }
 
   @include xl {
-    width: $xl;
+    max-width: $xl;
   }
 
   @include xxl {
     padding: 0 size(7);
-    width: $xxl;
+    max-width: $xxl;
   }
 
   &__search {
-    margin-left: auto;
     display: none !important;
-
-    @include sm {
-      // display: flex !important; // #SEARCH: turn it on when functionality is ready
-      margin-left: size(2);
-      margin-right: 8px;
-    }
-
-    @include md {
-      margin-right: 0;
-    }
-
-    @include xxl {
-      margin-left: size(10);
-    }
   }
 
   &__nav {
-    margin-left: auto;
+    grid-area: nav;
+    display: block;
+    width: 100%;
+    margin-inline-start: 0;
   }
 
   &__buttons {
+    grid-area: controls;
     position: relative;
-    display: grid;
-    grid-auto-columns: auto;
-    grid-auto-flow: column;
-    grid-gap: size(0.5);
-    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: size(0.5);
+    width: fit-content;
+    max-width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    justify-self: end;
+    margin-inline-start: auto;
 
     @include sm {
-      grid-gap: size(1);
+      gap: size(1);
     }
 
-    @include lg {
-      margin-left: 8px;
+    @include xxl {
+      gap: size(2);
     }
 
-    @include xl {
-      grid-gap: size(2);
-      margin-left: 16px;
+  }
+
+  &__button {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  &__button_node {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: size(24);
+
+    @include xxl {
+      max-width: size(28);
     }
+  }
+
+  &__button_icon,
+  &__button_lang {
+    flex-shrink: 0;
+  }
+
+  .header-logo {
+    grid-area: logo;
+    justify-self: start;
   }
 
   &__dropdown {
     position: absolute;
-    top: calc(50% + 20px + size(1));
-    z-index: 10;
-    right: size(1);
+    top: calc(100% + size(1));
+    z-index: 100;
+    inset-inline-end: size(1);
 
     @include xs {
-      right: size(2);
+      inset-inline-end: size(2);
     }
 
     @include md {
-      right: size(3);
+      inset-inline-end: size(3);
     }
   }
+
 }
 </style>

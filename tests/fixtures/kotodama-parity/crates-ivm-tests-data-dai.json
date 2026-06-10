@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "id": "crates-ivm-tests-data-dai",
+  "source_name": "dai.ko",
+  "compiler_source_path": "crates/ivm/tests/data/dai.ko",
+  "source": "// Simplified MakerDAO DAI clone example.\n// Demonstrates token operations like transfer, approve, mint and burn.\n// This is not a full implementation and uses function arguments\n// to represent balances and allowances for illustration purposes.\n\n// Transfer tokens between two accounts using the Iroha syscall.\nfn transfer(src_balance: int, dst_balance: int, from_account: AccountId, to_account: AccountId, asset: AssetDefinitionId, wad: int) {\n    if src_balance >= wad {\n        let new_src = src_balance - wad;\n        let new_dst = dst_balance + wad;\n        transfer_asset(from_account, to_account, asset, wad);\n    } else {\n        assert_eq(1, 0);\n    }\n}\n\n// Approve a spender allowance.\nfn approve(_current_allowance: int, wad: int) {\n    let new_allowance = wad;\n}\n\n// Transfer tokens using an allowance.\nfn transfer_from(src_balance: int, dst_balance: int, allowance: int, from_account: AccountId, to_account: AccountId, asset: AssetDefinitionId, wad: int) {\n    if src_balance >= wad {\n        if allowance >= wad {\n            let new_src = src_balance - wad;\n            let new_dst = dst_balance + wad;\n            let new_allowance = allowance - wad;\n            transfer_asset(from_account, to_account, asset, wad);\n        } else {\n            assert_eq(1, 0);\n        }\n    } else {\n        assert_eq(1, 0);\n    }\n}\n\n// Mint new tokens using the Iroha ledger syscall.\n// `mint_asset` writes to registers r10-r12 and performs the ISI.\nfn mint(account: AccountId, asset: AssetDefinitionId, wad: int) {\n    mint_asset(account, asset, wad);\n}\n\n// Burn tokens from an account using the Iroha syscall.\nfn burn(balance: int, total_supply: int, account: AccountId, asset: AssetDefinitionId, wad: int) {\n    if balance >= wad {\n        let new_balance = balance - wad;\n        let new_supply = total_supply - wad;\n        burn_asset(account, asset, wad);\n    } else {\n        assert_eq(1, 0);\n    }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSagAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAQgAAAAAAAABYkKOWy2e5gwIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAAQAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAACQHx8gQAofMUgLHzFQDB8xWA0fMWAOHzFoDx8xQB8YMEgfFzBQHwkwWB8IMGAfBzBoHwYwBhgMAj8ADSANDAUIAQUFIQEFBSMaAAVBYgAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIBkAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAGGAUCBhcFAQAGCiBpAABgAAoFIAAJCiAACAsgAAcMIAAFDSDgAABgAAoOIAALCiDgAABgAAoLIAAMCiDgAABgAAoMIAANCiDgAABgAAoNIAAOCiAkAABgAAAFIDgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAUgAQUFIAAAByACBwVAAgAAYAAAByAZAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAASeAfHyAAAR8xCBgfMRAKHzEYCx8xEB8YMBgfGDAIHxgwAB8BMCAfHyAAAQBIgB8fIAABHzEIBB8xEAUfMRgGHzEgBx8xKAgfMTAJHzE4Fx8xQBgfMUgKHzFQCx8xWAwfMWANHzFoDh8xcA8fMXgQHzFIHxgwUB8XMFgfCTBgHwgwaB8HMHAfBjB4HwUwBRgMAj8ADSANDAQIAQQEIQEEBCMaAARB0wAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIBkAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAFCQwCPwANIA0MBAgBBAQhAQQEIxoABEFjAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgGQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAUYBAIFFwQBBQkEAgAFCiBpAABgAAoEIAAICiAABwsgAAYMIAAEDSDgAABgAAoOIAALCiDgAABgAAoLIAAMCiDgAABgAAoMIAANCiDgAABgAAoNIAAOCiAkAABgAAAEIDgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAQgAQQEIAAABiACBgRAAgAAYAAABiAZAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgOAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAABiABBgYgAAAEIAIEBkACAABgAAAEIBkAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAIHwQwEB8FMBgfBjAgHwcwKB8IMDAfCTA4HxcwQB8YMAAfATB/Hx8gAR8fIAABAEjAHx8gAAEfMQgIHzEQCR8xGBcfMSAYHzEoCh8xMAsfMTgMHzEoHxgwMB8XMDgfCTAACQogaQAAYAAKCCAAGAogABcLIAAIDCDgAABgAAoNIAALCiDgAABgAAoLIAAMCiDgAABgAAoMIAANCiAiAABgAAAIIAgfCDAQHwkwGB8XMCAfGDAAHwEwQB8fIAABAEigHx8gAAEfMQgGHzEQBx8xGAgfMSAJHzEoFx8xMBgfMTgKHzFACx8xSAwfMVANHzFYDh8xOB8YMEAfFzBIHwkwUB8IMFgfBzAHGAwCPwANIA0MBggBBgYhAQYGIxoABkFeAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgGQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAcYBgIHFwYCAAcKIGkAAGAACgYgAAkKIAAICyAABgwg4AAAYAAKDSAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQogIwAAYAAABiA4AABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAGIAEGBiAAAAggAggGQAIAAGAAAAggGQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAgfBjAQHwcwGB8IMCAfCTAoHxcwMB8YMAAfATBgHx8gAAEASBf+AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJCP4BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEkK/wFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAASRT/AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJ",
+    "manifest": {
+      "code_hash": "hash:8A70E1F811B6C4C9F4F4BC8AD066F57CE7BB67E4D2AD2FD3A9C484FDF5FD611F#9CCC",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 4,
+        "function_name": "transfer",
+        "line": 7,
+        "pc_end": 596,
+        "pc_start": 0,
+        "source_path": "dai.ko"
+      },
+      {
+        "column": 4,
+        "function_name": "approve",
+        "line": 18,
+        "pc_end": 640,
+        "pc_start": 596,
+        "source_path": "dai.ko"
+      },
+      {
+        "column": 4,
+        "function_name": "transfer_from",
+        "line": 23,
+        "pc_end": 1776,
+        "pc_start": 640,
+        "source_path": "dai.ko"
+      },
+      {
+        "column": 4,
+        "function_name": "mint",
+        "line": 40,
+        "pc_end": 1920,
+        "pc_start": 1776,
+        "source_path": "dai.ko"
+      },
+      {
+        "column": 4,
+        "function_name": "burn",
+        "line": 45,
+        "pc_end": 2968,
+        "pc_start": 1920,
+        "source_path": "dai.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 596,
+        "bytecode_words": 149,
+        "column": 4,
+        "frame_bytes": 112,
+        "function_name": "transfer",
+        "jump_range_risk": false,
+        "jump_span_words": 149,
+        "line": 7,
+        "pc_end": 596,
+        "pc_start": 0,
+        "source_path": "dai.ko"
+      },
+      {
+        "bytecode_bytes": 44,
+        "bytecode_words": 11,
+        "column": 4,
+        "frame_bytes": 32,
+        "function_name": "approve",
+        "jump_range_risk": false,
+        "jump_span_words": 11,
+        "line": 18,
+        "pc_end": 640,
+        "pc_start": 596,
+        "source_path": "dai.ko"
+      },
+      {
+        "bytecode_bytes": 1136,
+        "bytecode_words": 284,
+        "column": 4,
+        "frame_bytes": 128,
+        "function_name": "transfer_from",
+        "jump_range_risk": false,
+        "jump_span_words": 284,
+        "line": 23,
+        "pc_end": 1776,
+        "pc_start": 640,
+        "source_path": "dai.ko"
+      },
+      {
+        "bytecode_bytes": 144,
+        "bytecode_words": 36,
+        "column": 4,
+        "frame_bytes": 64,
+        "function_name": "mint",
+        "jump_range_risk": false,
+        "jump_span_words": 36,
+        "line": 40,
+        "pc_end": 1920,
+        "pc_start": 1776,
+        "source_path": "dai.ko"
+      },
+      {
+        "bytecode_bytes": 1048,
+        "bytecode_words": 262,
+        "column": 4,
+        "frame_bytes": 96,
+        "function_name": "burn",
+        "jump_range_risk": false,
+        "jump_span_words": 262,
+        "line": 45,
+        "pc_end": 2968,
+        "pc_start": 1920,
+        "source_path": "dai.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-09-struct-and-state",
+  "source_name": "09_struct_and_state.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/09_struct_and_state.ko",
+  "source": "// Demonstrates struct declaration and durable state.\nseiyaku StructAndState {\n  struct Pair { first: int, second: int }\n\n  state Pair stored_pair;\n\n  kotoage fn set_pair(a: int, b: int) {\n    stored_pair = Pair(a, b);\n    info(\"pair set\");\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "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",
+    "manifest": {
+      "code_hash": "hash:FE9DD9EE870104EA1A06FE2AC62CE9DB96F7FCA795272BD7A1F5E1D3966C1FC1#6D82",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "state:stored_pair_first",
+          "state:stored_pair_second"
+        ],
+        "write_keys": [
+          "state:stored_pair_first",
+          "state:stored_pair_second"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "set_pair",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "a",
+              "type_name": "int"
+            },
+            {
+              "name": "b",
+              "type_name": "int"
+            }
+          ],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [
+            "state:stored_pair_first",
+            "state:stored_pair_second"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [
+        {
+          "name": "stored_pair",
+          "type_name": "Pair{first: int, second: int}"
+        }
+      ],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "set_pair",
+        "line": 7,
+        "pc_end": 480,
+        "pc_start": 0,
+        "source_path": "09_struct_and_state.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__set_pair",
+        "line": 7,
+        "pc_end": 1056,
+        "pc_start": 480,
+        "source_path": "09_struct_and_state.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 480,
+        "bytecode_words": 120,
+        "column": 14,
+        "frame_bytes": 40,
+        "function_name": "set_pair",
+        "jump_range_risk": false,
+        "jump_span_words": 120,
+        "line": 7,
+        "pc_end": 480,
+        "pc_start": 0,
+        "source_path": "09_struct_and_state.ko"
+      },
+      {
+        "bytecode_bytes": 576,
+        "bytecode_words": 144,
+        "column": 14,
+        "frame_bytes": 64,
+        "function_name": "__entrypoint_impl__set_pair",
+        "jump_range_risk": false,
+        "jump_span_words": 144,
+        "line": 7,
+        "pc_end": 1056,
+        "pc_start": 480,
+        "source_path": "09_struct_and_state.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

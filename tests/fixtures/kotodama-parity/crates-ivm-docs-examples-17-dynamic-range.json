@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-17-dynamic-range",
+  "source_name": "17_dynamic_range.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/17_dynamic_range.ko",
+  "source": "// Dynamic range(start, end) example for durable state maps.\n// Semantics: iterate entries in [start, end). The compiler inserts runtime\n// guards and lowers at most 64 deterministic iterations.\n// Dynamic bounds are supported on state maps.\n\nseiyaku DynamicRange {\n  state Entries: Map<int, int>;\n\n  kotoage fn bounded_range_sum(start: int, end: int) -> int {\n    let acc = 0;\n    for (k, v) in Entries.range(start, end) {\n      acc = acc + v;\n    }\n    return acc;\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "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IAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAXCyBUAABgAAoGIAAGCiDgAABgUAAAYAAKGCAAAAYgBhgIDxoACEFRAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgGQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAYCiDgAABgUwAAYAAKCCAAFxggAAgYIBkAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAHFxcBVP8ARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAJCiAIHwUwEB8GMBgfBzAgHwgwKB8JMDAfFzA4HxgwAB8BMFAfHyAAAQBICB8FMBAfBjAYHwcwIB8IMCgfCTAwHxcwOB8YMAAfATBQHx8gAAEASOL+AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJ",
+    "manifest": {
+      "code_hash": "hash:84A94E09BCF309D1F05900A1518DEBB3E373EEFE3AC3411BC1EDF310F3ECFF7D#5AB3",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "state:Entries"
+        ],
+        "write_keys": [],
+        "dynamic_reads": [
+          {
+            "base_key": "state:Entries",
+            "key_type": "int",
+            "bound_kind": "range",
+            "max_keys": 64
+          }
+        ],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "bounded_range_sum",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "start",
+              "type_name": "int"
+            },
+            {
+              "name": "end",
+              "type_name": "int"
+            }
+          ],
+          "return_type": "int",
+          "permission": null,
+          "read_keys": [
+            "state:Entries"
+          ],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [
+        {
+          "name": "Entries",
+          "type_name": "map<int, int>"
+        }
+      ],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "bounded_range_sum",
+        "line": 9,
+        "pc_end": 488,
+        "pc_start": 0,
+        "source_path": "17_dynamic_range.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__bounded_range_sum",
+        "line": 9,
+        "pc_end": 1736,
+        "pc_start": 488,
+        "source_path": "17_dynamic_range.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 488,
+        "bytecode_words": 122,
+        "column": 14,
+        "frame_bytes": 40,
+        "function_name": "bounded_range_sum",
+        "jump_range_risk": false,
+        "jump_span_words": 122,
+        "line": 9,
+        "pc_end": 488,
+        "pc_start": 0,
+        "source_path": "17_dynamic_range.ko"
+      },
+      {
+        "bytecode_bytes": 1248,
+        "bytecode_words": 312,
+        "column": 14,
+        "frame_bytes": 80,
+        "function_name": "__entrypoint_impl__bounded_range_sum",
+        "jump_range_risk": false,
+        "jump_span_words": 312,
+        "line": 9,
+        "pc_end": 1736,
+        "pc_start": 488,
+        "source_path": "17_dynamic_range.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

@@ -6,10 +6,6 @@
 http://:8080 {
 	bind 0.0.0.0
 
-	handle /api/* {
-		reverse_proxy "{env.BACKEND_HOST}:{env.BACKEND_PORT}"
-	}
-
 	handle {
 		root * /srv
 		try_files {path} /index.html

@@ -7,9 +7,31 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+.pnpm-store
+.venv
+.venv-*
+
+# Build artifacts and generated outputs
 dist
 dist-ssr
+output
+coverage
+playwright-report
+test-results
+.playwright-cli/
+*.tsbuildinfo
+.vite
+
+# Runtime config is environment-specific; keep an example file tracked instead.
+public/config.json
+
+# Local environment overrides
+.env
+.env.*
+!.env.example
+!.env.*.example
 *.local
 
 # Editor directories and files

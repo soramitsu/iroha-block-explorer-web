@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "id": "crates-ivm-tests-data-amm",
+  "source_name": "amm.ko",
+  "compiler_source_path": "crates/ivm/tests/data/amm.ko",
+  "source": "// Demonstrates a simple Uniswap-style automated market maker swap.\n// Given token reserves and an input amount, it computes the output amount\n// based on the constant product formula.\nseiyaku Example {\n    kotoage fn swap(x_reserve, y_reserve, dx) {\n        // constant product k = x * y\n        let k = x_reserve * y_reserve;\n        // new x reserve after adding input\n        let new_x = x_reserve + dx;\n        // output amount = y_reserve - k / new_x\n        let new_y = k / new_x;\n        let dy = y_reserve - new_y;\n    }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRS3gAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAtgAAAAAAAABdxNG2OHdarwIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAAQAIAAAAAAAAAAB8AQAAAAAAAABzBQRzd2FwBAAAAAA0AwAAAAAAAAAQCgl4X3Jlc2VydmUEA2ludBAKCXlfcmVzZXJ2ZQQDaW50CQMCZHgEA2ludAEAAQAIAAAAAAAAAAAIAAAAAAAAAAABAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAExUTEIEAAAAAAAAAGYBAAAwAAAAAAAAAJIAAAAAAAAA6wAAAAAAAABEAQAAAAAAAAADAQAAADtOUlQwAAC3Omv00p5bZ7xzYNfcXqW5ABMAAAAAAAAAHfpWn/bIWWQCEnRyaWdnZXJfZXZlbnRfanNvbtcfvS+oYJZHAsvBd3abEvlQx79OiWH7iw6dIuDdcrMLAAMBAAAAMk5SVDAAALc6a/TSnltnvHNg19xepbkACgAAAAAAAAAJLsmXQlHFYwIJeF9yZXNlcnZlgS96ulF8QGc82d0BEfe72TsCsne3cTb00VbqvmQYpR8AAwEAAAAyTlJUMAAAtzpr9NKeW2e8c2DX3F6luQAKAAAAAAAAAPcuzdMdxKkHAgl5X3Jlc2VydmV2uElZx6BUlAq3bY3rLqCpRh7NqQ4/RanaZ2yB9gUDSwADAQAAACtOUlQwAAC3Omv00p5bZ7xzYNfcXqW5AAMAAAAAAAAA2bszi3KDsYECAmR4NJtL10psUrs442kqASyiF+baL4/CQwyHljAG38Q4eYXQHx8gAAAKIAAAGiAHABogAgAKIBoKCgYWCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYPEAAGAAChggABgKIOAAAGAAChwgAAAKIAAAGiAHABogAgAKIBoKCgZ4CgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKCSAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiADAAogGgoKBlEKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoIIAAYCiDgAABgAAocIAAACiAAABogBwAaIAQACiAaCgoGKgoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIHgAAGAACgcgAAkKIAAICyAABwwgGgABRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEm4Hx8gAAEfMQgHHzEQCB8xGAkfMSAXHzEoGB8xMAofMTgLHzFADB8xMB8YMDgfFzBAHwkwFxgIEAkYBwEHCAkUCRcHAggfBzAQHwgwGB8JMCAfFzAoHxgwAB8BMEgfHyAAAQBI5/8BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEk=",
+    "manifest": {
+      "code_hash": "hash:DC832BC89A6342A60E6A48FD862E26386047259B4624C401C068D9359E2BE219#367E",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "swap",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "x_reserve",
+              "type_name": "int"
+            },
+            {
+              "name": "y_reserve",
+              "type_name": "int"
+            },
+            {
+              "name": "dx",
+              "type_name": "int"
+            }
+          ],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": null,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 16,
+        "function_name": "swap",
+        "line": 5,
+        "pc_end": 612,
+        "pc_start": 0,
+        "source_path": "amm.ko"
+      },
+      {
+        "column": 16,
+        "function_name": "__entrypoint_impl__swap",
+        "line": 5,
+        "pc_end": 816,
+        "pc_start": 612,
+        "source_path": "amm.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 612,
+        "bytecode_words": 153,
+        "column": 16,
+        "frame_bytes": 48,
+        "function_name": "swap",
+        "jump_range_risk": false,
+        "jump_span_words": 153,
+        "line": 5,
+        "pc_end": 612,
+        "pc_start": 0,
+        "source_path": "amm.ko"
+      },
+      {
+        "bytecode_bytes": 204,
+        "bytecode_words": 51,
+        "column": 16,
+        "frame_bytes": 72,
+        "function_name": "__entrypoint_impl__swap",
+        "jump_range_risk": false,
+        "jump_span_words": 51,
+        "line": 5,
+        "pc_end": 816,
+        "pc_start": 612,
+        "source_path": "amm.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

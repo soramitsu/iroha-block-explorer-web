@@ -13,8 +13,8 @@
     </div>
 
     <div
-      v-for="(item, i) in adaptiveOptions"
-      :key="i"
+      v-for="item in adaptiveOptions"
+      :key="item.value"
       class="base-tabs__tab"
       :class="{ 'base-tabs__tab--active': item.value === model }"
       role="tab"

@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "id": "kotodama-jp",
+  "source_name": "kotodama_jp.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/kotodama_jp.ko",
+  "source": "// Japanese sample simplified to supported syntax.\nseiyaku KotodamaJp {\n  hajimari() {\n    info(\"初期化\");\n  }\n\n  kotoage fn swap(trader: AccountId,\n                  pool: AccountId,\n                  input_asset: AssetDefinitionId,\n                  output_asset: AssetDefinitionId,\n                  amount_in: int,\n                  reserve_in: int,\n                  reserve_out: int) -> int permission(Admin) {\n    let effective = (amount_in * 997) / 1000;\n    let out = (reserve_out * effective) / (reserve_in + effective);\n    transfer_asset(trader, pool, input_asset, amount_in);\n    transfer_asset(pool, trader, output_asset, out);\n    return out;\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "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IAAIDCAABQ0g4AAAYAAKDiAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQog4AAAYAAKDSAADgogJAAAYAAABSAAAgogCB8CMBAfAzAYHwQwIB8FMCgfBjAwHwcwOB8IMEAfCTBIHxcwUB8YMAAfATB/Hx8gER8fIAABAEgIHwIwEB8DMBgfBDAgHwUwKB8GMDAfBzA4HwgwQB8JMEgfFzBQHxgwAB8BMH8fHyARHx8gAAEASLAfHyAAAR8xCAMfMRAEHzEYBR8xIAYfMSgHHzEwCB8xOAkfMUAXHzFIGB8xAAAKIAAAGiAHABogBAAKIBoKCgZACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYPEAAGAAChggABgKIOAAAGAAChwgAAAKIAAAGiAHABogBQAKIBoKCgYiCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogewAAYAAKCSAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAFAAogGgoKBngKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB7AABgAAoIIAAYCiDgAABgAAocIAAACiAAABogBwAaIAYACiAaCgoGTAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIIAAAGAACgcgABgKIOAAAGAAChwgAAAKIAAAGiAHABogBwAKIBoKCgYnCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAoggAAAYAAKBiAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAIAAogGgoKBgMKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoFIAAYCiDgAABgAAocIAAACiAAABogBwAaIAgACiAaCgoGXAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIHgAAGAACgQgABgKIOAAAGAAChwgAAAKIAAAGiAHABogCQAKIBoKCgY2CgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKAyAACQogAAgLIAAHDCAABg0gAAUOIAAEDyAAAxAgav4BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAKFyAAFwogCB8DMBAfBDAYHwUwIB8GMCgfBzAwHwgwOB8JMEAfFzBIHxgwAB8BMFAfHyAAAQBIQ/4BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEmy/gFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAASQ==",
+    "manifest": {
+      "code_hash": "hash:D4AB1E7C6D0652016AA152B015507F0AA0A6D2B17BF3849AF69F37B99DE5263F#E0EC",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "hajimari",
+          "kind": {
+            "kind": "Hajimari",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "swap",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "trader",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "pool",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "input_asset",
+              "type_name": "AssetDefinitionId"
+            },
+            {
+              "name": "output_asset",
+              "type_name": "AssetDefinitionId"
+            },
+            {
+              "name": "amount_in",
+              "type_name": "int"
+            },
+            {
+              "name": "reserve_in",
+              "type_name": "int"
+            },
+            {
+              "name": "reserve_out",
+              "type_name": "int"
+            }
+          ],
+          "return_type": "int",
+          "permission": "Admin",
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 3,
+        "function_name": "hajimari",
+        "line": 3,
+        "pc_end": 116,
+        "pc_start": 0,
+        "source_path": "kotodama_jp.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__swap",
+        "line": 7,
+        "pc_end": 664,
+        "pc_start": 116,
+        "source_path": "kotodama_jp.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "swap",
+        "line": 7,
+        "pc_end": 2104,
+        "pc_start": 664,
+        "source_path": "kotodama_jp.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 116,
+        "bytecode_words": 29,
+        "column": 3,
+        "frame_bytes": 16,
+        "function_name": "hajimari",
+        "jump_range_risk": false,
+        "jump_span_words": 29,
+        "line": 3,
+        "pc_end": 116,
+        "pc_start": 0,
+        "source_path": "kotodama_jp.ko"
+      },
+      {
+        "bytecode_bytes": 548,
+        "bytecode_words": 137,
+        "column": 14,
+        "frame_bytes": 144,
+        "function_name": "__entrypoint_impl__swap",
+        "jump_range_risk": false,
+        "jump_span_words": 137,
+        "line": 7,
+        "pc_end": 664,
+        "pc_start": 116,
+        "source_path": "kotodama_jp.ko"
+      },
+      {
+        "bytecode_bytes": 1440,
+        "bytecode_words": 360,
+        "column": 14,
+        "frame_bytes": 80,
+        "function_name": "swap",
+        "jump_range_risk": false,
+        "jump_span_words": 360,
+        "line": 7,
+        "pc_end": 2104,
+        "pc_start": 664,
+        "source_path": "kotodama_jp.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

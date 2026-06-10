@@ -6,6 +6,25 @@ export function formatNumber(value: number | string) {
   return formatter.format(Number(value));
 }
 
+export function formatBytes(value: number | string) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes)) return '0 B';
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  let unitIndex = 0;
+  let scaled = Math.abs(bytes);
+
+  while (scaled >= 1024 && unitIndex < units.length - 1) {
+    scaled /= 1024;
+    unitIndex += 1;
+  }
+
+  const signedScaled = bytes < 0 ? -scaled : scaled;
+  const digits = unitIndex === 0 || Math.abs(signedScaled) >= 10 ? 0 : 1;
+
+  return `${signedScaled.toFixed(digits).replace(/\.0$/, '')} ${units[unitIndex]}`;
+}
+
 export function formatMoney(value: number | string, currency: string) {
   return currency + formatNumber(value);
 }

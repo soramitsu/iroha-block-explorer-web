@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "id": "crates-ivm-tests-data-complex",
+  "source_name": "complex.ko",
+  "compiler_source_path": "crates/ivm/tests/data/complex.ko",
+  "source": "// Demonstrates several built-in operations in sequence.\n// Computes a hash, generates a public key, commits a value\n// and combines the results.\nseiyaku Example {\n    kotoage fn complex(a, b) {\n        let c = a + b;\n        let d = poseidon2(c, b);\n        let e = pubkgen(d);\n        let f = valcom(e, a);\n        let g = f + d;\n    }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAQBAQg8AAAAAAAFDTlRSxwAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAnwAAAAAAAAADNjpasT7nDwIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAEAAAAAAAAAAQAIAAAAAAAAAABlAQAAAAAAAABcCAdjb21wbGV4BAAAAAAaAgAAAAAAAAAIAgFhBANpbnQIAgFiBANpbnQBAAEACAAAAAAAAAAACAAAAAAAAAAAAQAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAABMVExCAwAAAAEAAAAEAQAAKAAAAAAAAACKAAAAAAAAANsAAAAAAAAAAAMBAAAAO05SVDAAALc6a/TSnltnvHNg19xepbkAEwAAAAAAAAAd+laf9shZZAISdHJpZ2dlcl9ldmVudF9qc29u1x+9L6hglkcCy8F3dpsS+VDHv06JYfuLDp0i4N1yswsAAwEAAAAqTlJUMAAAtzpr9NKeW2e8c2DX3F6luQACAAAAAAAAANa/mEcBEVY6AgFhdQFe2ZvmGF8pXO0vs2NITgc2neJdDvlnoHL6WhRedcUAAwEAAAAqTlJUMAAAtzpr9NKeW2e8c2DX3F6luQACAAAAAAAAAOJAf+zoa/x9AgFiD5u4DIVMw853oj23iKEJRCx/LM11K9wJwbkowXLzxi0A2B8fIAAACiAAABogBwAaIAEACiAaCgoGdwoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGDxAABgAAoYIAAYCiDgAABgAAocIAAACiAAABogBwAaIAIACiAaCgoGWQoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIHgAAGAACgkgABgKIOAAAGAAChwgAAAKIAAAGiAHABogAwAKIBoKCgYqCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKCCAACQogAAgLIBoAAUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJyB8fIAABHzEICB8xEAkfMRgXHzEgGB8xKAofMTALHzEoHxgwMB8XMBcYCQEXCQiCAAgJhBgJF4UIFwkBCB8IMBAfCTAYHxcwIB8YMAAfATA4Hx8gAAEASOr/AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJ",
+    "manifest": {
+      "code_hash": "hash:C26DBBE0C42ABF900B178FD6C379FFB711F6B4B364E107FF3D5AC444D041C10F#F814",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 1,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "complex",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "a",
+              "type_name": "int"
+            },
+            {
+              "name": "b",
+              "type_name": "int"
+            }
+          ],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": null,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 16,
+        "function_name": "complex",
+        "line": 5,
+        "pc_end": 480,
+        "pc_start": 0,
+        "source_path": "complex.ko"
+      },
+      {
+        "column": 16,
+        "function_name": "__entrypoint_impl__complex",
+        "line": 5,
+        "pc_end": 672,
+        "pc_start": 480,
+        "source_path": "complex.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 480,
+        "bytecode_words": 120,
+        "column": 16,
+        "frame_bytes": 40,
+        "function_name": "complex",
+        "jump_range_risk": false,
+        "jump_span_words": 120,
+        "line": 5,
+        "pc_end": 480,
+        "pc_start": 0,
+        "source_path": "complex.ko"
+      },
+      {
+        "bytecode_bytes": 192,
+        "bytecode_words": 48,
+        "column": 16,
+        "frame_bytes": 56,
+        "function_name": "__entrypoint_impl__complex",
+        "jump_range_risk": false,
+        "jump_span_words": 48,
+        "line": 5,
+        "pc_end": 672,
+        "pc_start": 480,
+        "source_path": "complex.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}
