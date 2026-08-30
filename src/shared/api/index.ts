@@ -31,7 +31,15 @@ import { transformErrorResponse } from '@/shared/utils/transform-error-response'
 import type { SuccessfulFetching } from '@/shared/api/consts';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 
-const BASE_URL = window.location.origin.toString() + '/api/v1';
+export function resolveApiBaseUrl(configuredBaseUrl: string | undefined, origin: string) {
+  const normalizedConfigured = String(configuredBaseUrl ?? '').trim();
+  if (normalizedConfigured) {
+    return new URL(normalizedConfigured, origin).toString().replace(/\/+$/, '');
+  }
+  return `${origin.replace(/\/+$/, '')}/api/v1`;
+}
+
+const BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL, window.location.origin.toString());
 
 type GetResult<T> = { status: SuccessfulFetching, data: T } | { status: 'error', response: Response };
 type ResultWithStatus<T> = { status: SuccessfulFetching, data: T } | ErrorResponse;
@@ -152,7 +160,7 @@ export async function fetchNetworkMetrics(): Promise<ResultWithStatus<NetworkMet
 }
 
 export function streamTelemetryMetrics() {
-  const { data: streamedMetrics, status } = useEventSource('/api/v1/telemetry/live', [], {
+  const { data: streamedMetrics, status } = useEventSource(`${BASE_URL}/telemetry/live`, [], {
     autoReconnect: true,
   });
 

@@ -38,13 +38,16 @@ function isBase64EncodedWasm(item: Instruction) {
 
 function getInstructionPayloadValue(item: Instruction) {
   // TODO: display every instruction differently
-  return item.box.json[item.kind];
+  return item.box.json[item.kind] ?? item.box.json.payload ?? item.box.json;
 }
 
 function getInstructionPayloadEntity(item: Instruction) {
   if (isBase64EncodedWasm(item)) return t('transactions.object');
 
-  return Object.keys(item.box.json[item.kind])[0];
+  const value = getInstructionPayloadValue(item);
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (Object.keys(value)[0] ?? item.kind)
+    : item.kind;
 }
 
 const isOnAccountPage = computed(() => props.filterBy.kind === 'authority');

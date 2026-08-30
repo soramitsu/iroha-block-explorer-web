@@ -93,7 +93,7 @@ const transaction = computed(() =>
             </div>
             <div class="transaction-details__info-row">
               <DataField
-                :title="$t('accounts.accountId')"
+                :title="$t('transactions.authority')"
                 :hash="transaction.authority"
                 :type="accountIdHashType"
                 :link="`/accounts/${transaction.authority}`"

@@ -25,5 +25,8 @@ export const INSTRUCTION_OPTIONS: TabItem<TabInstructions>[] = [
   { i18nKey: 'transactions.setParameter', value: 'SetParameter' },
   { i18nKey: 'transactions.upgrade', value: 'Upgrade' },
   { i18nKey: 'transactions.log', value: 'Log' },
+  { i18nKey: 'transactions.shield', value: 'Shield' },
+  { i18nKey: 'transactions.zkTransfer', value: 'ZkTransfer' },
+  { i18nKey: 'transactions.unshield', value: 'Unshield' },
   { i18nKey: 'transactions.custom', value: 'Custom' },
 ];

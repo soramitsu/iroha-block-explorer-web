@@ -244,21 +244,35 @@ const InstructionKind = z.enum([
   'SetParameter',
   'Upgrade',
   'Log',
+  'Shield',
+  'ZkTransfer',
+  'Unshield',
   'Custom',
 ]);
 export type InstructionKind = z.infer<typeof InstructionKind>;
 
-export const Instruction = z.object({
+const InstructionBox = z.object({
+  scale: z.string().optional(),
+  encoded: z.string().optional(),
+  json: z.record(z.string(), z.any()),
+});
+
+export const Instruction = z.preprocess((raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw;
+  const record = raw as Record<string, unknown>;
+  if (record.box || !record['r#box']) return raw;
+  return {
+    ...record,
+    box: record['r#box'],
+  };
+}, z.object({
   authority: z.string(),
   created_at: z.coerce.date(),
   kind: InstructionKind,
   // TODO: add payload schemas for every kind
-  box: z.object({
-    scale: z.string(),
-    json: z.record(InstructionKind, z.any()),
-  }),
+  box: InstructionBox,
   transaction_hash: z.string(),
   transaction_status: TransactionStatus,
   block: z.number(),
-});
+}));
 export type Instruction = z.infer<typeof Instruction>;
