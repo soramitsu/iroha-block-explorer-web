@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import * as http from '@/shared/api';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
-import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
 import { getLocalTime, getUTCTime } from '@/shared/lib/time';
 import ArrowIcon from '@soramitsu-ui/icons/icomoon/arrows-chevron-left-rounded-24.svg';
@@ -12,56 +12,35 @@ import TransactionsTable from '@/shared/ui/components/TransactionsTable.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
-import type { NetworkMetrics } from '@/shared/api/schemas';
-import { streamTelemetryMetrics } from '@/shared/api';
-import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
+import { useTelemetryMetrics } from '@/shared/ui/composables/useTelemetryMetrics';
+import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 
 const router = useRouter();
+const navigation = useScopedExplorerNavigation();
 
 const metricsHashType = useAdaptiveHash({ sm: 'short', xs: 'short', xxs: 'short' }, 'full');
 
 const blockHeightOrHash = computed(() => {
   const heightOrHash = router.currentRoute.value.params['heightOrHash'];
 
-  invariant(typeof heightOrHash === 'string', 'Expected string or number');
+  invariant(typeof heightOrHash === 'string' && heightOrHash.length > 0, 'Expected one block height or hash segment');
 
-  return Number(heightOrHash) || heightOrHash;
+  return heightOrHash;
 });
 
 const blockScope = useParamScope(blockHeightOrHash, (value) => setupAsyncData(() => http.fetchBlock(value)));
 
-const isBlockLoading = computed(() => blockScope.value.expose.isLoading);
+const blockSnapshot = computed(() => blockScope.value.expose.snapshot);
 const block = computed(() => {
   if (blockScope.value?.expose.data?.status === SUCCESSFUL_FETCHING) return blockScope.value.expose.data.data;
 
   return null;
 });
-const isBlockNotFound = computed(() => blockScope.value?.expose.data?.status === NOT_FOUND);
-// TODO: display unknown error with i18n
-const isOtherError = computed(() => blockScope.value?.expose.data?.status === UNKNOWN_ERROR);
-const isBlockEmpty = computed(() => !block.value?.transactions_hash);
+const hasBlockBody = computed(() => block.value?.created_at !== null);
+const isBlockEmpty = computed(() => hasBlockBody.value && !block.value?.transactions_hash);
 
-const metrics = ref<NetworkMetrics | null>(null);
-
-const { data: streamedMetrics } = streamTelemetryMetrics();
-
-watch(
-  () => streamedMetrics.value,
-  () => {
-    if (!streamedMetrics.value) return;
-
-    switch (streamedMetrics.value.kind) {
-      case 'first': {
-        metrics.value = streamedMetrics.value.network_status;
-        break;
-      }
-      case 'network_status': {
-        metrics.value = streamedMetrics.value;
-        break;
-      }
-    }
-  }
-);
+const { metrics } = useTelemetryMetrics();
 
 const totalBlocks = computed(() => metrics.value?.block ?? 0);
 const isNextBlockExists = computed(() => block.value && block.value.height < totalBlocks.value);
@@ -70,13 +49,13 @@ const isPreviousBlockExists = computed(() => block.value && block.value.height >
 function handlePreviousBlockClick() {
   if (!block.value) return;
 
-  router.push({ name: 'blocks-details', params: { heightOrHash: block.value.height - 1 } });
+  navigation.push({ name: 'blocks-details', params: { heightOrHash: block.value.height - 1 } }).catch(() => {});
 }
 
 function handleNextBlockClick() {
   if (!block.value) return;
 
-  router.push({ name: 'blocks-details', params: { heightOrHash: block.value.height + 1 } });
+  navigation.push({ name: 'blocks-details', params: { heightOrHash: block.value.height + 1 } }).catch(() => {});
 }
 
 const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
@@ -86,57 +65,42 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
   <div class="block-details">
     <BaseContentBlock class="block-details__metrics">
       <template #header>
-        <div
-          v-if="!isBlockLoading"
-          class="block-details__metrics-header"
-        >
-          <ArrowIcon
+        <div class="block-details__metrics-header">
+          <button
             v-if="isPreviousBlockExists"
-            role="button"
-            tabindex="0"
+            type="button"
+            class="block-details__metrics-header-navigation"
+            :aria-label="$t('accessibility.previousBlock')"
             data-testid="prevBlock"
             @click="handlePreviousBlockClick"
-            @keydown.enter.space="handlePreviousBlockClick"
-          />
+          >
+            <ArrowIcon aria-hidden="true" />
+          </button>
           <span class="block-details__metrics-header-block">{{ $t('blocks.block', [blockHeightOrHash]) }}</span>
-          <ArrowIcon
+          <button
             v-if="isNextBlockExists"
-            role="button"
-            tabindex="0"
+            type="button"
+            class="block-details__metrics-header-navigation"
+            :aria-label="$t('accessibility.nextBlock')"
             data-testid="nextBlock"
             @click="handleNextBlockClick"
-            @keydown.enter.space="handleNextBlockClick"
-          />
+          >
+            <ArrowIcon aria-hidden="true" />
+          </button>
         </div>
       </template>
       <template #default>
-        <div
-          v-if="isBlockLoading"
-          class="block-details__metrics_loading"
+        <BaseResourceState
+          :snapshot="blockSnapshot"
+          :loading-label="$t('blocks.loading')"
+          :not-found-label="$t('blocks.blockNotAvailableYet')"
+          :error-label="$t('blocks.unknownError')"
+          :retry-label="$t('transactions.retryInstruction')"
+          @retry="blockScope.expose.refetch()"
         >
-          <BaseLoading />
-        </div>
-        <div
-          v-else-if="isBlockNotFound"
-          class="block-details__metrics_error row-text"
-        >
-          {{ $t('blocks.blockNotAvailableYet') }}
-        </div>
-        <div
-          v-else-if="isOtherError"
-          class="block-details__metrics_error row-text"
-        >
-          {{ $t('blocks.unknownError') }}
-        </div>
-        <div v-else-if="block">
-          <div class="block-details__metrics-data">
+          <div v-if="block" class="block-details__metrics-data">
             <div class="block-details__metrics-data-row">
-              <DataField
-                :title="$t('blocks.blockHash')"
-                :hash="block.hash"
-                :type="metricsHashType"
-                copy
-              />
+              <DataField :title="$t('blocks.blockHash')" :hash="block.hash" :type="metricsHashType" copy />
 
               <DataField
                 v-if="block.prev_block_hash"
@@ -149,18 +113,14 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
 
               <DataField
                 class="block-details__metrics-data-row-date"
+                data-test="block-created-at"
                 :title="$t('blocks.createdAt')"
-                :value="getLocalTime(block.created_at)"
+                :value="block.created_at ? getLocalTime(block.created_at) : $t('telemetry.dataUnknown')"
                 copy
-                :tooltip="getUTCTime(block.created_at)"
+                :tooltip="block.created_at ? getUTCTime(block.created_at) : undefined"
               />
 
-              <DataField
-                :title="$t('blocks.totalTransactions')"
-                :value="block.transactions_total"
-                copy
-                monospace
-              />
+              <DataField :title="$t('blocks.totalTransactions')" :value="block.transactions_total" copy monospace />
 
               <DataField
                 :title="$t('blocks.rejectedTransactions')"
@@ -176,27 +136,23 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
               />
             </div>
           </div>
-        </div>
+        </BaseResourceState>
       </template>
     </BaseContentBlock>
-    <BaseContentBlock
-      v-if="block"
-      :title="$t('blocks.blockTransactions')"
-      class="block-details__transactions"
-    >
+    <BaseContentBlock v-if="block" :title="$t('blocks.blockTransactions')" class="block-details__transactions">
       <template #default>
         <TransactionsTable
-          v-if="block && !isBlockEmpty"
+          v-if="hasBlockBody && !isBlockEmpty"
           show-authority
           :filter-by="{ kind: 'block', value: block.height }"
           :hash-type
         />
-        <span
-          v-else-if="!isBlockLoading && isBlockEmpty"
-          class="block-details__transactions_empty row-text"
-        >{{
+        <span v-else-if="isBlockEmpty" class="block-details__transactions_empty row-text" data-test="block-empty">{{
           $t('blocks.thisBlockIsEmpty')
         }}</span>
+        <span v-else class="block-details__transactions_empty row-text" data-test="block-body-unavailable">
+          {{ $t('blocks.bodyUnavailable') }}
+        </span>
       </template>
     </BaseContentBlock>
   </div>
@@ -234,30 +190,33 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
       @include tpg-h2();
 
       svg {
-        cursor: pointer;
         height: size(4);
         width: size(4);
         fill: theme-color('content-quaternary');
       }
 
+      &-navigation {
+        display: inline-flex;
+        padding: size(1);
+        border: 0;
+        border-radius: size(1);
+        background: transparent;
+        cursor: pointer;
+
+        &:focus-visible {
+          outline: 2px solid theme-color('primary');
+          outline-offset: 2px;
+        }
+      }
+
       [data-testid='nextBlock'] {
-        transform: scaleX(-1);
+        transform: rotateY(180deg);
       }
 
       &-block {
         user-select: none;
         cursor: default;
       }
-    }
-
-    &_loading {
-      margin-top: size(1);
-      display: flex;
-      justify-content: center;
-    }
-
-    &_error {
-      margin: size(2) size(4) 0;
     }
 
     &-data {
@@ -267,10 +226,6 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
       &-row {
         display: grid;
         gap: size(2);
-
-        &-date .context-tooltip {
-          left: size(31);
-        }
       }
 
       .base-link {
@@ -284,7 +239,8 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
   }
 
   &__transactions_empty {
-    margin-left: size(4);
+    display: block;
+    padding-inline: size(4);
   }
 }
 </style>

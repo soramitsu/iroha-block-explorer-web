@@ -1,42 +1,47 @@
 <template>
   <div class="base-tabs">
-    <div
-      v-if="adaptiveOptions && adaptiveIndexStart !== 0"
-      role="button"
-      tabIndex="0"
+    <button
+      v-if="adaptiveIndexStart !== 0"
+      type="button"
       class="base-tabs__arrow"
       data-testid="prev"
+      :aria-label="$t('accessibility.previousTabs')"
       @click="handleArrowPrevClick"
-      @keydown.enter.space="handleArrowPrevClick"
     >
-      <ArrowIcon />
-    </div>
+      <ArrowIcon aria-hidden="true" />
+    </button>
 
     <div
-      v-for="(item, i) in adaptiveOptions"
-      :key="i"
-      class="base-tabs__tab"
-      :class="{ 'base-tabs__tab--active': item.value === model }"
-      role="tab"
-      :aria-selected="item.value === model"
-      tabIndex="0"
-      @click="model = item.value"
-      @keydown.enter.space="model = item.value"
+      class="base-tabs__list"
+      role="tablist"
+      :aria-label="$t('accessibility.tabOptions')"
     >
-      {{ item.label }}
+      <button
+        v-for="(item, index) in adaptiveOptions"
+        :key="item.value"
+        type="button"
+        class="base-tabs__tab"
+        :class="{ 'base-tabs__tab--active': item.value === model }"
+        role="tab"
+        :aria-selected="item.value === model"
+        :tabindex="item.value === rovingValue ? 0 : -1"
+        @click="model = item.value"
+        @keydown="handleTabKeydown($event, index)"
+      >
+        {{ item.label }}
+      </button>
     </div>
 
-    <div
-      v-if="adaptiveOptions && adaptiveIndexEnd < props.items.length"
+    <button
+      v-if="adaptiveIndexEnd < props.items.length"
+      type="button"
       class="base-tabs__arrow"
       data-testid="next"
-      role="button"
-      tabIndex="0"
+      :aria-label="$t('accessibility.nextTabs')"
       @click="handleArrowNextClick"
-      @keydown.enter.space="handleArrowNextClick"
     >
-      <ArrowIcon />
-    </div>
+      <ArrowIcon aria-hidden="true" />
+    </button>
   </div>
 </template>
 
@@ -66,42 +71,76 @@ const { width } = useWindowSize();
 
 const adaptiveIndexStart = ref(0);
 const adaptiveIndexEnd = ref(0);
+const diff = ref(0);
+const model = useVModel(props, 'modelValue', emit);
 
 const adaptiveOptions = computed(() => {
   return props.items
     .slice(adaptiveIndexStart.value, adaptiveIndexEnd.value)
-    .map((i) => ({ ...i, label: t(i.i18nKey) }));
+    .map((i) => ({ ...i, label: i.label ?? t(i.i18nKey) }));
+});
+
+const rovingValue = computed(() => {
+  const selected = adaptiveOptions.value.find((item) => item.value === model.value);
+  return selected?.value ?? adaptiveOptions.value[0]?.value;
 });
 
 function handleArrowNextClick() {
-  adaptiveIndexStart.value += diff.value;
-  adaptiveIndexEnd.value += diff.value;
+  const maxStart = Math.max(0, props.items.length - 1);
+  adaptiveIndexStart.value = Math.min(adaptiveIndexStart.value + diff.value, maxStart);
+  adaptiveIndexEnd.value = Math.min(adaptiveIndexStart.value + diff.value, props.items.length);
 }
 
 function handleArrowPrevClick() {
-  adaptiveIndexStart.value -= diff.value;
-  adaptiveIndexEnd.value -= diff.value;
+  adaptiveIndexStart.value = Math.max(0, adaptiveIndexStart.value - diff.value);
+  adaptiveIndexEnd.value = Math.min(adaptiveIndexStart.value + diff.value, props.items.length);
 }
 
-const diff = ref(0);
+function handleTabKeydown(event: KeyboardEvent, index: number) {
+  const tabCount = adaptiveOptions.value.length;
+  if (tabCount === 0) return;
+
+  const tabList = (event.currentTarget as HTMLElement).closest('[role="tablist"]');
+  const inheritedDirection = tabList?.closest('[dir]')?.getAttribute('dir');
+  const isRtl = (inheritedDirection ?? document.documentElement.dir) === 'rtl';
+  let targetIndex: number | null = null;
+
+  if (event.key === 'Home') targetIndex = 0;
+  else if (event.key === 'End') targetIndex = tabCount - 1;
+  else if (event.key === 'ArrowRight') targetIndex = index + (isRtl ? -1 : 1);
+  else if (event.key === 'ArrowLeft') targetIndex = index + (isRtl ? 1 : -1);
+
+  if (targetIndex === null) return;
+  event.preventDefault();
+  const wrappedIndex = (targetIndex + tabCount) % tabCount;
+  const target = adaptiveOptions.value[wrappedIndex];
+  if (!target) return;
+  model.value = target.value;
+  tabList?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[wrappedIndex]?.focus();
+}
 
 watch(
-  width,
+  [width, () => props.items.length],
   () => {
-    diff.value = applyAdaptiveOptions(width.value, props.adaptiveOptions ?? props.items.length);
-    adaptiveIndexEnd.value += diff.value;
+    diff.value = Math.max(
+      1,
+      applyAdaptiveOptions(width.value, props.adaptiveOptions ?? props.items.length)
+    );
+    const maxStart = Math.max(0, props.items.length - 1);
+    adaptiveIndexStart.value = Math.min(adaptiveIndexStart.value, maxStart);
+    adaptiveIndexEnd.value = Math.min(adaptiveIndexStart.value + diff.value, props.items.length);
   },
   { immediate: true }
 );
-
-const model = useVModel(props, 'modelValue', emit);
 </script>
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
 
 .base-tabs {
-  display: grid;
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
   grid-gap: size(0.5);
   grid-auto-flow: column;
   width: fit-content;
@@ -110,40 +149,59 @@ const model = useVModel(props, 'modelValue', emit);
   border-radius: size(2);
   background: theme-color('background');
 
-  @include shadow-input;
+  border: 1px solid theme-color('border-secondary');
+
+  &__list {
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
+    grid-auto-flow: column;
+    grid-gap: size(0.5);
+    align-items: center;
+  }
 
   &__arrow {
-    border-radius: 50%;
-    color: theme-color('content-on-surface-variant');
-    background: theme-color('content-quaternary');
-    width: size(2);
-    height: size(2);
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    flex: 0 0 44px;
+    font: inherit;
+    color: theme-color('primary');
+    background: theme-color('primary-background');
+    width: 44px;
+    height: 44px;
     display: flex;
     justify-content: center;
     align-items: center;
     text-align: center;
-    margin-left: 4px;
+    margin-inline-start: 4px;
     cursor: pointer;
 
     &:last-child {
       transform: rotateY(180deg);
-      margin-right: 4px;
+      margin-inline-end: 4px;
     }
 
     svg {
-      fill: theme-color('content-on-surface-variant');
+      fill: theme-color('primary');
       width: size(2);
       height: size(2);
     }
   }
 
   &__tab {
+    border: 0;
+    min-height: 44px;
+    min-width: 44px;
+    flex: 0 0 auto;
     padding: size(0.5) size(1);
-    border-radius: size(1.5);
+    border-radius: 8px;
+    font: inherit;
+    background: transparent;
     @include tpg-s4;
     cursor: pointer;
     user-select: none;
-    transition: all 300ms ease-in-out;
+    transition: background-color 120ms, color 120ms;
     color: theme-color('content-quaternary');
 
     &:hover {
@@ -151,11 +209,11 @@ const model = useVModel(props, 'modelValue', emit);
     }
 
     &--active {
-      background: theme-color('content-quaternary');
-      color: theme-color('content-on-surface-variant');
+      background: theme-color('primary-background');
+      color: theme-color('primary');
 
       &:hover {
-        background: theme-color('content-quaternary');
+        background: theme-color('primary-background');
       }
     }
   }

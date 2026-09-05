@@ -4,8 +4,8 @@
     role="radiogroup"
   >
     <div
-      v-for="(item, i) in props.items"
-      :key="i"
+      v-for="item in props.items"
+      :key="item.value"
       class="base-radio-group__item"
       :data-active="item.value === props.modelValue || null"
       :aria-checked="item.value === props.modelValue"
@@ -55,15 +55,16 @@ function choose(value: string) {
     grid-gap: size(0.5);
     grid-auto-flow: column;
     width: fit-content;
+    min-height: 44px;
     align-items: center;
     padding: size(1) size(2);
     border-radius: size(2);
     background: theme-color('background');
     cursor: pointer;
     user-select: none;
-    transition: all 300ms ease-in-out;
+    transition: background-color 120ms, color 120ms;
     color: theme-color('content-secondary-bright');
-    @include shadow-input;
+    border: 1px solid theme-color('border-secondary');
     @include tpg-s4;
 
     &:hover {
@@ -71,12 +72,12 @@ function choose(value: string) {
     }
 
     &[data-active] {
-      background: theme-color('content-quaternary');
-      color: theme-color('content-on-surface-variant');
+      background: theme-color('primary-background');
+      color: theme-color('primary');
       box-shadow: none;
 
       &:hover {
-        background: theme-color('content-quaternary');
+        background: theme-color('primary-background');
       }
     }
   }

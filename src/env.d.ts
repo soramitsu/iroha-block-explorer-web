@@ -2,19 +2,21 @@
 
 declare module '*.vue' {
   import type { DefineComponent } from 'vue';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-restricted-types
-  const component: DefineComponent<{}, {}, any>;
+  const component: DefineComponent<Record<string, never>, Record<string, never>, unknown>;
   export default component;
 }
 
-interface ImportMetaEnv {
-  readonly VITE_API_URL: string
-  readonly VITE_API_BASE_URL?: string
-  readonly VITE_FAKE_API_ENABLED?: 'TRUE' | 'FALSE'
+export interface ImportMetaEnv {
+  readonly VITE_API_URL?: string;
+  readonly VITE_KOTODAMA_COMPILER_URL?: string;
+}
+
+export interface ImportMeta {
+  readonly env: ImportMetaEnv;
 }
 
 declare module '@soramitsu-ui/icons/*' {
   import type { DefineComponent } from 'vue';
-  const component: DefineComponent<{}, {}, any>;
+  const component: DefineComponent<Record<string, never>, Record<string, never>, unknown>;
   export default component;
 }

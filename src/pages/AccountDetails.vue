@@ -5,30 +5,66 @@ import * as http from '@/shared/api';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
-import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import { AccountIdSchema } from '@/shared/api/schemas';
+import type { AccountQrSnapshot, ExplorerAsset, Domain, NFT, RWA } from '@/shared/api/schemas';
 import { parseMetadata } from '@/shared/ui/utils/json';
 import BaseTabs from '@/shared/ui/components/BaseTabs.vue';
 import type { TabAccountTransactions } from '@/features/filter/transactions/model';
 import { ACCOUNT_TRANSACTIONS_OPTIONS } from '@/features/filter/transactions/model';
 import TransactionsTable from '@/shared/ui/components/TransactionsTable.vue';
-import type { AssetId, NftId } from '@iroha/core/data-model';
 import InstructionsTable from '@/shared/ui/components/InstructionsTable.vue';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
-import type { TabAssets } from '@/features/filter/assets/model';
-import { ASSETS_OPTIONS } from '@/features/filter/assets/model';
+import type { TabItem } from '@/features/filter';
 import { useI18n } from 'vue-i18n';
-import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import { useClipboard } from '@vueuse/core';
+import { useNotifications } from '@/shared/ui/composables/notifications';
+import CopyIcon from '@/shared/ui/icons/copy.svg';
+import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
+import { getAssetDefinitionDisplayName } from '@/shared/lib/asset-definition-id';
+import { getDisplayedAccountId } from '@/shared/lib/account-id';
+import { mergeRouteQuery, parseRouteEnum } from '@/shared/lib/route-query';
+import AccountActivityView from '@/pages/account/AccountActivityView.vue';
+import AccountPermissionsView from '@/pages/account/AccountPermissionsView.vue';
+import AccountMultisigWorkspace from '@/pages/account/AccountMultisigWorkspace.vue';
 
 const { t } = useI18n();
 const router = useRouter();
+const navigation = useScopedExplorerNavigation();
+const clipboard = useClipboard();
+const notifications = useNotifications();
 
-const hashType = useAdaptiveHash({ xs: 'short', xxs: 'short' }, 'medium');
+type AccountAssetsTab = 'assets' | 'nft' | 'rwa';
+type AccountViewTab = 'overview' | 'activity' | 'permissions' | 'multisig';
 
-const accountId = computed(() => {
+const ACCOUNT_VIEW_OPTIONS: TabItem<AccountViewTab>[] = [
+  { i18nKey: 'accounts.views.overview', value: 'overview' },
+  { i18nKey: 'accounts.views.activity', value: 'activity' },
+  { i18nKey: 'accounts.views.permissions', value: 'permissions' },
+  { i18nKey: 'accounts.views.multisig', value: 'multisig' },
+];
+const ACCOUNT_VIEW_VALUES = new Set<AccountViewTab>(ACCOUNT_VIEW_OPTIONS.map((item) => item.value));
+const accountView = computed<AccountViewTab>({
+  get: () => parseRouteEnum(router.currentRoute.value.query.tab, ACCOUNT_VIEW_VALUES, 'overview'),
+  set: (value) => {
+    router
+      .push({
+        query: mergeRouteQuery(router.currentRoute.value.query, { tab: value }, { tab: 'overview' }),
+      })
+      .catch(() => {});
+  },
+});
+
+const ACCOUNT_ASSETS_OPTIONS: TabItem<AccountAssetsTab>[] = [
+  { i18nKey: 'assets.numerics', value: 'assets' },
+  { i18nKey: 'assets.nfts', value: 'nft' },
+  { i18nKey: 'assets.rwas', value: 'rwa' },
+];
+
+const accountSelector = computed(() => {
   const id = router.currentRoute.value.params['id'];
 
   return AccountIdSchema.parse(id);
@@ -37,28 +73,30 @@ const accountId = computed(() => {
 const accountScope = useParamScope(
   () => {
     return {
-      key: accountId.value.toString(),
-      payload: accountId.value,
+      key: accountSelector.value,
+      payload: accountSelector.value,
     };
   },
   ({ payload }) => setupAsyncData(() => http.fetchAccount(payload))
 );
 
-const isAccountLoading = computed(() => accountScope.value.expose.isLoading);
+const accountSnapshot = computed(() => accountScope.value.expose.snapshot);
 const account = computed(() =>
   accountScope.value.expose.data?.status === SUCCESSFUL_FETCHING ? accountScope.value?.expose.data.data : undefined
 );
+const displayAccountId = computed(() => getDisplayedAccountId(account.value?.id ?? accountSelector.value));
+const accountFilterId = computed(() => displayAccountId.value);
 
 const domainsListState = reactive({
-  page: 1,
-  per_page: 10,
-  owned_by: computed(() => accountId.value),
+  cursor: null as string | null,
+  limit: 10,
+  owned_by: computed(() => accountFilterId.value),
 });
 
 watch(
-  () => domainsListState.per_page,
+  () => domainsListState.limit,
   () => {
-    domainsListState.page = 1;
+    domainsListState.cursor = null;
   }
 );
 
@@ -75,31 +113,39 @@ const domainsScope = useParamScope(
 );
 
 const isDomainsLoading = computed(() => !!domainsScope.value?.expose.isLoading);
-const totalDomains = computed(() =>
+const domainsPagination = computed(() =>
   domainsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? domainsScope.value.expose.data.data.pagination.total_items
-    : 0
+    ? domainsScope.value.expose.data.data.pagination
+    : null
 );
 const domains = computed(() =>
   domainsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? domainsScope.value.expose.data.data.items : []
 );
+const accountDomainRowKey = (item: Domain) => item.id;
 
-const assetsTab = ref<TabAssets>('assets');
-const isCryptoAssetsSelected = computed(() => assetsTab.value === 'assets');
+const assetsTab = ref<AccountAssetsTab>('assets');
+const isNumericAssetsSelected = computed(() => assetsTab.value === 'assets');
+const isNftsSelected = computed(() => assetsTab.value === 'nft');
+const isRwasSelected = computed(() => assetsTab.value === 'rwa');
 
 const assetsListState = reactive({
-  page: 1,
-  per_page: 10,
-  owned_by: computed(() => accountId.value),
+  cursor: null as string | null,
+  limit: 10,
+  owned_by: computed(() => accountFilterId.value),
 });
 
-watch([() => assetsListState.per_page, () => assetsTab.value], () => {
-  assetsListState.page = 1;
+watch([() => assetsListState.limit, () => assetsTab.value], () => {
+  assetsListState.cursor = null;
+});
+
+watch(accountFilterId, () => {
+  domainsListState.cursor = null;
+  assetsListState.cursor = null;
 });
 
 const assetsScope = useParamScope(
   () => {
-    if (!isCryptoAssetsSelected.value || !account.value?.owned_assets) return null;
+    if (!isNumericAssetsSelected.value || !account.value?.owned_assets) return null;
 
     return {
       key: JSON.stringify(assetsListState),
@@ -110,18 +156,18 @@ const assetsScope = useParamScope(
 );
 
 const isAssetsLoading = computed(() => !!assetsScope.value?.expose.isLoading);
-const totalAssets = computed(() =>
-  assetsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? assetsScope.value.expose.data.data.pagination.total_items
-    : 0
+const assetsPagination = computed(() =>
+  assetsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? assetsScope.value.expose.data.data.pagination : null
 );
 const assets = computed(() =>
   assetsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? assetsScope.value.expose.data.data.items : []
 );
+const accountAssetRowKey = (item: ExplorerAsset) => item.id;
+const accountAssetDefinitionName = (asset: ExplorerAsset) => getAssetDefinitionDisplayName(asset.definition_id);
 
 const NFTsScope = useParamScope(
   () => {
-    if (isCryptoAssetsSelected.value || !account.value?.owned_nfts) return null;
+    if (!isNftsSelected.value || !account.value?.owned_nfts) return null;
 
     return {
       key: JSON.stringify(assetsListState),
@@ -132,269 +178,493 @@ const NFTsScope = useParamScope(
 );
 
 const isNFTsLoading = computed(() => !!NFTsScope.value?.expose.isLoading);
-const totalNFTs = computed(() =>
-  NFTsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? NFTsScope.value.expose.data.data.pagination.total_items
-    : 0
+const NFTsPagination = computed(() =>
+  NFTsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? NFTsScope.value.expose.data.data.pagination : null
 );
 const nfts = computed(() =>
   NFTsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? NFTsScope.value.expose.data.data.items : []
 );
+const accountNftRowKey = (item: NFT) => item.id.toString();
+
+const rwasScope = useParamScope(
+  () => {
+    if (!isRwasSelected.value || !account.value) return null;
+
+    return {
+      key: JSON.stringify(assetsListState),
+      payload: assetsListState,
+    };
+  },
+  ({ payload }) => setupAsyncData(() => http.fetchRwas(payload))
+);
+
+const isRwasLoading = computed(() => !!rwasScope.value?.expose.isLoading);
+const rwasPagination = computed(() =>
+  rwasScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? rwasScope.value.expose.data.data.pagination : null
+);
+const rwas = computed(() =>
+  rwasScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? rwasScope.value.expose.data.data.items : []
+);
+const accountRwaRowKey = (item: RWA) => item.id;
+const isRwasListEmpty = computed(
+  () =>
+    isRwasSelected.value &&
+    !isRwasLoading.value &&
+    rwasScope.value?.expose.data?.status === SUCCESSFUL_FETCHING &&
+    assetsListState.cursor === null &&
+    rwas.value.length === 0 &&
+    rwasPagination.value?.has_more === false
+);
 
 const transactionsTab = ref<TabAccountTransactions>('transactions');
 const shouldShowInstructions = computed(() => transactionsTab.value === 'instructions');
+const traceRoute = computed(() => ({
+  name: 'tracing-workspace',
+  query: {
+    seed_type: 'account',
+    seed_value: accountFilterId.value,
+  },
+}));
 
-function handleAssetRowClick(id: AssetId) {
-  router.push(`/assets/${encodeURIComponent(id.definition.toString())}`);
-}
+watch(
+  () => transactionsTab.value,
+  (nextTab) => {
+    if (nextTab !== 'tracing') return;
+    navigation.push(traceRoute.value).catch(() => {});
+    transactionsTab.value = 'transactions';
+  }
+);
 
-function handleNFTRowClick(id: NftId) {
-  router.push(`/nfts/${encodeURIComponent(id.toString())}`);
-}
+const accountQr = ref<AccountQrSnapshot | null>(null);
+const qrGenerationFailed = ref(false);
+const qrLoading = ref(false);
+let qrLoadToken = 0;
 
-function handleDomainRowClick(id: string) {
-  router.push(`/domains/${id}`);
+const i105Qr = computed(() => {
+  const svg = accountQr.value?.svg;
+  return svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : null;
+});
+const authoritativeAccountAddress = computed(() => accountQr.value?.literal ?? displayAccountId.value);
+const addressDetails = computed(() => {
+  if (!account.value) return null;
+  return {
+    networkPrefix: accountQr.value?.networkPrefix ?? account.value.network_prefix,
+  };
+});
+
+watch(
+  () => (account.value ? accountSelector.value : null),
+  async (selector, _previous, onCleanup) => {
+    const token = ++qrLoadToken;
+    accountQr.value = null;
+
+    if (!selector || typeof window === 'undefined') {
+      qrGenerationFailed.value = false;
+      qrLoading.value = false;
+      return;
+    }
+
+    const controller = new AbortController();
+    onCleanup(() => controller.abort());
+    qrLoading.value = true;
+    qrGenerationFailed.value = false;
+
+    try {
+      const result = await http.fetchAccountQr(selector, controller.signal);
+      if (token !== qrLoadToken || controller.signal.aborted) return;
+      if (result.status === SUCCESSFUL_FETCHING) {
+        accountQr.value = result.data;
+      } else {
+        qrGenerationFailed.value = true;
+      }
+    } catch {
+      if (token !== qrLoadToken || controller.signal.aborted) return;
+      qrGenerationFailed.value = true;
+    } finally {
+      if (token === qrLoadToken && !controller.signal.aborted) qrLoading.value = false;
+    }
+  },
+  { immediate: true }
+);
+
+async function copyAddress(value?: string) {
+  if (!value) return;
+  if (!clipboard.isSupported) {
+    notifications.error(t('clipboard.error'));
+    return;
+  }
+
+  await clipboard.copy(value);
+  notifications.success(t('clipboard.success'));
 }
 
 const assetsSection = computed(() => {
-  if (isCryptoAssetsSelected.value)
+  if (isNumericAssetsSelected.value)
     return {
       title: t('accounts.accountAssets'),
       isZero: !account.value?.owned_assets,
       zeroTitle: t('accounts.accountDoesntHaveAnyAssets'),
     };
 
+  if (isNftsSelected.value)
+    return {
+      title: t('accounts.accountNFTs'),
+      isZero: !account.value?.owned_nfts,
+      zeroTitle: t('accounts.accountDoesntHaveAnyNFTs'),
+    };
+
   return {
-    title: t('accounts.accountNFTs'),
-    isZero: !account.value?.owned_nfts,
-    zeroTitle: t('accounts.accountDoesntHaveAnyNFTs'),
+    title: t('assets.rwas'),
+    isZero: isRwasListEmpty.value,
+    zeroTitle: t('noData'),
   };
 });
 </script>
 
 <template>
-  <div class="account-details">
-    <div class="account-details__personal">
-      <BaseContentBlock
-        :title="$t('accounts.accountInformation')"
-        class="account-details__personal-information"
-      >
-        <template #default>
-          <div
-            v-if="isAccountLoading"
-            class="account-details__personal-information_loading"
-          >
-            <BaseLoading />
-          </div>
-          <div v-else-if="account">
-            <div class="account-details__personal-information-row">
-              <DataField
-                :title="$t('accounts.accountId')"
-                :hash="accountId.toString()"
-                copy
-                :type="hashType"
-              />
+  <div class="account-details-page">
+    <BaseTabs v-model="accountView" :items="ACCOUNT_VIEW_OPTIONS" class="account-details-page__tabs" />
 
-              <DataField
-                :title="$t('metadata')"
-                :metadata="{ display: 'short' }"
-                :value="parseMetadata(account.metadata)"
-              />
-            </div>
-          </div>
-        </template>
-      </BaseContentBlock>
-
-      <BaseContentBlock
-        :title="assetsSection.title"
-        class="account-details__personal-owned"
-      >
-        <template #header-action>
-          <BaseTabs
-            v-model="assetsTab"
-            :items="ASSETS_OPTIONS"
-          />
-        </template>
-        <template #default>
-          <span
-            v-if="assetsSection.isZero"
-            class="account-details__personal-owned_empty row-text"
-          >{{
-            assetsSection.zeroTitle
-          }}</span>
-          <BaseTable
-            v-else-if="isCryptoAssetsSelected"
-            v-model:page="assetsListState.page"
-            v-model:page-size="assetsListState.per_page"
-            :loading="isAssetsLoading"
-            :total="totalAssets"
-            :items="assets"
-            container-class="account-details__personal-owned-list"
-            :breakpoint="960"
-            row-pointer
-            @click:row="(asset) => handleAssetRowClick(asset.id)"
-          >
-            <template #header>
-              <div class="account-details__personal-owned-list-row">
-                <span class="h-sm">{{ $t('name') }}</span>
-                <span class="h-sm">{{ $t('value') }}</span>
-              </div>
-            </template>
-
-            <template #row="{ item }">
-              <div class="account-details__personal-owned-list-row">
-                <span class="row-text-monospace">{{ item.id.definition.name.value }}</span>
-                <span class="row-text-monospace">{{ item.value }}</span>
-              </div>
-            </template>
-
-            <template #mobile-card="{ item }">
-              <div class="account-details__personal-owned-mobile-list-row">
-                <div class="account-details__personal-owned-mobile-list-row-data row-text">
-                  <span class="h-sm">{{ $t('name') }}</span>
-                  <BaseLink :to="`/assets/${encodeURIComponent(item.id.definition.toString())}`">
-                    {{ item.id.definition.name.value }}
-                  </BaseLink>
+    <div v-if="accountView === 'overview'" class="account-details" data-test="account-overview">
+      <div class="account-details__personal">
+        <BaseContentBlock :title="$t('accounts.accountInformation')" class="account-details__personal-information">
+          <template #default>
+            <BaseResourceState
+              :snapshot="accountSnapshot"
+              :loading-label="$t('accounts.resource.loading')"
+              :not-found-label="$t('accounts.resource.notFound')"
+              :error-label="$t('accounts.resource.loadError')"
+              :retry-label="$t('accounts.resource.retry')"
+              @retry="accountScope.expose.refetch()"
+            >
+              <div v-if="account">
+                <div class="account-details__personal-information-row">
+                  <DataField
+                    :title="$t('metadata')"
+                    :metadata="{ display: 'short' }"
+                    :value="parseMetadata(account.metadata)"
+                  />
                 </div>
 
-                <div class="account-details__personal-owned-mobile-list-row-data row-text">
-                  <span class="h-sm">{{ $t('value') }}</span>
-                  <span class="row-text-monospace">{{ item.value }}</span>
+                <div v-if="addressDetails && authoritativeAccountAddress" class="account-details__address-card">
+                  <div class="account-details__address-heading">
+                    <span class="h-sm">{{ $t('accounts.accountAddressFormats') }}</span>
+                  </div>
+
+                  <div class="account-details__address-grid">
+                    <div class="account-details__address-field">
+                      <div class="account-details__address-field-header">
+                        <span class="h-sm">{{
+                          $t('accounts.accountAddressI105Label', { prefix: addressDetails.networkPrefix })
+                        }}</span>
+                        <button
+                          type="button"
+                          class="account-details__address-copy"
+                          :aria-label="$t('accounts.copyI105Address')"
+                          @click.stop="copyAddress(authoritativeAccountAddress)"
+                        >
+                          <CopyIcon aria-hidden="true" />
+                        </button>
+                      </div>
+                      <p class="account-details__address-value row-text-monospace">
+                        {{ authoritativeAccountAddress }}
+                      </p>
+                    </div>
+
+                    <div class="account-details__address-qr" :aria-busy="qrLoading">
+                      <img v-if="i105Qr" :src="i105Qr" :alt="$t('accounts.accountAddressQrAlt')" />
+                      <span v-else-if="qrGenerationFailed" class="row-text">
+                        {{ $t('accounts.accountAddressQrError') }}
+                      </span>
+                      <span class="account-details__address-qr-caption">
+                        {{ $t('accounts.accountAddressQrCaption') }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </template>
-          </BaseTable>
-          <BaseTable
-            v-else
-            v-model:page="assetsListState.page"
-            v-model:page-size="assetsListState.per_page"
-            :loading="isNFTsLoading"
-            :total="totalNFTs"
-            :items="nfts"
-            container-class="account-details__personal-owned-nft-list"
-            :breakpoint="960"
-            row-pointer
-            @click:row="(asset) => handleNFTRowClick(asset.id)"
-          >
-            <template #header>
-              <div class="account-details__personal-owned-nft-list-row">
-                <span class="h-sm">{{ $t('name') }}</span>
-              </div>
-            </template>
+            </BaseResourceState>
+          </template>
+        </BaseContentBlock>
 
-            <template #row="{ item }">
-              <div class="account-details__personal-owned-nft-list-row">
-                <span class="row-text-monospace">{{ item.id.toString() }}</span>
-              </div>
-            </template>
-
-            <template #mobile-card="{ item }">
-              <div class="account-details__personal-owned-nft-mobile-list-row">
-                <div class="account-details__personal-owned-nft-mobile-list-row-data row-text">
-                  <span class="h-sm">{{ $t('name') }}</span>
-                  <BaseLink :to="`/nfts/${encodeURIComponent(item.id.toString())}`">
-                    {{ item.id.toString() }}
-                  </BaseLink>
+        <BaseContentBlock v-if="account" :title="assetsSection.title" class="account-details__personal-owned">
+          <template #header-action>
+            <BaseTabs v-model="assetsTab" :items="ACCOUNT_ASSETS_OPTIONS" />
+          </template>
+          <template #default>
+            <span v-if="assetsSection.isZero" class="account-details__personal-owned_empty row-text">{{
+              assetsSection.zeroTitle
+            }}</span>
+            <BaseTable
+              v-else-if="isNumericAssetsSelected"
+              v-model:cursor="assetsListState.cursor"
+              v-model:page-size="assetsListState.limit"
+              :loading="isAssetsLoading"
+              pagination-mode="cursor"
+              :cursor-pagination="assetsPagination"
+              :items="assets"
+              :row-key="accountAssetRowKey"
+              container-class="account-details__personal-owned-list"
+              :breakpoint="960"
+            >
+              <template #header>
+                <div class="account-details__personal-owned-list-row" role="presentation">
+                  <span class="h-sm" role="columnheader">{{ $t('name') }}</span>
+                  <span class="h-sm" role="columnheader">{{ $t('value') }}</span>
                 </div>
-              </div>
-            </template>
-          </BaseTable>
-        </template>
-      </BaseContentBlock>
+              </template>
 
-      <BaseContentBlock
-        :title="$t('accounts.accountDomains')"
-        class="account-details__personal-owned"
-      >
-        <template #default>
-          <span
-            v-if="!account?.owned_domains"
-            class="account-details__personal-owned_empty row-text"
-          >{{
-            $t('accounts.accountDoesntHaveAnyDomains')
-          }}</span>
-          <BaseTable
-            v-else
-            v-model:page="domainsListState.page"
-            v-model:page-size="domainsListState.per_page"
-            :loading="isDomainsLoading"
-            :total="totalDomains"
-            :items="domains"
-            container-class="account-details__personal-owned-list"
-            :breakpoint="960"
-            row-pointer
-            @click:row="(domain) => handleDomainRowClick(domain.id)"
-          >
-            <template #header>
-              <div class="account-details__personal-owned-list-row">
-                <span class="h-sm">{{ $t('id') }}</span>
-                <span class="h-sm">{{ $t('assets.assets') }}</span>
-                <span class="h-sm">{{ $t('accounts.accounts') }}</span>
-              </div>
-            </template>
-
-            <template #row="{ item }">
-              <div class="account-details__personal-owned-list-row">
-                <span class="row-text-monospace">{{ item.id }}</span>
-                <span class="row-text-monospace">{{ item.assets }}</span>
-                <span class="row-text-monospace">{{ item.accounts }}</span>
-              </div>
-            </template>
-
-            <template #mobile-card="{ item }">
-              <div class="account-details__personal-owned-mobile-list-row">
-                <div class="account-details__personal-owned-mobile-list-row-data row-text">
-                  <span class="h-sm">{{ $t('id') }}</span>
-                  <BaseLink :to="`/domains/${item.id}`">
-                    {{ item.id }}
-                  </BaseLink>
+              <template #row="{ item }">
+                <div class="account-details__personal-owned-list-row" role="presentation">
+                  <div role="cell">
+                    <BaseLink :to="`/assets/${encodeURIComponent(item.definition_id.toString())}`" monospace>
+                      {{ accountAssetDefinitionName(item) }}
+                    </BaseLink>
+                  </div>
+                  <span class="row-text-monospace" role="cell">{{ item.value }}</span>
                 </div>
+              </template>
 
-                <div class="account-details__personal-owned-mobile-list-row-data row-text">
-                  <span class="h-sm">{{ $t('assets.assets') }}</span>
-                  <span class="row-text-monospace">{{ item.assets }}</span>
-                </div>
+              <template #mobile-card="{ item }">
+                <div class="account-details__personal-owned-mobile-list-row">
+                  <div class="account-details__personal-owned-mobile-list-row-data row-text">
+                    <span class="h-sm">{{ $t('name') }}</span>
+                    <BaseLink :to="`/assets/${encodeURIComponent(item.definition_id.toString())}`">
+                      {{ accountAssetDefinitionName(item) }}
+                    </BaseLink>
+                  </div>
 
-                <div class="account-details__personal-owned-mobile-list-row-data row-text">
-                  <span class="h-sm">{{ $t('accounts.accounts') }}</span>
-                  <span class="row-text-monospace">{{ item.accounts }}</span>
+                  <div class="account-details__personal-owned-mobile-list-row-data row-text">
+                    <span class="h-sm">{{ $t('value') }}</span>
+                    <span class="row-text-monospace">{{ item.value }}</span>
+                  </div>
                 </div>
-              </div>
-            </template>
-          </BaseTable>
-        </template>
-      </BaseContentBlock>
-    </div>
-    <div class="account-details__transactions">
-      <BaseContentBlock :title="$t('accounts.accountTransactions')">
-        <template #header-action>
-          <BaseTabs
-            v-model="transactionsTab"
-            :items="ACCOUNT_TRANSACTIONS_OPTIONS"
-          />
-        </template>
-        <template #default>
-          <div class="account-details__transactions-table account-details__transactions-table_short">
-            <TransactionsTable
-              v-if="!shouldShowInstructions"
-              :filter-by="{ kind: 'authority', value: accountId }"
-              hash-type="short"
-              show-block
-            />
-            <InstructionsTable
+              </template>
+            </BaseTable>
+            <BaseTable
+              v-else-if="isNftsSelected"
+              v-model:cursor="assetsListState.cursor"
+              v-model:page-size="assetsListState.limit"
+              :loading="isNFTsLoading"
+              pagination-mode="cursor"
+              :cursor-pagination="NFTsPagination"
+              :items="nfts"
+              :row-key="accountNftRowKey"
+              container-class="account-details__personal-owned-nft-list"
+              :breakpoint="960"
+            >
+              <template #header>
+                <div class="account-details__personal-owned-nft-list-row" role="presentation">
+                  <span class="h-sm" role="columnheader">{{ $t('name') }}</span>
+                </div>
+              </template>
+
+              <template #row="{ item }">
+                <div class="account-details__personal-owned-nft-list-row" role="presentation">
+                  <div role="cell">
+                    <BaseLink :to="`/nfts/${encodeURIComponent(item.id.toString())}`" monospace>
+                      {{ item.id.toString() }}
+                    </BaseLink>
+                  </div>
+                </div>
+              </template>
+
+              <template #mobile-card="{ item }">
+                <div class="account-details__personal-owned-nft-mobile-list-row">
+                  <div class="account-details__personal-owned-nft-mobile-list-row-data row-text">
+                    <span class="h-sm">{{ $t('name') }}</span>
+                    <BaseLink :to="`/nfts/${encodeURIComponent(item.id.toString())}`">
+                      {{ item.id.toString() }}
+                    </BaseLink>
+                  </div>
+                </div>
+              </template>
+            </BaseTable>
+            <BaseTable
               v-else
-              hash-type="short"
-              :filter-by="{ kind: 'authority', value: accountId }"
-            />
-          </div>
-        </template>
-      </BaseContentBlock>
+              v-model:cursor="assetsListState.cursor"
+              v-model:page-size="assetsListState.limit"
+              :loading="isRwasLoading"
+              pagination-mode="cursor"
+              :cursor-pagination="rwasPagination"
+              :items="rwas"
+              :row-key="accountRwaRowKey"
+              container-class="account-details__personal-owned-list"
+              :breakpoint="960"
+            >
+              <template #header>
+                <div class="account-details__personal-owned-list-row" role="presentation">
+                  <span class="h-sm" role="columnheader">{{ $t('id') }}</span>
+                  <span class="h-sm" role="columnheader">{{ $t('value') }}</span>
+                  <span class="h-sm" role="columnheader">{{ $t('assets.heldQuantity') }}</span>
+                </div>
+              </template>
+
+              <template #row="{ item }">
+                <div class="account-details__personal-owned-list-row" role="presentation">
+                  <div role="cell">
+                    <BaseLink :to="`/rwas/${encodeURIComponent(item.id)}`" monospace>
+                      {{ item.id }}
+                    </BaseLink>
+                  </div>
+                  <span class="row-text-monospace" role="cell">{{ item.quantity.toString() }}</span>
+                  <span class="row-text-monospace" role="cell">{{ item.held_quantity.toString() }}</span>
+                </div>
+              </template>
+
+              <template #mobile-card="{ item }">
+                <div class="account-details__personal-owned-mobile-list-row">
+                  <div class="account-details__personal-owned-mobile-list-row-data row-text">
+                    <span class="h-sm">{{ $t('id') }}</span>
+                    <BaseLink :to="`/rwas/${encodeURIComponent(item.id)}`">
+                      {{ item.id }}
+                    </BaseLink>
+                  </div>
+
+                  <div class="account-details__personal-owned-mobile-list-row-data row-text">
+                    <span class="h-sm">{{ $t('value') }}</span>
+                    <span class="row-text-monospace">{{ item.quantity.toString() }}</span>
+                  </div>
+
+                  <div class="account-details__personal-owned-mobile-list-row-data row-text">
+                    <span class="h-sm">{{ $t('assets.heldQuantity') }}</span>
+                    <span class="row-text-monospace">{{ item.held_quantity.toString() }}</span>
+                  </div>
+                </div>
+              </template>
+            </BaseTable>
+          </template>
+        </BaseContentBlock>
+
+        <BaseContentBlock v-if="account" :title="$t('accounts.accountDomains')" class="account-details__personal-owned">
+          <template #default>
+            <span v-if="!account?.owned_domains" class="account-details__personal-owned_empty row-text">{{
+              $t('accounts.accountDoesntHaveAnyDomains')
+            }}</span>
+            <BaseTable
+              v-else
+              v-model:cursor="domainsListState.cursor"
+              v-model:page-size="domainsListState.limit"
+              :loading="isDomainsLoading"
+              pagination-mode="cursor"
+              :cursor-pagination="domainsPagination"
+              :items="domains"
+              :row-key="accountDomainRowKey"
+              container-class="account-details__personal-owned-list"
+              :breakpoint="960"
+            >
+              <template #header>
+                <div class="account-details__personal-owned-list-row" role="presentation">
+                  <span class="h-sm" role="columnheader">{{ $t('id') }}</span>
+                  <span class="h-sm" role="columnheader">{{ $t('assets.assets') }}</span>
+                  <span class="h-sm" role="columnheader">{{ $t('accounts.accounts') }}</span>
+                </div>
+              </template>
+
+              <template #row="{ item }">
+                <div class="account-details__personal-owned-list-row" role="presentation">
+                  <div role="cell">
+                    <BaseLink :to="`/domains/${item.id}`" monospace>
+                      {{ item.id }}
+                    </BaseLink>
+                  </div>
+                  <span class="row-text-monospace" role="cell">{{ item.assets }}</span>
+                  <span class="row-text-monospace" role="cell">{{ item.accounts }}</span>
+                </div>
+              </template>
+
+              <template #mobile-card="{ item }">
+                <div class="account-details__personal-owned-mobile-list-row">
+                  <div class="account-details__personal-owned-mobile-list-row-data row-text">
+                    <span class="h-sm">{{ $t('id') }}</span>
+                    <BaseLink :to="`/domains/${item.id}`">
+                      {{ item.id }}
+                    </BaseLink>
+                  </div>
+
+                  <div class="account-details__personal-owned-mobile-list-row-data row-text">
+                    <span class="h-sm">{{ $t('assets.assets') }}</span>
+                    <span class="row-text-monospace">{{ item.assets }}</span>
+                  </div>
+
+                  <div class="account-details__personal-owned-mobile-list-row-data row-text">
+                    <span class="h-sm">{{ $t('accounts.accounts') }}</span>
+                    <span class="row-text-monospace">{{ item.accounts }}</span>
+                  </div>
+                </div>
+              </template>
+            </BaseTable>
+          </template>
+        </BaseContentBlock>
+      </div>
     </div>
+
+    <div v-else-if="accountView === 'activity'" class="account-details-page__view" data-test="account-activity">
+      <AccountActivityView :account-id="accountFilterId" />
+      <div class="account-details__transactions account-details__transactions_activity">
+        <BaseContentBlock :title="$t('accounts.accountTransactions')">
+          <template #header-action>
+            <BaseTabs v-model="transactionsTab" :items="ACCOUNT_TRANSACTIONS_OPTIONS" />
+          </template>
+          <template #default>
+            <div class="account-details__transactions-table account-details__transactions-table_short">
+              <TransactionsTable
+                v-if="!shouldShowInstructions"
+                :filter-by="{ kind: 'authority', value: displayAccountId }"
+                hash-type="short"
+                show-block
+              />
+              <InstructionsTable v-else hash-type="short" :filter-by="{ kind: 'authority', value: displayAccountId }" />
+            </div>
+          </template>
+        </BaseContentBlock>
+      </div>
+    </div>
+
+    <AccountPermissionsView
+      v-else-if="accountView === 'permissions'"
+      :account-id="accountFilterId"
+      class="account-details-page__view"
+      data-test="account-permissions"
+    />
+
+    <AccountMultisigWorkspace
+      v-else
+      :account-id="accountFilterId"
+      class="account-details-page__view"
+      data-test="account-multisig"
+    />
   </div>
 </template>
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
+
+.account-details-page {
+  display: flex;
+  flex-direction: column;
+  gap: size(2);
+
+  @include xxs {
+    padding: 0 size(3);
+  }
+
+  &__tabs {
+    align-self: flex-start;
+  }
+
+  &__view {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: size(2);
+
+    .account-details__transactions {
+      width: 100%;
+    }
+  }
+}
 
 .account-details {
   display: flex;
@@ -413,21 +683,22 @@ const assetsSection = computed(() => {
     display: flex;
     flex-direction: column;
     gap: size(2);
+    min-width: 0;
 
     @include xxs {
-      width: 90vw;
+      width: 100%;
     }
 
     @include lg {
-      width: 45vw;
+      width: 100%;
     }
 
     @include xl {
-      width: size(85);
+      width: 100%;
     }
 
     @include xxl {
-      width: size(95);
+      width: 100%;
     }
 
     &-information {
@@ -529,8 +800,95 @@ const assetsSection = computed(() => {
     }
   }
 
+  &__address-card {
+    margin-top: size(3);
+    display: flex;
+    flex-direction: column;
+    gap: size(2);
+    padding: 0 size(2) size(2) size(4);
+  }
+
+  &__address-heading {
+    display: flex;
+    flex-direction: column;
+    gap: size(0.5);
+  }
+
+  &__address-grid {
+    display: grid;
+    gap: size(2);
+
+    @include sm {
+      grid-template-columns: repeat(auto-fit, minmax(size(20), 1fr));
+    }
+  }
+
+  &__address-field {
+    padding: size(2);
+    border: 1px solid theme-color('border-primary');
+    border-radius: size(2);
+    display: flex;
+    flex-direction: column;
+    gap: size(1);
+  }
+
+  &__address-field-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: size(1);
+  }
+
+  &__address-copy {
+    flex: 0 0 auto;
+    display: inline-flex;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    color: theme-color('content-quaternary');
+    transition: color 200ms ease-in-out;
+
+    &:hover {
+      color: theme-color('content-tertiary');
+    }
+
+    svg {
+      width: size(3);
+      height: size(3);
+    }
+  }
+
+  &__address-value {
+    word-break: break-all;
+  }
+
+  &__address-qr {
+    border: 1px dashed theme-color('border-primary');
+    border-radius: size(2);
+    padding: size(2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-height: size(25);
+
+    img {
+      width: 100%;
+      max-width: size(30);
+      height: auto;
+    }
+  }
+
+  &__address-qr-caption {
+    margin-top: size(1);
+    color: theme-color('content-tertiary');
+    @include tpg-s4;
+  }
+
   &__transactions {
     margin-bottom: size(2);
+    min-width: 0;
 
     .base-content-block__header {
       display: flex;
@@ -548,10 +906,10 @@ const assetsSection = computed(() => {
     }
 
     @include xxs {
-      width: 90vw;
+      width: 100%;
     }
     @include lg {
-      width: 48vw;
+      width: 48%;
     }
     @include xl {
       width: size(80);
@@ -568,20 +926,8 @@ const assetsSection = computed(() => {
       &_short {
         .content-row {
           height: auto;
-
-          @include xxs {
-            width: 90vw;
-          }
-          @include lg {
-            width: 48vw;
-            height: 48px;
-          }
-          @include xl {
-            width: size(80);
-          }
-          @include xxl {
-            width: size(95);
-          }
+          width: 100%;
+          max-width: 100%;
         }
         & > .content-row {
           height: auto;
@@ -607,6 +953,12 @@ const assetsSection = computed(() => {
           }
           &-block {
             width: size(16);
+          }
+        }
+
+        .transactions-table__container .content-row {
+          @include lg {
+            height: 48px;
           }
         }
       }

@@ -1,8 +1,6 @@
 @font-face {
   font-family: 'Sora';
-  src:
-    /* url('./Sora-VariableFont_wght.woff2') format('woff2-variations'),
-    url('./Sora-VariableFont_wght.woff') format('woff-variations'), */ url('./Sora-VariableFont_wght.ttf')
-    format('truetype-variations');
+  src: url('./Sora-VariableFont_wght.woff2') format('woff2-variations');
   font-weight: 1 999;
+  font-display: swap;
 }

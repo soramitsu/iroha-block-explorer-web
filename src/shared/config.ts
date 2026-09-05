@@ -1,15 +1,35 @@
-export const menu = [
-  { i18nKey: 'blocks.blocks', to: '/blocks', names: ['blocks-list', 'blocks-details'] },
-  {
-    i18nKey: 'assets.assetsAndNFT',
-    to: '/assets',
-    names: ['assets', 'asset-details', 'nfts', 'nft-details'],
-  },
-  { i18nKey: 'domains.domains', to: '/domains', names: ['domains-list', 'domain-details'] },
-  { i18nKey: 'accounts.accounts', to: '/accounts', names: ['accounts-list', 'account-details'] },
-  { i18nKey: 'transactions.transactions', to: '/transactions', names: ['transactions-list', 'transaction-details'] },
-  { i18nKey: 'telemetry.telemetry', to: '/telemetry', names: ['telemetry'] },
+export const navigationGroups = [
+  { id: 'explore', i18nKey: 'ux.explore', items: [
+    { i18nKey: 'ux.overview', to: '/', names: ['home'] },
+    { i18nKey: 'blocks.blocks', to: '/blocks', names: ['blocks-list', 'blocks-details'] },
+    { i18nKey: 'transactions.transactions', to: '/transactions', names: ['transactions-list', 'transaction-details'] },
+    { i18nKey: 'accounts.accounts', to: '/accounts', names: ['accounts-list', 'account-details'] },
+    { i18nKey: 'assets.assetsAndNFTAndRWA', to: '/assets', names: ['assets', 'asset-details', 'nfts', 'nft-details', 'rwas', 'rwa-details'] },
+    { i18nKey: 'domains.domains', to: '/domains', names: ['domains-list', 'domain-details'] },
+  ] },
+  { id: 'analysis', i18nKey: 'ux.analysis', items: [
+    { i18nKey: 'tracing.nav', to: '/tracing', names: ['tracing-workspace'] },
+    { i18nKey: 'econometrics.nav', to: '/econometrics', names: ['econometrics'] },
+  ] },
+  { id: 'network', i18nKey: 'ux.network', items: [
+    { i18nKey: 'telemetry.telemetry', to: '/telemetry', names: ['telemetry'] },
+    { i18nKey: 'dataspaces.nav', to: '/dataspaces', names: ['dataspaces', 'dataspaces-details'] },
+    { i18nKey: 'governance.nav', to: '/governance', names: ['governance-dashboard'] },
+    { i18nKey: 'parameters.nav', to: '/parameters', names: ['system-parameters'] },
+    { i18nKey: 'soracles.nav', to: '/soracles', names: ['soracles'] },
+    { i18nKey: 'vpn.nav', to: '/vpn', names: ['vpn-stats'] },
+    { i18nKey: 'kaigi.nav', to: '/kaigi/relays', names: ['kaigi-relays'] },
+    { i18nKey: 'soracloud.nav', to: '/soracloud', names: ['soracloud'] },
+    { i18nKey: 'sorafs.registryNav', to: '/sorafs/registry', names: ['sorafs-registry'] },
+    { i18nKey: 'zkRegistry.nav', to: '/zk/registry', names: ['zk-registry'] },
+  ] },
+  { id: 'develop', i18nKey: 'ux.develop', items: [
+    { i18nKey: 'contracts.nav', to: '/contracts', names: ['smart-contracts'] },
+    { i18nKey: 'studio.nav', to: '/studio', names: ['kotodama-studio'] },
+  ] },
 ];
+
+export const menu = navigationGroups.flatMap((group) => group.items);
 
 export const langOptions = [
   { label: 'EN - English', value: 'en' },
@@ -18,4 +38,24 @@ export const langOptions = [
   { label: 'DE - Deutsch', value: 'de' },
   { label: 'RU - Русский', value: 'ru' },
   { label: 'JP - 日本', value: 'jp' },
+  { label: 'DV - ދިވެހި', value: 'dv' },
+  { label: 'DZ - རྫོང་ཁ', value: 'dz' },
+  { label: 'NE - नेपाली', value: 'ne' },
+  { label: 'MY - မြန်မာ', value: 'my' },
+  { label: 'KH - ខ្មែរ', value: 'kh' },
+  { label: 'ZH-TW - 繁體中文', value: 'zh-TW' },
+  { label: 'KO - 한국어', value: 'ko' },
+  { label: 'TH - ไทย', value: 'th' },
+  { label: 'AM - አማርኛ', value: 'am' },
+  { label: 'AZ - Azərbaycan', value: 'az' },
+  { label: 'HY - Հայերեն', value: 'hy' },
+  { label: 'KA - ქართული', value: 'ka' },
+  { label: 'TR - Türkçe', value: 'tr' },
+  { label: 'SI - සිංහල', value: 'si' },
+  { label: 'TA - தமிழ்', value: 'ta' },
+  { label: 'ID - Bahasa Indonesia', value: 'id' },
+  { label: 'UK - Українська', value: 'uk' },
+  { label: 'UR - اردو', value: 'ur' },
+  { label: 'HE - עברית', value: 'he' },
+  { label: 'AR - العربية', value: 'ar' },
 ];

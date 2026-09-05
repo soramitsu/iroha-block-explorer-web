@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "id": "authority-probe",
+  "source_name": "authority_probe.ko",
+  "compiler_source_path": "demo/authority_probe.ko",
+  "source": "seiyaku AuthorityProbe {\n  meta { abi_version: 1 }\n\n  kotoage fn main() permission(Admin) {\n    let caller = authority();\n    let alice = account!(\"sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB\");\n    let key = name!(\"authority_probe\");\n\n    if (caller == alice) {\n      set_account_detail(caller, key, json!{ match: \"alice\" });\n      return;\n    }\n\n    set_account_detail(caller, key, json!{ match: \"other\" });\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSuAEAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAkAEAAAAAAAAa0kI5i0yxdAIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAkQEBjgFHAgAAAAAAAAAqKWFjY291bnQuZGV0YWlsOiRhdXRob3JpdHk6YXV0aG9yaXR5X3Byb2JlExJhY2NvdW50OiRhdXRob3JpdHkzAQAAAAAAAAAqKWFjY291bnQuZGV0YWlsOiRhdXRob3JpdHk6YXV0aG9yaXR5X3Byb2JlCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAAxAEBAAAAAAAAALoBBQRtYWluBAAAAAAIAAAAAAAAAAABAAgBBgVBZG1pbkcCAAAAAAAAABMSYWNjb3VudDokYXV0aG9yaXR5KilhY2NvdW50LmRldGFpbDokYXV0aG9yaXR5OmF1dGhvcml0eV9wcm9iZTMBAAAAAAAAACopYWNjb3VudC5kZXRhaWw6JGF1dGhvcml0eTphdXRob3JpdHlfcHJvYmUDAQEBCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAATFRMQgQAAAADAAAAwQEAADAAAAAAAAAAzgAAAAAAAAAtAQAAAAAAAI8BAAAAAAAAAAEBAAAAd05SVDAAAGDoFHOu0KEnbxxXdtD2nDgATwAAAAAAAABa8qSbs5BTyQIAAAAASiEAAAAAAAAAAQABEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERoRO5vVxUNkpbmpsE4GXw+uOl248oCH8wiqYuRp7aMQ8AAwEAAAA4TlJUMAAAtzpr9NKeW2e8c2DX3F6luQAQAAAAAAAAAP3ksI4iqsNfAg9hdXRob3JpdHlfcHJvYmX0pSDL41SnyiCXEso6xUKlLwD7J9YZuemJSVGrjaPDhwAEAQAAADtOUlQwAADbQEpyjNjJP35EqIgTP2cZABMAAAAAAAAA6hZ+8E8JkswCEhF7Im1hdGNoIjoiYWxpY2UifRBMLTTnQ48er++e1nsJkWQmQ9BRqBOOaF5WxeZU26JJAAQBAAAAO05SVDAAANtASnKM2Mk/fkSoiBM/ZxkAEwAAAAAAAAB0dL9QIViehQISEXsibWF0Y2giOiJvdGhlciJ9d8xg/C13qkm/lyUU8EHU3iDBk1+jCEptCMwBjwrrDAkAAADYHx8gpAAAYAAKGCAAGAog4AAAYAAKCyAAAAogAAAaIAcAGiADAAogGgoKBnAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgXwAAYAAKCCAaAAhBiAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIBkAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAGAogAAALIAAAGiAHABogBQALIBoLCwYOCwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAAMIAAAGiAHABogBQAMIBoMDAZtDAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwg4AAAYAAKDSAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQogGgAAYAAACCAAAABJMgAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIBkAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAGAogAAALIAAAGiAHABogBQALIBoLCwYOCwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAAMIAAAGiAHABogBgAMIBoMDAZPDAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwg4AAAYAAKDSAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQogGgAAYAAACCAAAABJ",
+    "manifest": {
+      "code_hash": "hash:13D11ECBE23DBF5F66DF67DC079A041DC9A6FF33D6FFC9391046527A61E2BA1D#682B",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account.detail:$authority:authority_probe",
+          "account:$authority"
+        ],
+        "write_keys": [
+          "account.detail:$authority:authority_probe"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "main",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "account:$authority",
+            "account.detail:$authority:authority_probe"
+          ],
+          "write_keys": [
+            "account.detail:$authority:authority_probe"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "main",
+        "line": 4,
+        "pc_end": 1024,
+        "pc_start": 0,
+        "source_path": "authority_probe.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 1024,
+        "bytecode_words": 256,
+        "column": 14,
+        "frame_bytes": 40,
+        "function_name": "main",
+        "jump_range_risk": false,
+        "jump_span_words": 256,
+        "line": 4,
+        "pc_end": 1024,
+        "pc_start": 0,
+        "source_path": "authority_probe.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

@@ -1,0 +1,443 @@
+{
+  "version": 1,
+  "id": "docs-portal-static-norito-snippets-threshold-escrow",
+  "source_name": "threshold-escrow.ko",
+  "compiler_source_path": "docs/portal/static/norito-snippets/threshold-escrow.ko",
+  "source": "// Threshold escrow sample for a single payer and an exact funding target.\n// The payer is bound to authority() when the escrow is opened.\nseiyaku ThresholdEscrow {\n  meta { abi_version: 1; }\n\n  const recipient_account_literal: String = \"sorauﾛ1PｽNgｿﾘ9ﾏﾕ2ﾕ9ﾄZﾀﾃﾌWwNｸｾヰﾄﾂT3WｺTxｶｵﾎKﾓﾛmｷ4Y6PLN\";\n  const escrow_account_literal: String = \"sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76\";\n  const escrow_asset_definition_literal: String = \"62Fk4FPcMuLvW5QjDGNF2a4jAmjM\";\n\n  state AccountId payer_account;\n  state AccountId recipient_account;\n  state AccountId escrow_account_id;\n  state AssetDefinitionId escrow_asset_definition;\n  state int target_amount_value;\n  state int funded_amount_value;\n  state bool is_open;\n  state bool is_released;\n  state bool is_refunded;\n\n  fn assert_unopened() {\n    assert(!is_open, \"escrow already open\");\n    assert(!is_released, \"escrow already released\");\n    assert(!is_refunded, \"escrow already refunded\");\n  }\n\n  fn assert_open() {\n    assert(is_open, \"escrow is not open\");\n    assert(!is_released, \"escrow already released\");\n    assert(!is_refunded, \"escrow already refunded\");\n  }\n\n  fn assert_payer() {\n    assert(authority() == payer_account, \"only the payer may call this entrypoint\");\n  }\n\n  kotoage fn main() {}\n\n  // NOTE:\n  // This sample uses permission(Admin) because it releases and refunds funds\n  // from the configured escrow account. The recipient, escrow account, and\n  // asset definition are fixed literals so the compiler can emit a complete\n  // first-release access set without manual annotations.\n  kotoage fn open_escrow(target_amount: int) permission(Admin) {\n    assert_unopened();\n    assert(target_amount > 0, \"target_amount must be positive\");\n\n    payer_account = authority();\n    recipient_account = account_id(recipient_account_literal);\n    escrow_account_id = account_id(escrow_account_literal);\n    escrow_asset_definition = asset_definition(escrow_asset_definition_literal);\n    target_amount_value = target_amount;\n    funded_amount_value = 0;\n    is_open = true;\n    is_released = false;\n    is_refunded = false;\n  }\n  kotoage fn deposit(amount: int) permission(Admin) {\n    assert_open();\n    assert_payer();\n    assert(amount > 0, \"amount must be positive\");\n\n    let next_funded = funded_amount_value + amount;\n    assert(next_funded <= target_amount_value, \"deposit exceeds target_amount\");\n\n    transfer_asset(\n      authority(),\n      account_id(escrow_account_literal),\n      asset_definition(escrow_asset_definition_literal),\n      amount\n    );\n    funded_amount_value = next_funded;\n  }\n  kotoage fn release_if_ready() permission(Admin) {\n    assert_open();\n    assert(funded_amount_value == target_amount_value, \"escrow is not fully funded\");\n\n    transfer_asset(\n      account_id(escrow_account_literal),\n      account_id(recipient_account_literal),\n      asset_definition(escrow_asset_definition_literal),\n      funded_amount_value\n    );\n    is_open = false;\n    is_released = true;\n  }\n  kotoage fn refund() permission(Admin) {\n    assert_open();\n    assert_payer();\n\n    let funded = funded_amount_value;\n    if (funded > 0) {\n      transfer_asset(\n        account_id(escrow_account_literal),\n        authority(),\n        asset_definition(escrow_asset_definition_literal),\n        funded\n      );\n    }\n    is_open = false;\n    is_refunded = true;\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSWhEAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAMhEAAAAAAACFH5M5ShESlwIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAzQoBygqhBhAAAAAAAAAAExJhY2NvdW50OiRhdXRob3JpdHllZGFjY291bnQ6c29yYXXvvpsxTmbvvbdn776J776T776JQu+9pkvvvozvvpjvvpJv776H776C776bckc4Me++i2pX776O776VVm5jd+++jFPvvbEzcO++mO++i+++iWhVUzlRNzZramFjY291bnQ6c29yYXXvvpsxUO+9vU5n772/776YOe++j+++lTLvvpU5776EWu++gO++g+++jFd3Tu+9uO+9vuODsO++hO++glQzV++9ulR477227721776OS+++k+++m23vvbc0WTZQTE6AAX9hc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2hwGFAWFzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxUO+9vU5n772/776YOe++j+++lTLvvpU5776EWu++gO++g+++jFd3Tu+9uO+9vuODsO++hO++glQzV++9ulR477227721776OS+++k+++m23vvbc0WTZQTE4uLWFzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak06JGF1dGhvcml0eScmYXNzZXRfZGVmOjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0YF3N0YXRlOmVzY3Jvd19hY2NvdW50X2lkHh1zdGF0ZTplc2Nyb3dfYXNzZXRfZGVmaW5pdGlvbhoZc3RhdGU6ZnVuZGVkX2Ftb3VudF92YWx1ZQ4Nc3RhdGU6aXNfb3BlbhIRc3RhdGU6aXNfcmVmdW5kZWQSEXN0YXRlOmlzX3JlbGVhc2VkFBNzdGF0ZTpwYXllcl9hY2NvdW50GBdzdGF0ZTpyZWNpcGllbnRfYWNjb3VudBoZc3RhdGU6dGFyZ2V0X2Ftb3VudF92YWx1ZZMEDAAAAAAAAACAAX9hc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2hwGFAWFzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxUO+9vU5n772/776YOe++j+++lTLvvpU5776EWu++gO++g+++jFd3Tu+9uO+9vuODsO++hO++glQzV++9ulR477227721776OS+++k+++m23vvbc0WTZQTE4uLWFzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak06JGF1dGhvcml0eRgXc3RhdGU6ZXNjcm93X2FjY291bnRfaWQeHXN0YXRlOmVzY3Jvd19hc3NldF9kZWZpbml0aW9uGhlzdGF0ZTpmdW5kZWRfYW1vdW50X3ZhbHVlDg1zdGF0ZTppc19vcGVuEhFzdGF0ZTppc19yZWZ1bmRlZBIRc3RhdGU6aXNfcmVsZWFzZWQUE3N0YXRlOnBheWVyX2FjY291bnQYF3N0YXRlOnJlY2lwaWVudF9hY2NvdW50GhlzdGF0ZTp0YXJnZXRfYW1vdW50X3ZhbHVlCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAAqxUFAAAAAAAAAEkFBG1haW4EAAAAAAgAAAAAAAAAAAEAAQAIAAAAAAAAAAAIAAAAAAAAAAADAQEBCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAAvgIMC29wZW5fZXNjcm93BAAAAAAdAQAAAAAAAAAUDg10YXJnZXRfYW1vdW50BANpbnQBAAgBBgVBZG1pbggAAAAAAAAAANkBCQAAAAAAAAAUE3N0YXRlOnBheWVyX2FjY291bnQYF3N0YXRlOnJlY2lwaWVudF9hY2NvdW50GBdzdGF0ZTplc2Nyb3dfYWNjb3VudF9pZB4dc3RhdGU6ZXNjcm93X2Fzc2V0X2RlZmluaXRpb24aGXN0YXRlOnRhcmdldF9hbW91bnRfdmFsdWUaGXN0YXRlOmZ1bmRlZF9hbW91bnRfdmFsdWUODXN0YXRlOmlzX29wZW4SEXN0YXRlOmlzX3JlbGVhc2VkEhFzdGF0ZTppc19yZWZ1bmRlZAMBAQEIAAAAAAAAAAAIAAAAAAAAAAAICCMAAAAAAAC4BQgHZGVwb3NpdAQAAAAAFgEAAAAAAAAADQcGYW1vdW50BANpbnQBAAgBBgVBZG1pbpEDBwAAAAAAAAAaGXN0YXRlOmZ1bmRlZF9hbW91bnRfdmFsdWUaGXN0YXRlOnRhcmdldF9hbW91bnRfdmFsdWUuLWFzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak06JGF1dGhvcml0eRMSYWNjb3VudDokYXV0aG9yaXR5JyZhc3NldF9kZWY6NjJGazRGUGNNdUx2VzVRakRHTkYyYTRqQW1qTYABf2Fzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxTmbvvbdn776J776T776JQu+9pkvvvozvvpjvvpJv776H776C776bckc4Me++i2pX776O776VVm5jd+++jFPvvbEzcO++mO++i+++iWhVUzlRNzZlZGFjY291bnQ6c29yYXXvvpsxTmbvvbdn776J776T776JQu+9pkvvvozvvpjvvpJv776H776C776bckc4Me++i2pX776O776VVm5jd+++jFPvvbEzcO++mO++i+++iWhVUzlRNzbUAQMAAAAAAAAAGhlzdGF0ZTpmdW5kZWRfYW1vdW50X3ZhbHVlLi1hc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNOiRhdXRob3JpdHmAAX9hc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2AwEBAQgAAAAAAAAAAAgAAAAAAAAAAAjYIwAAAAAAAMYHERByZWxlYXNlX2lmX3JlYWR5BAAAAAAIAAAAAAAAAAABAAgBBgVBZG1pbsMEBwAAAAAAAAAaGXN0YXRlOmZ1bmRlZF9hbW91bnRfdmFsdWUaGXN0YXRlOnRhcmdldF9hbW91bnRfdmFsdWWAAX9hc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2ZWRhY2NvdW50OnNvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2JyZhc3NldF9kZWY6NjJGazRGUGNNdUx2VzVRakRHTkYyYTRqQW1qTYcBhQFhc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMVDvvb1OZ++9v+++mDnvvo/vvpUy776VOe++hFrvvoDvvoPvvoxXd07vvbjvvb7jg7DvvoTvvoJUM1fvvbpUeO+9tu+9te++jkvvvpPvvptt7723NFk2UExOa2phY2NvdW50OnNvcmF1776bMVDvvb1OZ++9v+++mDnvvo/vvpUy776VOe++hFrvvoDvvoPvvoxXd07vvbjvvb7jg7DvvoTvvoJUM1fvvbpUeO+9tu+9te++jkvvvpPvvptt7723NFk2UExOtQIEAAAAAAAAAA4Nc3RhdGU6aXNfb3BlbhIRc3RhdGU6aXNfcmVsZWFzZWSAAX9hc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2hwGFAWFzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxUO+9vU5n772/776YOe++j+++lTLvvpU5776EWu++gO++g+++jFd3Tu+9uO+9vuODsO++hO++glQzV++9ulR477227721776OS+++k+++m23vvbc0WTZQTE4DAQEBCAAAAAAAAAAACAAAAAAAAAAACEAkAAAAAAAAlQUHBnJlZnVuZAQAAAAACAAAAAAAAAAAAQAIAQYFQWRtaW72AgYAAAAAAAAAGhlzdGF0ZTpmdW5kZWRfYW1vdW50X3ZhbHVlgAF/YXNzZXQ6NjJGazRGUGNNdUx2VzVRakRHTkYyYTRqQW1qTSNzb3Jhde++mzFOZu+9t2fvvonvvpPvvolC772mS+++jO++mO++km/vvofvvoLvvptyRzgx776Lalfvvo7vvpVWbmN3776MU++9sTNw776Y776L776JaFVTOVE3NmVkYWNjb3VudDpzb3Jhde++mzFOZu+9t2fvvonvvpPvvolC772mS+++jO++mO++km/vvofvvoLvvptyRzgx776Lalfvvo7vvpVWbmN3776MU++9sTNw776Y776L776JaFVTOVE3NicmYXNzZXRfZGVmOjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0uLWFzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak06JGF1dGhvcml0eRMSYWNjb3VudDokYXV0aG9yaXR52wEEAAAAAAAAAA4Nc3RhdGU6aXNfb3BlbhIRc3RhdGU6aXNfcmVmdW5kZWSAAX9hc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2Li1hc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNOiRhdXRob3JpdHkDAQEBCAAAAAAAAAAACAAAAAAAAAAACKgkAAAAAAAAhgIJAAAAAAAAABkODXBheWVyX2FjY291bnQJAQAAAAAAAAAJHRIRcmVjaXBpZW50X2FjY291bnQJAQAAAAAAAAAJHRIRZXNjcm93X2FjY291bnRfaWQJAQAAAAAAAAAJIxgXZXNjcm93X2Fzc2V0X2RlZmluaXRpb24JAQAAAAAAAAAKHxQTdGFyZ2V0X2Ftb3VudF92YWx1ZQkBAAAAAAAAAAAfFBNmdW5kZWRfYW1vdW50X3ZhbHVlCQEAAAAAAAAAABMIB2lzX29wZW4JAQAAAAAAAAAEFwwLaXNfcmVsZWFzZWQJAQAAAAAAAAAEFwwLaXNfcmVmdW5kZWQJAQAAAAAAAAAETFRMQhsAAAAAAAAAfgoAAOgAAAAAAAAAPwEAAAAAAAB5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IAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIOAAAGAAChwgAAsKIOAAAGAACgsgABwKIFEAAGAAAAogAAAaIAcAGiAtAAogGgoKBnoKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgXQAAYAAKFyAAAAogAAAaIAcAGiAvAAogGgoKBhgKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAAAAsgAAAaIAcAGiAvAAsgGgsLBnkLCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyDgAABgAAocIAALCiDgAABgAAoLIAAcCiBRAABgAAAKIAAAGiAHABogMQAKIBoKCgY+CgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYF0AAGAAChcgAAAKIAAAGiAHABogMgAKIBoKCgYtCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAALIAAAGiAHABogMwALIBoLCwYUCwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsg4AAAYAAKHCAACwog4AAAYAAKCyAAHAogUQAAYAAYCiBVAABgAAoJIAAACiAAABogBwAaIDQACiAaCgoGKgoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAJCyDgAABgAAocIAALCiDgAABgAAoLIAAcCiBRAABgAAAYIAAYCiBVAABgAAoJIAAACiAAABogBwAaIDUACiAaCgoGDQoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAJCyDgAABgAAocIAALCiDgAABgAAoLIAAcCiBRAABgAAAYIAEYGCAAGAogVQAAYAAKCSAAAAogAAAaIAcAGiAkAAogGgoKBkoKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACQsg4AAAYAAKHCAACwog4AAAYAAKCyAAHAogUQAAYAAAGCAAGAogVQAAYAAKCSAAAAogAAAaIAcAGiAlAAogGgoKBlsKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACQsg4AAAYAAKHCAACwog4AAAYAAKCyAAHAogUQAAYAAAGCAAGAogVQAAYAAKCSAAAAogAAAaIAcAGiAmAAogGgoKBnQKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACQsg4AAAYAAKHCAACwog4AAAYAAKCyAAHAogUQAAYAgfCTAQHxcwGB8YMAAfATAoHx8gAAEASOAfHyAAAR8xCAkfMRAXHzEYGB8xAAAKIAAAGiAHABogNQAKIBoKCgZwCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYPEAAGAAChggABgKIOAAAGAAChwgAAAKIAAAGiAHABogNgAKIBoKCgZSCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKCSAACQogqP0BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAgfCTAQHxcwGB8YMAAfATAgHx8gAAEASMAfHyAAAR8xCAYfMRAHHzEYCB8xIAkfMSgXHzEwGB8xOAofMTgfGDBu/AFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAXIBX9AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAABcgAAAXIBgXDAI/AA0gDQwJCAEJCSEAABcgAAAaIAcAGiA3ABcgGhcXBi8XFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyACAAlBAgAAYAAACSAAAAogAAAaIAcAGiA1AAogGgoKBg0KCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgUAAAYAAKFyAAFwog4AAAYFMAAGAACgkgGAkXAQAACiAAABogBwAaIDQACiAaCgoGKgoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGBQAABgAAoIIAAICiDgAABgUwAAYAAKCSAXCQwCPwANIA0MCAgBCAghAQgIIwAACSAAABogBwAaIDcACSAaCQkGbQkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAIACEECAABgAAAIIKQAAGAACgggABgKIGkAAGAACgYgAAgKIAAACyAAABogBwAaIC0ACyAaCwsGegsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAAADCAAABogBwAaIDEADCAaDAwGPgwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAGDSDgAABgAAoOIAALCiDgAABgAAoLIAAMCiDgAABgAAoMIAANCiDgAABgAAoNIAAOCiAkAABgAAAGIAAXCiBVAABgAAoGIAAACiAAABogBwAaIDUACiAaCgoGDQoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAGCyDgAABgAAocIAALCiDgAABgAAoLIAAcCiBRAABgCB8GMBAfBzAYHwgwIB8JMCgfFzAwHxgwAB8BMEAfHyAAAQBI4B8fIAABHzEICR8xEBcfMRgYHzEAAAogAAAaIAcAGiA1AAogGgoKBnAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABg8QAAYAAKGCAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiA4AAogGgoKBjEKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoJIAAJCiCR/gFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgCB8JMBAfFzAYHxgwAB8BMCAfHyAAAQBI0B8fIAABHzEIBx8xEAgfMRgJHzEgFx8xKBgfMeP6AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAABggAAAKIAAAGiAHABogNQAKIBoKCgYNCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYFAAAGAAChcgABcKIOAAAGBTAABgAAoYIAAACiAAABogBwAaIDQACiAaCgoGKgoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGBQAABgAAoJIAAJCiDgAABgUwAAYAAKFyAXGAkOAAAXIAAAGiAHABogOQAXIBoXFwYHFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgAgAJQQIAAGAAAAkgABgKIGkAAGAACgcgAAAKIAAAGiAHABogLQAKIBoKCgZ6CgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAALIAAAGiAHABogKgALIBoLCwY2CwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAAMIAAAGiAHABogMQAMIBoMDAY+DAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAcNIOAAAGAACg4gAAsKIOAAAGAACgsgAAwKIOAAAGAACgwgAA0KIOAAAGAACg0gAA4KICQAAGAAAAcgAAAHIAAHCiBVAABgAAoIIAAACiAAABogBwAaICQACiAaCgoGSgoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAICyDgAABgAAocIAALCiDgAABgAAoLIAAcCiBRAABgAAAHIAEHByAABwogVQAAYAAKCCAAAAogAAAa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IAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAASS35AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJKvsBRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAElw+wFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAASYT8AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJyvwBRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEnW/QFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAASQ==",
+    "manifest": {
+      "code_hash": "hash:E9872C035433F0DF85C3FB95014FB48342FC7E7CCA3D7F4C2B70E2EE4B75ABB9#2E4F",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account:$authority",
+          "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "account:sorauﾛ1PｽNgｿﾘ9ﾏﾕ2ﾕ9ﾄZﾀﾃﾌWwNｸｾヰﾄﾂT3WｺTxｶｵﾎKﾓﾛmｷ4Y6PLN",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1PｽNgｿﾘ9ﾏﾕ2ﾕ9ﾄZﾀﾃﾌWwNｸｾヰﾄﾂT3WｺTxｶｵﾎKﾓﾛmｷ4Y6PLN",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM:$authority",
+          "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM",
+          "state:escrow_account_id",
+          "state:escrow_asset_definition",
+          "state:funded_amount_value",
+          "state:is_open",
+          "state:is_refunded",
+          "state:is_released",
+          "state:payer_account",
+          "state:recipient_account",
+          "state:target_amount_value"
+        ],
+        "write_keys": [
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1PｽNgｿﾘ9ﾏﾕ2ﾕ9ﾄZﾀﾃﾌWwNｸｾヰﾄﾂT3WｺTxｶｵﾎKﾓﾛmｷ4Y6PLN",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM:$authority",
+          "state:escrow_account_id",
+          "state:escrow_asset_definition",
+          "state:funded_amount_value",
+          "state:is_open",
+          "state:is_refunded",
+          "state:is_released",
+          "state:payer_account",
+          "state:recipient_account",
+          "state:target_amount_value"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "main",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "open_escrow",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "target_amount",
+              "type_name": "int"
+            }
+          ],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [],
+          "write_keys": [
+            "state:payer_account",
+            "state:recipient_account",
+            "state:escrow_account_id",
+            "state:escrow_asset_definition",
+            "state:target_amount_value",
+            "state:funded_amount_value",
+            "state:is_open",
+            "state:is_released",
+            "state:is_refunded"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "deposit",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "amount",
+              "type_name": "int"
+            }
+          ],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "state:funded_amount_value",
+            "state:target_amount_value",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM:$authority",
+            "account:$authority",
+            "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76"
+          ],
+          "write_keys": [
+            "state:funded_amount_value",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM:$authority",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "release_if_ready",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "state:funded_amount_value",
+            "state:target_amount_value",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1PｽNgｿﾘ9ﾏﾕ2ﾕ9ﾄZﾀﾃﾌWwNｸｾヰﾄﾂT3WｺTxｶｵﾎKﾓﾛmｷ4Y6PLN",
+            "account:sorauﾛ1PｽNgｿﾘ9ﾏﾕ2ﾕ9ﾄZﾀﾃﾌWwNｸｾヰﾄﾂT3WｺTxｶｵﾎKﾓﾛmｷ4Y6PLN"
+          ],
+          "write_keys": [
+            "state:is_open",
+            "state:is_released",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1PｽNgｿﾘ9ﾏﾕ2ﾕ9ﾄZﾀﾃﾌWwNｸｾヰﾄﾂT3WｺTxｶｵﾎKﾓﾛmｷ4Y6PLN"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "refund",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "state:funded_amount_value",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM:$authority",
+            "account:$authority"
+          ],
+          "write_keys": [
+            "state:is_open",
+            "state:is_refunded",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM:$authority"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [
+        {
+          "name": "payer_account",
+          "type_name": "AccountId"
+        },
+        {
+          "name": "recipient_account",
+          "type_name": "AccountId"
+        },
+        {
+          "name": "escrow_account_id",
+          "type_name": "AccountId"
+        },
+        {
+          "name": "escrow_asset_definition",
+          "type_name": "AssetDefinitionId"
+        },
+        {
+          "name": "target_amount_value",
+          "type_name": "int"
+        },
+        {
+          "name": "funded_amount_value",
+          "type_name": "int"
+        },
+        {
+          "name": "is_open",
+          "type_name": "bool"
+        },
+        {
+          "name": "is_released",
+          "type_name": "bool"
+        },
+        {
+          "name": "is_refunded",
+          "type_name": "bool"
+        }
+      ],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "main",
+        "line": 36,
+        "pc_end": 8,
+        "pc_start": 0,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "column": 6,
+        "function_name": "assert_unopened",
+        "line": 20,
+        "pc_end": 784,
+        "pc_start": 8,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "column": 6,
+        "function_name": "assert_open",
+        "line": 26,
+        "pc_end": 1556,
+        "pc_start": 784,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "column": 6,
+        "function_name": "assert_payer",
+        "line": 32,
+        "pc_end": 1876,
+        "pc_start": 1556,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__open_escrow",
+        "line": 43,
+        "pc_end": 4016,
+        "pc_start": 1876,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "open_escrow",
+        "line": 43,
+        "pc_end": 4400,
+        "pc_start": 4016,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__deposit",
+        "line": 57,
+        "pc_end": 5608,
+        "pc_start": 4400,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "deposit",
+        "line": 57,
+        "pc_end": 5992,
+        "pc_start": 5608,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "release_if_ready",
+        "line": 73,
+        "pc_end": 7168,
+        "pc_start": 5992,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "refund",
+        "line": 86,
+        "pc_end": 9488,
+        "pc_start": 7168,
+        "source_path": "threshold-escrow.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 8,
+        "bytecode_words": 2,
+        "column": 14,
+        "frame_bytes": 8,
+        "function_name": "main",
+        "jump_range_risk": false,
+        "jump_span_words": 2,
+        "line": 36,
+        "pc_end": 8,
+        "pc_start": 0,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "bytecode_bytes": 776,
+        "bytecode_words": 194,
+        "column": 6,
+        "frame_bytes": 32,
+        "function_name": "assert_unopened",
+        "jump_range_risk": false,
+        "jump_span_words": 194,
+        "line": 20,
+        "pc_end": 784,
+        "pc_start": 8,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "bytecode_bytes": 772,
+        "bytecode_words": 193,
+        "column": 6,
+        "frame_bytes": 32,
+        "function_name": "assert_open",
+        "jump_range_risk": false,
+        "jump_span_words": 193,
+        "line": 26,
+        "pc_end": 1556,
+        "pc_start": 784,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "bytecode_bytes": 320,
+        "bytecode_words": 80,
+        "column": 6,
+        "frame_bytes": 32,
+        "function_name": "assert_payer",
+        "jump_range_risk": false,
+        "jump_span_words": 80,
+        "line": 32,
+        "pc_end": 1876,
+        "pc_start": 1556,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "bytecode_bytes": 2140,
+        "bytecode_words": 535,
+        "column": 14,
+        "frame_bytes": 40,
+        "function_name": "__entrypoint_impl__open_escrow",
+        "jump_range_risk": false,
+        "jump_span_words": 535,
+        "line": 43,
+        "pc_end": 4016,
+        "pc_start": 1876,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "bytecode_bytes": 384,
+        "bytecode_words": 96,
+        "column": 14,
+        "frame_bytes": 32,
+        "function_name": "open_escrow",
+        "jump_range_risk": false,
+        "jump_span_words": 96,
+        "line": 43,
+        "pc_end": 4400,
+        "pc_start": 4016,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "bytecode_bytes": 1208,
+        "bytecode_words": 302,
+        "column": 14,
+        "frame_bytes": 64,
+        "function_name": "__entrypoint_impl__deposit",
+        "jump_range_risk": false,
+        "jump_span_words": 302,
+        "line": 57,
+        "pc_end": 5608,
+        "pc_start": 4400,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "bytecode_bytes": 384,
+        "bytecode_words": 96,
+        "column": 14,
+        "frame_bytes": 32,
+        "function_name": "deposit",
+        "jump_range_risk": false,
+        "jump_span_words": 96,
+        "line": 57,
+        "pc_end": 5992,
+        "pc_start": 5608,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "bytecode_bytes": 1176,
+        "bytecode_words": 294,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "release_if_ready",
+        "jump_range_risk": false,
+        "jump_span_words": 294,
+        "line": 73,
+        "pc_end": 7168,
+        "pc_start": 5992,
+        "source_path": "threshold-escrow.ko"
+      },
+      {
+        "bytecode_bytes": 2320,
+        "bytecode_words": 580,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "refund",
+        "jump_range_risk": false,
+        "jump_span_words": 580,
+        "line": 86,
+        "pc_end": 9488,
+        "pc_start": 7168,
+        "source_path": "threshold-escrow.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

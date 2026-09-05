@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "id": "invalid-syntax",
+  "source_name": "invalid-syntax.ko",
+  "compiler_source_path": "/Users/takemiyamakoto/dev/iroha-block-explorer-web/tests/fixtures/kotodama-parity/sources/invalid-syntax.ko",
+  "source": "seiyaku Broken {\n  @\n}\n",
+  "rust": {
+    "kind": "failure",
+    "diagnostics": [
+      {
+        "severity": "error",
+        "message": "compile error: parser error: Unexpected character '@' at 2:3",
+        "code": null,
+        "phase": null
+      }
+    ],
+    "compiler_stderr": [
+      "compile error: parser error: Unexpected character '@' at 2:3"
+    ]
+  }
+}

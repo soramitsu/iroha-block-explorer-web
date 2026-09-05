@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "id": "create-nft-for-every-user-trigger",
+  "source_name": "create_nft_for_every_user_trigger.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/create_nft_for_every_user_trigger.ko",
+  "source": "// Create one NFT per known account (snapshot-based convenience).\nseiyaku CreateNftForEveryUser {\n  kotoage fn run() {\n    create_nfts_for_all_users();\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSsQAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAiQAAAAAAAABm8bjUjat8lwIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAAQAIAAAAAAAAAABPAQAAAAAAAABGBANydW4EAAAAAAgAAAAAAAAAAAEAAQAIAAAAAAAAAAAIAAAAAAAAAAABAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAPAfHyCiAABgAAAYIAAAAEk=",
+    "manifest": {
+      "code_hash": "hash:FB6BD24909961989DD93AC840AEA5D1996D85F80C20DDF0EEB3A77C57C95E41F#752B",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "run",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": null,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "run",
+        "line": 3,
+        "pc_end": 16,
+        "pc_start": 0,
+        "source_path": "create_nft_for_every_user_trigger.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 16,
+        "bytecode_words": 4,
+        "column": 14,
+        "frame_bytes": 16,
+        "function_name": "run",
+        "jump_range_risk": false,
+        "jump_span_words": 4,
+        "line": 3,
+        "pc_end": 16,
+        "pc_start": 0,
+        "source_path": "create_nft_for_every_user_trigger.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

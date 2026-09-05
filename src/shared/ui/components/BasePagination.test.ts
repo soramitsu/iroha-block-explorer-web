@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { i18n } from '@/shared/lib/localization';
 import BasePagination from '@/shared/ui/components/BasePagination.vue';
@@ -18,6 +18,21 @@ test.each([
       start: 29,
       end: 11,
       total: 29,
+    },
+  ],
+  [
+    {
+      reversed: false,
+      items: 0,
+      totalItems: 15,
+      page: 4,
+      pageSize: 10,
+      activePage: 4,
+    },
+    {
+      start: 0,
+      end: 0,
+      total: 15,
     },
   ],
   [
@@ -209,6 +224,96 @@ test.each([
   }
 );
 
+describe('BasePagination accessibility', () => {
+  function mountPagination(page: number, totalItems = 35, items = 10) {
+    return mount(BasePagination, {
+      props: {
+        items,
+        page,
+        pageSize: 10,
+        reversed: false,
+        totalItems,
+      },
+      global: {
+        plugins: [i18n],
+      },
+    });
+  }
+
+  it('renders a labelled navigation landmark with native page buttons', () => {
+    const wrapper = mountPagination(7, 189);
+    expect(wrapper.element.tagName).toBe('NAV');
+    expect(wrapper.attributes('aria-label')).toBe('Pagination');
+
+    const pageButtons = wrapper.findAll('button.base-pagination__item-numbers-number');
+    expect(pageButtons.length).toBeGreaterThan(1);
+    expect(pageButtons.every((button) => button.attributes('type') === 'button')).toBe(true);
+    expect(wrapper.get('[aria-current="page"]').text()).toBe('7');
+
+    const ellipses = wrapper.findAll('[data-ellipsis]');
+    expect(ellipses.length).toBeGreaterThan(0);
+    expect(ellipses.every((ellipsis) => ellipsis.element.tagName === 'SPAN')).toBe(true);
+    expect(ellipses.every((ellipsis) => ellipsis.attributes('aria-hidden') === 'true')).toBe(true);
+  });
+
+  it('disables the previous native button on the first page and emits next-page selection', async () => {
+    const wrapper = mountPagination(1);
+    const previous = wrapper.get<HTMLButtonElement>('[data-testid="prev"]');
+    const next = wrapper.get<HTMLButtonElement>('[data-testid="next"]');
+
+    expect(previous.element.tagName).toBe('BUTTON');
+    expect(previous.element.disabled).toBe(true);
+    expect(previous.attributes('aria-label')).toBe('Previous page');
+    expect(next.element.disabled).toBe(false);
+    await next.trigger('click');
+    expect(wrapper.emitted('update:page')?.at(-1)).toEqual([2]);
+  });
+
+  it('disables the next native button on the last page and allows moving backward', async () => {
+    const wrapper = mountPagination(4);
+    const previous = wrapper.get<HTMLButtonElement>('[data-testid="prev"]');
+    const next = wrapper.get<HTMLButtonElement>('[data-testid="next"]');
+
+    expect(next.element.disabled).toBe(true);
+    expect(next.attributes('aria-label')).toBe('Next page');
+    await previous.trigger('click');
+    expect(wrapper.emitted('update:page')?.at(-1)).toEqual([3]);
+  });
+
+  it('caps navigable pages to the Torii fetch window while retaining the exact total', () => {
+    const wrapper = mount(BasePagination, {
+      props: {
+        items: 20,
+        page: 25,
+        pageSize: 20,
+        reversed: false,
+        totalItems: 1_000,
+        maxFetchSize: 500,
+      },
+      global: { plugins: [i18n] },
+    });
+
+    expect(wrapper.text()).toContain('481-500 of 1000');
+    expect(wrapper.get('[data-test="fetch-window-limit"]').text()).toContain('500');
+    expect(
+      wrapper.findAll('button.base-pagination__item-numbers-number').some((button) => button.text() === '25')
+    ).toBe(true);
+    expect(
+      wrapper.findAll('button.base-pagination__item-numbers-number').some((button) => button.text() === '26')
+    ).toBe(false);
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="next"]').element.disabled).toBe(true);
+  });
+
+  it('keeps a page-one recovery control for an empty out-of-range page', async () => {
+    const wrapper = mountPagination(3, 7, 0);
+    expect(wrapper.text()).toContain('0-0 of 7');
+    const pageOne = wrapper.get('button.base-pagination__item-numbers-number');
+    expect(pageOne.text()).toBe('1');
+    await pageOne.trigger('click');
+    expect(wrapper.emitted('update:page')?.at(-1)).toEqual([1]);
+  });
+});
+
 test.each([
   [
     {
@@ -220,8 +325,8 @@ test.each([
       totalItems: 35,
     },
     {
-      segmentInfo: '35-21 of 35',
-      numbers: ['3', '2', '1'],
+      segmentInfo: '21-35 of 35',
+      numbers: ['1', '2', '3'],
       activePage: '3',
     },
   ],
@@ -235,8 +340,8 @@ test.each([
       totalItems: 30,
     },
     {
-      segmentInfo: '30-21 of 30',
-      numbers: ['3', '2', '1'],
+      segmentInfo: '21-30 of 30',
+      numbers: ['1', '2', '3'],
       activePage: '3',
     },
   ],
@@ -250,8 +355,8 @@ test.each([
       totalItems: 105,
     },
     {
-      segmentInfo: '105-91 of 105',
-      numbers: ['10', '9', '8', '7', '6', '5', '4', '. . .', '1'],
+      segmentInfo: '91-105 of 105',
+      numbers: ['1', '. . .', '4', '5', '6', '7', '8', '9', '10'],
       activePage: '10',
     },
   ],
@@ -265,8 +370,8 @@ test.each([
       totalItems: 125,
     },
     {
-      segmentInfo: '80-71 of 125',
-      numbers: ['12', '11', '10', '9', '8', '7', '6', '. . .', '1'],
+      segmentInfo: '71-80 of 125',
+      numbers: ['1', '. . .', '6', '7', '8', '9', '10', '11', '12'],
       activePage: '8',
     },
   ],
@@ -280,8 +385,8 @@ test.each([
       totalItems: 125,
     },
     {
-      segmentInfo: '30-21 of 125',
-      numbers: ['12', '. . .', '7', '6', '5', '4', '3', '2', '1'],
+      segmentInfo: '21-30 of 125',
+      numbers: ['1', '2', '3', '4', '5', '6', '7', '. . .', '12'],
       activePage: '3',
     },
   ],
@@ -295,8 +400,8 @@ test.each([
       totalItems: 195,
     },
     {
-      segmentInfo: '80-71 of 195',
-      numbers: ['19', '. . .', '11', '10', '9', '8', '7', '6', '5', '. . .', '1'],
+      segmentInfo: '71-80 of 195',
+      numbers: ['1', '. . .', '5', '6', '7', '8', '9', '10', '11', '. . .', '19'],
       activePage: '8',
     },
   ],
@@ -310,8 +415,8 @@ test.each([
       totalItems: 35,
     },
     {
-      segmentInfo: '20-11 of 35',
-      numbers: ['3', '2', '1'],
+      segmentInfo: '11-20 of 35',
+      numbers: ['1', '2', '3'],
       activePage: '2',
     },
   ],
@@ -325,7 +430,22 @@ test.each([
       totalItems: 27,
     },
     {
-      segmentInfo: '27-1 of 27',
+      segmentInfo: '1-27 of 27',
+      numbers: [],
+      activePage: '',
+    },
+  ],
+  [
+    {
+      items: 1,
+      page: 0,
+      pageSize: 10,
+      payloadPagination: { page: 0, per_page: 10, total_pages: 1, total_items: 1 },
+      reversed: true,
+      totalItems: 1,
+    },
+    {
+      segmentInfo: '1-1 of 1',
       numbers: [],
       activePage: '',
     },

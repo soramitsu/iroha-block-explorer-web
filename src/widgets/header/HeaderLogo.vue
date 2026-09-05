@@ -1,35 +1,42 @@
-<script setup lang="ts">
-import IrohaLogo from '@/assets/iroha-logo.png';
-</script>
-
 <template>
-  <RouterLink
+  <BaseLink
     to="/"
     class="header-logo"
+    aria-label="Hyperledger Iroha"
   >
-    <img
-      :src="IrohaLogo"
-      class="header-logo"
-      alt="iroha"
-    >
-  </RouterLink>
+    <Logo
+      class="header-logo__img"
+      aria-hidden="true"
+      focusable="false"
+    />
+  </BaseLink>
 </template>
+
+<script setup lang="ts">
+import BaseLink from '@/shared/ui/components/BaseLink.vue';
+import Logo from '@/assets/hyperledger_iroha_final.svg';
+</script>
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
 
 .header-logo {
-  width: 140px;
-  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
-  @include xxs {
-    width: 160px;
-    height: 46px;
-  }
+  &__img {
+    width: 140px;
+    height: auto;
 
-  @include xl {
-    width: 192px;
-    height: 52px;
+    @include xs {
+      width: 160px;
+    }
+
+    @include xl {
+      width: 200px;
+    }
   }
 }
+html.dark .header-logo__img .st4 { fill: #e9e9e9; }
 </style>

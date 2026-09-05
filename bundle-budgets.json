@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "default_chunk_gzip_bytes": 180000,
+  "chunk_gzip_bytes": {
+    "index": 65000,
+    "contract-view": 2000,
+    "iroha-sdk": 165000,
+    "json-viewer": 15000,
+    "studio-flow": 85000,
+    "transaction-instructions": 5000,
+    "vendor": 48000,
+    "vue": 65000
+  },
+  "entry_gzip_bytes": {
+    "index.html": 540000
+  },
+  "route_gzip_bytes": {
+    "src/pages/SearchResults.vue": 30000,
+    "src/pages/TransactionDetails.vue": 40000,
+    "src/pages/KotodamaStudio.vue": 115000,
+    "src/pages/NodesTelemetry.vue": 45000,
+    "src/pages/SorafsRegistry.vue": 60000
+  }
+}

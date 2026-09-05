@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "id": "query-assets-and-save-cursor",
+  "source_name": "query_assets_and_save_cursor.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/query_assets_and_save_cursor.ko",
+  "source": "// Save a simple ForwardCursor-like value into account metadata at key \"cursor\".\n// Uses pointer-ABI inputs: account=authority(), key=\"cursor\", value=ForwardCursor{\"sc_dummy\",1}.\nseiyaku QueryAssetsAndSaveCursor {\n  kotoage fn run() permission(Admin) {\n    set_account_detail(authority(), name!(\"cursor\"), json!{ query: \"sc_dummy\", cursor: 1 });\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSkQEAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAaQEAAAAAAABGoD6M2+reJwIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAfgF8PgIAAAAAAAAAISBhY2NvdW50LmRldGFpbDokYXV0aG9yaXR5OmN1cnNvchMSYWNjb3VudDokYXV0aG9yaXR5KgEAAAAAAAAAISBhY2NvdW50LmRldGFpbDokYXV0aG9yaXR5OmN1cnNvcggAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAALEBAQAAAAAAAACnAQQDcnVuBAAAAAAIAAAAAAAAAAABAAgBBgVBZG1pbj4CAAAAAAAAABMSYWNjb3VudDokYXV0aG9yaXR5ISBhY2NvdW50LmRldGFpbDokYXV0aG9yaXR5OmN1cnNvcioBAAAAAAAAACEgYWNjb3VudC5kZXRhaWw6JGF1dGhvcml0eTpjdXJzb3IDAQEBCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAATFRMQgIAAAABAAAAxgAAACAAAAAAAAAAdgAAAAAAAAAAAwEAAAAvTlJUMAAAtzpr9NKeW2e8c2DX3F6luQAHAAAAAAAAAEHvzrjtiDNBAgZjdXJzb3L/jlQdOJ3sY2jXD/vMPVOCvym1sJx0tcAHf1qfokYzXQAEAQAAAElOUlQwAADbQEpyjNjJP35EqIgTP2cZACEAAAAAAAAAQXYKcbhqu5sCIB97ImN1cnNvciI6MSwicXVlcnkiOiJzY19kdW1teSJ9zrwJ7OAbyqqkDyIFjeKZeEPVv4prd0oKp95xljC+BXkA4B8fIKQAAGAAChggABgKIAAACyAAABogBwAaIAMACyAaCwsGOQsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAAADCAAABogBwAaIAQADCAaDAwGDwwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIOAAAGAACg0gAAsKIOAAAGAACgsgAAwKIOAAAGAACgwgAA0KIBoAAGAAAAkgAAAASQ==",
+    "manifest": {
+      "code_hash": "hash:3C965E92381A736A797EDC0A48F1B600B7EC4D5395183EE9E0A711617A0CB61D#7DFA",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account.detail:$authority:cursor",
+          "account:$authority"
+        ],
+        "write_keys": [
+          "account.detail:$authority:cursor"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "run",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "account:$authority",
+            "account.detail:$authority:cursor"
+          ],
+          "write_keys": [
+            "account.detail:$authority:cursor"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "run",
+        "line": 4,
+        "pc_end": 256,
+        "pc_start": 0,
+        "source_path": "query_assets_and_save_cursor.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 256,
+        "bytecode_words": 64,
+        "column": 14,
+        "frame_bytes": 32,
+        "function_name": "run",
+        "jump_range_risk": false,
+        "jump_span_words": 64,
+        "line": 4,
+        "pc_end": 256,
+        "pc_start": 0,
+        "source_path": "query_assets_and_save_cursor.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "id": "examples-hello-hello",
+  "source_name": "hello.ko",
+  "compiler_source_path": "examples/hello/hello.ko",
+  "source": "// Minimal Kotodama example: logs a greeting and writes a detail for the current authority\n\nseiyaku Hello {\n  // Optional initializer; deploy-oriented runtimes may call this automatically.\n  hajimari() {\n    info(\"Hello from Kotodama\");\n  }\n\n  // Default raw-IVM entrypoint used by ivm_run / transaction ivm when no selector is supplied.\n  kotoage fn main() permission(Admin) {\n    info(\"Hello from Kotodama\");\n    write_detail();\n  }\n\n  // Public entrypoint that sets an account detail on the caller.\n  kotoage fn write_detail() permission(Admin) {\n    set_account_detail(\n      authority(),\n      name!(\"example\"),\n      json!{ hello: \"world\" }\n    );\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "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",
+    "manifest": {
+      "code_hash": "hash:D535942B2F1B9839FE1FAAFAD0399F8CDA49C58F5E1F7BA0B518524B1044E0CF#5B1F",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account.detail:$authority:example",
+          "account:$authority"
+        ],
+        "write_keys": [
+          "account.detail:$authority:example"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "hajimari",
+          "kind": {
+            "kind": "Hajimari",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "main",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "write_detail",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "account:$authority",
+            "account.detail:$authority:example"
+          ],
+          "write_keys": [
+            "account.detail:$authority:example"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "main",
+        "line": 10,
+        "pc_end": 220,
+        "pc_start": 0,
+        "source_path": "hello.ko"
+      },
+      {
+        "column": 3,
+        "function_name": "hajimari",
+        "line": 5,
+        "pc_end": 356,
+        "pc_start": 220,
+        "source_path": "hello.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "write_detail",
+        "line": 16,
+        "pc_end": 856,
+        "pc_start": 356,
+        "source_path": "hello.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 220,
+        "bytecode_words": 55,
+        "column": 14,
+        "frame_bytes": 16,
+        "function_name": "main",
+        "jump_range_risk": false,
+        "jump_span_words": 55,
+        "line": 10,
+        "pc_end": 220,
+        "pc_start": 0,
+        "source_path": "hello.ko"
+      },
+      {
+        "bytecode_bytes": 136,
+        "bytecode_words": 34,
+        "column": 3,
+        "frame_bytes": 16,
+        "function_name": "hajimari",
+        "jump_range_risk": false,
+        "jump_span_words": 34,
+        "line": 5,
+        "pc_end": 356,
+        "pc_start": 220,
+        "source_path": "hello.ko"
+      },
+      {
+        "bytecode_bytes": 500,
+        "bytecode_words": 125,
+        "column": 14,
+        "frame_bytes": 32,
+        "function_name": "write_detail",
+        "jump_range_risk": false,
+        "jump_span_words": 125,
+        "line": 16,
+        "pc_end": 856,
+        "pc_start": 356,
+        "source_path": "hello.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

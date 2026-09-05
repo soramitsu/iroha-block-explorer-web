@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router';
 import { computed } from 'vue';
 import * as http from '@/shared/api';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
-import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
 import { NftIdSchema } from '@/shared/api/schemas';
 import { parseMetadata } from '@/shared/ui/utils/json';
@@ -32,42 +32,46 @@ const NFTScope = useParamScope(
   ({ payload }) => setupAsyncData(() => http.fetchNFTById(payload))
 );
 
-const isLoading = computed(() => NFTScope.value.expose.isLoading);
+const nftSnapshot = computed(() => NFTScope.value.expose.snapshot);
 const NFT = computed(() =>
   NFTScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? NFTScope.value.expose.data.data : undefined
 );
+const nftDisplayName = computed(() => NFTId.value.split('$')[0] ?? NFTId.value);
 </script>
 
 <template>
   <div class="nft-details">
     <BaseContentBlock
-      :title="NFTId.name.value"
+      :title="nftDisplayName"
       class="nft-details__section"
     >
       <template #default>
-        <div
-          v-if="isLoading"
-          class="nft-details__section_loading"
+        <BaseResourceState
+          :snapshot="nftSnapshot"
+          :loading-label="$t('assets.resource.loadingNft')"
+          :not-found-label="$t('assets.resource.nftNotFound')"
+          :error-label="$t('assets.resource.nftLoadError')"
+          :retry-label="$t('assets.resource.retryNft')"
+          @retry="NFTScope.expose.refetch()"
         >
-          <BaseLoading />
-        </div>
-        <div v-else-if="NFT">
-          <div class="nft-details__section-information">
-            <DataField
-              :title="$t('assets.ownedBy')"
-              :hash="NFT.owned_by.toString()"
-              copy
-              :link="`/accounts/${NFT.owned_by}`"
-              :type="hashType"
-            />
-            <DataField
-              class="nft-details__section-information-nft-content"
-              :title="$t('content')"
-              :metadata="{ display: 'full' }"
-              :value="parseMetadata(NFT.content)"
-            />
+          <div v-if="NFT">
+            <div class="nft-details__section-information">
+              <DataField
+                :title="$t('assets.ownedBy')"
+                :hash="NFT.owned_by.toString()"
+                copy
+                :link="`/accounts/${NFT.owned_by}`"
+                :type="hashType"
+              />
+              <DataField
+                class="nft-details__section-information-nft-content"
+                :title="$t('content')"
+                :metadata="{ display: 'full' }"
+                :value="parseMetadata(NFT.metadata)"
+              />
+            </div>
           </div>
-        </div>
+        </BaseResourceState>
       </template>
     </BaseContentBlock>
   </div>

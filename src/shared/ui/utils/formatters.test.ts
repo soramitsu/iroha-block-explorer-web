@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { formatNumber, formatTimestamp } from './formatters';
+import { formatBytes, formatNumber, formatTimestamp } from './formatters';
 
 test.each([
   [1234567.22312, '1,234,567.22312'],
@@ -22,4 +22,14 @@ test.each([
   [1000 * 60 * 60 * 24 * 3, '3d'],
 ])('format %f as %s', (input, expected) => {
   expect(formatTimestamp(input)).toBe(expected);
+});
+
+test.each([
+  [123, '123 B'],
+  [1024, '1 KB'],
+  [1536, '1.5 KB'],
+  [1024 * 1024, '1 MB'],
+  [1024 * 1024 * 12, '12 MB'],
+])('format %f bytes as %s', (input, expected) => {
+  expect(formatBytes(input)).toBe(expected);
 });

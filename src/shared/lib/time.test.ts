@@ -29,6 +29,7 @@ test.each([
   [new Date(NOW - 18002000), '5 hours ago'],
   [new Date(NOW - 90000000), '1 day ago'],
   [new Date(NOW - 1800000000), '20 days ago'],
+  [new Date(NOW + 86_400_000), '0 sec ago'],
 ])('Correct time difference display', (date, expected) => {
   const wrapper = mount(TimeStamp, {
     props: {
@@ -48,6 +49,8 @@ test.each([
   [new Date(NOW - 1000 * 60 * 3), false, { precision: 'minutes', value: 3 }],
   [new Date(NOW - 1000 * 60 * 60 * 3), false, { precision: 'hours', value: 3 }],
   [new Date(NOW - 1000 * 60 * 60 * 72), false, { precision: 'days', value: 3 }],
+  [new Date(NOW + 1000), false, { precision: 'seconds', value: 0 }],
+  [new Date(NOW + 1000), true, { precision: 'seconds', value: 0 }],
 ])('Correct countTimeDifference computation', (date, isDetailed, expected) => {
   const res = countTimeDifference(NOW, date, isDetailed);
   expect(res).toStrictEqual(expected);

@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "id": "stablecoin-simple",
+  "source_name": "stablecoin_simple.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/stablecoin_simple.ko",
+  "source": "// Minimal over-collateralized stablecoin minting example.\n// Assumes price is given as collateral_value per unit (already normalized to stablecoin units).\nseiyaku StablecoinSimple {\n  // Return how much stable to mint for given collateral and target ratio (bps).\n  kotoage fn mintable_amount(collateral_amount: int, price: int, target_ratio_bps: int) -> int {\n    // collateral_value = collateral_amount * price\n    let value = collateral_amount * price;\n    // mint limited by target ratio: minted * target_ratio_bps <= value * 10_000\n    let max_mint = (value * 10_000) / target_ratio_bps;\n    return max_mint;\n  }\n\n  // Mint stable if health check passes (ratio >= min_ratio_bps)\n  kotoage fn mint_stable(user: AccountId,\n                         vault_account: AccountId,\n                         collateral_asset: AssetDefinitionId,\n                         stable_asset: AssetDefinitionId,\n                         collateral_amount: int,\n                         price: int,\n                         min_ratio_bps: int,\n                         mint_amount: int) permission(Admin) {\n    // move collateral in\n    transfer_asset(user, vault_account, collateral_asset, collateral_amount);\n    // health check\n    let value = collateral_amount * price;\n    let post_ratio = (value * 10_000) / mint_amount;\n    let ok = (post_ratio >= min_ratio_bps) ? 1 : 0;\n    assert_eq(ok, 1);\n    // mint\n    mint_asset(user, stable_asset, mint_amount);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "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IH8GBiB/BgYgfwYGIH8GBiB/BgYgfwYGIH8GBiB/BgYgfwYGIB4GBiAGAwcQBAcGFAUGDAI/AA0gDQwHCAEHByEBBwcjGgAHQU8AAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAZAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAHIAEHByAAAAYgAAcFIDUAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAYgAAAHIAAHBSAZAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAHIAEHByACBwVAAgAAYAAAByAABAogaQAAYAAKByAAGAogAAgLIAAHDCDgAABgAAoNIAALCiDgAABgAAoLIAAMCiDgAABgAAoMIAANCiAiAABgAAAHIAgfAzAQHwQwGB8FMCAfBjAoHwcwMB8IMDgfCTBAHxcwSB8YMAAfATB/Hx8gER8fIAABAEioHx8gAAEfMQgCHzEQAx8xGAQfMSAFHzEoBh8xMAcfMTgIHzFACR8xSBcfMVAYHzEAAAogAAAaIAcAGiAFAAogGgoKBgkKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABg8QAAYAAKGCAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAIAAogGgoKBgEKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB7AABgAAoJIAAYCiDgAABgAAocIAAACiAAABogBwAaIAgACiAaCgoGVQoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIHsAAGAACgggABgKIOAAAGAAChwgAAAKIAAAGiAHABogCQAKIBoKCgYyCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAoggAAAYAAKByAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAKAAogGgoKBhIKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiCAAABgAAoGIAAYCiDgAABgAAocIAAACiAAABogBwAaIAUACiAaCgoGawoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIHgAAGAACgUgABgKIOAAAGAAChwgAAAKIAAAGiAHABogBgAKIBoKCgZMCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKBCAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAKAAogGgoKBm4KCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoDIAAYCiDgAABgAAocIAAACiAAABogBwAaIAsACiAaCgoGSwoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIHgAAGAACgIgAAkKIAAICyAABwwgAAYNIAAFDiAABA8gAAMQIAACESDp/QFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgCB8CMBAfAzAYHwQwIB8FMCgfBjAwHwcwOB8IMEAfCTBIHxcwUB8YMAAfATBYHx8gAAEASJH9AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJqf0BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEl3/gFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAASQ==",
+    "manifest": {
+      "code_hash": "hash:529B0921599B32BA839B3B60DE042A58606C7EEE9080A39DDAC5EF661BF3FA13#0185",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "mintable_amount",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "collateral_amount",
+              "type_name": "int"
+            },
+            {
+              "name": "price",
+              "type_name": "int"
+            },
+            {
+              "name": "target_ratio_bps",
+              "type_name": "int"
+            }
+          ],
+          "return_type": "int",
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "mint_stable",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "user",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "vault_account",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "collateral_asset",
+              "type_name": "AssetDefinitionId"
+            },
+            {
+              "name": "stable_asset",
+              "type_name": "AssetDefinitionId"
+            },
+            {
+              "name": "collateral_amount",
+              "type_name": "int"
+            },
+            {
+              "name": "price",
+              "type_name": "int"
+            },
+            {
+              "name": "min_ratio_bps",
+              "type_name": "int"
+            },
+            {
+              "name": "mint_amount",
+              "type_name": "int"
+            }
+          ],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "mintable_amount",
+        "line": 5,
+        "pc_end": 620,
+        "pc_start": 0,
+        "source_path": "stablecoin_simple.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__mintable_amount",
+        "line": 5,
+        "pc_end": 820,
+        "pc_start": 620,
+        "source_path": "stablecoin_simple.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__mint_stable",
+        "line": 14,
+        "pc_end": 1748,
+        "pc_start": 820,
+        "source_path": "stablecoin_simple.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "mint_stable",
+        "line": 14,
+        "pc_end": 3424,
+        "pc_start": 1748,
+        "source_path": "stablecoin_simple.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 620,
+        "bytecode_words": 155,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "mintable_amount",
+        "jump_range_risk": false,
+        "jump_span_words": 155,
+        "line": 5,
+        "pc_end": 620,
+        "pc_start": 0,
+        "source_path": "stablecoin_simple.ko"
+      },
+      {
+        "bytecode_bytes": 200,
+        "bytecode_words": 50,
+        "column": 14,
+        "frame_bytes": 64,
+        "function_name": "__entrypoint_impl__mintable_amount",
+        "jump_range_risk": false,
+        "jump_span_words": 50,
+        "line": 5,
+        "pc_end": 820,
+        "pc_start": 620,
+        "source_path": "stablecoin_simple.ko"
+      },
+      {
+        "bytecode_bytes": 928,
+        "bytecode_words": 232,
+        "column": 14,
+        "frame_bytes": 144,
+        "function_name": "__entrypoint_impl__mint_stable",
+        "jump_range_risk": false,
+        "jump_span_words": 232,
+        "line": 14,
+        "pc_end": 1748,
+        "pc_start": 820,
+        "source_path": "stablecoin_simple.ko"
+      },
+      {
+        "bytecode_bytes": 1676,
+        "bytecode_words": 419,
+        "column": 14,
+        "frame_bytes": 88,
+        "function_name": "mint_stable",
+        "jump_range_risk": false,
+        "jump_span_words": 419,
+        "line": 14,
+        "pc_end": 3424,
+        "pc_start": 1748,
+        "source_path": "stablecoin_simple.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

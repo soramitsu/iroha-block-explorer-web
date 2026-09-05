@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "id": "examples-transfer-transfer",
+  "source_name": "transfer.ko",
+  "compiler_source_path": "examples/transfer/transfer.ko",
+  "source": "// Transfer example: uses typed pointer constructors and transfer_asset syscall\n\nseiyaku TransferDemo {\n  // Public entrypoint to transfer 10 units of the canonical Base58 asset definition between canonical I105 accounts\n  kotoage fn do_transfer() permission(AssetTransferRole) {\n    transfer_asset(\n      account!(\"sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB\"),\n      account!(\"sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76\"),\n      asset_definition!(\"62Fk4FPcMuLvW5QjDGNF2a4jAmjM\"),\n      10\n    );\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRS1wYAAE5SVDAAAJxFYTLfthcec01NMFJ73cwArwYAAAAAAAAgShFQN8ZxiQIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAlwYBlAb3AwUAAAAAAAAAZWRhY2NvdW50OnNvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2YWBhY2NvdW50OnNvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEKAAX9hc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2fHthc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEInJmFzc2V0X2RlZjo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNhwICAAAAAAAAAIABf2Fzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxTmbvvbdn776J776T776JQu+9pkvvvozvvpjvvpJv776H776C776bckc4Me++i2pX776O776VVm5jd+++jFPvvbEzcO++mO++i+++iWhVUzlRNzZ8e2Fzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxTnDvvoPvvpXjg7HvvodxMTFw772z776YMu+9sTXvvofvvaZpQ0pLalLvvpR67723Tk1O776G7725776VUEPvvbPvvplGdu+9tUU5TEJMQggAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAN0GAQAAAAAAAADTBgwLZG9fdHJhbnNmZXIEAAAAAAgAAAAAAAAAAAEAFAESEUFzc2V0VHJhbnNmZXJSb2xl9wMFAAAAAAAAAHx7YXNzZXQ6NjJGazRGUGNNdUx2VzVRakRHTkYyYTRqQW1qTSNzb3Jhde++mzFOcO++g+++leODse++h3ExMXDvvbPvvpgy772xNe++h++9pmlDSktqUu++lHrvvbdOTU7vvobvvbnvvpVQQ++9s+++mUZ27721RTlMQkxCYWBhY2NvdW50OnNvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEInJmFzc2V0X2RlZjo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNgAF/YXNzZXQ6NjJGazRGUGNNdUx2VzVRakRHTkYyYTRqQW1qTSNzb3Jhde++mzFOZu+9t2fvvonvvpPvvolC772mS+++jO++mO++km/vvofvvoLvvptyRzgx776Lalfvvo7vvpVWbmN3776MU++9sTNw776Y776L776JaFVTOVE3NmVkYWNjb3VudDpzb3Jhde++mzFOZu+9t2fvvonvvpPvvolC772mS+++jO++mO++km/vvofvvoLvvptyRzgx776Lalfvvo7vvpVWbmN3776MU++9sTNw776Y776L776JaFVTOVE3NocCAgAAAAAAAAB8e2Fzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxTnDvvoPvvpXjg7HvvodxMTFw772z776YMu+9sTXvvofvvaZpQ0pLalLvvpR67723Tk1O776G7725776VUEPvvbPvvplGdu+9tUU5TEJMQoABf2Fzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxTmbvvbdn776J776T776JQu+9pkvvvozvvpjvvpJv776H776C776bckc4Me++i2pX776O776VVm5jd+++jFPvvbEzcO++mO++i+++iWhVUzlRNzYDAQEBCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAATFRMQgMAAAACAAAAqwEAACgAAAAAAAAAxgAAAAAAAABkAQAAAAAAAAABAQAAAHdOUlQwAABg6BRzrtChJ28cV3bQ9pw4AE8AAAAAAAAAWvKkm7OQU8kCAAAAAEohAAAAAAAAAAEAAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEaETub1cVDZKW5qbBOBl8PrjpduPKAh/MIqmLkae2jEPAAEBAAAAd05SVDAAAGDoFHOu0KEnbxxXdtD2nDgATwAAAAAAAACuR9cVcZNVtQIAAAAASiEAAAAAAAAAAQABBAH/AVsBgQEEAW0B3AHPARkB4gHkAVEBxAFdAfsBbwFTAXUBnQFOAbMBDwGiAe8BqAEHASgBTQEcAcMBMAEWrv0OzW+QThOmy/woLQrHhKmC2uQvJ0UIN+B496/bNoUAAgEAAABITlJUMAAAhE9KzVp9TzAJqliLoIoyDwAgAAAAAAAAABHvh6Qctk6OAgFoAXIBRQFOAZwBBAFGAUEBqgFYAR4BxQHzAYABFgEZqn33rP93tKZ2vKVO5/Vo8x6jrk4ecvbtNpqRXifFZCsAANAfHyAAAAggCggIIAAICiBpAABgAAoHIAAACiAAABogBwAaIA4ACiAaCgoGBwoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAACyAAABogBwAaIA8ACyAaCwsGJQsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAAADCAAABogBwAaIBAADCAaDAwGQwwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAHDSDgAABgAAoOIAALCiDgAABgAAoLIAAMCiDgAABgAAoMIAANCiDgAABgAAoNIAAOCiAkAABgAAAHIAAAAEk=",
+    "manifest": {
+      "code_hash": "hash:711C207A6725054844C11B048ED4FF5DFCAD7A6FA2E837F7854440874D097869#C2F4",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+        ],
+        "write_keys": [
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "do_transfer",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "AssetTransferRole",
+          "read_keys": [
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76"
+          ],
+          "write_keys": [
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "do_transfer",
+        "line": 5,
+        "pc_end": 376,
+        "pc_start": 0,
+        "source_path": "transfer.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 376,
+        "bytecode_words": 94,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "do_transfer",
+        "jump_range_risk": false,
+        "jump_span_words": 94,
+        "line": 5,
+        "pc_end": 376,
+        "pc_start": 0,
+        "source_path": "transfer.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

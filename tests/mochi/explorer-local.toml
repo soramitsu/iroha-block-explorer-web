@@ -1,0 +1,15 @@
+# Browser access for the deterministic Explorer integration profile. Torii
+# rejects wildcard origins, so keep both the Vite development and Playwright
+# preview origins explicit.
+
+[torii.cors]
+enabled = true
+allowed_origins = [
+  "http://127.0.0.1:4175",
+  "http://localhost:4175",
+  "http://127.0.0.1:5173",
+  "http://localhost:5173",
+]
+allowed_methods = ["GET", "POST", "OPTIONS"]
+allowed_headers = ["accept", "content-type"]
+exposed_headers = ["etag", "location", "retry-after"]

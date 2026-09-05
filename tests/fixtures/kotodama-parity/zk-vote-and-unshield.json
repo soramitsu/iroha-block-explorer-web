@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "id": "zk-vote-and-unshield",
+  "source_name": "zk_vote_and_unshield.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/zk_vote_and_unshield.ko",
+  "source": "// Demonstrates the intended flow for shielded voting and unshield operations\n// using Kotodama ZK intrinsics followed by the vendor bridge to enqueue ISIs.\n//\n// These intrinsics lower to IVM syscalls with strict pointer‑ABI:\n//   - `zk_vote_verify_ballot(norito_bytes(...))` → ZK_VOTE_VERIFY_BALLOT (0x62)\n//   - `zk_verify_unshield(norito_bytes(...))` → ZK_VERIFY_UNSHIELD (0x61)\n//   - `execute_instruction(<Blob NoritoBytes InstructionBox>)` → SMARTCONTRACT_EXECUTE_INSTRUCTION (0xA0)\n//\n// Note: This sample uses string literals and inline builders to construct\n// Blob/NoritoBytes pointers for illustration. Real clients should prepare\n// proper Norito TLVs (envelopes and InstructionBox bytes) and may preload them\n// into INPUT.\nseiyaku ZkVoteAndUnshield {\n  meta {\n    abi_version: 1,\n    features: [\"zk\"],\n    max_cycles: 0,\n  }\n\n  // Verify a ballot proof, then enqueue a prebuilt SubmitBallot instruction via the vendor bridge.\n  fn verify_and_submit_ballot(proof_env: Blob, submit: Blob) {\n    // 1) Verify the ballot using ZK_VOTE_VERIFY_BALLOT.\n    //    `proof_env` must be a Norito-encoded OpenVerifyEnvelope in a NoritoBytes TLV.\n    zk_vote_verify_ballot(proof_env);\n\n    // 2) Enqueue the prebuilt SubmitBallot InstructionBox.\n    // Generic entry point: lowers to SMARTCONTRACT_EXECUTE_INSTRUCTION (0xA0)\n    execute_instruction(submit);\n  }\n\n  // Verify an unshield proof, then enqueue a prebuilt Unshield instruction via the vendor bridge.\n  fn verify_and_unshield(proof_env: Blob, unshield: Blob) {\n    // 1) Verify the unshield using ZK_VERIFY_UNSHIELD (0x61).\n    zk_verify_unshield(proof_env);\n\n    // 2) Enqueue the prebuilt Unshield instruction.\n    execute_instruction(unshield);\n  }\n\n  // Optional demo entrypoint: verifies and enqueues both operations using literal data.\n  // The vendor bridge and unshield flow are privileged, so public entrypoints\n  // that reach them must declare a permission tag.\n  kotoage fn demo() permission(Admin) {\n    // Mock envelope bytes (opaque here); in practice, pass a Norito-encoded OpenVerifyEnvelope.\n    let env_ballot = norito_bytes(\"ENV-BALLOT\");\n    let env_unshield = norito_bytes(\"ENV-UNSHIELD\");\n    let nullifier = blob!(\"0123456789abcdef0123456789abcdef\");\n    let proof = blob!(\"proof-bytes\");\n    let vk = blob!(\"vk-bytes\");\n\n    // Inline builders require literal inputs; for runtime data, prebuild\n    // the Norito InstructionBox and pass it as a Blob/NoritoBytes pointer.\n    let submit = build_submit_ballot_inline(\n      \"election-1\",\n      blob!(\"ciphertext\"),\n      nullifier,\n      \"halo2/ipa\",\n      proof,\n      vk\n    );\n    verify_and_submit_ballot(env_ballot, submit);\n\n    // `authority()` is runtime data, so the inline builder sample uses a\n    // compile-time recipient literal instead.\n    let recipient = account!(\"sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB\");\n    let unshield = build_unshield_inline(\n      asset_definition!(\"6pEP9RjNoZ7beWkT3pLfKoM1dyfi\"),\n      recipient,\n      1,\n      nullifier,\n      \"halo2/ipa\",\n      proof,\n      vk\n    );\n    verify_and_unshield(env_unshield, unshield);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAQBAQg8AAAAAAAFDTlRSxAMAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAnAMAAAAAAADm0FEp46liKgIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAEAAAAAAAAAiQYBhga9AwcAAAAAAAAAYWBhY2NvdW50OnNvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEJ8e2Fzc2V0OjZwRVA5UmpOb1o3YmVXa1QzcExmS29NMWR5Zmkjc29yYXXvvpsxTnDvvoPvvpXjg7HvvodxMTFw772z776YMu+9sTXvvofvvaZpQ0pLalLvvpR67723Tk1O776G7725776VUEPvvbPvvplGdu+9tUU5TEJMQj8+YXNzZXRfZGVmLmRldGFpbDo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpOnprLnVuc2hpZWxkLmxhc3QnJmFzc2V0X2RlZjo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpIyJ6azplbGVjdGlvbjplbGVjdGlvbi0xOmNpcGhlcnRleHRzIiF6azplbGVjdGlvbjplbGVjdGlvbi0xOm51bGxpZmllcnMmJXprX2Fzc2V0OjZwRVA5UmpOb1o3YmVXa1QzcExmS29NMWR5ZmmzAgUAAAAAAAAAfHthc3NldDo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpI3NvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEI/PmFzc2V0X2RlZi5kZXRhaWw6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaTp6ay51bnNoaWVsZC5sYXN0IyJ6azplbGVjdGlvbjplbGVjdGlvbi0xOmNpcGhlcnRleHRzIiF6azplbGVjdGlvbjplbGVjdGlvbi0xOm51bGxpZmllcnMmJXprX2Fzc2V0OjZwRVA5UmpOb1o3YmVXa1QzcExmS29NMWR5ZmkIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAABZAQAAAAAAAABQBQRkZW1vBAAAAAAIAAAAAAAAAAABAAgBBgVBZG1pbggAAAAAAAAAAAgAAAAAAAAAAAMBAQEIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAABMVExCDgAAAAIAAAA2CwAAgAAAAAAAAACxAAAAAAAAAOEAAAAAAAAAEgMAAAAAAABDAwAAAAAAAG8EAAAAAAAA1gcAAAAAAAAJCAAAAAAAANAJAAAAAAAAFwoAAAAAAABJCgAAAAAAAHgKAAAAAAAAqQoAAAAAAABHCwAAAAAAAAAGAQAAAAplbGVjdGlvbi0xgGlLjjzkvu7nv7EgAMkLz4KNgm2lZGdSxxOceG3/+xcABgEAAAAJaGFsbzIvaXBhFunHH3V8K3aSXMop2+FUpHl9awjUSgq8APfN5F3XXXkACQEAAAIKNGU1MjU0MzAwMDAwODYyYTdkNzcwNzVkNGQyM2ZmNmMxMjYxZGIwMjc4MTEwMGRkMDAwMDAwMDAwMDAwMDA5Y2Q1YjRjZTJmMmRiYjQ1MDIyODI3Njk3MjZmNjg2MTVmNjQ2MTc0NjE1ZjZkNmY2NDY1NmMzYTNhNjk3MzY5M2EzYTdhNmIzYTNhNTM3NTYyNmQ2OTc0NDI2MTZjNmM2Zjc0YjIwMWFhMDAwMDAwMDAwMDAwMDA0ZTUyNTQzMDAwMDAwYjE2ZjgxOGI2NThkYjdiOWY0MzgzYTc2ZWViNTU0NTAwODIwMDAwMDAwMDAwMDAwMDkzZWYxY2Y4YTViYmEwMmMwMjBiMGE2NTZjNjU2Mzc0Njk2ZjZlMmQzMTEyMGEwMDAwMDAwMDAwMDAwMDYzNjk3MDY4NjU3Mjc0NjU3ODc0NDEwYTA5Njg2MTZjNmYzMjJmNjk3MDYxMWYwYTA5Njg2MTZjNmYzMjJmNjk3MDYxMTMwYjAwMDAwMDAwMDAwMDAwNzA3MjZmNmY2NjJkNjI3OTc0NjU3MzE1MGEwOTY4NjE2YzZmMzIyZjY5NzA2MTA5MDg3NjZiMmQ2Mjc5NzQ2NTczMjAzMDMxMzIzMzM0MzUzNjM3MzgzOTYxNjI2MzY0NjU2NjMwMzEzMjMzMzQzNTM2MzczODM5NjE2MjYzNjQ2NTY2WAZsSEE9fKUbLp7CkJAupMfemzdYi0+dhH+L5jA62+EACQEAAAAKRU5WLUJBTExPVGMQqqNuBCwI6ZxDNg3PpW/m8ASAGF3qTd4ofGpiQoTdAAkBAAABBU5SVDAAAIYqfXcHXU0j/2wSYdsCeBEA3QAAAAAAAACc1bTOLy27RQIoJ2lyb2hhX2RhdGFfbW9kZWw6OmlzaTo6ems6OlN1Ym1pdEJhbGxvdLIBqgAAAAAAAABOUlQwAAALFvgYtljbe59Dg6du61VFAIIAAAAAAAAAk+8c+KW7oCwCCwplbGVjdGlvbi0xEgoAAAAAAAAAY2lwaGVydGV4dEEKCWhhbG8yL2lwYR8KCWhhbG8yL2lwYRMLAAAAAAAAAHByb29mLWJ5dGVzFQoJaGFsbzIvaXBhCQh2ay1ieXRlcyAwMTIzNDU2Nzg5YWJjZGVmMDEyMzQ1Njc4OWFiY2RlZkDboHg6xOoMIiIhcaIlagk0CeZxcYuNRGUoP3BGCuARAAkBAAADQDRlNTI1NDMwMDAwMDg2MmE3ZDc3MDc1ZDRkMjNmZjZjMTI2MWRiMDI3ODExMDA3ODAxMDAwMDAwMDAwMDAwMzJmZDIwODczNjIyYzE2MTAyMjQyMzY5NzI2ZjY4NjE1ZjY0NjE3NDYxNWY2ZDZmNjQ2NTZjM2EzYTY5NzM2OTNhM2E3YTZiM2EzYTU1NmU3MzY4Njk2NTZjNjRkMTAyNDkwMTAwMDAwMDAwMDAwMDRlNTI1NDMwMDAwMDFjYjU1ZWNjN2ZkOTI2MjViMmJlZTMzZTQ5MWE0YTBjMDAxOTAxMDAwMDAwMDAwMDAwY2JmMDkzNzliZjEyZDRhOTAyMDAwMDAwMDAwMDAwMDAwMDIwMDFhMTAxNTgwMTZiMDE5YjAxZTEwMTY0MDE0YjAxMDQwMTg4MDE5YTAxODgwMWMwMDE4ZTAxNDAwMTE1MDE0NDRmMDAwMDAwMDA0YTIxMDAwMDAwMDAwMDAwMDAwMTAwMDExMTAxMTEwMTExMDExMTAxMTEwMTExMDExMTAxMTEwMTExMDExMTAxMTEwMTExMDExMTAxMTEwMTExMDExMTAxMTEwMTExMDExMTAxMTEwMTExMDExMTAxMTEwMTExMDExMTAxMTEwMTExMDExMTAxMTEwMTExMDExMTAxMTExMDAxMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwNDkwMTAwMDAwMDAwMDAwMDAwNDAwMTMwMDEzMTAxMzIwMTMzMDEz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",
+    "manifest": {
+      "code_hash": "hash:D564472E14837735B2EE734856AFA389460D810D8124719252F4823A5521E145#30CA",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 1,
+      "access_set_hints": {
+        "read_keys": [
+          "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset_def.detail:6pEP9RjNoZ7beWkT3pLfKoM1dyfi:zk.unshield.last",
+          "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi",
+          "zk:election:election-1:ciphertexts",
+          "zk:election:election-1:nullifiers",
+          "zk_asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+        ],
+        "write_keys": [
+          "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset_def.detail:6pEP9RjNoZ7beWkT3pLfKoM1dyfi:zk.unshield.last",
+          "zk:election:election-1:ciphertexts",
+          "zk:election:election-1:nullifiers",
+          "zk_asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "demo",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "demo",
+        "line": 43,
+        "pc_end": 1088,
+        "pc_start": 0,
+        "source_path": "zk_vote_and_unshield.ko"
+      },
+      {
+        "column": 6,
+        "function_name": "verify_and_submit_ballot",
+        "line": 21,
+        "pc_end": 1356,
+        "pc_start": 1088,
+        "source_path": "zk_vote_and_unshield.ko"
+      },
+      {
+        "column": 6,
+        "function_name": "verify_and_unshield",
+        "line": 32,
+        "pc_end": 1832,
+        "pc_start": 1356,
+        "source_path": "zk_vote_and_unshield.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 1088,
+        "bytecode_words": 272,
+        "column": 14,
+        "frame_bytes": 80,
+        "function_name": "demo",
+        "jump_range_risk": false,
+        "jump_span_words": 272,
+        "line": 43,
+        "pc_end": 1088,
+        "pc_start": 0,
+        "source_path": "zk_vote_and_unshield.ko"
+      },
+      {
+        "bytecode_bytes": 268,
+        "bytecode_words": 67,
+        "column": 6,
+        "frame_bytes": 40,
+        "function_name": "verify_and_submit_ballot",
+        "jump_range_risk": false,
+        "jump_span_words": 67,
+        "line": 21,
+        "pc_end": 1356,
+        "pc_start": 1088,
+        "source_path": "zk_vote_and_unshield.ko"
+      },
+      {
+        "bytecode_bytes": 476,
+        "bytecode_words": 119,
+        "column": 6,
+        "frame_bytes": 40,
+        "function_name": "verify_and_unshield",
+        "jump_range_risk": false,
+        "jump_span_words": 119,
+        "line": 32,
+        "pc_end": 1832,
+        "pc_start": 1356,
+        "source_path": "zk_vote_and_unshield.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

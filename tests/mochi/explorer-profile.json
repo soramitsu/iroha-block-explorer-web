@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "iroha_revision": "16866ffbe8406c7565548d0be8110209b8cba2bc",
+  "profile": "single-peer",
+  "profile_slug": "single-peer",
+  "chain_id": "iroha-explorer-e2e-v1",
+  "start_timeout_seconds": 3600,
+  "seed": {
+    "domain_id": "wonderland.universal",
+    "minimum_head_height": 2,
+    "minimum_transactions": 1
+  }
+}

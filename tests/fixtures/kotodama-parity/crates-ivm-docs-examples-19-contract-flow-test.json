@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-19-contract-flow-test",
+  "source_name": "19_contract_flow_test.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/19_contract_flow_test.ko",
+  "source": "seiyaku ContractFlowExample {\n  state int counter;\n  state AccountId last_actor;\n\n  hajimari() {\n    counter = 1;\n  }\n\n  kotoage fn increment() {\n    counter = counter + 4;\n  }\n\n  kotoage fn remember_caller() {\n    last_actor = authority();\n  }\n\n  kotoage fn reject_me() {\n    require(false);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "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",
+    "manifest": {
+      "code_hash": "hash:2BBD0AA7949D790BF942201ABB768800006F34A76B83D0C534BEA4D7B9B35903#2699",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "state:counter",
+          "state:last_actor"
+        ],
+        "write_keys": [
+          "state:counter",
+          "state:last_actor"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "hajimari",
+          "kind": {
+            "kind": "Hajimari",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [
+            "state:counter"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "increment",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [
+            "state:counter"
+          ],
+          "write_keys": [
+            "state:counter"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "remember_caller",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [
+            "state:last_actor"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "reject_me",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [
+        {
+          "name": "counter",
+          "type_name": "int"
+        },
+        {
+          "name": "last_actor",
+          "type_name": "AccountId"
+        }
+      ],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 3,
+        "function_name": "hajimari",
+        "line": 5,
+        "pc_end": 156,
+        "pc_start": 0,
+        "source_path": "19_contract_flow_test.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "increment",
+        "line": 9,
+        "pc_end": 476,
+        "pc_start": 156,
+        "source_path": "19_contract_flow_test.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "remember_caller",
+        "line": 13,
+        "pc_end": 664,
+        "pc_start": 476,
+        "source_path": "19_contract_flow_test.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "reject_me",
+        "line": 17,
+        "pc_end": 1032,
+        "pc_start": 664,
+        "source_path": "19_contract_flow_test.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 156,
+        "bytecode_words": 39,
+        "column": 3,
+        "frame_bytes": 24,
+        "function_name": "hajimari",
+        "jump_range_risk": false,
+        "jump_span_words": 39,
+        "line": 5,
+        "pc_end": 156,
+        "pc_start": 0,
+        "source_path": "19_contract_flow_test.ko"
+      },
+      {
+        "bytecode_bytes": 320,
+        "bytecode_words": 80,
+        "column": 14,
+        "frame_bytes": 32,
+        "function_name": "increment",
+        "jump_range_risk": false,
+        "jump_span_words": 80,
+        "line": 9,
+        "pc_end": 476,
+        "pc_start": 156,
+        "source_path": "19_contract_flow_test.ko"
+      },
+      {
+        "bytecode_bytes": 188,
+        "bytecode_words": 47,
+        "column": 14,
+        "frame_bytes": 24,
+        "function_name": "remember_caller",
+        "jump_range_risk": false,
+        "jump_span_words": 47,
+        "line": 13,
+        "pc_end": 664,
+        "pc_start": 476,
+        "source_path": "19_contract_flow_test.ko"
+      },
+      {
+        "bytecode_bytes": 368,
+        "bytecode_words": 92,
+        "column": 14,
+        "frame_bytes": 24,
+        "function_name": "reject_me",
+        "jump_range_risk": false,
+        "jump_span_words": 92,
+        "line": 17,
+        "pc_end": 1032,
+        "pc_start": 664,
+        "source_path": "19_contract_flow_test.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

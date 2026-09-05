@@ -2,12 +2,15 @@
   <BaseButton
     :pressed="isDark"
     class="app-theme-switcher"
-    aria-label="theme switcher"
+    :aria-label="$t('accessibility.themeSwitcher')"
     bordered
     rounded
     @click="toggleTheme"
   >
-    <DarkModeIcon />
+    <DarkModeIcon
+      aria-hidden="true"
+      focusable="false"
+    />
   </BaseButton>
 </template>
 
@@ -51,21 +54,4 @@ body.theme-transition * {
   }
 }
 
-html {
-  &:not(.dark) .app-theme-switcher {
-    @include shadow-elevated;
-
-    &:hover {
-      @include shadow-elevated-active;
-    }
-  }
-
-  &.dark .app-theme-switcher {
-    @include shadow-lowered;
-
-    &:hover {
-      @include shadow-lowered-active;
-    }
-  }
-}
 </style>

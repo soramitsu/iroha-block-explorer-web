@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "id": "lending-simple",
+  "source_name": "lending_simple.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/lending_simple.ko",
+  "source": "// Minimal lending market primitives.\n// Shows collateral ratio checks and minting borrowed asset.\nseiyaku LendingSimple {\n  // Compute collateralization ratio in basis points (bps = 1/100 of a percent).\n  fn collateral_ratio_bps(collateral_value: int, debt_value: int) -> int {\n    if debt_value == 0 { return 1_000_000; } // effectively infinite\n    let ratio = (collateral_value * 10_000) / debt_value;\n    return ratio;\n  }\n\n  // Borrow after checking ratio >= min_ratio_bps.\n  kotoage fn borrow(user: AccountId,\n                    _vault_account: AccountId,\n                    debt_asset: AssetDefinitionId,\n                    amount: int,\n                    collateral_value: int,\n                    current_debt_value: int,\n                    min_ratio_bps: int) permission(Admin) {\n    let new_debt_value = current_debt_value + amount;\n    let ratio = collateral_ratio_bps(collateral_value, new_debt_value);\n    // assert(ratio >= min_ratio_bps)\n    let ok = (ratio >= min_ratio_bps) ? 1 : 0;\n    // assert_eq emits a VM assertion; 1 means true\n    assert_eq(ok, 1);\n    // Mint borrowed asset to user\n    mint_asset(user, debt_asset, amount);\n  }\n\n  // Repay by transferring tokens from user to vault and burning.\n  kotoage fn repay(user: AccountId,\n                   vault_account: AccountId,\n                   debt_asset: AssetDefinitionId,\n                   amount: int) permission(Admin) {\n    transfer_asset(user, vault_account, debt_asset, amount);\n    burn_asset(vault_account, debt_asset, amount);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "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IAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIHsAAGAACgggABgKIOAAAGAAChwgAAAKIAAAGiAHABogBwAKIBoKCgYFCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAoggAAAYAAKByAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAHAAogGgoKBl8KCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoGIAAYCiDgAABgAAocIAAACiAAABogBwAaIAgACiAaCgoGNQoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIHgAAGAACgUgABgKIOAAAGAAChwgAAAKIAAAGiAHABogCQAKIBoKCgYVCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKBCAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAJAAogGgoKBncKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoDIAAJCiAACAsgAAcMIAAGDSAABQ4gAAQPIAADECDFAAFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAScgfHyAAAR8xCAgfMRAJHzEYFx8xIBgfMSgKHzEwCx8xKB8YMDAfFzAAAAkgCRcIDhoACEFgAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgGQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAGiALGhogAAAIIH8ICCB/CAggfwgIIGsICCAaCAgGfwgIIH8ICCB/CAggfwgIIEQICCAACAogCB8IMBAfCTAYHxcwIB8YMAAfATA4Hx8gAAEASDIAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAZAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAaIAsaGiAAAAggBAgIIBoICAZ/CAggfwgIIH8ICCB/CAggfwgIIH8ICCB/CAggfwgIIH8ICCB/CAggfwgIIH8ICCB/CAggfwgIIB4ICCAIGAkQFwkIFAAICiAIHwgwEB8JMBgfFzAgHxgwAB8BMDgfHyAAAQBICB8IMBAfCTAYHxcwIB8YMAAfATA4Hx8gAAEASIgfHyAAAR8xCAUfMRAGHzEYBx8xIAgfMSgJHzEwFx8xOBgfMUAKHzFICx8xUAwfMVgNHzFgDh8xaA8fMXAQHzFAHxgwSB8XMFAfFzBYHwkwYB8IMGgfBzBwHwYwCQcFAQAICiAABQsgO/8BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAKByAGBwwCPwANIA0MBQgBBQUhAQUFIxoABUFPAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgGQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAABSABBQUgAAAHIAAFBiA1AABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAHIAAABSAABQYgGQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAABSABBQUgAgUGQAIAAGAAAAUgAAkKIGkAAGAACgUgABgKIAAXCyAABQwg4AAAYAAKDSAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQogIgAAYAAABSAIHwUwEB8GMBgfBzAgHwgwKB8JMDAfFzA4HxgwAB8BMHgfHyAAAQBIsB8fIAABHzEIBx8xEAgfMRgJHzEgFx8xKBgfMTAKHzE4Cx8xQAwfMUgNHzEwHxgwOB8XMEAfCTBIHwgwAAgKIGkAAGAACgcgABgKIAAXCyAACQwgAAcNIOAAAGAACg4gAAsKIOAAAGAACgsgAAwKIOAAAGAACgwgAA0KIOAAAGAACg0gAA4KICQAAGAAAAcgAAgKIGkAAGAACgcgABcKIAAJCyAABwwg4AAAYAAKDSAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQogIwAAYAAAByAIHwcwEB8IMBgfCTAgHxcwKB8YMAAfATBQHx8gAAEASMgfHyAAAR8xCAYfMRAHHzEYCB8xIAkfMSgXHzEwGB8xAAAKIAAAGiAHABogBAAKIBoKCgZxCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYPEAAGAAChggABgKIOAAAGAAChwgAAAKIAAAGiAHABogBQAKIBoKCgZTCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogewAAYAAKCSAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAKAAogGgoKBlQKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB7AABgAAoIIAAYCiDgAABgAAocIAAACiAAABogBwAaIAcACiAaCgoGBQoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIIAAAGAACgcgABgKIOAAAGAAChwgAAAKIAAAGiAHABogBwAKIBoKCgZfCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKBiAACQogAAgLIAAHDCAABg0gHP8BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAgfBjAQHwcwGB8IMCAfCTAoHxcwMB8YMAAfATA4Hx8gAAEASIr9AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJG/4BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEnG/gFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAASen+AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJ",
+    "manifest": {
+      "code_hash": "hash:0D34A192B8A794C804FA3113DFEC9795144B402ED5628EC59E6380C2D8F18D89#4F66",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "borrow",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "user",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "_vault_account",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "debt_asset",
+              "type_name": "AssetDefinitionId"
+            },
+            {
+              "name": "amount",
+              "type_name": "int"
+            },
+            {
+              "name": "collateral_value",
+              "type_name": "int"
+            },
+            {
+              "name": "current_debt_value",
+              "type_name": "int"
+            },
+            {
+              "name": "min_ratio_bps",
+              "type_name": "int"
+            }
+          ],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "repay",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "user",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "vault_account",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "debt_asset",
+              "type_name": "AssetDefinitionId"
+            },
+            {
+              "name": "amount",
+              "type_name": "int"
+            }
+          ],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "borrow",
+        "line": 12,
+        "pc_end": 1140,
+        "pc_start": 0,
+        "source_path": "lending_simple.ko"
+      },
+      {
+        "column": 6,
+        "function_name": "collateral_ratio_bps",
+        "line": 5,
+        "pc_end": 1824,
+        "pc_start": 1140,
+        "source_path": "lending_simple.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__borrow",
+        "line": 12,
+        "pc_end": 2612,
+        "pc_start": 1824,
+        "source_path": "lending_simple.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__repay",
+        "line": 30,
+        "pc_end": 2856,
+        "pc_start": 2612,
+        "source_path": "lending_simple.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "repay",
+        "line": 30,
+        "pc_end": 4076,
+        "pc_start": 2856,
+        "source_path": "lending_simple.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 1140,
+        "bytecode_words": 285,
+        "column": 14,
+        "frame_bytes": 80,
+        "function_name": "borrow",
+        "jump_range_risk": false,
+        "jump_span_words": 285,
+        "line": 12,
+        "pc_end": 1140,
+        "pc_start": 0,
+        "source_path": "lending_simple.ko"
+      },
+      {
+        "bytecode_bytes": 684,
+        "bytecode_words": 171,
+        "column": 6,
+        "frame_bytes": 56,
+        "function_name": "collateral_ratio_bps",
+        "jump_range_risk": false,
+        "jump_span_words": 171,
+        "line": 5,
+        "pc_end": 1824,
+        "pc_start": 1140,
+        "source_path": "lending_simple.ko"
+      },
+      {
+        "bytecode_bytes": 788,
+        "bytecode_words": 197,
+        "column": 14,
+        "frame_bytes": 120,
+        "function_name": "__entrypoint_impl__borrow",
+        "jump_range_risk": false,
+        "jump_span_words": 197,
+        "line": 12,
+        "pc_end": 2612,
+        "pc_start": 1824,
+        "source_path": "lending_simple.ko"
+      },
+      {
+        "bytecode_bytes": 244,
+        "bytecode_words": 61,
+        "column": 14,
+        "frame_bytes": 80,
+        "function_name": "__entrypoint_impl__repay",
+        "jump_range_risk": false,
+        "jump_span_words": 61,
+        "line": 30,
+        "pc_end": 2856,
+        "pc_start": 2612,
+        "source_path": "lending_simple.ko"
+      },
+      {
+        "bytecode_bytes": 1220,
+        "bytecode_words": 305,
+        "column": 14,
+        "frame_bytes": 56,
+        "function_name": "repay",
+        "jump_range_risk": false,
+        "jump_span_words": 305,
+        "line": 30,
+        "pc_end": 4076,
+        "pc_start": 2856,
+        "source_path": "lending_simple.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

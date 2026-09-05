@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "id": "fuzz-attachments-zk-kotodama-zk-shield-example",
+  "source_name": "zk_shield_example.ko",
+  "compiler_source_path": "fuzz/attachments/zk/kotodama/zk_shield_example.ko",
+  "source": "// Kotodama sample: shield-like host interaction demo (logs and asset ops)\n\nseiyaku ZkShieldDemo {\n  meta {\n    abi_version: 1,\n    features: [\"zk\"],\n    max_cycles: 0,\n  }\n\n  // Public entrypoint: demonstrates pointer constructors and host calls\n  kotoage fn run() permission(Admin) {\n    let who = account!(\"sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D\");\n    let ad = asset_definition!(\"62Fk4FPcMuLvW5QjDGNF2a4jAmjM\");\n\n    info(\"ZkShieldDemo: start\");\n    let proof_env = norito_bytes(\"ENV-SHIELD\");\n    zk_verify_transfer(proof_env);\n    // Example: set an account detail (host syscall)\n    set_account_detail(who, name!(\"zk_demo\"), json!{ run: true });\n    // Example: mint a tiny amount (host syscall)\n    mint_asset(who, ad, 1);\n    info(\"ZkShieldDemo: done\");\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAQBAQg8AAAAAAAFDTlRSAwYAAE5SVDAAAJxFYTLfthcec01NMFJ73cwA2wUAAAAAAACwu7nHBwowiQIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAEAAAAAAAAAtwUBtAWAAwQAAAAAAAAAcG9hY2NvdW50LmRldGFpbDpzb3Jhde++mzFQYVHvvb1HaDHvvbQ2cEHvvpxuce+9uGZKde+9v03vvpFWce++j3ZR776Q776a7728772+776LYe++iO+9s+++imMx7726776KMUdHTTJEOnprX2RlbW9hYGFjY291bnQ6c29yYXXvvpsxUGFR7729R2gx7720NnBB776cbnHvvbhmSnXvvb9N776RVnHvvo92Ue++kO++mu+9vO+9vu++i2HvvojvvbPvvopjMe+9uu++ijFHR00yRHx7YXNzZXQ6NjJGazRGUGNNdUx2VzVRakRHTkYyYTRqQW1qTSNzb3Jhde++mzFQYVHvvb1HaDHvvbQ2cEHvvpxuce+9uGZKde+9v03vvpFWce++j3ZR776Q776a7728772+776LYe++iO+9s+++imMx7726776KMUdHTTJEJyZhc3NldF9kZWY6NjJGazRGUGNNdUx2VzVRakRHTkYyYTRqQW1qTZ4CAwAAAAAAAABwb2FjY291bnQuZGV0YWlsOnNvcmF1776bMVBhUe+9vUdoMe+9tDZwQe++nG5x7724Zkp1772/Te++kVZx776PdlHvvpDvvprvvbzvvb7vvoth776I772z776KYzHvvbrvvooxR0dNMkQ6emtfZGVtb3x7YXNzZXQ6NjJGazRGUGNNdUx2VzVRakRHTkYyYTRqQW1qTSNzb3Jhde++mzFQYVHvvb1HaDHvvbQ2cEHvvpxuce+9uGZKde+9v03vvpFWce++j3ZR776Q776a7728772+776LYe++iO+9s+++imMx7726776KMUdHTTJEJyZhc3NldF9kZWY6NjJGazRGUGNNdUx2VzVRakRHTkYyYTRqQW1qTQgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAOkFAQAAAAAAAADfBQQDcnVuBAAAAAAIAAAAAAAAAAABAAgBBgVBZG1pboADBAAAAAAAAABhYGFjY291bnQ6c29yYXXvvpsxUGFR7729R2gx7720NnBB776cbnHvvbhmSnXvvb9N776RVnHvvo92Ue++kO++mu+9vO+9vu++i2HvvojvvbPvvopjMe+9uu++ijFHR00yRHBvYWNjb3VudC5kZXRhaWw6c29yYXXvvpsxUGFR7729R2gx7720NnBB776cbnHvvbhmSnXvvb9N776RVnHvvo92Ue++kO++mu+9vO+9vu++i2HvvojvvbPvvopjMe+9uu++ijFHR00yRDp6a19kZW1vfHthc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMVBhUe+9vUdoMe+9tDZwQe++nG5x7724Zkp1772/Te++kVZx776PdlHvvpDvvprvvbzvvb7vvoth776I772z776KYzHvvbrvvooxR0dNMkQnJmFzc2V0X2RlZjo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNngIDAAAAAAAAAHBvYWNjb3VudC5kZXRhaWw6c29yYXXvvpsxUGFR7729R2gx7720NnBB776cbnHvvbhmSnXvvb9N776RVnHvvo92Ue++kO++mu+9vO+9vu++i2HvvojvvbPvvopjMe+9uu++ijFHR00yRDp6a19kZW1vfHthc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMVBhUe+9vUdoMe+9tDZwQe++nG5x7724Zkp1772/Te++kVZx776PdlHvvpDvvprvvbzvvb7vvoth776I772z776KYzHvvbrvvooxR0dNMkQnJmFzc2V0X2RlZjo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNAwEBAQgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAExUTEIHAAAAAAAAAGUCAABIAAAAAAAAAIIAAAAAAAAAswAAAAAAAABRAQAAAAAAAKgBAAAAAAAABQIAAAAAAAB0AgAAAAAAAAAGAQAAABNaa1NoaWVsZERlbW86IHN0YXJ06oYBPsN2OF362RaOGFT74UbRuHwxDD5MOgX6EgJ8APcACQEAAAAKRU5WLVNISUVMRCMeWyfkGRI24/iF2BvAiR+D0daoij8jyUo3EJgKCmvJAAEBAAAAd05SVDAAAGDoFHOu0KEnbxxXdtD2nDgATwAAAAAAAABOy1+Jg0RPNwIAAAAASiEAAAAAAAAAAQABigGIAeMB3QF0AQkB8QGVAf0BUgHbAS0BPAG6AV0BcgHKAWcBCQG/AR0BlAESARsB8wF0AYgBAQG0AQ8BbwFcGENgq98rbiFx/xDM3YPdw1n3vwMS+y2XYLFtuW2RGYUAAwEAAAAwTlJUMAAAtzpr9NKeW2e8c2DX3F6luQAIAAAAAAAAAEOmhl2AAKbyAgd6a19kZW1vnu7vhUjiG7RYGoiXWWCJKH73o0aPxwZOCiiqa60H8x0ABAEAAAA2TlJUMAAA20BKcozYyT9+RKiIEz9nGQAOAAAAAAAAAPNN4itlXzZVAg0MeyJydW4iOnRydWV9TY0VJ/lU7nD79goXYqFfaEcpApH+/WMQHT41x/3kUMsAAgEAAABITlJUMAAAhE9KzVp9TzAJqliLoIoyDwAgAAAAAAAAABHvh6Qctk6OAgFoAXIBRQFOAZwBBAFGAUEBqgFYAR4BxQHzAYABFgEZqn33rP93tKZ2vKVO5/Vo8x6jrk4ecvbtNpqRXifFZCsABgEAAAASWmtTaGllbGREZW1vOiBkb25lERvtL+VdpeudiXDP56SfG2MY0QxttGG/hqQVEAiiiZPYHx8gAAAJIAAAGiAHABogDAAJIBoJCQZTCQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkKIAMAAGAAAAkgAAAKIAAAGiAHABogDQAKIBoKCgYNCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYGAAAGAAAAkgAAAKIAAAGiAHABogDQAKIBoKCgY+CgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAALIAAAGiAHABogDgALIBoLCwZcCwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAAMIAAAGiAHABogDwAMIBoMDAYzDAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwg4AAAYAAKDSAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQogGgAAYAAACCAAAAggAQgIIAAICiBpAABgAAoJIAAACiAAABogBwAaIA0ACiAaCgoGPgoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAACyAAABogBwAaIBAACyAaCwsGEAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAAJDCDgAABgAAoNIAALCiDgAABgAAoLIAAMCiDgAABgAAoMIAANCiAiAABgAAAJIAAACSAAABogBwAaIBAACSAaCQkGfwkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCSAACQkgAAkJIAAJCiADAABgAAAJIAAAAEk=",
+    "manifest": {
+      "code_hash": "hash:6EAA41AA8295AD9D1A8D64F32135B41B6DEC1A570609DC74507C22144A167B5F#1742",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 1,
+      "access_set_hints": {
+        "read_keys": [
+          "account.detail:sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D:zk_demo",
+          "account:sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D",
+          "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+        ],
+        "write_keys": [
+          "account.detail:sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D:zk_demo",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D",
+          "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "run",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "account:sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D",
+            "account.detail:sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D:zk_demo",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D",
+            "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+          ],
+          "write_keys": [
+            "account.detail:sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D:zk_demo",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D",
+            "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "run",
+        "line": 11,
+        "pc_end": 924,
+        "pc_start": 0,
+        "source_path": "zk_shield_example.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 924,
+        "bytecode_words": 231,
+        "column": 14,
+        "frame_bytes": 40,
+        "function_name": "run",
+        "jump_range_risk": false,
+        "jump_span_words": 231,
+        "line": 11,
+        "pc_end": 924,
+        "pc_start": 0,
+        "source_path": "zk_shield_example.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

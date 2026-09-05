@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-11-detail-and-transfer",
+  "source_name": "11_detail_and_transfer.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/11_detail_and_transfer.ko",
+  "source": "// Demonstrates typed pointer-ABI for account detail and asset transfer.\nseiyaku DetailAndTransfer {\n  kotoage fn set_cursor_and_transfer() permission(Admin) {\n    // Write a small JSON cursor to the caller's account metadata\n    set_account_detail(authority(), name!(\"cursor\"), json!{ q: \"sc_dummy\", c: 1 });\n\n    // Transfer 10 ROSE from Alice to Bob\n    let from = account!(\"sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB\");\n    let to = account!(\"sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76\");\n    let asset = asset_definition!(\"6pEP9RjNoZ7beWkT3pLfKoM1dyfi\");\n    transfer_asset(from, to, asset, 10);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRShwcAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAXwcAAAAAAACHhV8t6x9hBwIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAA7wYB7AatBAcAAAAAAAAAISBhY2NvdW50LmRldGFpbDokYXV0aG9yaXR5OmN1cnNvchMSYWNjb3VudDokYXV0aG9yaXR5ZWRhY2NvdW50OnNvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2YWBhY2NvdW50OnNvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEKAAX9hc3NldDo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2fHthc3NldDo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpI3NvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEInJmFzc2V0X2RlZjo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpqQIDAAAAAAAAACEgYWNjb3VudC5kZXRhaWw6JGF1dGhvcml0eTpjdXJzb3KAAX9hc3NldDo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2fHthc3NldDo2cEVQOVJqTm9aN2JlV2tUM3BMZktvTTFkeWZpI3NvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEIIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAAC1BwEAAAAAAAAAqwcYF3NldF9jdXJzb3JfYW5kX3RyYW5zZmVyBAAAAAAIAAAAAAAAAAABAAgBBgVBZG1pbq0EBwAAAAAAAAATEmFjY291bnQ6JGF1dGhvcml0eSEgYWNjb3VudC5kZXRhaWw6JGF1dGhvcml0eTpjdXJzb3J8e2Fzc2V0OjZwRVA5UmpOb1o3YmVXa1QzcExmS29NMWR5Zmkjc29yYXXvvpsxTnDvvoPvvpXjg7HvvodxMTFw772z776YMu+9sTXvvofvvaZpQ0pLalLvvpR67723Tk1O776G7725776VUEPvvbPvvplGdu+9tUU5TEJMQmFgYWNjb3VudDpzb3Jhde++mzFOcO++g+++leODse++h3ExMXDvvbPvvpgy772xNe++h++9pmlDSktqUu++lHrvvbdOTU7vvobvvbnvvpVQQ++9s+++mUZ27721RTlMQkxCJyZhc3NldF9kZWY6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaYABf2Fzc2V0OjZwRVA5UmpOb1o3YmVXa1QzcExmS29NMWR5Zmkjc29yYXXvvpsxTmbvvbdn776J776T776JQu+9pkvvvozvvpjvvpJv776H776C776bckc4Me++i2pX776O776VVm5jd+++jFPvvbEzcO++mO++i+++iWhVUzlRNzZlZGFjY291bnQ6c29yYXXvvpsxTmbvvbdn776J776T776JQu+9pkvvvozvvpjvvpJv776H776C776bckc4Me++i2pX776O776VVm5jd+++jFPvvbEzcO++mO++i+++iWhVUzlRNzapAgMAAAAAAAAAISBhY2NvdW50LmRldGFpbDokYXV0aG9yaXR5OmN1cnNvcnx7YXNzZXQ6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaSNzb3Jhde++mzFOcO++g+++leODse++h3ExMXDvvbPvvpgy772xNe++h++9pmlDSktqUu++lHrvvbdOTU7vvobvvbnvvpVQQ++9s+++mUZ27721RTlMQkxCgAF/YXNzZXQ6NnBFUDlSak5vWjdiZVdrVDNwTGZLb00xZHlmaSNzb3Jhde++mzFOZu+9t2fvvonvvpPvvolC772mS+++jO++mO++km/vvofvvoLvvptyRzgx776Lalfvvo7vvpVWbmN3776MU++9sTNw776Y776L776JaFVTOVE3NgMBAQEIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAABMVExCBQAAAAEAAABoAgAAOAAAAAAAAACOAAAAAAAAAPUAAAAAAAAAkwEAAAAAAAAxAgAAAAAAAAADAQAAAC9OUlQwAAC3Omv00p5bZ7xzYNfcXqW5AAcAAAAAAAAAQe/OuO2IM0ECBmN1cnNvcv+OVB04nexjaNcP+8w9U4K/KbWwnHS1wAd/Wp+iRjNdAAQBAAAAQE5SVDAAANtASnKM2Mk/fkSoiBM/ZxkAGAAAAAAAAADwTq0bTF2dmAIXFnsiYyI6MSwicSI6InNjX2R1bW15In3yBN/1/BJaUj6ox6O8SU+wp0+MSit87fovyyWuUqs9SQABAQAAAHdOUlQwAABg6BRzrtChJ28cV3bQ9pw4AE8AAAAAAAAAWvKkm7OQU8kCAAAAAEohAAAAAAAAAAEAAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEaETub1cVDZKW5qbBOBl8PrjpduPKAh/MIqmLkae2jEPAAEBAAAAd05SVDAAAGDoFHOu0KEnbxxXdtD2nDgATwAAAAAAAACuR9cVcZNVtQIAAAAASiEAAAAAAAAAAQABBAH/AVsBgQEEAW0B3AHPARkB4gHkAVEBxAFdAfsBbwFTAXUBnQFOAbMBDwGiAe8BqAEHASgBTQEcAcMBMAEWrv0OzW+QThOmy/woLQrHhKmC2uQvJ0UIN+B496/bNoUAAgEAAABITlJUMAAAhE9KzVp9TzAJqliLoIoyDwAgAAAAAAAAAKUu0qjltLHbAgGhAVgBawGbAeEBZAFLAQQBiAGaAYgBwAGOAUABFQFEbDZrLmI1tRLp++G5xSWEPhH8DyU8nR4XZBp/MNCbh4cA0B8fIKQAAGAAChggABgKIAAACyAAABogBwAaIA8ACyAaCwsGRwsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAAADCAAABogBwAaIBAADCAaDAwGHQwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIOAAAGAACg0gAAsKIOAAAGAACgsgAAwKIOAAAGAACgwgAA0KIBoAAGAAAAkgAAAIIAoICCAACAogaQAAYAAKByAAAAogAAAaIAcAGiARAAogGgoKBgQKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAAAAsgAAAaIAcAGiASAAsgGgsLBiILCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAAAAwgAAAaIAcAGiATAAwgGgwMBkAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAABw0g4AAAYAAKDiAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQog4AAAYAAKDSAADgogJAAAYAAAByAAAABJ",
+    "manifest": {
+      "code_hash": "hash:4C336A7DD8CFE3CBE3431BD1C6E0FAC3EB5DAF41A98B5245163565150051F577#48E3",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account.detail:$authority:cursor",
+          "account:$authority",
+          "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi"
+        ],
+        "write_keys": [
+          "account.detail:$authority:cursor",
+          "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "set_cursor_and_transfer",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "account:$authority",
+            "account.detail:$authority:cursor",
+            "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "asset_def:6pEP9RjNoZ7beWkT3pLfKoM1dyfi",
+            "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76"
+          ],
+          "write_keys": [
+            "account.detail:$authority:cursor",
+            "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "asset:6pEP9RjNoZ7beWkT3pLfKoM1dyfi#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "set_cursor_and_transfer",
+        "line": 3,
+        "pc_end": 624,
+        "pc_start": 0,
+        "source_path": "11_detail_and_transfer.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 624,
+        "bytecode_words": 156,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "set_cursor_and_transfer",
+        "jump_range_risk": false,
+        "jump_span_words": 156,
+        "line": 3,
+        "pc_end": 624,
+        "pc_start": 0,
+        "source_path": "11_detail_and_transfer.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

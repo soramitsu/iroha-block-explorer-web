@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "id": "examples-map-map",
+  "source_name": "map.ko",
+  "compiler_source_path": "examples/map/map.ko",
+  "source": "// Design example: deterministic map iteration with bounds\n// Note: multi-entry iteration requires a state map.\n\nseiyaku MapDemo {\n  state Entries: Map<int, int>;\n\n  kotoage fn sum_first_two() -> int {\n    let s = 0;\n    for (k, v) in Entries.take(2) {\n      s = s + v;\n    }\n    return s;\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSLQEAAE5SVDAAAJxFYTLfthcec01NMFJ73cwABQEAAAAAAADUHrlPk9ec+AIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAANQEzFwEAAAAAAAAADg1zdGF0ZTpFbnRyaWVzCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAAbwEAAAAAAAAAZg4Nc3VtX2ZpcnN0X3R3bwQAAAAACAAAAAAAAAAABgEEA2ludAEAFwEAAAAAAAAADg1zdGF0ZTpFbnRyaWVzCAAAAAAAAAAAAwEBAQgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAADABAAAAAAAAACcIB0VudHJpZXMdFQAAAAAAAAASCQEAAAAAAAAAAAkBAAAAAAAAAABMVExCAQAAAAAAAABXAAAAGAAAAAAAAAAAAwEAAAAwTlJUMAAAtzpr9NKeW2e8c2DX3F6luQAIAAAAAAAAAE4bK+z/kCTZAgdFbnRyaWVz3TEB+c+BNykDOYffhyBJ4gRDU9XNBgDVf0sqjIOGuVPAHx8gAAAYIAAAFyAAAAkgAgkJIAAACCABCAggGQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAkXDAI/AA0gDQwHCAEHByEaAAdBwAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIBkAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAogAAAaIAcAGiACAAogGgoKBk0KCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgABcLIFQAAGAACgYgAAYKIOAAAGBQAABgAAoHIAAABiAGBwUPGgAFQVEAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAZAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAcKIOAAAGBTAABgAAoFIAAXByAABQcgGQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAgXFwFU/wBGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgABgKIAAAAEkAAABJ",
+    "manifest": {
+      "code_hash": "hash:B4ECECC452B11C1D05A54CEA7260E820284F1094BB87BDC23EF68C00C5CD1DD3#73C9",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "state:Entries"
+        ],
+        "write_keys": [],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "sum_first_two",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": "int",
+          "permission": null,
+          "read_keys": [
+            "state:Entries"
+          ],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [
+        {
+          "name": "Entries",
+          "type_name": "map<int, int>"
+        }
+      ],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "sum_first_two",
+        "line": 7,
+        "pc_end": 928,
+        "pc_start": 0,
+        "source_path": "map.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 928,
+        "bytecode_words": 232,
+        "column": 14,
+        "frame_bytes": 64,
+        "function_name": "sum_first_two",
+        "jump_range_risk": false,
+        "jump_span_words": 232,
+        "line": 7,
+        "pc_end": 928,
+        "pc_start": 0,
+        "source_path": "map.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

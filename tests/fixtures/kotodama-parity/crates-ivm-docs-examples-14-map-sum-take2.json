@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-14-map-sum-take2",
+  "source_name": "14_map_sum_take2.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/14_map_sum_take2.ko",
+  "source": "// Deterministically sum up to two (k,v) pairs from a state map.\n// The compiler lowers `for (k,v) in Entries.take(2)` to a fixed two-iteration walk.\nseiyaku MapTakeTwo {\n  state Entries: Map<int, int>;\n\n  kotoage fn sum_two() -> int {\n    let acc = 0;\n    for (k, v) in Entries.take(2) {\n      acc = acc + v;\n    }\n    return acc;\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSJwEAAE5SVDAAAJxFYTLfthcec01NMFJ73cwA/wAAAAAAAADLELD67JG0QAIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAANQEzFwEAAAAAAAAADg1zdGF0ZTpFbnRyaWVzCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAAaQEAAAAAAAAAYAgHc3VtX3R3bwQAAAAACAAAAAAAAAAABgEEA2ludAEAFwEAAAAAAAAADg1zdGF0ZTpFbnRyaWVzCAAAAAAAAAAAAwEBAQgAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAADABAAAAAAAAACcIB0VudHJpZXMdFQAAAAAAAAASCQEAAAAAAAAAAAkBAAAAAAAAAABMVExCAQAAAAIAAABXAAAAGAAAAAAAAAAAAwEAAAAwTlJUMAAAtzpr9NKeW2e8c2DX3F6luQAIAAAAAAAAAE4bK+z/kCTZAgdFbnRyaWVz3TEB+c+BNykDOYffhyBJ4gRDU9XNBgDVf0sqjIOGuVMAAMAfHyAAABggAAAXIAAACSACCQkgAAAIIAEICCAZAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgCRcMAj8ADSANDAcIAQcHIRoAB0HAAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgGQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAACiAAABogBwAaIAIACiAaCgoGRwoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAAFwsgVAAAYAAKBiAABgog4AAAYFAAAGAACgcgAAAGIAYHBQ8aAAVBUQAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIBkAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAABwog4AAAYFMAAGAACgUgABcHIAAFByAZAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgCBcXAVT/AEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAGAogAAAASQAAAEk=",
+    "manifest": {
+      "code_hash": "hash:3CABED87A031AF7F7811DE3DB3EB4E33EFC5E9AD0940CE235A72FF46C78C2BA3#D799",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "state:Entries"
+        ],
+        "write_keys": [],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "sum_two",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": "int",
+          "permission": null,
+          "read_keys": [
+            "state:Entries"
+          ],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [
+        {
+          "name": "Entries",
+          "type_name": "map<int, int>"
+        }
+      ],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "sum_two",
+        "line": 6,
+        "pc_end": 928,
+        "pc_start": 0,
+        "source_path": "14_map_sum_take2.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 928,
+        "bytecode_words": 232,
+        "column": 14,
+        "frame_bytes": 64,
+        "function_name": "sum_two",
+        "jump_range_risk": false,
+        "jump_span_words": 232,
+        "line": 6,
+        "pc_end": 928,
+        "pc_start": 0,
+        "source_path": "14_map_sum_take2.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

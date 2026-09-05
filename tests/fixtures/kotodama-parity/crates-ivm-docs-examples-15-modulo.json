@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "id": "crates-ivm-docs-examples-15-modulo",
+  "source_name": "15_modulo.ko",
+  "compiler_source_path": "crates/ivm/docs/examples/15_modulo.ko",
+  "source": "// Simple modulo example demonstrating `%` operator support.\nseiyaku ModuloDemo {\n  kotoage fn remainder(a: int, b: int) -> int {\n    return a % b;\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSzgAAAE5SVDAAAJxFYTLfthcec01NMFJ73cwApgAAAAAAAAC9S3p+9S6A5AIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAAQAIAAAAAAAAAABsAQAAAAAAAABjCglyZW1haW5kZXIEAAAAABoCAAAAAAAAAAgCAWEEA2ludAgCAWIEA2ludAYBBANpbnQBAAgAAAAAAAAAAAgAAAAAAAAAAAEACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAATFRMQgMAAAACAAAABAEAACgAAAAAAAAAigAAAAAAAADbAAAAAAAAAAADAQAAADtOUlQwAAC3Omv00p5bZ7xzYNfcXqW5ABMAAAAAAAAAHfpWn/bIWWQCEnRyaWdnZXJfZXZlbnRfanNvbtcfvS+oYJZHAsvBd3abEvlQx79OiWH7iw6dIuDdcrMLAAMBAAAAKk5SVDAAALc6a/TSnltnvHNg19xepbkAAgAAAAAAAADWv5hHARFWOgIBYXUBXtmb5hhfKVztL7NjSE4HNp3iXQ75Z6By+loUXnXFAAMBAAAAKk5SVDAAALc6a/TSnltnvHNg19xepbkAAgAAAAAAAADiQH/s6Gv8fQIBYg+buAyFTMPOd6I9t4ihCUQsfyzNdSvcCcG5KMFy88YtAADYHx8gAAAKIAAAGiAHABogAQAKIBoKCgZ+CgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYPEAAGAAChggABgKIOAAAGAAChwgAAAKIAAAGiAHABogAgAKIBoKCgZgCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKCSAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiADAAogGgoKBjEKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoIIAAJCiAACAsgHAABRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAKFyAAFwogAAAASdAfHyAAAR8xCAkfMRAXHzEYGB8xIAofMSgLHzEgHxgwKB8XMBcYCRYACQogCB8JMBAfFzAYHxgwAB8BMDAfHyAAAQBICB8JMBAfFzAYHxgwAB8BMDAfHyAAAQBI6f8BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEk=",
+    "manifest": {
+      "code_hash": "hash:9C57F3C1D6D8DB62D1F30293B2773D838B641F203EC6A2E7A5C5A1A9A6204ABB#9892",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "remainder",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "a",
+              "type_name": "int"
+            },
+            {
+              "name": "b",
+              "type_name": "int"
+            }
+          ],
+          "return_type": "int",
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": null,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "remainder",
+        "line": 3,
+        "pc_end": 488,
+        "pc_start": 0,
+        "source_path": "15_modulo.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__remainder",
+        "line": 3,
+        "pc_end": 684,
+        "pc_start": 488,
+        "source_path": "15_modulo.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 488,
+        "bytecode_words": 122,
+        "column": 14,
+        "frame_bytes": 40,
+        "function_name": "remainder",
+        "jump_range_risk": false,
+        "jump_span_words": 122,
+        "line": 3,
+        "pc_end": 488,
+        "pc_start": 0,
+        "source_path": "15_modulo.ko"
+      },
+      {
+        "bytecode_bytes": 196,
+        "bytecode_words": 49,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "__entrypoint_impl__remainder",
+        "jump_range_risk": false,
+        "jump_span_words": 49,
+        "line": 3,
+        "pc_end": 684,
+        "pc_start": 488,
+        "source_path": "15_modulo.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

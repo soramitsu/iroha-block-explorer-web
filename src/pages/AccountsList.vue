@@ -3,64 +3,152 @@
     :title="$t('accounts.accounts')"
     class="accounts-list-page"
   >
-    <BaseTable
-      v-model:page="listState.page"
-      v-model:page-size="listState.per_page"
-      :loading="isLoading"
-      :total="totalAccounts"
-      :items="accounts"
-      container-class="accounts-list-page__container"
-      row-pointer
-      @click:row="(account) => handleRowClick(account.id)"
+    <div class="accounts-list-page__filters">
+      <label>
+        <span class="label">{{ $t('accounts.filters.domainLabel') }}</span>
+        <input
+          v-model="domainFilter"
+          type="text"
+          :placeholder="$t('accounts.filters.domainPlaceholder')"
+        >
+      </label>
+      <label>
+        <span class="label">{{ $t('accounts.filters.assetLabel') }}</span>
+        <input
+          v-model="assetFilter"
+          type="text"
+          :placeholder="$t('accounts.filters.assetPlaceholder')"
+        >
+        <small
+          v-if="assetFilterError"
+          class="accounts-list-page__filters-error"
+        >
+          {{ assetFilterError }}
+        </small>
+      </label>
+    </div>
+
+    <div
+      v-if="!pagination.ok"
+      class="accounts-list-page__pagination-error content-row"
+      data-test="accounts-invalid-pagination"
+      role="alert"
     >
-      <template #header>
-        <div class="accounts-list-page__row">
-          <span class="h-sm cell">{{ $t('accounts.address') }}</span>
-          <span class="h-sm">{{ $t('domains.domains') }}</span>
-          <span class="h-sm">{{ $t('assets.assets') }}</span>
-        </div>
-      </template>
+      <span class="row-text">{{ $t('table.invalidCursorPagination') }}</span>
+      <BaseButton
+        bordered
+        @click="resetPagination"
+      >
+        {{ $t('table.resetPagination') }}
+      </BaseButton>
+    </div>
 
-      <template #row="{ item }">
-        <div class="accounts-list-page__row">
-          <BaseHash
-            :hash="item.id.toString()"
-            :link="`/accounts/${item.id}`"
-            :type="hashType"
-            copy
-            class="cell"
-          />
-
-          <span class="row-text-monospace">{{ item.owned_domains }}</span>
-          <span class="row-text-monospace">{{ item.owned_assets + item.owned_nfts }}</span>
-        </div>
-      </template>
-
-      <template #mobile-card="{ item }">
-        <div class="accounts-list-page__mobile-card">
-          <div class="accounts-list-page__mobile-row">
-            <span class="h-sm accounts-list-page__mobile-row-label">{{ $t('accounts.address') }}</span>
-            <BaseHash
-              :hash="item.id.toString()"
-              :link="`/accounts/${item.id}`"
-              :type="hashType"
-              class="accounts-list-page__mobile-row-id"
-              copy
-            />
+    <BaseCollectionState
+      v-if="pagination.ok && scope"
+      v-slot="{ emptyLabel }"
+      table
+      :snapshot="scope.expose.snapshot"
+      :count="accounts.length"
+      :filtered="Boolean(accountQuery.domain || accountQuery.with_asset)"
+      @reset="updateListQuery({ domain: null, asset: null })"
+      @retry="scope.expose.refetch()"
+    >
+      <BaseTable
+        v-model:cursor="cursor"
+        v-model:page-size="limit"
+        :empty-label
+        :loading="isLoading"
+        pagination-mode="cursor"
+        :cursor-pagination="accountsPagination"
+        :items="accounts"
+        :row-key="accountRowKey"
+        container-class="accounts-list-page__container"
+      >
+        <template #header>
+          <div
+            class="accounts-list-page__row"
+            role="presentation"
+          >
+            <span
+              class="h-sm cell"
+              role="columnheader"
+            >{{ $t('accounts.address') }}</span>
+            <span
+              class="h-sm"
+              role="columnheader"
+            >{{ $t('domains.domains') }}</span>
+            <span
+              class="h-sm"
+              role="columnheader"
+            >{{ $t('assets.assets') }}</span>
           </div>
+        </template>
 
-          <div class="accounts-list-page__mobile-row">
-            <span class="h-sm accounts-list-page__mobile-row-label">{{ $t('domains.domains') }}</span>
-            <span class="row-text-monospace">{{ item.owned_domains }}</span>
-          </div>
+        <template #row="{ item }">
+          <div
+            class="accounts-list-page__row"
+            role="presentation"
+          >
+            <div
+              class="cell"
+              role="cell"
+            >
+              <BaseHash
+                :hash="accountDisplayId(item)"
+                :link="accountLink(item)"
+                :type="hashType"
+                copy
+              />
+            </div>
 
-          <div class="accounts-list-page__mobile-row">
-            <span class="h-sm accounts-list-page__mobile-row-label">{{ $t('assets.assets') }}</span>
-            <span class="row-text-monospace">{{ item.owned_assets + item.owned_nfts }}</span>
+            <span
+              class="row-text-monospace"
+              role="cell"
+            >{{ item.owned_domains }}</span>
+            <span
+              class="row-text-monospace"
+              role="cell"
+            >{{ item.owned_assets + item.owned_nfts }}</span>
           </div>
-        </div>
-      </template>
-    </BaseTable>
+        </template>
+
+        <template #mobile-card="{ item }">
+          <div class="accounts-list-page__mobile-card">
+            <div class="accounts-list-page__mobile-row">
+              <span class="h-sm accounts-list-page__mobile-row-label">{{ $t('accounts.address') }}</span>
+              <BaseHash
+                :hash="accountDisplayId(item)"
+                :link="accountLink(item)"
+                :type="hashType"
+                class="accounts-list-page__mobile-row-id"
+                copy
+              />
+            </div>
+
+            <div class="accounts-list-page__mobile-row">
+              <span class="h-sm accounts-list-page__mobile-row-label">{{ $t('domains.domains') }}</span>
+              <span class="row-text-monospace">{{ item.owned_domains }}</span>
+            </div>
+
+            <div class="accounts-list-page__mobile-row">
+              <span class="h-sm accounts-list-page__mobile-row-label">{{ $t('assets.assets') }}</span>
+              <span class="row-text-monospace">{{ item.owned_assets + item.owned_nfts }}</span>
+            </div>
+          </div>
+        </template>
+        <template #empty>
+          <span>{{ emptyLabel }}</span>
+          <BaseButton
+            v-if="Boolean(accountQuery.domain || accountQuery.with_asset)"
+            bordered
+            data-test="collection-reset"
+            @click="updateListQuery({ domain: null, asset: null })"
+          >
+            {{ $t('ux.collection.resetFilters') }}
+          </BaseButton>
+        </template>
+      </BaseTable>
+    </BaseCollectionState>
   </BaseContentBlock>
 </template>
 
@@ -68,58 +156,148 @@
 import * as http from '@/shared/api';
 import BaseHash from '@/shared/ui/components/BaseHash.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
+import BaseCollectionState from '@/shared/ui/components/BaseCollectionState.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
-import { computed, reactive, watch } from 'vue';
+import BaseButton from '@/shared/ui/components/BaseButton.vue';
+import { computed, ref, watch } from 'vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
-import type { AccountId } from '@iroha/core/data-model';
-import { useRouter } from 'vue-router';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import { useI18n } from 'vue-i18n';
+import type { Account } from '@/shared/api/schemas';
+import { getDisplayedAccountId } from '@/shared/lib/account-id';
+import { normalizeAssetDefinitionSelectorLiteral } from '@/shared/lib/asset-definition-literal';
+import { parseOptionalFilterCatching } from '@/shared/lib/optional-filter';
+import { firstRouteQueryValue } from '@/shared/lib/route-query';
+import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
+import { watchDebounced } from '@vueuse/core';
 
-const router = useRouter();
+const { t } = useI18n();
 
 const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full', xs: 'two-line', xxs: 'two-line' }, 'medium');
 
-const listState = reactive({
-  page: 1,
-  per_page: 10,
-});
+const { route, cursor, limit, pagination, resetPagination, updateListQuery } = useCursorListRouteQuery();
+const domainFilter = ref(firstRouteQueryValue(route.query.domain) ?? '');
+const assetFilter = ref(firstRouteQueryValue(route.query.asset) ?? '');
+function parseAssetSelector(value: string): string {
+  const normalized = normalizeAssetDefinitionSelectorLiteral(value);
+  if (!normalized) throw new Error('invalid asset selector');
+  return normalized;
+}
+const assetFilterState = computed(() =>
+  parseOptionalFilterCatching(assetFilter.value, parseAssetSelector, t('accounts.filters.assetInvalid'))
+);
+const parsedAssetFilter = computed<string | undefined>(() => assetFilterState.value.value);
+const assetFilterError = computed(() => assetFilterState.value.error);
 
 watch(
-  () => listState.per_page,
-  () => {
-    listState.page = 1;
+  () => [route.query.domain, route.query.asset] as const,
+  ([domain, asset]) => {
+    domainFilter.value = firstRouteQueryValue(domain) ?? '';
+    assetFilter.value = firstRouteQueryValue(asset) ?? '';
   }
 );
 
+watchDebounced(
+  [domainFilter, assetFilter],
+  () => {
+    if (assetFilterError.value) return;
+    updateListQuery({
+      domain: domainFilter.value.trim() || null,
+      asset: parsedAssetFilter.value ?? null,
+    }).catch(() => undefined);
+  },
+  { debounce: 300, maxWait: 600 }
+);
+
+const accountQuery = computed(() => ({
+  cursor: cursor.value,
+  limit: limit.value,
+  domain: (firstRouteQueryValue(route.query.domain) ?? '').trim() || undefined,
+  with_asset: (() => {
+    const raw = firstRouteQueryValue(route.query.asset) ?? '';
+    return raw ? (normalizeAssetDefinitionSelectorLiteral(raw) ?? undefined) : undefined;
+  })(),
+}));
+const hasInvalidRouteAsset = computed(() => {
+  const raw = firstRouteQueryValue(route.query.asset) ?? '';
+  return Boolean(raw && !normalizeAssetDefinitionSelectorLiteral(raw));
+});
+
 const scope = useParamScope(
   () => {
+    if (!pagination.value.ok || hasInvalidRouteAsset.value) return null;
     return {
-      key: JSON.stringify(listState),
-      payload: listState,
+      key: JSON.stringify({
+        cursor: accountQuery.value.cursor,
+        limit: accountQuery.value.limit,
+        domain: accountQuery.value.domain ?? null,
+        with_asset: accountQuery.value.with_asset?.toString() ?? null,
+      }),
+      payload: accountQuery.value,
     };
   },
   ({ payload }) => setupAsyncData(() => http.fetchAccounts(payload))
 );
 
-const isLoading = computed(() => scope.value?.expose.isLoading);
-const totalAccounts = computed(() =>
-  scope.value.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.pagination.total_items : 0
+const isLoading = computed(() => Boolean(scope.value?.expose.isLoading));
+const accountsPagination = computed(() =>
+  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.pagination : null
 );
 const accounts = computed(() =>
-  scope.value.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
+  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
 );
-
-function handleRowClick(id: AccountId) {
-  router.push(`/accounts/${id}`);
-}
+const accountDisplayId = (item: Account) => getDisplayedAccountId(item.id);
+const accountLink = (item: Account) => `/accounts/${encodeURIComponent(accountDisplayId(item))}`;
+const accountRowKey = (item: Account) => accountDisplayId(item);
 </script>
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
 
 .accounts-list-page {
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: size(2);
+    padding: 0 size(2);
+    margin-bottom: size(2);
+
+    @include sm {
+      padding: 0 size(3);
+    }
+
+    @include md {
+      padding: 0 size(2);
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: size(1);
+      min-width: 220px;
+
+      .label {
+        font-size: size(1.5);
+        color: theme-color('content-tertiary');
+      }
+
+      input {
+        padding: size(1.25);
+        border: 1px solid theme-color('border-primary');
+        border-radius: size(1);
+        background: transparent;
+        color: theme-color('content-primary');
+      }
+    }
+
+    &-error {
+      color: theme-color('error');
+      font-size: size(1.3);
+    }
+  }
+
   &__row {
     width: 100%;
     display: grid;

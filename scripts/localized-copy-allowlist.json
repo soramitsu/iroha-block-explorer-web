@@ -1,0 +1,202 @@
+[
+  {
+    "file": "src/shared/config.ts",
+    "pattern": "^[A-Z]{2,5}(?:-[A-Z]{2})? - ",
+    "reason": "Language-picker labels are reviewed locale self-names, not prose in the active UI locale."
+  },
+  {
+    "file": "src/shared/runtime-config.ts",
+    "pattern": ".+",
+    "reason": "Runtime configuration parser diagnostics are developer/operator validation errors, not rendered product copy."
+  },
+  {
+    "file": "src/shared/api/index.ts",
+    "pattern": ".+",
+    "reason": "API schema diagnostics name raw protocol fields and are retained verbatim for developers."
+  },
+  {
+    "file": "src/shared/api/schemas.ts",
+    "pattern": ".+",
+    "reason": "Zod protocol diagnostics name raw wire fields and are retained verbatim for developers."
+  },
+  {
+    "file": "src/shared/api/consts.ts",
+    "value": "unknown-error",
+    "reason": "Raw result-state discriminator shared with the API adapter."
+  },
+  {
+    "file": "src/shared/utils/resource-state.ts",
+    "value": "message",
+    "reason": "Raw JavaScript Error property key, not rendered copy."
+  },
+  {
+    "file": "src/features/studio/ContractGraphCanvas.vue",
+    "value": "label",
+    "reason": "Serialized graph-model property name, not rendered copy."
+  },
+  {
+    "file": "src/shared/lib/kotodama-studio-graph.ts",
+    "value": "GraphFirstContract",
+    "reason": "Generated Kotodama contract identifier preserved as source code."
+  },
+  {
+    "file": "src/shared/lib/kotodama-studio-graph.ts",
+    "value": "next",
+    "reason": "Serialized graph edge-port discriminator, not rendered copy."
+  },
+  {
+    "file": "src/shared/lib/kotodama-studio-graph.ts",
+    "pattern": "^(?:AssetOps|SubscriptionBilling|ThresholdEscrow|IrohaSwapLite|StablecoinSimple)$",
+    "reason": "Generated Kotodama sample contract identifiers preserved as source code."
+  },
+  {
+    "file": "src/pages/account/AccountActivityView.vue",
+    "value": "result_ok:",
+    "reason": "Raw Torii filter field name displayed as protocol evidence."
+  },
+  {
+    "file": "src/pages/DataspaceDetails.vue",
+    "pattern": "^(?:/status|OperatorSigningContext)$",
+    "reason": "Exact Torii route and operator authentication scope preserved as protocol literals."
+  },
+  {
+    "file": "src/pages/GovernanceDashboard.vue",
+    "pattern": "^(?:/v1/gov/\\*|/v1/gov/capabilities|X-Iroha-(?:Account|Signature|Timestamp-Ms|Nonce|Witness))$",
+    "reason": "Exact governance routes and canonical request header names preserved as protocol literals."
+  },
+  {
+    "file": "src/pages/KotodamaStudio.vue",
+    "value": "canonical-rust-service",
+    "reason": "Exact compiler backend identifier preserved as source/runtime evidence."
+  },
+  {
+    "file": "src/pages/SoracloudPage.vue",
+    "value": "NetworkId",
+    "reason": "Exact Iroha SDK type and runtime configuration field name."
+  },
+  {
+    "file": "src/pages/SoraclesPage.vue",
+    "pattern": "^[1-4] · (?:perps_market|options_series|options_shout|cover_policy)$",
+    "reason": "Exact numeric DeFi oracle-domain discriminators and canonical wire names displayed as protocol evidence."
+  },
+  {
+    "file": "src/pages/SystemParameters.vue",
+    "value": "custom",
+    "reason": "Exact top-level Parameters wire field displayed as protocol evidence."
+  },
+  {
+    "file": "src/pages/SorafsRegistry.vue",
+    "pattern": "^(?:content_bytes|approved_epoch|retention_epoch|storage_class|min_replicas|retirement_reason|chunk_digest_sha3_256|por_root|council_envelope_digest)$",
+    "reason": "Raw SoraFS manifest and lifecycle field names displayed as protocol evidence."
+  },
+  {
+    "file": "src/pages/VpnStats.vue",
+    "value": "/metrics",
+    "reason": "Exact operator metrics route preserved as a protocol literal."
+  },
+  {
+    "file": "src/widgets/header/HeaderLogo.vue",
+    "value": "Hyperledger Iroha",
+    "reason": "Protected product brand."
+  },
+  {
+    "file": "index.html",
+    "value": "Hyperledger Iroha",
+    "reason": "Protected brand-only static fallback; runtime title and social metadata are localized from the active catalog."
+  },
+  {
+    "file": "public/site.webmanifest",
+    "value": "Hyperledger Iroha",
+    "reason": "Protected installable-app brand; no English descriptive prose remains in the static manifest."
+  },
+  {
+    "file": "src/features/studio/blockly.ts",
+    "pattern": "^(?:state |\\$\\{header\\}|register_trigger |info\\(|transfer_asset\\(|set_account_detail\\(|\\$\\{stateName\\}|let \\$\\{alias\\}|call \\$\\{entrypoint\\}|if \\(|for \\().*",
+    "reason": "Generated Kotodama source syntax and code literals, not UI prose."
+  },
+  {
+    "file": "src/features/studio/ContractGraphCanvas.vue",
+    "pattern": "^(?:then|else|next)$",
+    "reason": "Serialized graph port discriminators; their rendered labels use catalog keys."
+  },
+  {
+    "file": "src/pages/AssetsList.vue",
+    "pattern": "^(?:rwa|nft|holders|assets)$",
+    "reason": "Route/view discriminators, not rendered labels."
+  },
+  {
+    "file": "src/pages/KotodamaStudio.vue",
+    "pattern": "^(?:then|else|next)$",
+    "reason": "Serialized graph edge-port discriminators; their rendered labels use catalog keys."
+  },
+  {
+    "file": "src/pages/RWADetails.vue",
+    "pattern": "^M \\$\\{startX\\} \\$\\{startY\\} C ",
+    "reason": "SVG path command data, not rendered copy."
+  },
+  {
+    "file": "src/pages/SearchResults.vue",
+    "pattern": "^HTTP \\$\\{problem\\.status\\}$",
+    "reason": "Protected HTTP protocol name plus a dynamic status code."
+  },
+  {
+    "file": "src/shared/lib/freshness.ts",
+    "pattern": "^(?:unknown|fresh|delayed|stale)$",
+    "reason": "Internal freshness discriminators mapped to catalog messages by every renderer."
+  },
+  {
+    "file": "src/shared/lib/instruction-presentation.ts",
+    "value": "null",
+    "reason": "Canonical JSON null literal displayed as raw instruction data."
+  },
+  {
+    "file": "src/shared/lib/kotodama-studio-graph.ts",
+    "pattern": "^(?:Map<|unknown$|bool$|int$|AccountId$|AssetDefinitionId$|DomainId$|Name$|Json$|Blob$|NoritoBytes$|info\\(|let query_result =|execute_instruction\\(|set_account_detail\\().*",
+    "reason": "Kotodama type identifiers and generated source-code syntax, not UI prose."
+  },
+  {
+    "file": "src/shared/lib/kotodama-studio-source.ts",
+    "pattern": "^\\$\\{parts\\.join.*Main actions:",
+    "reason": "Generated source-document commentary from a legacy source serializer; no production UI consumer renders it."
+  },
+  {
+    "file": "src/shared/lib/time.ts",
+    "pattern": "^GMT[+-]$",
+    "reason": "Protected IANA/UTC time-zone notation."
+  },
+  {
+    "file": "src/shared/ui/components/BaseButton.vue",
+    "pattern": "^(?:line|bordered|default)$",
+    "reason": "Internal visual variant discriminators, not labels."
+  },
+  {
+    "file": "src/shared/ui/components/ContractCodeViewPanel.vue",
+    "pattern": "^(?:verified|manifest|decompiled|\\$\\{entrypoint\\.kind\\} fn ).*",
+    "reason": "Internal view discriminators and protected decompiled function syntax."
+  },
+  {
+    "file": "src/shared/ui/components/InstructionSemanticCard.vue",
+    "pattern": "^instruction-semantic-field-",
+    "reason": "Stable test/DOM identifier, not rendered copy."
+  },
+  {
+    "file": "src/shared/ui/components/TransactionEvidencePanel.vue",
+    "pattern": "^(?:failed|incomplete)$",
+    "reason": "Internal evidence-state discriminators mapped to catalog messages."
+  },
+  {
+    "file": "src/shared/ui/composables/usePeersTelemetry.ts",
+    "pattern": "^(?:NONE|LIVE_SSE|SNAPSHOT|MIXED)$",
+    "reason": "Internal telemetry-source discriminators; no production UI renders them directly."
+  },
+  {
+    "file": "src/shared/ui/utils/formatters.ts",
+    "pattern": "^(?:0 B|\\$\\{signedScaled\\.toFixed).*",
+    "reason": "Protected byte-unit notation emitted by a technical numeric formatter."
+  },
+  {
+    "file": "src/shared/utils/resource-state.ts",
+    "pattern": "^(?:ready|not-found|error)$",
+    "reason": "Internal resource-state discriminators, not labels."
+  }
+]

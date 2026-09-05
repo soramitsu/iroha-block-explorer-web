@@ -45,12 +45,12 @@ function toggle() {
 @use '@/shared/ui/styles/main' as *;
 
 .base-inner-block {
-  border-radius: size(4);
-  background: theme-color('background');
+  border-radius: 12px;
+  background: theme-color('surface');
   padding: size(3) size(4);
   margin: size(3) size(4);
 
-  @include shadow-elevated;
+  border: 1px solid theme-color('border-primary');
 
   &__header {
     display: flex;
@@ -81,4 +81,5 @@ function toggle() {
     }
   }
 }
+
 </style>

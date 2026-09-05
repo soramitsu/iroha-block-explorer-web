@@ -13,8 +13,8 @@
       role="listbox"
     >
       <li
-        v-for="(item, i) in items"
-        :key="i"
+        v-for="item in items"
+        :key="item.value"
         :data-active="model === item.value || null"
         :data-size="size"
         class="base-dropdown-window__item"
@@ -37,6 +37,7 @@ import { ref } from 'vue';
 interface Props {
   modelValue: string
   size: 'md' | 'lg'
+  ignoreClickOutside?: string[]
   items?: {
     label: string
     value: string
@@ -52,6 +53,8 @@ const target = ref(null);
 
 onClickOutside(target, () => {
   emit('update:modelValue', model.value);
+}, {
+  ignore: props.ignoreClickOutside ?? [],
 });
 
 const model = useVModel(props, 'modelValue', emit);
@@ -61,13 +64,17 @@ const model = useVModel(props, 'modelValue', emit);
 @use '@/shared/ui/styles/main' as *;
 
 .base-dropdown-window {
-  background: theme-color('background');
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  background: theme-color('surface');
   color: theme-color('content-primary');
   fill: theme-color('content-primary');
   overflow: hidden;
+  border: 1px solid theme-color('border-secondary');
 
   @include tpg-s4;
-  @include shadow-input;
+
 
   &[data-size='md'] {
     border-radius: size(2);
@@ -84,6 +91,9 @@ const model = useVModel(props, 'modelValue', emit);
 
   &__item {
     list-style: none;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
     user-select: none;
     cursor: pointer;
 
@@ -104,4 +114,5 @@ const model = useVModel(props, 'modelValue', emit);
     }
   }
 }
+
 </style>

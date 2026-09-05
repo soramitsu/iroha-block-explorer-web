@@ -2,12 +2,12 @@
 import { useRouter } from 'vue-router';
 import { computed, reactive, ref, watch } from 'vue';
 import * as http from '@/shared/api';
+import type { Account, AccountSearchParams, ExplorerAssetDefinition, NFT } from '@/shared/api/schemas';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
 import BaseHash from '@/shared/ui/components/BaseHash.vue';
-import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
-import type { AccountId, AssetDefinitionId, NftId } from '@iroha/core/data-model';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import { parseMetadata } from '@/shared/ui/utils/json';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
@@ -19,6 +19,10 @@ import { useI18n } from 'vue-i18n';
 import BaseTabs from '@/shared/ui/components/BaseTabs.vue';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import { getDisplayedAccountId } from '@/shared/lib/account-id';
+import { normalizeAssetDefinitionSelectorLiteral } from '@/shared/lib/asset-definition-literal';
+import { getAssetDefinitionDisplayName } from '@/shared/lib/asset-definition-id';
+import { parseOptionalFilterCatching } from '@/shared/lib/optional-filter';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -36,7 +40,7 @@ const domainId = computed(() => {
 
 const domainScope = useParamScope(domainId, (value) => setupAsyncData(() => http.fetchDomain(value)));
 
-const isDomainLoading = computed(() => domainScope.value.expose.isLoading);
+const domainSnapshot = computed(() => domainScope.value.expose.snapshot);
 const domain = computed(() =>
   domainScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? domainScope.value.expose.data.data : undefined
 );
@@ -48,13 +52,18 @@ const assetsTab = ref<TabAssets>('assets');
 const isCryptoAssetsSelected = computed(() => assetsTab.value === 'assets');
 
 const assetsListState = reactive({
-  page: 1,
-  per_page: 10,
+  cursor: null as string | null,
+  limit: 10,
   domain: domainId.value,
 });
 
-watch([() => assetsListState.per_page, () => assetsTab.value], () => {
-  assetsListState.page = 1;
+watch([() => assetsListState.limit, () => assetsTab.value], () => {
+  assetsListState.cursor = null;
+});
+
+watch(domainId, (next) => {
+  assetsListState.domain = next;
+  assetsListState.cursor = null;
 });
 
 const assetsListScope = useParamScope(
@@ -63,7 +72,11 @@ const assetsListScope = useParamScope(
 
     return {
       key: JSON.stringify(assetsListState),
-      payload: assetsListState,
+      payload: {
+        cursor: assetsListState.cursor,
+        limit: assetsListState.limit,
+        owning_domain: assetsListState.domain,
+      },
     };
   },
   ({ payload }) => setupAsyncData(() => http.fetchAssetDefinitions(payload))
@@ -73,6 +86,14 @@ const isAssetsListLoading = computed(() => !!assetsListScope.value?.expose.isLoa
 const assets = computed(() =>
   assetsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? assetsListScope.value.expose.data.data.items : []
 );
+const assetsPagination = computed(() =>
+  assetsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
+    ? assetsListScope.value.expose.data.data.pagination
+    : null
+);
+const assetDefinitionRowKey = (item: ExplorerAssetDefinition) => item.id;
+const domainAssetDefinitionName = (assetDefinition: ExplorerAssetDefinition) =>
+  getAssetDefinitionDisplayName(assetDefinition);
 
 const NFTsListScope = useParamScope(
   () => {
@@ -90,27 +111,64 @@ const isNFTsListLoading = computed(() => !!NFTsListScope.value?.expose.isLoading
 const NFTs = computed(() =>
   NFTsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? NFTsListScope.value.expose.data.data.items : []
 );
+const NFTsPagination = computed(() =>
+  NFTsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
+    ? NFTsListScope.value.expose.data.data.pagination
+    : null
+);
+const nftRowKey = (item: NFT) => item.id.toString();
+const nftDisplayName = (item: NFT) => item.id.split('$')[0] ?? item.id;
 
 const accountsListState = reactive({
-  page: 1,
-  per_page: 10,
+  cursor: null as string | null,
+  limit: 10,
   domain: domainId.value,
 });
+const accountAssetFilter = ref('');
+function parseAssetSelector(value: string): string {
+  const normalized = normalizeAssetDefinitionSelectorLiteral(value);
+  if (!normalized) throw new Error('invalid asset selector');
+  return normalized;
+}
+const accountAssetFilterState = computed(() =>
+  parseOptionalFilterCatching(accountAssetFilter.value, parseAssetSelector, t('accounts.filters.assetInvalid'))
+);
+const parsedAccountAssetFilter = computed<string | undefined>(() => accountAssetFilterState.value.value);
+const accountAssetFilterError = computed(() => accountAssetFilterState.value.error);
 
 watch(
-  () => accountsListState.per_page,
+  () => accountsListState.limit,
   () => {
-    accountsListState.page = 1;
+    accountsListState.cursor = null;
   }
 );
 
+watch(accountAssetFilter, () => {
+  accountsListState.cursor = null;
+});
+
+watch(domainId, (next) => {
+  accountsListState.domain = next;
+  accountsListState.cursor = null;
+});
+
 const accountsListScope = useParamScope(
   () => {
-    if (!domainAccounts.value) return null;
+    if (!domainAccounts.value || accountAssetFilterError.value) return null;
+
+    const payload: AccountSearchParams = {
+      cursor: accountsListState.cursor,
+      limit: accountsListState.limit,
+      domain: accountsListState.domain,
+      ...(parsedAccountAssetFilter.value ? { with_asset: parsedAccountAssetFilter.value } : {}),
+    };
 
     return {
-      key: JSON.stringify(accountsListState),
-      payload: accountsListState,
+      key: JSON.stringify({
+        ...accountsListState,
+        with_asset: parsedAccountAssetFilter.value?.toString(),
+      }),
+      payload,
     };
   },
   ({ payload }) => setupAsyncData(() => http.fetchAccounts(payload))
@@ -122,18 +180,14 @@ const accounts = computed(() =>
     ? accountsListScope.value.expose.data.data.items
     : []
 );
-
-function handleAssetRowClick(id: AssetDefinitionId) {
-  router.push(`/assets/${encodeURIComponent(id.toString())}`);
-}
-
-function handleNFTRowClick(id: NftId) {
-  router.push(`/nfts/${encodeURIComponent(id.toString())}`);
-}
-
-function handleAccountRowClick(id: AccountId) {
-  router.push(`/accounts/${id}`);
-}
+const accountsPagination = computed(() =>
+  accountsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
+    ? accountsListScope.value.expose.data.data.pagination
+    : null
+);
+const accountDisplayId = (item: Account) => getDisplayedAccountId(item.id);
+const accountLink = (item: Account) => `/accounts/${encodeURIComponent(accountDisplayId(item))}`;
+const accountRowKey = (item: Account) => accountDisplayId(item);
 
 const domainAssetsSection = computed(() => {
   if (isCryptoAssetsSelected.value)
@@ -154,82 +208,74 @@ const domainAssetsSection = computed(() => {
 <template>
   <div class="domain-details">
     <div class="domain-details__native">
-      <BaseContentBlock
-        :title="$t('domain')"
-        class="domain-details__native-information"
-      >
+      <BaseContentBlock :title="$t('domain')" class="domain-details__native-information">
         <template #default>
-          <div
-            v-if="isDomainLoading"
-            class="domain-details__native-information_loading"
+          <BaseResourceState
+            :snapshot="domainSnapshot"
+            :loading-label="$t('domains.resource.loading')"
+            :not-found-label="$t('domains.resource.notFound')"
+            :error-label="$t('domains.resource.loadError')"
+            :retry-label="$t('domains.resource.retry')"
+            @retry="domainScope.expose.refetch()"
           >
-            <BaseLoading />
-          </div>
-          <div v-else-if="domain">
-            <div class="domain-details__native-information-row">
-              <DataField
-                :title="$t('domains.domainId')"
-                :hash="domainId"
-              />
+            <div v-if="domain">
+              <div class="domain-details__native-information-row">
+                <DataField :title="$t('domains.domainId')" :hash="domainId" />
 
-              <DataField
-                :title="$t('domains.ownedBy')"
-                :hash="domain.owned_by.toString()"
-                copy
-                :link="`/accounts/${domain.owned_by}`"
-                :type="accountHashType"
-              />
+                <DataField
+                  :title="$t('domains.ownedBy')"
+                  :hash="domain.owned_by.toString()"
+                  copy
+                  :link="`/accounts/${domain.owned_by}`"
+                  :type="accountHashType"
+                />
 
-              <DataField
-                :title="$t('metadata')"
-                :value="parseMetadata(domain.metadata)"
-                :metadata="{ display: 'short' }"
-              />
+                <DataField
+                  :title="$t('metadata')"
+                  :value="parseMetadata(domain.metadata)"
+                  :metadata="{ display: 'short' }"
+                />
+              </div>
             </div>
-          </div>
+          </BaseResourceState>
         </template>
       </BaseContentBlock>
 
-      <BaseContentBlock
-        :title="domainAssetsSection.title"
-        class="domain-details__native-assets"
-      >
+      <BaseContentBlock v-if="domain" :title="domainAssetsSection.title" class="domain-details__native-assets">
         <template #header-action>
-          <BaseTabs
-            v-model="assetsTab"
-            :items="ASSETS_OPTIONS"
-          />
+          <BaseTabs v-model="assetsTab" :items="ASSETS_OPTIONS" />
         </template>
         <template #default>
-          <span
-            v-if="domainAssetsSection.isZero"
-            class="domain-details__native-assets_empty row-text"
-          >
+          <span v-if="domainAssetsSection.isZero" class="domain-details__native-assets_empty row-text">
             {{ domainAssetsSection.zeroTitle }}
           </span>
           <BaseTable
             v-else-if="isCryptoAssetsSelected"
-            v-model:page="assetsListState.page"
-            v-model:page-size="assetsListState.per_page"
+            v-model:cursor="assetsListState.cursor"
+            v-model:page-size="assetsListState.limit"
             :loading="isAssetsListLoading"
-            :total="domainAssets"
+            pagination-mode="cursor"
+            :cursor-pagination="assetsPagination"
             :items="assets"
+            :row-key="assetDefinitionRowKey"
             container-class="domain-details__native-assets-list"
             :breakpoint="960"
-            row-pointer
-            @click:row="(asset) => handleAssetRowClick(asset.id)"
           >
             <template #header>
-              <div class="domain-details__native-assets-list-row">
-                <span class="h-sm">{{ $t('name') }}</span>
-                <span class="h-sm">{{ $t('mintable') }}</span>
+              <div class="domain-details__native-assets-list-row" role="presentation">
+                <span class="h-sm" role="columnheader">{{ $t('name') }}</span>
+                <span class="h-sm" role="columnheader">{{ $t('mintable') }}</span>
               </div>
             </template>
 
             <template #row="{ item }">
-              <div class="domain-details__native-assets-list-row">
-                <span class="row-text">{{ item.id.name.value }}</span>
-                <span class="row-text">{{ item.mintable }}</span>
+              <div class="domain-details__native-assets-list-row" role="presentation">
+                <div role="cell">
+                  <BaseLink :to="`/assets/${encodeURIComponent(item.id.toString())}`">
+                    {{ domainAssetDefinitionName(item) }}
+                  </BaseLink>
+                </div>
+                <span class="row-text" role="cell">{{ item.mintable }}</span>
               </div>
             </template>
 
@@ -238,7 +284,7 @@ const domainAssetsSection = computed(() => {
                 <div class="domain-details__native-assets-mobile-list-row-data row-text">
                   <span class="h-sm">{{ $t('name') }}</span>
                   <BaseLink :to="`/assets/${encodeURIComponent(item.id.toString())}`">
-                    {{ item.id.name.value }}
+                    {{ domainAssetDefinitionName(item) }}
                   </BaseLink>
                 </div>
 
@@ -251,25 +297,29 @@ const domainAssetsSection = computed(() => {
           </BaseTable>
           <BaseTable
             v-else
-            v-model:page="assetsListState.page"
-            v-model:page-size="assetsListState.per_page"
+            v-model:cursor="assetsListState.cursor"
+            v-model:page-size="assetsListState.limit"
             :loading="isNFTsListLoading"
-            :total="domainNFTs"
+            pagination-mode="cursor"
+            :cursor-pagination="NFTsPagination"
             :items="NFTs"
+            :row-key="nftRowKey"
             container-class="domain-details__native-assets-list"
             :breakpoint="960"
-            row-pointer
-            @click:row="(asset) => handleNFTRowClick(asset.id)"
           >
             <template #header>
-              <div class="domain-details__native-nfts-list-row">
-                <span class="h-sm">{{ $t('name') }}</span>
+              <div class="domain-details__native-nfts-list-row" role="presentation">
+                <span class="h-sm" role="columnheader">{{ $t('name') }}</span>
               </div>
             </template>
 
             <template #row="{ item }">
-              <div class="domain-details__native-nfts-list-row">
-                <span class="row-text">{{ item.id.name.value }}</span>
+              <div class="domain-details__native-nfts-list-row" role="presentation">
+                <div role="cell">
+                  <BaseLink :to="`/nfts/${encodeURIComponent(item.id.toString())}`">
+                    {{ nftDisplayName(item) }}
+                  </BaseLink>
+                </div>
               </div>
             </template>
 
@@ -278,7 +328,7 @@ const domainAssetsSection = computed(() => {
                 <div class="domain-details__native-nfts-mobile-list-row-data row-text">
                   <span class="h-sm">{{ $t('name') }}</span>
                   <BaseLink :to="`/nfts/${encodeURIComponent(item.id.toString())}`">
-                    {{ item.id.name.value }}
+                    {{ nftDisplayName(item) }}
                   </BaseLink>
                 </div>
               </div>
@@ -288,41 +338,49 @@ const domainAssetsSection = computed(() => {
       </BaseContentBlock>
     </div>
 
-    <div class="domain-details__accounts">
+    <div v-if="domain" class="domain-details__accounts">
       <BaseContentBlock :title="$t('domains.domainAccounts')">
         <template #default>
-          <span
-            v-if="!domainAccounts"
-            class="domain-details__accounts_empty row-text"
-          >
+          <div class="domain-details__accounts-filters">
+            <label>
+              <span class="label">{{ $t('accounts.filters.assetLabel') }}</span>
+              <input v-model="accountAssetFilter" type="text" :placeholder="$t('accounts.filters.assetPlaceholder')" />
+              <small v-if="accountAssetFilterError" class="domain-details__accounts-error">
+                {{ accountAssetFilterError }}
+              </small>
+            </label>
+          </div>
+          <span v-if="!domainAccounts" class="domain-details__accounts_empty row-text">
             {{ $t('domains.domainDoesntHaveAnyAccounts') }}
           </span>
           <BaseTable
             v-else
-            v-model:page="accountsListState.page"
-            v-model:page-size="accountsListState.per_page"
+            v-model:cursor="accountsListState.cursor"
+            v-model:page-size="accountsListState.limit"
             :loading="isAccountsListLoading"
-            :total="domainAccounts"
+            pagination-mode="cursor"
+            :cursor-pagination="accountsPagination"
             :items="accounts"
+            :row-key="accountRowKey"
             container-class="domain-details__accounts-container"
             :breakpoint="960"
-            row-pointer
-            @click:row="(account) => handleAccountRowClick(account.id)"
           >
             <template #header>
-              <div class="domain-details__accounts-row">
-                <span class="h-sm">{{ $t('accounts.accountId') }}</span>
+              <div class="domain-details__accounts-row" role="presentation">
+                <span class="h-sm" role="columnheader">{{ $t('accounts.accountId') }}</span>
               </div>
             </template>
 
             <template #row="{ item }">
-              <div class="domain-details__accounts-row">
-                <BaseHash
-                  :hash="item.id.toString()"
-                  :link="`/accounts/${item.id}`"
-                  :type="domainAccountsHashType"
-                  copy
-                />
+              <div class="domain-details__accounts-row" role="presentation">
+                <div role="cell">
+                  <BaseHash
+                    :hash="accountDisplayId(item)"
+                    :link="accountLink(item)"
+                    :type="domainAccountsHashType"
+                    copy
+                  />
+                </div>
               </div>
             </template>
 
@@ -331,8 +389,8 @@ const domainAssetsSection = computed(() => {
                 <div class="domain-details__accounts-mobile-row">
                   <span class="h-sm domain-details__accounts-mobile-label">{{ $t('accounts.accountId') }}</span>
                   <BaseHash
-                    :hash="item.id.toString()"
-                    :link="`/accounts/${item.id}`"
+                    :hash="accountDisplayId(item)"
+                    :link="accountLink(item)"
                     :type="domainAccountsHashType"
                     copy
                   />
@@ -502,6 +560,38 @@ const domainAssetsSection = computed(() => {
     }
     @include xxl {
       width: calc(size(60) + 10vw);
+    }
+
+    &-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: size(2);
+      margin-bottom: size(2);
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: size(1);
+        min-width: 220px;
+
+        .label {
+          font-size: size(1.5);
+          color: theme-color('content-tertiary');
+        }
+
+        input {
+          padding: size(1.25);
+          border: 1px solid theme-color('border-primary');
+          border-radius: size(1);
+          background: transparent;
+          color: theme-color('content-primary');
+        }
+      }
+    }
+
+    &-error {
+      color: theme-color('error');
+      font-size: size(1.3);
     }
 
     .content-row {

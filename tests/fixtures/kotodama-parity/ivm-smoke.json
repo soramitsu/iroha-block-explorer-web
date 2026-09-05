@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "id": "ivm-smoke",
+  "source_name": "ivm_smoke.ko",
+  "compiler_source_path": "demo/ivm_smoke.ko",
+  "source": "seiyaku SmokeTransfer {\n  meta { abi_version: 1 }\n\n  kotoage fn main() permission(Admin) {\n    transfer_asset(\n      account!(\"sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB\"),\n      account!(\"sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76\"),\n      asset_definition!(\"61CtjvNd9T3THAR65GsMVHr82Bjc\"),\n      1\n    );\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSxAYAAE5SVDAAAJxFYTLfthcec01NMFJ73cwAnAYAAAAAAADrH6sRrfsz1QIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAAlwYBlAb3AwUAAAAAAAAAZWRhY2NvdW50OnNvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2YWBhY2NvdW50OnNvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEKAAX9hc3NldDo2MUN0anZOZDlUM1RIQVI2NUdzTVZIcjgyQmpjI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2fHthc3NldDo2MUN0anZOZDlUM1RIQVI2NUdzTVZIcjgyQmpjI3NvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEInJmFzc2V0X2RlZjo2MUN0anZOZDlUM1RIQVI2NUdzTVZIcjgyQmpjhwICAAAAAAAAAIABf2Fzc2V0OjYxQ3Rqdk5kOVQzVEhBUjY1R3NNVkhyODJCamMjc29yYXXvvpsxTmbvvbdn776J776T776JQu+9pkvvvozvvpjvvpJv776H776C776bckc4Me++i2pX776O776VVm5jd+++jFPvvbEzcO++mO++i+++iWhVUzlRNzZ8e2Fzc2V0OjYxQ3Rqdk5kOVQzVEhBUjY1R3NNVkhyODJCamMjc29yYXXvvpsxTnDvvoPvvpXjg7HvvodxMTFw772z776YMu+9sTXvvofvvaZpQ0pLalLvvpR67723Tk1O776G7725776VUEPvvbPvvplGdu+9tUU5TEJMQggAAAAAAAAAAAgAAAAAAAAAAAgAAAAAAAAAAMoGAQAAAAAAAADABgUEbWFpbgQAAAAACAAAAAAAAAAAAQAIAQYFQWRtaW73AwUAAAAAAAAAfHthc3NldDo2MUN0anZOZDlUM1RIQVI2NUdzTVZIcjgyQmpjI3NvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEJhYGFjY291bnQ6c29yYXXvvpsxTnDvvoPvvpXjg7HvvodxMTFw772z776YMu+9sTXvvofvvaZpQ0pLalLvvpR67723Tk1O776G7725776VUEPvvbPvvplGdu+9tUU5TEJMQicmYXNzZXRfZGVmOjYxQ3Rqdk5kOVQzVEhBUjY1R3NNVkhyODJCamOAAX9hc3NldDo2MUN0anZOZDlUM1RIQVI2NUdzTVZIcjgyQmpjI3NvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2ZWRhY2NvdW50OnNvcmF1776bMU5m7723Z+++ie++k+++iULvvaZL776M776Y776Sb+++h+++gu++m3JHODHvvotqV+++ju++lVZuY3fvvoxT772xM3DvvpjvvovvvoloVVM5UTc2hwICAAAAAAAAAHx7YXNzZXQ6NjFDdGp2TmQ5VDNUSEFSNjVHc01WSHI4MkJqYyNzb3Jhde++mzFOcO++g+++leODse++h3ExMXDvvbPvvpgy772xNe++h++9pmlDSktqUu++lHrvvbdOTU7vvobvvbnvvpVQQ++9s+++mUZ27721RTlMQkxCgAF/YXNzZXQ6NjFDdGp2TmQ5VDNUSEFSNjVHc01WSHI4MkJqYyNzb3Jhde++mzFOZu+9t2fvvonvvpPvvolC772mS+++jO++mO++km/vvofvvoLvvptyRzgx776Lalfvvo7vvpVWbmN3776MU++9sTNw776Y776L776JaFVTOVE3NgMBAQEIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAABMVExCAwAAAAEAAACrAQAAKAAAAAAAAADGAAAAAAAAAGQBAAAAAAAAAAEBAAAAd05SVDAAAGDoFHOu0KEnbxxXdtD2nDgATwAAAAAAAABa8qSbs5BTyQIAAAAASiEAAAAAAAAAAQABEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERoRO5vVxUNkpbmpsE4GXw+uOl248oCH8wiqYuRp7aMQ8AAQEAAAB3TlJUMAAAYOgUc67QoSdvHFd20PacOABPAAAAAAAAAK5H1xVxk1W1AgAAAABKIQAAAAAAAAABAAEEAf8BWwGBAQQBbQHcAc8BGQHiAeQBUQHEAV0B+wFvAVMBdQGdAU4BswEPAaIB7wGoAQcBKAFNARwBwwEwARau/Q7Nb5BOE6bL/CgtCseEqYLa5C8nRQg34Hj3r9s2hQACAQAAAEhOUlQwAACET0rNWn1PMAmqWIugijIPACAAAAAAAAAAFsTSJt2w2i8CAWcBJQHiAW8BFwHSAUwBkAGpARcBrQF/ARMBNQFEAXKMSzueG62RRrtEA1xL3ZFVZ967aed8omxkX425jYqEXwDQHx8gAAAIIAEICCAACAogaQAAYAAKByAAAAogAAAaIAcAGiANAAogGgoKBnQKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAAAAsgAAAaIAcAGiAPAAsgGgsLBhILCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAAAAwgAAAaIAcAGiAQAAwgGgwMBjAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAADAwgAAwMIAAMDCAABw0g4AAAYAAKDiAACwog4AAAYAAKCyAADAog4AAAYAAKDCAADQog4AAAYAAKDSAADgogJAAAYAAAByAAAABJ",
+    "manifest": {
+      "code_hash": "hash:2A38F60964F5D5D37D315B9107BA978D19A0D39BF6D8935212BC8F44ECE84029#9F21",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset:61CtjvNd9T3THAR65GsMVHr82Bjc#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "asset:61CtjvNd9T3THAR65GsMVHr82Bjc#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset_def:61CtjvNd9T3THAR65GsMVHr82Bjc"
+        ],
+        "write_keys": [
+          "asset:61CtjvNd9T3THAR65GsMVHr82Bjc#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+          "asset:61CtjvNd9T3THAR65GsMVHr82Bjc#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "main",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "Admin",
+          "read_keys": [
+            "asset:61CtjvNd9T3THAR65GsMVHr82Bjc#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "asset_def:61CtjvNd9T3THAR65GsMVHr82Bjc",
+            "asset:61CtjvNd9T3THAR65GsMVHr82Bjc#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76",
+            "account:sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76"
+          ],
+          "write_keys": [
+            "asset:61CtjvNd9T3THAR65GsMVHr82Bjc#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "asset:61CtjvNd9T3THAR65GsMVHr82Bjc#sorauﾛ1NfｷgﾉﾓﾉBｦKﾌﾘﾒoﾇﾂﾛrG81ﾋjWﾎﾕVncwﾌSｱ3pﾘﾋﾉhUS9Q76"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "main",
+        "line": 4,
+        "pc_end": 376,
+        "pc_start": 0,
+        "source_path": "ivm_smoke.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 376,
+        "bytecode_words": 94,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "main",
+        "jump_range_risk": false,
+        "jump_span_words": 94,
+        "line": 4,
+        "pc_end": 376,
+        "pc_start": 0,
+        "source_path": "ivm_smoke.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

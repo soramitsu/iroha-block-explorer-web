@@ -7,20 +7,26 @@
       v-for="item in noti.list.value"
       :key="item.id"
       class="app-notifications__item"
+      :role="item.type === 'error' ? 'alert' : 'status'"
+      :aria-live="item.type === 'error' ? 'assertive' : 'polite'"
+      aria-atomic="true"
     >
       <component
         :is="icons[item.type] || 'div'"
         :class="`app-notifications__icon-${item.type}`"
+        aria-hidden="true"
       />
 
       <span class="app-notifications__message">{{ item.message }}</span>
 
-      <div
+      <button
+        type="button"
         class="app-notifications__close"
+          :aria-label="$t('accessibility.dismissNotification')"
         @click="noti.close(item.id)"
       >
-        <CloseIcon />
-      </div>
+        <CloseIcon aria-hidden="true" />
+      </button>
     </div>
   </div>
 </template>
@@ -81,6 +87,11 @@ const icons = {
   }
 
   &__close {
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
     fill: theme-color('content-on-background-inverted');
     cursor: pointer;
     width: size(3);

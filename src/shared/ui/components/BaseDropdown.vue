@@ -41,8 +41,8 @@
         role="listbox"
       >
         <li
-          v-for="(item, i) in items"
-          :key="i"
+          v-for="item in items"
+          :key="item.value"
           role="option"
           tabindex="0"
           :aria-selected="props.modelValue === item.value || false"
@@ -122,7 +122,7 @@ const arrowIconRotateValue = computed(() => {
     flex-direction: column;
 
     @include tpg-s4;
-    @include shadow-input;
+    border: 1px solid theme-color('border-secondary');
 
     &_reversed {
       flex-direction: column-reverse;

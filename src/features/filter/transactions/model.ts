@@ -2,12 +2,13 @@ import type { InstructionKind, TransactionStatus } from '@/shared/api/schemas';
 import type { TabItem } from '../index';
 
 export type Status = TransactionStatus | null;
-export type TabAccountTransactions = 'transactions' | 'instructions';
+export type TabAccountTransactions = 'transactions' | 'instructions' | 'tracing';
 export type TabInstructions = 'All' | InstructionKind;
 
 export const ACCOUNT_TRANSACTIONS_OPTIONS: TabItem<TabAccountTransactions>[] = [
   { i18nKey: 'transactions.transactions', value: 'transactions' },
   { i18nKey: 'transactions.instructions', value: 'instructions' },
+  { i18nKey: 'tracing.nav', value: 'tracing' },
 ];
 
 export const INSTRUCTION_OPTIONS: TabItem<TabInstructions>[] = [
@@ -25,8 +26,13 @@ export const INSTRUCTION_OPTIONS: TabItem<TabInstructions>[] = [
   { i18nKey: 'transactions.setParameter', value: 'SetParameter' },
   { i18nKey: 'transactions.upgrade', value: 'Upgrade' },
   { i18nKey: 'transactions.log', value: 'Log' },
-  { i18nKey: 'transactions.shield', value: 'Shield' },
-  { i18nKey: 'transactions.zkTransfer', value: 'ZkTransfer' },
-  { i18nKey: 'transactions.unshield', value: 'Unshield' },
+  {
+    i18nKey: 'studio.instructionPresentation.titles.KagemushaTopUp_KagemushaTopUp',
+    value: 'KagemushaTopUp',
+  },
+  {
+    i18nKey: 'studio.instructionPresentation.titles.KagemushaRedeem_KagemushaRedeem',
+    value: 'KagemushaRedeem',
+  },
   { i18nKey: 'transactions.custom', value: 'Custom' },
 ];

@@ -11,24 +11,30 @@ const { width } = useWindowSize();
 
 const props = withDefaults(
   defineProps<{
-    totalItems?: number
-    reversed?: boolean
-    payloadPagination?: Pagination | null
-    paginationBreakpoint?: number
-    items: number
+    totalItems?: number;
+    reversed?: boolean;
+    payloadPagination?: Pagination | null;
+    paginationBreakpoint?: number;
+    maxFetchSize?: number | null;
+    items: number;
   }>(),
   {
     reversed: false,
     paginationBreakpoint: 960,
     payloadPagination: null,
     totalItems: 0,
+    maxFetchSize: null,
   }
 );
 
 const isLengthBiggerThanPerPage = computed(() => props.totalItems % pageSize.value > 0);
 
 const totalPages = computed(() => {
-  if (!props.reversed) return Math.ceil(props.totalItems / pageSize.value);
+  if (!props.reversed) {
+    const exactPages = Math.ceil(props.totalItems / pageSize.value);
+    if (props.maxFetchSize === null) return exactPages;
+    return Math.min(exactPages, Math.floor(props.maxFetchSize / pageSize.value));
+  }
 
   if (!props.payloadPagination) return 0;
 
@@ -43,6 +49,10 @@ const totalPages = computed(() => {
 
 const activePage = computed(() => {
   if (!props.payloadPagination) return 0;
+
+  if (props.reversed && props.payloadPagination.page === 0) {
+    return totalPages.value;
+  }
 
   if (isLengthBiggerThanPerPage.value && props.items > pageSize.value) {
     return props.payloadPagination.page - 1;
@@ -70,7 +80,10 @@ const { displayRange, numbers } = usePagination({
 });
 
 const segmentInfo = computed(() => {
-  return t('table.pageOf', [displayRange.value.start, displayRange.value.end, displayRange.value.total]);
+  const from = props.reversed ? Math.min(displayRange.value.start, displayRange.value.end) : displayRange.value.start;
+  const to = props.reversed ? Math.max(displayRange.value.start, displayRange.value.end) : displayRange.value.end;
+
+  return t('table.pageOf', [from, to, displayRange.value.total]);
 });
 const sizeOptions = [
   {
@@ -91,21 +104,34 @@ const sizeOptions = [
   },
 ];
 
-function nextPage() {
-  if (props.reversed && activePage.value > 1) page.value = activePage.value - 1;
-  else if (!props.reversed && page.value < totalPages.value) page.value++;
-}
-
-function prevPage() {
-  if (props.reversed) {
-    if (totalPages.value === activePage.value + 1) page.value = 0;
-    else if (activePage.value < totalPages.value) page.value = activePage.value + 1;
-  } else if (page.value > 1) page.value--;
-}
-
 function setPage(i: number) {
   if (props.reversed && totalPages.value === i) page.value = 0;
   else if (i !== page.value) page.value = i;
+}
+
+const displayNumbers = computed(() => {
+  if (!props.reversed) return numbers.value;
+  return [...numbers.value].toReversed();
+});
+
+const currentPageNumber = computed(() => {
+  if (props.reversed) return activePage.value;
+  return page.value;
+});
+
+const canGoPrev = computed(() => currentPageNumber.value > 1);
+const canGoNext = computed(() => currentPageNumber.value < totalPages.value);
+const shouldShowPageControls = computed(() => numbers.value.length > 1 || currentPageNumber.value > totalPages.value);
+const fetchWindowLimited = computed(() => props.maxFetchSize !== null && props.totalItems > props.maxFetchSize);
+
+function goPrev() {
+  if (!canGoPrev.value) return;
+  setPage(currentPageNumber.value - 1);
+}
+
+function goNext() {
+  if (!canGoNext.value) return;
+  setPage(currentPageNumber.value + 1);
 }
 
 function isPageActive(item: string | number) {
@@ -117,20 +143,14 @@ function isPageActive(item: string | number) {
 const shouldShowDropdown = computed(
   () => (props.reversed && props.totalItems > 19) || (!props.reversed && props.totalItems > 10)
 );
-const shouldShowPrevArrow = computed(
-  () => (props.reversed && activePage.value !== numbers.value.length) || (!props.reversed && page.value !== 1)
-);
-const shouldShowNextArrow = computed(
-  () => (props.reversed && activePage.value !== 1) || (!props.reversed && page.value !== numbers.value.length)
-);
 </script>
 
 <template>
-  <div class="base-pagination">
-    <div
-      v-if="props.totalItems"
-      class="base-pagination__item"
-    >
+  <nav class="base-pagination" :aria-label="$t('accessibility.pagination')">
+    <p v-if="fetchWindowLimited" class="base-pagination__limit" data-test="fetch-window-limit">
+      {{ $t('table.fetchWindowLimit', { maxFetchSize: props.maxFetchSize }) }}
+    </p>
+    <div v-if="props.totalItems" class="base-pagination__item">
       <div class="base-pagination__segment-info">
         {{ segmentInfo }}
       </div>
@@ -145,46 +165,50 @@ const shouldShowNextArrow = computed(
       />
     </div>
 
-    <div
-      v-if="numbers.length > 1"
-      class="base-pagination__item"
-    >
+    <div v-if="shouldShowPageControls" class="base-pagination__item">
       <div class="base-pagination__item-numbers">
-        <span
-          v-for="(item, i) in numbers"
-          :key="i"
-          class="base-pagination__item-numbers-number"
-          :data-active="isPageActive(item)"
-          role="button"
-          :aria-pressed="!!isPageActive(item)"
-          tabindex="0"
-          @click="Number.isInteger(item) && setPage(Number(item))"
-          @keydown.enter.space="Number.isInteger(item) && setPage(Number(item))"
-        >
-          {{ item }}
-        </span>
+        <template v-for="(item, i) in displayNumbers" :key="`${i}-${item}`">
+          <button
+            v-if="Number.isInteger(item)"
+            type="button"
+            class="base-pagination__item-numbers-number"
+            :data-active="isPageActive(item)"
+            :aria-current="isPageActive(item) ? 'page' : undefined"
+            :aria-label="$t('accessibility.pageNumber', { page: item })"
+            @click="setPage(Number(item))"
+          >
+            {{ item }}
+          </button>
+          <span v-else class="base-pagination__item-numbers-number" data-ellipsis aria-hidden="true">
+            {{ item }}
+          </span>
+        </template>
       </div>
 
       <div class="base-pagination__arrows">
-        <ArrowIcon
-          v-if="shouldShowPrevArrow"
+        <button
+          type="button"
           data-testid="prev"
-          role="button"
-          tabindex="0"
-          @click="prevPage"
-          @keydown.enter.space="prevPage"
-        />
-        <ArrowIcon
-          v-if="shouldShowNextArrow"
+          :aria-label="$t('accessibility.previousPage')"
+          :aria-disabled="!canGoPrev"
+          :disabled="!canGoPrev"
+          @click="goPrev"
+        >
+          <ArrowIcon aria-hidden="true" />
+        </button>
+        <button
+          type="button"
           data-testid="next"
-          role="button"
-          tabindex="0"
-          @click="nextPage"
-          @keydown.enter.space="nextPage"
-        />
+          :aria-label="$t('accessibility.nextPage')"
+          :aria-disabled="!canGoNext"
+          :disabled="!canGoNext"
+          @click="goNext"
+        >
+          <ArrowIcon aria-hidden="true" />
+        </button>
       </div>
     </div>
-  </div>
+  </nav>
 </template>
 
 <style scoped lang="scss">
@@ -200,6 +224,13 @@ const shouldShowNextArrow = computed(
   grid-gap: size(2);
   align-self: end;
   border-top: 1px solid theme-color('border-primary');
+
+  &__limit {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: theme-color('content-secondary');
+    @include tpg-s5;
+  }
 
   @include sm {
     grid-template-columns: auto auto;
@@ -218,18 +249,44 @@ const shouldShowNextArrow = computed(
       user-select: none;
 
       &-number {
+        padding: 0;
+        border: 0;
+        font: inherit;
+        background: transparent;
         @include tpg-s5-bold;
-        color: theme-color('content-primary');
-        padding: 0 size(0.75);
-        margin-right: size(0.25);
+        color: theme-color('content-secondary');
+        min-width: size(3);
+        height: size(3);
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: size(0.5);
         cursor: pointer;
+        transition: all 180ms ease;
 
         @include xs {
-          padding: 0 size(1);
+          min-width: size(3.5);
+          height: size(3.5);
+        }
+
+        &[data-ellipsis] {
+          color: theme-color('content-tertiary');
+          cursor: default;
+          min-width: auto;
+          height: auto;
+          margin-right: size(0.25);
+          padding: 0 size(0.25);
+        }
+
+        &:hover:not([data-active]):not([data-ellipsis]) {
+          color: theme-color('content-primary');
+          background: theme-color('background-hover');
         }
 
         &[data-active] {
           color: theme-color('primary');
+          background: color-mix(in srgb, theme-color('primary') 14%, transparent);
           cursor: default;
         }
       }
@@ -249,19 +306,40 @@ const shouldShowNextArrow = computed(
 
   &__arrows {
     display: flex;
+    gap: size(0.5);
 
-    & > svg {
-      display: flex;
+    & > button {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: size(3);
-      width: size(3);
-      padding: 4px;
-      color: theme-color('content-primary');
+      height: size(3.5);
+      width: size(3.5);
+      padding: size(0.75);
+      color: theme-color('content-secondary');
+      background: theme-color('background');
+      border: 1px solid theme-color('border-primary');
+      border-radius: 999px;
       cursor: pointer;
+      transition: all 180ms ease;
 
-      &[data-testid='prev'] {
+      &[data-testid='prev'] svg {
         transform: rotateY(180deg);
+      }
+
+      &:hover:not(:disabled) {
+        color: theme-color('content-primary');
+        background: theme-color('background-hover');
+      }
+
+      &:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+
+      svg {
+        display: block;
+        width: 100%;
+        height: 100%;
       }
     }
   }

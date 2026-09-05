@@ -30,34 +30,10 @@ const slots = defineSlots();
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
-
 .base-content-block {
-  background: theme-color('surface');
-  border-radius: size(4);
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-
-  @include shadow-block;
-
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 72px;
-    padding: 0 size(4);
-  }
-
-  &__body {
-    padding: 0 0 size(4) 0;
-  }
-
-  &__title {
-    color: theme-color('content-primary');
-    @include tpg-h3;
-
-    @include sm {
-      @include tpg-h2;
-    }
-  }
+  min-width: 0; background: theme-color('surface'); border: 1px solid theme-color('border-primary'); border-radius: 12px;
+  &__header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; min-height: 64px; padding: 12px 24px; }
+  &__title { color: theme-color('content-primary'); font-size: 22px; font-weight: 600; line-height: 1.35; }
+  &__body { min-width: 0; padding-bottom: 16px; }
 }
 </style>

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "id": "subscription-usage-recorder",
+  "source_name": "subscription_usage_recorder.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/subscription_usage_recorder.ko",
+  "source": "// Subscription usage recorder (expects SubscriptionUsageDelta in trigger args).\nseiyaku SubscriptionUsageRecorder {\n  kotoage fn run() {\n    subscription_record_usage();\n  }\n}\n",
+  "rust": {
+    "kind": "failure",
+    "diagnostics": [
+      {
+        "severity": "error",
+        "message": "compile error: semantic error: public function `run` calls privileged operations but is missing `permission(...)`",
+        "code": null,
+        "phase": null
+      }
+    ],
+    "compiler_stderr": [
+      "compile error: semantic error: public function `run` calls privileged operations but is missing `permission(...)`"
+    ]
+  }
+}

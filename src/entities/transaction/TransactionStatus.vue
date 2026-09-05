@@ -47,14 +47,6 @@ defineProps<Props>();
   align-items: center;
   height: size(4);
 
-  &:hover .context-tooltip {
-    display: flex;
-    left: 0;
-    bottom: size(-5);
-    padding: size(1.5) size(2);
-    align-items: center;
-  }
-
   &__icon {
     width: size(4);
     height: size(4);

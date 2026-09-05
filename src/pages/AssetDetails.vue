@@ -1,178 +1,343 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import * as http from '@/shared/api';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
-import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
-import { AssetDefinitionIdSchema } from '@/shared/api/schemas';
+import { AssetDefinitionSelectorSchema } from '@/shared/api/schemas';
 import { parseMetadata } from '@/shared/ui/utils/json';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
 import BaseHash from '@/shared/ui/components/BaseHash.vue';
+import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import { normalizeAccountIdLiteral } from '@/shared/lib/account-literal';
+import { getAssetDefinitionDisplayName } from '@/shared/lib/asset-definition-id';
+import { useI18n } from 'vue-i18n';
+import type { AssetSearchParams, ExplorerAsset } from '@/shared/api/schemas';
+import { parseOptionalFilter } from '@/shared/lib/optional-filter';
 
 const router = useRouter();
 
 const hashType = useAdaptiveHash({ md: 'medium', sm: 'medium', xs: 'medium', xxs: 'short' }, 'full');
 const accountIdType = useAdaptiveHash({ md: 'short', xs: 'short', xxs: 'two-line' }, 'medium');
+const { t } = useI18n();
 
-const assetDefinitionId = computed(() => {
+const assetDefinitionSelector = computed(() => {
   const id = router.currentRoute.value.params['id'];
 
-  return AssetDefinitionIdSchema.parse(id);
+  return AssetDefinitionSelectorSchema.parse(id);
 });
 
 const assetScope = useParamScope(
   () => {
     return {
-      key: assetDefinitionId.value.toString(),
-      payload: assetDefinitionId.value,
+      key: assetDefinitionSelector.value,
+      payload: assetDefinitionSelector.value,
     };
   },
   ({ payload }) => setupAsyncData(() => http.fetchAssetDefinition(payload))
 );
 
-const isAssetLoading = computed(() => assetScope.value.expose.isLoading);
+const assetSnapshot = computed(() => assetScope.value.expose.snapshot);
 const asset = computed(() =>
   assetScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? assetScope.value.expose.data.data : undefined
 );
+const assetDefinitionId = computed(() => asset.value?.id ?? assetDefinitionSelector.value);
+const assetDefinitionName = computed(() => getAssetDefinitionDisplayName(asset.value ?? assetDefinitionSelector.value));
+const assetDefinitionDomain = computed(() => asset.value?.owning_domain ?? null);
+const confidentialPolicyJson = computed(() => JSON.stringify(asset.value?.confidential_policy ?? null));
+const numericSpecJson = computed(() => JSON.stringify(asset.value?.spec ?? null));
+
+const confidentialTransitionsScope = useParamScope(
+  () => {
+    const id = asset.value?.id;
+    return id ? { key: id, payload: id } : null;
+  },
+  ({ payload }) => setupAsyncData(() => http.fetchConfidentialAssetTransitions(payload))
+);
+const confidentialTransitionsSnapshot = computed(
+  () => confidentialTransitionsScope.value?.expose.snapshot ?? ({ status: 'idle' } as const)
+);
+const confidentialAssetPolicy = computed(() =>
+  confidentialTransitionsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
+    ? confidentialTransitionsScope.value.expose.data.data
+    : undefined
+);
+const confidentialModesJson = computed(() =>
+  JSON.stringify({
+    current_mode: confidentialAssetPolicy.value?.current_mode,
+    effective_mode: confidentialAssetPolicy.value?.effective_mode,
+  })
+);
+const confidentialParametersJson = computed(() =>
+  JSON.stringify({
+    poseidon_params_id: confidentialAssetPolicy.value?.poseidon_params_id,
+    pedersen_params_id: confidentialAssetPolicy.value?.pedersen_params_id,
+  })
+);
+const pendingTransitionJson = computed(() => JSON.stringify(confidentialAssetPolicy.value?.pending_transition ?? null));
+
+function formatTimestampMs(value: number | undefined): string {
+  if (value === undefined) return '—';
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? t('units.milliseconds', { value }) : date.toISOString();
+}
 
 const listState = reactive({
-  page: 1,
-  per_page: 10,
-  definition: computed(() => assetDefinitionId.value),
+  cursor: null as string | null,
+  limit: 10,
 });
+const holderFilter = ref('');
+const holderFilterState = computed(() =>
+  parseOptionalFilter(holderFilter.value, normalizeAccountIdLiteral, t('searchUnsupported'))
+);
+const parsedHolderFilter = computed<string | undefined>(() => holderFilterState.value.value);
+const holderFilterError = computed(() => holderFilterState.value.error);
 
 watch(
-  () => listState.per_page,
+  () => listState.limit,
   () => {
-    listState.page = 1;
+    listState.cursor = null;
   }
 );
 
+watch(assetDefinitionSelector, () => {
+  listState.cursor = null;
+});
+
+watch(holderFilter, () => {
+  listState.cursor = null;
+});
+
 const assetsListScope = useParamScope(
   () => {
-    if (!asset.value?.assets) return null;
+    if (!asset.value || holderFilterError.value) return null;
+
+    const payload: AssetSearchParams = {
+      cursor: listState.cursor,
+      limit: listState.limit,
+      definition: assetDefinitionId.value,
+      ...(parsedHolderFilter.value ? { owned_by: parsedHolderFilter.value } : {}),
+    };
 
     return {
-      key: JSON.stringify(listState),
-      payload: listState,
+      key: JSON.stringify({
+        cursor: listState.cursor,
+        limit: listState.limit,
+        definition: assetDefinitionId.value,
+        owned_by: parsedHolderFilter.value ?? null,
+      }),
+      payload,
     };
   },
   ({ payload }) => setupAsyncData(() => http.fetchAssets(payload))
 );
 
 const isLoadingAssets = computed(() => !!assetsListScope.value?.expose.isLoading);
-const totalAssets = computed(() =>
+const assetsPagination = computed(() =>
   assetsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? assetsListScope.value.expose.data.data.pagination.total_items
-    : 0
+    ? assetsListScope.value.expose.data.data.pagination
+    : null
 );
 const assets = computed(() =>
   assetsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? assetsListScope.value.expose.data.data.items : []
 );
+const isInitialTerminalEmptyAssetsPage = computed(
+  () =>
+    listState.cursor === null &&
+    !holderFilter.value.trim() &&
+    !isLoadingAssets.value &&
+    assets.value.length === 0 &&
+    assetsPagination.value?.has_more === false &&
+    assetsPagination.value.next_cursor === null
+);
+
+const assetInstanceRowKey = (item: ExplorerAsset) => item.id;
+const assetInstanceDefinitionName = (item: ExplorerAsset) => getAssetDefinitionDisplayName(item.definition_id);
 </script>
 
 <template>
   <div class="asset-details">
-    <BaseContentBlock
-      :title="$t('assets.asset', [assetDefinitionId.name.value])"
-      class="asset-details__information"
-    >
+    <BaseContentBlock :title="$t('assets.asset', [assetDefinitionName])" class="asset-details__information">
+      <template #header-action>
+        <BaseButton line :to="`/econometrics?asset=${encodeURIComponent(assetDefinitionId.toString())}`">
+          {{ $t('econometrics.nav') }}
+        </BaseButton>
+      </template>
+
       <template #default>
-        <div
-          v-if="isAssetLoading"
-          class="asset-details__information_loading"
+        <BaseResourceState
+          :snapshot="assetSnapshot"
+          :loading-label="$t('assets.resource.loadingDefinition')"
+          :not-found-label="$t('assets.resource.definitionNotFound')"
+          :error-label="$t('assets.resource.definitionLoadError')"
+          :retry-label="$t('assets.resource.retryDefinition')"
+          @retry="assetScope.expose.refetch()"
         >
-          <BaseLoading />
-        </div>
-        <div v-else-if="asset">
-          <DataField
-            :title="$t('assets.ownedBy')"
-            :hash="asset.owned_by.toString()"
-            copy
-            :link="`/accounts/${asset.owned_by}`"
-            :type="hashType"
-            class="asset-details__information-owner"
-          />
-          <div class="asset-details__information-data">
+          <div v-if="asset">
             <DataField
-              :title="$t('domain')"
-              :value="assetDefinitionId.domain.value"
-              :link="`/domains/${assetDefinitionId.domain.value}`"
+              :title="$t('assets.ownedBy')"
+              :hash="asset.owned_by.toString()"
+              copy
+              :link="`/accounts/${asset.owned_by}`"
+              :type="hashType"
+              class="asset-details__information-owner"
             />
-            <DataField
-              :title="$t('mintable')"
-              :value="asset.mintable"
-            />
-            <DataField
-              :title="$t('metadata')"
-              :metadata="{ display: 'short' }"
-              :value="parseMetadata(asset.metadata)"
-            />
+            <div class="asset-details__information-data">
+              <DataField :title="$t('assets.definitionFields.name')" :value="asset.name" />
+              <DataField :title="$t('assets.definitionFields.description')" :value="asset.description" />
+              <DataField :title="$t('assets.definitionFields.alias')" :value="asset.alias" monospace />
+              <DataField
+                :title="$t('assets.definitionFields.aliasStatus')"
+                :value="asset.alias_binding?.status ?? '—'"
+                monospace
+              />
+              <DataField
+                :title="$t('assets.definitionFields.aliasLeaseExpiry')"
+                :value="formatTimestampMs(asset.alias_binding?.lease_expiry_ms)"
+                monospace
+              />
+              <DataField
+                :title="$t('assets.definitionFields.aliasGraceUntil')"
+                :value="formatTimestampMs(asset.alias_binding?.grace_until_ms)"
+                monospace
+              />
+              <DataField
+                :title="$t('assets.definitionFields.aliasBoundAt')"
+                :value="formatTimestampMs(asset.alias_binding?.bound_at_ms)"
+                monospace
+              />
+              <DataField
+                :title="$t('domain')"
+                :value="assetDefinitionDomain ?? '-'"
+                :link="assetDefinitionDomain ? `/domains/${assetDefinitionDomain}` : undefined"
+              />
+              <DataField
+                :title="$t('assets.definitionFields.balanceScopePolicy')"
+                :value="asset.balance_scope_policy"
+                monospace
+              />
+              <DataField
+                :title="$t('assets.definitionFields.confidentialPolicy')"
+                :value="confidentialPolicyJson"
+                monospace
+              />
+              <DataField :title="$t('assets.definitionFields.logo')" :value="asset.logo" monospace />
+              <DataField :title="$t('assets.definitionFields.numericSpec')" :value="numericSpecJson" monospace />
+              <DataField
+                :title="$t('assets.definitionFields.totalQuantity')"
+                :value="asset.total_quantity.toString()"
+                monospace
+              />
+              <DataField :title="$t('mintable')" :value="asset.mintable" />
+              <DataField
+                :title="$t('metadata')"
+                :metadata="{ display: 'short' }"
+                :value="parseMetadata(asset.metadata)"
+              />
+            </div>
           </div>
-        </div>
+        </BaseResourceState>
       </template>
     </BaseContentBlock>
 
     <BaseContentBlock
-      :title="$t('assets.assetHolders')"
-      class="asset-details__assets-table"
+      v-if="asset"
+      :title="$t('assets.definitionFields.confidentialPolicy')"
+      class="asset-details__confidential-policy"
+      data-test="confidential-asset-policy"
     >
       <template #default>
-        <span
-          v-if="!asset?.assets"
-          class="asset-details__assets-table_empty row-text"
-        >{{
+        <BaseResourceState
+          :snapshot="confidentialTransitionsSnapshot"
+          :loading-label="$t('assets.resource.loadingDefinition')"
+          :not-found-label="$t('assets.resource.definitionNotFound')"
+          :error-label="$t('assets.resource.definitionLoadError')"
+          :retry-label="$t('assets.resource.retryDefinition')"
+          @retry="confidentialTransitionsScope?.expose.refetch()"
+        >
+          <div v-if="confidentialAssetPolicy" class="asset-details__information-data">
+            <DataField :title="$t('id')" :value="confidentialAssetPolicy.asset_id" monospace />
+            <DataField :title="$t('blocks.height')" :value="confidentialAssetPolicy.block_height" monospace />
+            <DataField :title="$t('studio.graph.fields.mode')" :value="confidentialModesJson" monospace />
+            <DataField
+              :title="$t('zkRegistry.columns.verifyingKey')"
+              :value="confidentialAssetPolicy.vk_set_hash"
+              monospace
+            />
+            <DataField :title="$t('studio.graph.fields.parameters')" :value="confidentialParametersJson" monospace />
+            <DataField :title="$t('sorafs.manifestStatus.pending')" :value="pendingTransitionJson" monospace />
+          </div>
+        </BaseResourceState>
+      </template>
+    </BaseContentBlock>
+
+    <BaseContentBlock v-if="asset" :title="$t('assets.assetHolders')" class="asset-details__assets-table">
+      <template #default>
+        <div class="asset-details__filters">
+          <label>
+            <span class="label">{{ $t('assets.filters.holderLabel') }}</span>
+            <input v-model="holderFilter" type="text" :placeholder="$t('assets.filters.holderPlaceholder')" />
+            <small v-if="holderFilterError" class="asset-details__filters-error">
+              {{ holderFilterError }}
+            </small>
+          </label>
+        </div>
+        <span v-if="isInitialTerminalEmptyAssetsPage" class="asset-details__assets-table_empty row-text">{{
           $t('assets.assetDoesntContainAnyInstances')
         }}</span>
         <BaseTable
           v-else
-          v-model:page="listState.page"
-          v-model:page-size="listState.per_page"
+          v-model:cursor="listState.cursor"
+          v-model:page-size="listState.limit"
           :loading="isLoadingAssets"
-          :total="totalAssets"
+          pagination-mode="cursor"
+          :cursor-pagination="assetsPagination"
           :items="assets"
+          :row-key="assetInstanceRowKey"
           container-class="asset-details__assets-table-list"
           :breakpoint="1200"
         >
           <template #header>
-            <div class="asset-details__assets-table-list-row">
-              <span class="h-sm">{{ $t('name') }}</span>
-              <span class="h-sm">{{ $t('domain') }}</span>
-              <span class="h-sm">{{ $t('accountId') }}</span>
-              <span class="h-sm">{{ $t('value') }}</span>
+            <div class="asset-details__assets-table-list-row" role="presentation">
+              <span class="h-sm" role="columnheader">{{ $t('name') }}</span>
+              <span class="h-sm" role="columnheader">{{ $t('domain') }}</span>
+              <span class="h-sm" role="columnheader">{{ $t('accountId') }}</span>
+              <span class="h-sm" role="columnheader">{{ $t('value') }}</span>
             </div>
           </template>
 
           <template #row="{ item }">
-            <div class="asset-details__assets-table-list-row">
-              <div class="row-text">
-                <BaseLink :to="`/assets/${encodeURIComponent(item.id.definition.toString())}`">
-                  {{ item.id.definition.name.value }}
+            <div class="asset-details__assets-table-list-row" role="presentation">
+              <div class="row-text" role="cell">
+                <BaseLink :to="`/assets/${encodeURIComponent(item.definition_id.toString())}`">
+                  {{ assetInstanceDefinitionName(item) }}
                 </BaseLink>
               </div>
 
-              <div class="row-text">
-                <BaseLink :to="`/domains/${item.id.definition.domain.value}`">
-                  {{ item.id.definition.domain.value }}
+              <div class="row-text" role="cell">
+                <BaseLink v-if="assetDefinitionDomain" :to="`/domains/${assetDefinitionDomain}`">
+                  {{ assetDefinitionDomain }}
                 </BaseLink>
+                <span v-else class="row-text-monospace">-</span>
               </div>
 
-              <div class="row-text">
+              <div class="row-text" role="cell">
                 <BaseHash
                   :type="accountIdType"
-                  :hash="item.id.account.toString()"
-                  :link="`/accounts/${item.id.account.toString()}`"
+                  :hash="item.account_id.toString()"
+                  :link="`/accounts/${item.account_id.toString()}`"
                   copy
                 />
               </div>
 
-              <span class="row-text-monospace">
+              <span class="row-text-monospace" role="cell">
                 {{ item.value }}
               </span>
             </div>
@@ -182,24 +347,25 @@ const assets = computed(() =>
             <div class="asset-details__assets-table-mobile-list-row">
               <div class="asset-details__assets-table-mobile-list-row-data row-text">
                 <span class="h-sm">{{ $t('name') }}</span>
-                <BaseLink :to="`/assets/${encodeURIComponent(item.id.definition.toString())}`">
-                  {{ item.id.definition.name.value }}
+                <BaseLink :to="`/assets/${encodeURIComponent(item.definition_id.toString())}`">
+                  {{ assetInstanceDefinitionName(item) }}
                 </BaseLink>
               </div>
 
               <div class="asset-details__assets-table-mobile-list-row-data row-text">
                 <span class="h-sm">{{ $t('domain') }}</span>
-                <BaseLink :to="`/domains/${item.id.definition.domain.value}`">
-                  {{ item.id.definition.domain.value }}
+                <BaseLink v-if="assetDefinitionDomain" :to="`/domains/${assetDefinitionDomain}`">
+                  {{ assetDefinitionDomain }}
                 </BaseLink>
+                <span v-else class="row-text-monospace">-</span>
               </div>
 
               <div class="asset-details__assets-table-mobile-list-row-data row-text">
                 <span class="h-sm">{{ $t('accountId') }}</span>
                 <BaseHash
                   :type="accountIdType"
-                  :hash="item.id.account.toString()"
-                  :link="`/accounts/${item.id.account.toString()}`"
+                  :hash="item.account_id.toString()"
+                  :link="`/accounts/${item.account_id.toString()}`"
                   copy
                 />
               </div>
@@ -357,6 +523,38 @@ const assets = computed(() =>
         }
       }
     }
+  }
+
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: size(2);
+    padding: 0 size(4) size(2);
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: size(1);
+      min-width: 220px;
+
+      .label {
+        font-size: size(1.5);
+        color: theme-color('content-tertiary');
+      }
+
+      input {
+        padding: size(1.25);
+        border: 1px solid theme-color('border-primary');
+        border-radius: size(1);
+        background: transparent;
+        color: theme-color('content-primary');
+      }
+    }
+  }
+
+  &__filters-error {
+    color: theme-color('error');
+    font-size: size(1.3);
   }
 }
 </style>

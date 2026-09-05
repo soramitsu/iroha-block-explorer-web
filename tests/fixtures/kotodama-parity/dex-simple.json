@@ -1,0 +1,202 @@
+{
+  "version": 1,
+  "id": "dex-simple",
+  "source_name": "dex_simple.ko",
+  "compiler_source_path": "crates/kotodama_lang/src/samples/dex_simple.ko",
+  "source": "// Simple constant-product DEX helpers (no persistent state yet).\n// Demonstrates arithmetic, conditionals, returns, and syscalls.\nseiyaku DexSimple {\n  // Quote output amount for selling `amount_in` of input into output reserves.\n  fn quote_sell(reserve_in: int, reserve_out: int, amount_in: int) -> int {\n    // apply 0.3% fee\n    let effective = (amount_in * 997) / 1000;\n    let numerator = reserve_out * effective;\n    let denominator = reserve_in + effective;\n    let out = numerator / denominator;\n    return out;\n  }\n\n  // Perform a swap by moving tokens between trader and a pool account.\n  // In a full implementation, `pool_account` would be derived from contract state.\n  kotoage fn swap(trader: AccountId,\n                  pool_account: AccountId,\n                  input_asset: AssetDefinitionId,\n                  output_asset: AssetDefinitionId,\n                  amount_in: int,\n                  reserve_in: int,\n                  reserve_out: int) -> int permission(Admin) {\n    let out = quote_sell(reserve_in, reserve_out, amount_in);\n    // move input from trader to pool, and output from pool to trader\n    transfer_asset(trader, pool_account, input_asset, amount_in);\n    transfer_asset(pool_account, trader, output_asset, out);\n    return out;\n  }\n\n  // Deterministic order id using a Poseidon hash of (trader, salt).\n  kotoage fn order_id(trader: int, salt: int) -> int {\n    let h = poseidon2(trader, salt);\n    return h;\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "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IAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIIAAAGAACgcgABgKIOAAAGAAChwgAAAKIAAAGiAHABogBwAKIBoKCgYmCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAoggAAAYAAKBiAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAIAAogGgoKBgIKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoFIAAYCiDgAABgAAocIAAACiAAABogBwAaIAgACiAaCgoGWwoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIOAAAGAACgsgABwKIHgAAGAACgQgABgKIOAAAGAAChwgAAAKIAAAGiAHABogCQAKIBoKCgY1CgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKAyAACQogAAgLIAAHDCAABg0gAAUOIAAEDyAAAxAgVQABRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAKFyAAFwogAAAASbgfHyAAAR8xCAcfMRAIHzEYCR8xIBcfMSgYHzEwCh8xOAsfMUAMHzEwHxgwOB8XMEAfCTAAABogCxoaIAAACCB/CAggfwgIIH8ICCB/CAggfwgIIH8ICCB/CAggbAgIIAgJBxAAABogCxoaIAAACCB/CAggfwgIIH8ICCB/CAggfwgIIH8ICCB/CAggbwgIIAgHCRQJFwgQCRgXARcICRQACQogCB8HMBAfCDAYHwkwIB8XMCgfGDAAHwEwSB8fIAABAEgIHwcwEB8IMBgfCTAgHxcwKB8YMAAfATBIHx8gAAEASIAfHyAAAR8xCAQfMRAFHzEYBh8xIAcfMSgIHzEwCR8xOBcfMUAYHzFICh8xUAsfMVgMHzFgDR8xaA4fMXAPHzF4EB8xSB8YMFAfFzBYHwkwYB8IMGgfBzBwHwYweB8FMAAGCiAABQsgAAcMIKz/AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAACgQgAAcKIGkAAGAACgUgABgKIAAXCyAACQwgAAUNIOAAAGAACg4gAAsKIOAAAGAACgsgAAwKIOAAAGAACgwgAA0KIOAAAGAACg0gAA4KICQAAGAAAAUgAAQKIGkAAGAACgUgABcKIAAYCyAACAwgAAUNIOAAAGAACg4gAAsKIOAAAGAACgsgAAwKIOAAAGAACgwgAA0KIOAAAGAACg0gAA4KICQAAGAAAAUgAAQKIAgfBDAQHwUwGB8GMCAfBzAoHwgwMB8JMDgfFzBAHxgwAB8BMH8fHyABHx8gAAEASAgfBDAQHwUwGB8GMCAfBzAoHwgwMB8JMDgfFzBAHxgwAB8BMH8fHyABHx8gAAEASNAfHyAAAR8xCAkfMRAXHzEYGB8xIAofMSgLHzEgHxgwKB8XMBcYCYIACQogCB8JMBAfFzAYHxgwAB8BMDAfHyAAAQBICB8JMBAfFzAYHxgwAB8BMDAfHyAAAQBI2B8fIAABHzEICB8xEAkfMRgXHzEgGB8xAAAKIAAAGiAHABogBAAKIBoKCgY3CgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYPEAAGAAChggABgKIOAAAGAAChwgAAAKIAAAGiAHABogBQAKIBoKCgYZCgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgog4AAAYAAKCyAAHAogeAAAYAAKCSAAGAog4AAAYAAKHCAAAAogAAAaIAcAGiAKAAogGgoKBhAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgAAoLIAAcCiB4AABgAAoIIAAJCiAACAsghv8BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAKFyAAFwogCB8IMBAfCTAYHxcwIB8YMAAfATAoHx8gAAEASLP+AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJ0v4BRhgAAEYAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAAEkw/wFGGAAARgAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAASS3/AUYYAABGAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAAAgAAAAIAAAACAAAABJ",
+    "manifest": {
+      "code_hash": "hash:009912B1A77C44C038482474989D431A0FFF9CAD8F8063A76D93D98622B0DAF1#DE82",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 1,
+      "access_set_hints": null,
+      "entrypoints": [
+        {
+          "name": "swap",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "trader",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "pool_account",
+              "type_name": "AccountId"
+            },
+            {
+              "name": "input_asset",
+              "type_name": "AssetDefinitionId"
+            },
+            {
+              "name": "output_asset",
+              "type_name": "AssetDefinitionId"
+            },
+            {
+              "name": "amount_in",
+              "type_name": "int"
+            },
+            {
+              "name": "reserve_in",
+              "type_name": "int"
+            },
+            {
+              "name": "reserve_out",
+              "type_name": "int"
+            }
+          ],
+          "return_type": "int",
+          "permission": "Admin",
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        },
+        {
+          "name": "order_id",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [
+            {
+              "name": "trader",
+              "type_name": "int"
+            },
+            {
+              "name": "salt",
+              "type_name": "int"
+            }
+          ],
+          "return_type": "int",
+          "permission": null,
+          "read_keys": [],
+          "write_keys": [],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "swap",
+        "line": 16,
+        "pc_end": 1148,
+        "pc_start": 0,
+        "source_path": "dex_simple.ko"
+      },
+      {
+        "column": 6,
+        "function_name": "quote_sell",
+        "line": 5,
+        "pc_end": 1376,
+        "pc_start": 1148,
+        "source_path": "dex_simple.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__swap",
+        "line": 16,
+        "pc_end": 1856,
+        "pc_start": 1376,
+        "source_path": "dex_simple.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "__entrypoint_impl__order_id",
+        "line": 31,
+        "pc_end": 1948,
+        "pc_start": 1856,
+        "source_path": "dex_simple.ko"
+      },
+      {
+        "column": 14,
+        "function_name": "order_id",
+        "line": 31,
+        "pc_end": 2896,
+        "pc_start": 1948,
+        "source_path": "dex_simple.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 1148,
+        "bytecode_words": 287,
+        "column": 14,
+        "frame_bytes": 80,
+        "function_name": "swap",
+        "jump_range_risk": false,
+        "jump_span_words": 287,
+        "line": 16,
+        "pc_end": 1148,
+        "pc_start": 0,
+        "source_path": "dex_simple.ko"
+      },
+      {
+        "bytecode_bytes": 228,
+        "bytecode_words": 57,
+        "column": 6,
+        "frame_bytes": 72,
+        "function_name": "quote_sell",
+        "jump_range_risk": false,
+        "jump_span_words": 57,
+        "line": 5,
+        "pc_end": 1376,
+        "pc_start": 1148,
+        "source_path": "dex_simple.ko"
+      },
+      {
+        "bytecode_bytes": 480,
+        "bytecode_words": 120,
+        "column": 14,
+        "frame_bytes": 128,
+        "function_name": "__entrypoint_impl__swap",
+        "jump_range_risk": false,
+        "jump_span_words": 120,
+        "line": 16,
+        "pc_end": 1856,
+        "pc_start": 1376,
+        "source_path": "dex_simple.ko"
+      },
+      {
+        "bytecode_bytes": 92,
+        "bytecode_words": 23,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "__entrypoint_impl__order_id",
+        "jump_range_risk": false,
+        "jump_span_words": 23,
+        "line": 31,
+        "pc_end": 1948,
+        "pc_start": 1856,
+        "source_path": "dex_simple.ko"
+      },
+      {
+        "bytecode_bytes": 948,
+        "bytecode_words": 237,
+        "column": 14,
+        "frame_bytes": 40,
+        "function_name": "order_id",
+        "jump_range_risk": false,
+        "jump_span_words": 237,
+        "line": 31,
+        "pc_end": 2896,
+        "pc_start": 1948,
+        "source_path": "dex_simple.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

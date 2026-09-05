@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "id": "docs-portal-static-norito-snippets-register-and-mint",
+  "source_name": "register-and-mint.ko",
+  "compiler_source_path": "docs/portal/static/norito-snippets/register-and-mint.ko",
+  "source": "// Register a new asset and mint some to the specified account.\nseiyaku RegisterAndMint {\n  kotoage fn register_and_mint() permission(AssetManager) {\n    // name, symbol, quantity (precision or supply depending on host), mintable flag\n    let asset = asset_definition!(\"62Fk4FPcMuLvW5QjDGNF2a4jAmjM\");\n    let symbol = \"ROSE\";\n    let qty = 1000;      // interpretation depends on data model (example only)\n    let mintable = 1;    // 1 = mintable, 0 = fixed\n    register_asset(asset, symbol, qty, mintable);\n\n    // Mint 250 ROSE to Alice\n    let to = account!(\"sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB\");\n    mint_asset(to, asset, 250);\n  }\n}\n",
+  "rust": {
+    "kind": "success",
+    "artifact_b64": "SVZNAAEBAABAQg8AAAAAAAFDTlRSVAQAAE5SVDAAAJxFYTLfthcec01NMFJ73cwALAQAAAAAAAA2tepTt35L5gIbGmtvdG9kYW1hX2xhbmcvMi4wLjAtcmMuMi4wCAAAAAAAAAAA1QMB0gOPAgMAAAAAAAAAYWBhY2NvdW50OnNvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEJ8e2Fzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxTnDvvoPvvpXjg7HvvodxMTFw772z776YMu+9sTXvvofvvaZpQ0pLalLvvpR67723Tk1O776G7725776VUEPvvbPvvplGdu+9tUU5TEJMQicmYXNzZXRfZGVmOjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak2tAQIAAAAAAAAAfHthc3NldDo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNI3NvcmF1776bMU5w776D776V44Ox776HcTExcO+9s+++mDLvvbE1776H772maUNKS2pS776Ueu+9t05NTu++hu+9ue++lVBD772z776ZRnbvvbVFOUxCTEInJmFzc2V0X2RlZjo2MkZrNEZQY011THZXNVFqREdORjJhNGpBbWpNCAAAAAAAAAAACAAAAAAAAAAACAAAAAAAAAAAnAQBAAAAAAAAAJIEEhFyZWdpc3Rlcl9hbmRfbWludAQAAAAACAAAAAAAAAAAAQAPAQ0MQXNzZXRNYW5hZ2VyjwIDAAAAAAAAACcmYXNzZXRfZGVmOjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak18e2Fzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxTnDvvoPvvpXjg7HvvodxMTFw772z776YMu+9sTXvvofvvaZpQ0pLalLvvpR67723Tk1O776G7725776VUEPvvbPvvplGdu+9tUU5TEJMQmFgYWNjb3VudDpzb3Jhde++mzFOcO++g+++leODse++h3ExMXDvvbPvvpgy772xNe++h++9pmlDSktqUu++lHrvvbdOTU7vvobvvbnvvpVQQ++9s+++mUZ27721RTlMQkxCrQECAAAAAAAAACcmYXNzZXRfZGVmOjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak18e2Fzc2V0OjYyRms0RlBjTXVMdlc1UWpER05GMmE0akFtak0jc29yYXXvvpsxTnDvvoPvvpXjg7HvvodxMTFw772z776YMu+9sTXvvofvvaZpQ0pLalLvvpR67723Tk1O776G7725776VUEPvvbPvvplGdu+9tUU5TEJMQgMBAQEIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAAAIAAAAAAAAAABMVExCAwAAAAAAAAA4AQAAKAAAAAAAAABTAAAAAAAAAMIAAAAAAAAAAAYBAAAABFJPU0Wc86mYCigDx3U0Xa5wkWl9U7h3LFJZ0IAojq7vbfzDGQACAQAAAEhOUlQwAACET0rNWn1PMAmqWIugijIPACAAAAAAAAAAEe+HpBy2To4CAWgBcgFFAU4BnAEEAUYBQQGqAVgBHgHFAfMBgAEWARmqffes/3e0pna8pU7n9WjzHqOuTh5y9u02mpFeJ8VkKwABAQAAAHdOUlQwAABg6BRzrtChJ28cV3bQ9pw4AE8AAAAAAAAAWvKkm7OQU8kCAAAAAEohAAAAAAAAAAEAAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEQERAREBEaETub1cVDZKW5qbBOBl8PrjpduPKAh/MIqmLkae2jEP0B8fIAAAFyAAABogBwAaIAkAFyAaFxcGBBcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAXFyAAFxcgABcXIAAAGiALGhogAAAJIH8JCSB/CQkgfwkJIH8JCSB/CQkgfwkJIH8JCSBvCQkgAAAIIAEICCAACQogaQAAYAAKByAAAAogAAAaIAcAGiAJAAogGgoKBi8KCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiDgAABgABcLIAAHDCAACA0gIAAAYAAAByAAABogCxoaIAAACCB/CAggewgIIAAICiBpAABgAAoXIAAACiAAABogBwAaIAoACiAaCgoGHgoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAKCiAACgogAAoKIAAACyAAABogBwAaIAkACyAaCwsGLwsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAALCyAACwsgAAsLIAAXDCDgAABgAAoNIAALCiDgAABgAAoLIAAMCiDgAABgAAoMIAANCiAiAABgAAAXIAAAAEk=",
+    "manifest": {
+      "code_hash": "hash:0D120D4F24EE5400A8BEE8A3946913A1B436BB235AAFCAAB6F3F811DF79EC33B#B536",
+      "abi_hash": "hash:73CEFB1B419F97B9E2864CDC6545D3F80AE2328DC0FBE2FBD034CD51A837BA0D#4D00",
+      "compiler_fingerprint": "kotodama_lang/2.0.0-rc.2.0",
+      "features_bitmap": 0,
+      "access_set_hints": {
+        "read_keys": [
+          "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+        ],
+        "write_keys": [
+          "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+          "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM"
+        ],
+        "dynamic_reads": [],
+        "dynamic_writes": []
+      },
+      "entrypoints": [
+        {
+          "name": "register_and_mint",
+          "kind": {
+            "kind": "Public",
+            "value": null
+          },
+          "params": [],
+          "return_type": null,
+          "permission": "AssetManager",
+          "read_keys": [
+            "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB",
+            "account:sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB"
+          ],
+          "write_keys": [
+            "asset_def:62Fk4FPcMuLvW5QjDGNF2a4jAmjM",
+            "asset:62Fk4FPcMuLvW5QjDGNF2a4jAmjM#sorauﾛ1Npﾃﾕヱﾇq11pｳﾘ2ｱ5ﾇｦiCJKjRﾔzｷNMNﾆｹﾕPCｳﾙFvｵE9LBLB"
+          ],
+          "access_hints_complete": true,
+          "access_hints_skipped": [],
+          "triggers": []
+        }
+      ],
+      "states": [],
+      "kotoba": null,
+      "provenance": null
+    },
+    "source_map": [
+      {
+        "column": 14,
+        "function_name": "register_and_mint",
+        "line": 3,
+        "pc_end": 560,
+        "pc_start": 0,
+        "source_path": "register-and-mint.ko"
+      }
+    ],
+    "budget_report": [
+      {
+        "bytecode_bytes": 560,
+        "bytecode_words": 140,
+        "column": 14,
+        "frame_bytes": 48,
+        "function_name": "register_and_mint",
+        "jump_range_risk": false,
+        "jump_span_words": 140,
+        "line": 3,
+        "pc_end": 560,
+        "pc_start": 0,
+        "source_path": "register-and-mint.ko"
+      }
+    ],
+    "diagnostics": [],
+    "compiler_stderr": []
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "name": "Hyperledger Iroha Blockchain Explorer",
+  "name": "Hyperledger Iroha",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -15,7 +15,7 @@
       "src": "/icon-mask-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose":"maskable"
+      "purpose": "maskable"
     }
   ]
 }
