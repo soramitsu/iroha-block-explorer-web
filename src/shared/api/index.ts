@@ -432,7 +432,6 @@ async function triggerToriiFailover(trigger: ToriiFailoverSwitch['trigger']): Pr
 
 function trackToriiFailure(reason: string) {
   const runtime = failoverRuntimeConfig();
-  if (!runtime.enabled) return;
   const nowMs = Date.now();
   failoverFailureTimestampsMs.push(nowMs);
   const oldestAllowed = nowMs - runtime.windowMs;
@@ -442,7 +441,7 @@ function trackToriiFailure(reason: string) {
   toriiFailureCountState.value = failoverFailureTimestampsMs.length;
   toriiLastErrorState.value = reason;
   if (toriiAvailabilityState.value !== 'failing_over' && toriiAvailabilityState.value !== 'outage') {
-    toriiAvailabilityState.value = 'degraded';
+    toriiAvailabilityState.value = runtime.enabled ? 'degraded' : 'outage';
   }
 }
 

@@ -3,32 +3,32 @@ import '@/shared/ui/fonts/jet-brains-mono/index.css';
 
 import { createApp, watch } from 'vue';
 
-import App from './App.vue';
-import router from './router';
-import { ensureLocaleLoaded, i18n } from '@/shared/lib/localization';
-import { getRuntimeConfig, loadRuntimeConfig } from '@/shared/runtime-config';
-import { setToriiBaseUrlFromConfig } from '@/shared/api';
-import { applyLocalizedDocumentMetadata } from '@/shared/lib/localized-metadata';
-import { loadAncientFontForLocale } from '@/shared/ui/fonts/ancient';
-
-function syncLocalizedDocumentMetadata(): void {
-  if (typeof document === 'undefined') return;
-  applyLocalizedDocumentMetadata(document, {
-    title: String(i18n.global.t('appMetadata.title')),
-    description: String(i18n.global.t('appMetadata.description')),
-    keywords: String(i18n.global.t('appMetadata.keywords')),
-    imageAlt: String(i18n.global.t('appMetadata.imageAlt')),
-  });
-}
+import { loadRuntimeConfig } from '@/shared/runtime-config';
 
 async function bootstrap() {
-  await loadRuntimeConfig();
-  const config = getRuntimeConfig();
+  const config = await loadRuntimeConfig();
+  // Do not evaluate API consumers (including their saved-node state) until the
+  // runtime profile is valid. Apply its forced endpoint before loading the app.
+  const { setToriiBaseUrlFromConfig } = await import('@/shared/api');
   if (config.toriiBaseUrl) {
     setToriiBaseUrlFromConfig(config.toriiBaseUrl, {
       force: config.toriiForceBaseUrl === true,
     });
   }
+
+  const [
+    { default: App },
+    { default: router },
+    { ensureLocaleLoaded, i18n },
+    { applyLocalizedDocumentMetadata },
+    { loadAncientFontForLocale },
+  ] = await Promise.all([
+    import('./App.vue'),
+    import('./router'),
+    import('@/shared/lib/localization'),
+    import('@/shared/lib/localized-metadata'),
+    import('@/shared/ui/fonts/ancient'),
+  ]);
 
   if (typeof window !== 'undefined') {
     try {
@@ -42,15 +42,22 @@ async function bootstrap() {
     }
   }
 
-  const app = createApp(App);
-
   await loadAncientFontForLocale(i18n.global.locale.value);
   watch(i18n.global.locale, async (locale) => {
     await loadAncientFontForLocale(locale).catch((error) => {
       console.error(`[localization] Failed to load the ${locale} font`, error);
     });
   });
-  watch(i18n.global.locale, syncLocalizedDocumentMetadata, { immediate: true });
+  watch(i18n.global.locale, () => {
+    applyLocalizedDocumentMetadata(document, {
+      title: String(i18n.global.t('appMetadata.title')),
+      description: String(i18n.global.t('appMetadata.description')),
+      keywords: String(i18n.global.t('appMetadata.keywords')),
+      imageAlt: String(i18n.global.t('appMetadata.imageAlt')),
+    });
+  }, { immediate: true });
+
+  const app = createApp(App);
 
   app.use(router);
   app.use(i18n);
@@ -58,6 +65,28 @@ async function bootstrap() {
   app.mount('#app');
 }
 
-bootstrap().catch((error) => {
-  console.error('[bootstrap] Failed to initialize application', error);
-});
+function showBootstrapError() {
+  // Startup errors may contain private configuration or raw response bodies.
+  // Keep both the visible error and the console message fixed and non-sensitive.
+  console.error('[bootstrap] Explorer initialization failed. Check deployment configuration and connectivity.');
+  const root = document.querySelector('#app');
+  if (!root) return;
+
+  const panel = document.createElement('section');
+  panel.setAttribute('role', 'alert');
+  const heading = document.createElement('h1');
+  heading.textContent = 'Explorer could not start';
+  const message = document.createElement('p');
+  message.textContent = 'The deployment configuration or application could not be loaded. Retry, or contact the deployment operator.';
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.textContent = 'Retry';
+  retry.addEventListener('click', () => {
+    retry.disabled = true;
+    bootstrap().catch(showBootstrapError);
+  });
+  panel.append(heading, message, retry);
+  root.replaceChildren(panel);
+}
+
+bootstrap().catch(showBootstrapError);

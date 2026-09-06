@@ -1,8 +1,4 @@
 import BigNumber from 'bignumber.js';
-import {
-  extractAssetDefinitionIdFromAssetIdLiteral,
-  normalizeAssetDefinitionSelectorLiteral,
-} from './asset-definition-literal';
 
 export function sum(values: readonly BigNumber[]): BigNumber {
   return values.reduce((acc, value) => acc.plus(value), new BigNumber(0));
@@ -171,88 +167,6 @@ export function parseBigNumber(value: unknown): BigNumber | null {
   }
   if (value instanceof BigNumber) return value;
   return null;
-}
-
-export function extractIsiObject(payload: unknown): unknown {
-  if (!payload || typeof payload !== 'object') return null;
-  const record = payload as Record<string, unknown>;
-  if (!('object' in record)) return null;
-  return record.object;
-}
-
-export function extractTransferObject(payload: unknown): unknown {
-  return extractIsiObject(payload);
-}
-
-export function extractAssetDefinitionIdFromIsiObject(objectValue: unknown): string | null {
-  if (!objectValue) return null;
-
-  if (typeof objectValue === 'string') {
-    const trimmed = objectValue.trim();
-    if (!trimmed) return null;
-    const assetIdDefinition = extractAssetDefinitionIdFromAssetIdLiteral(trimmed);
-    if (assetIdDefinition) return assetIdDefinition;
-    return normalizeAssetDefinitionSelectorLiteral(trimmed);
-  }
-
-  if (typeof objectValue === 'object') {
-    const record = objectValue as Record<string, unknown>;
-
-    if (typeof record.definition_id === 'string') return extractAssetDefinitionIdFromIsiObject(record.definition_id);
-    if (typeof record.definition === 'string') return extractAssetDefinitionIdFromIsiObject(record.definition);
-    if (record.definition && typeof record.definition === 'object') {
-      const def = record.definition as Record<string, unknown>;
-      if (typeof def.id === 'string') return extractAssetDefinitionIdFromIsiObject(def.id);
-      if (typeof def.definition_id === 'string') return extractAssetDefinitionIdFromIsiObject(def.definition_id);
-      if (typeof def.alias === 'string') return extractAssetDefinitionIdFromIsiObject(def.alias);
-      if (typeof def.name === 'string' && typeof def.domain === 'string') return `${def.name}#${def.domain}`;
-    }
-    if (typeof record.id === 'string') {
-      return extractAssetDefinitionIdFromIsiObject(record.id);
-    }
-    if (typeof record.alias === 'string') {
-      return extractAssetDefinitionIdFromIsiObject(record.alias);
-    }
-    if (typeof record.name === 'string' && typeof record.domain === 'string') {
-      return `${record.name}#${record.domain}`;
-    }
-  }
-
-  return null;
-}
-
-export function extractAssetDefinitionIdFromIsiPayload(payload: unknown): string | null {
-  const objectValue = extractIsiObject(payload);
-  return extractAssetDefinitionIdFromIsiObject(objectValue);
-}
-
-/**
- * Best-effort extraction of the asset definition id referenced by a Transfer payload.
- * Returns the selector/id string (for example a canonical Base58 id or asset alias) when detected.
- */
-export function extractAssetDefinitionIdFromTransferPayload(payload: unknown): string | null {
-  return extractAssetDefinitionIdFromIsiPayload(payload);
-}
-
-export function extractAmountFromIsiPayload(payload: unknown): BigNumber | null {
-  if (!payload || typeof payload !== 'object') return null;
-  const record = payload as Record<string, unknown>;
-
-  const direct = parseBigNumber(record.value ?? record.amount ?? record.quantity);
-  if (direct) return direct;
-
-  const nested = record.value;
-  if (nested && typeof nested === 'object') {
-    const nestedRecord = nested as Record<string, unknown>;
-    const numeric = parseBigNumber(nestedRecord.numeric ?? nestedRecord.value);
-    if (numeric) return numeric;
-  }
-
-  return null;
-}
-
-export function extractTransferAmountFromPayload(payload: unknown): BigNumber | null {
-  return extractAmountFromIsiPayload(payload);
 }
 
 /**

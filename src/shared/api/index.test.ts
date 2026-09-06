@@ -888,6 +888,42 @@ describe('API url builders', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    { toriiFailoverEnabled: false },
+    { toriiForceBaseUrl: true, toriiFailoverEnabled: true },
+  ])('tracks outages and recovery while node switching is disabled: %j', async (config) => {
+    runtimeConfigState.value = {
+      ...config,
+      toriiFailoverNodes: ['https://backup.example'],
+      toriiFailoverFailureThreshold: 1,
+      toriiRequestRetryCount: 0,
+    };
+    const fetchSpy = vi.fn()
+      .mockResolvedValueOnce(new Response('bad gateway', { status: 502 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        pagination: { ...HISTORY_PAGINATION, limit: 1 },
+        items: [],
+      }), { headers: { 'content-type': 'application/json' } }));
+    global.fetch = fetchSpy as any;
+
+    const module = await importApiModule({ VITE_API_URL: 'https://torii.example' });
+    const availability = module.useToriiAvailability();
+
+    await module.fetchTransactions({ limit: 1 });
+
+    expect(availability.state.value).toBe('outage');
+    expect(availability.failureCount.value).toBe(1);
+    expect(availability.lastError.value).toBe('HTTP 502');
+    expect(module.getToriiBaseUrl()).toBe('https://torii.example');
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    expect((await module.fetchTransactions({ limit: 1 })).status).toBe(SUCCESSFUL_FETCHING);
+    expect(availability.state.value).toBe('healthy');
+    expect(availability.failureCount.value).toBe(0);
+    expect(availability.lastError.value).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('auto-failovers to a healthy runtime candidate after repeated transient failures', async () => {
     runtimeConfigState.value = {
       toriiFailoverEnabled: true,

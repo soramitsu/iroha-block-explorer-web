@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  collectEntryBootManifestKeys,
   collectStaticManifestKeys,
   evaluateBundleBudgets,
   validateBundleBudgets,
@@ -18,6 +19,7 @@ function fixture() {
   mkdirSync(join(distDir, '_assets'));
   const files: Record<string, string> = {
     '_assets/index.js': 'const entry = "entry";'.repeat(50),
+    '_assets/bootstrap.js': 'const bootstrap = "bootstrap";'.repeat(50),
     '_assets/shared.js': 'const shared = "shared";'.repeat(50),
     '_assets/route.js': 'const route = "route";'.repeat(50),
     '_assets/contract.worker-AbCd1234.js': 'const worker = "worker";'.repeat(50),
@@ -30,14 +32,21 @@ function fixture() {
       src: 'index.html',
       isEntry: true,
       imports: ['_shared.js'],
+      dynamicImports: ['_bootstrap.js'],
     },
     '_shared.js': { file: '_assets/shared.js', name: 'shared' },
+    '_bootstrap.js': {
+      file: '_assets/bootstrap.js',
+      name: 'bootstrap',
+      isDynamicEntry: true,
+      imports: ['_shared.js', 'index.html'],
+    },
     'src/pages/Route.vue': {
       file: '_assets/route.js',
       name: 'Route',
       src: 'src/pages/Route.vue',
       isDynamicEntry: true,
-      imports: ['_shared.js'],
+      imports: ['_shared.js', '_bootstrap.js'],
     },
   };
   const sizes = Object.fromEntries(
@@ -50,7 +59,13 @@ function budgets(overrides: Record<string, unknown> = {}) {
   return {
     schema_version: 1,
     default_chunk_gzip_bytes: 10_000,
-    chunk_gzip_bytes: { index: 10_000, shared: 10_000, Route: 10_000, 'contract.worker': 10_000 },
+    chunk_gzip_bytes: {
+      index: 10_000,
+      bootstrap: 10_000,
+      shared: 10_000,
+      Route: 10_000,
+      'contract.worker': 10_000,
+    },
     entry_gzip_bytes: { 'index.html': 10_000 },
     route_gzip_bytes: { 'src/pages/Route.vue': 10_000 },
     ...overrides,
@@ -67,13 +82,23 @@ describe('bundle budget checker', () => {
     const result = evaluateBundleBudgets({ manifest, budgets: budgets(), distDir });
 
     expect(collectStaticManifestKeys(manifest, 'src/pages/Route.vue')).toEqual(
-      new Set(['src/pages/Route.vue', '_shared.js'])
+      new Set(['src/pages/Route.vue', '_bootstrap.js', 'index.html', '_shared.js'])
+    );
+    expect(collectEntryBootManifestKeys(manifest, 'index.html')).toEqual(
+      new Set(['index.html', '_shared.js', '_bootstrap.js'])
     );
     expect(result.failures).toEqual([]);
     expect(result.measurements).toContainEqual({
       kind: 'route',
       name: 'src/pages/Route.vue',
       actual: sizes['_assets/route.js'],
+      limit: 10_000,
+    });
+    expect(result.measurements).toContainEqual({
+      kind: 'entry',
+      name: 'index.html',
+      actual:
+        sizes['_assets/index.js'] + sizes['_assets/shared.js'] + sizes['_assets/bootstrap.js'],
       limit: 10_000,
     });
     expect(result.measurements).toContainEqual({
@@ -91,6 +116,7 @@ describe('bundle budget checker', () => {
       budgets: budgets({
         chunk_gzip_bytes: {
           index: 10_000,
+          bootstrap: 10_000,
           shared: 10_000,
           Route: sizes['_assets/route.js'] - 1,
           'contract.worker': 10_000,
@@ -122,6 +148,7 @@ describe('bundle budget checker', () => {
       budgets: budgets({
         chunk_gzip_bytes: {
           index: 10_000,
+          bootstrap: 10_000,
           shared: 10_000,
           Route: 10_000,
           'contract.worker': 10_000,

@@ -11,6 +11,7 @@ dist
 /releases/
 output
 coverage
+public/config.json
 .env
 .env.*
 *.local

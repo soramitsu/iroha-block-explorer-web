@@ -198,5 +198,20 @@
     "file": "src/shared/utils/resource-state.ts",
     "pattern": "^(?:ready|not-found|error)$",
     "reason": "Internal resource-state discriminators, not labels."
+  },
+  {
+    "file": "src/app/main.ts",
+    "value": "Explorer could not start",
+    "reason": "Fixed, non-sensitive bootstrap failure copy is rendered before trusted runtime configuration and application localization can initialize."
+  },
+  {
+    "file": "src/app/main.ts",
+    "value": "The deployment configuration or application could not be loaded. Retry, or contact the deployment operator.",
+    "reason": "Fixed, non-sensitive bootstrap failure copy is rendered before trusted runtime configuration and application localization can initialize."
+  },
+  {
+    "file": "src/app/main.ts",
+    "value": "Retry",
+    "reason": "Fixed, non-sensitive bootstrap failure copy is rendered before trusted runtime configuration and application localization can initialize."
   }
 ]

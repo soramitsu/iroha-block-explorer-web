@@ -59,6 +59,15 @@ export function collectStaticManifestKeys(manifest, rootKey) {
   return visited;
 }
 
+export function collectEntryBootManifestKeys(manifest, entryKey) {
+  const entry = manifestItem(manifest, entryKey);
+  const bootKeys = collectStaticManifestKeys(manifest, entryKey);
+  for (const dynamicImportKey of entry.dynamicImports ?? []) {
+    for (const key of collectStaticManifestKeys(manifest, dynamicImportKey)) bootKeys.add(key);
+  }
+  return bootKeys;
+}
+
 function assetFilesForKeys(manifest, keys) {
   const files = new Set();
   for (const key of keys) {
@@ -118,7 +127,7 @@ export function evaluateBundleBudgets({ manifest, budgets, distDir }) {
   for (const [source, limit] of Object.entries(checkedBudgets.entry_gzip_bytes)) {
     const entryKey = findEntryKey(manifest, source);
     if (!entryKey) throw new Error(`Configured entry is missing from the manifest: ${source}`);
-    const keys = collectStaticManifestKeys(manifest, entryKey);
+    const keys = collectEntryBootManifestKeys(manifest, entryKey);
     entryClosures.set(entryKey, keys);
     const actual = sumGzipBytes(distDir, assetFilesForKeys(manifest, keys));
     measurements.push({ kind: 'entry', name: source, actual, limit });

@@ -3,7 +3,6 @@ import { NetworkId } from '@iroha/iroha-js/browser';
 
 const NetworkIdLiteralSchema = z
   .string()
-  .trim()
   .superRefine((value, ctx) => {
     try {
       NetworkId.parse(value);
@@ -56,6 +55,7 @@ const RuntimeConfigSchema = z
 
 export type RuntimeConfig = z.infer<typeof RuntimeConfigSchema>;
 
+const CONFIGURATION_ERROR_MESSAGE = 'Explorer runtime configuration is unavailable or invalid.';
 let runtimeConfig: RuntimeConfig = {};
 let loadPromise: Promise<RuntimeConfig> | null = null;
 
@@ -87,32 +87,33 @@ export async function loadRuntimeConfig(
       });
 
       if (!res.ok) {
-        if (required) throw new Error(`Runtime config request failed with HTTP ${res.status}`);
-        return runtimeConfig;
+        if (!required && res.status === 404) return runtimeConfig;
+        throw new Error(CONFIGURATION_ERROR_MESSAGE);
       }
 
       const json = await res.json();
       const parsed = RuntimeConfigSchema.safeParse(json);
       if (!parsed.success) {
-        if (required) throw new Error(`Runtime config is invalid: ${parsed.error.message}`);
-        return runtimeConfig;
+        throw new Error(CONFIGURATION_ERROR_MESSAGE);
       }
       if (required && (!parsed.data.networkId || !parsed.data.toriiBaseUrl)) {
-        throw new Error('Production runtime config requires exact networkId and toriiBaseUrl values');
+        throw new Error(CONFIGURATION_ERROR_MESSAGE);
       }
 
       runtimeConfig = parsed.data;
       return runtimeConfig;
-    } catch (error) {
-      if (required) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Unable to load required runtime config from ${configUrl}: ${message}`, { cause: error });
-      }
-      return runtimeConfig;
+    } catch {
+      // Keep raw server/configuration details out of startup diagnostics.
+      throw new Error(CONFIGURATION_ERROR_MESSAGE);
     } finally {
       window.clearTimeout(timeout);
     }
   })();
 
-  return loadPromise;
+  try {
+    return await loadPromise;
+  } catch (error) {
+    loadPromise = null;
+    throw error;
+  }
 }

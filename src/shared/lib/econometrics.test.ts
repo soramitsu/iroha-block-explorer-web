@@ -2,10 +2,6 @@ import { describe, expect, it } from 'vitest';
 import BigNumber from 'bignumber.js';
 import {
   concentrationTopN,
-  extractAssetDefinitionIdFromTransferPayload,
-  extractAssetDefinitionIdFromIsiPayload,
-  extractAmountFromIsiPayload,
-  extractTransferAmountFromPayload,
   giniCoefficient,
   herfindahlIndex,
   lorenzCurvePoints,
@@ -18,12 +14,6 @@ import {
   normalizedEntropy,
   effectiveNumberFromEntropy,
 } from './econometrics';
-
-const SAMPLE_I105 =
-  'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-const SAMPLE_ASSET_DEFINITION_ID = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
-const SAMPLE_ASSET_ALIAS = 'usd#issuer.main';
-const SAMPLE_ASSET_ID = `${SAMPLE_ASSET_DEFINITION_ID}#${SAMPLE_I105}`;
 
 describe('econometrics', () => {
   it('computes gini coefficient', () => {
@@ -78,28 +68,6 @@ describe('econometrics', () => {
     expect(nearestRankQuantile([new BigNumber(1), new BigNumber(100)], 0.99)?.toNumber()).toBe(100);
   });
 
-  it('extracts asset definition id from transfer payload', () => {
-    expect(extractAssetDefinitionIdFromTransferPayload({ object: SAMPLE_ASSET_ALIAS })).toBe(SAMPLE_ASSET_ALIAS);
-    expect(extractAssetDefinitionIdFromTransferPayload({ object: SAMPLE_ASSET_ID })).toBe(SAMPLE_ASSET_DEFINITION_ID);
-    expect(extractAssetDefinitionIdFromTransferPayload({ object: { definition: SAMPLE_ASSET_DEFINITION_ID } })).toBe(
-      SAMPLE_ASSET_DEFINITION_ID
-    );
-    expect(extractAssetDefinitionIdFromTransferPayload({ object: { definition_id: SAMPLE_ASSET_ALIAS } })).toBe(
-      SAMPLE_ASSET_ALIAS
-    );
-    expect(extractAssetDefinitionIdFromTransferPayload({ object: { name: 'usd', domain: 'issuer.main' } })).toBe(
-      SAMPLE_ASSET_ALIAS
-    );
-    expect(extractAssetDefinitionIdFromTransferPayload({ nope: true })).toBeNull();
-  });
-
-  it('extracts transfer amounts from transfer payload', () => {
-    expect(extractTransferAmountFromPayload({ value: '10' })?.toString()).toBe('10');
-    expect(extractTransferAmountFromPayload({ amount: 42 })?.toString()).toBe('42');
-    expect(extractTransferAmountFromPayload({ value: { numeric: '0.5' } })?.toString()).toBe('0.5');
-    expect(extractTransferAmountFromPayload({})).toBeNull();
-  });
-
   it('computes entropy/theil metrics', () => {
     const equal = [new BigNumber(1), new BigNumber(1), new BigNumber(1), new BigNumber(1)];
     expect(theilIndexT(equal)).toBeCloseTo(0, 12);
@@ -140,13 +108,4 @@ describe('econometrics', () => {
     expect(concentrated[4]!.share).toBeCloseTo(1, 10);
   });
 
-  it('extracts generic ISI payload fields', () => {
-    expect(extractAssetDefinitionIdFromIsiPayload({ object: SAMPLE_ASSET_ID })).toBe(SAMPLE_ASSET_DEFINITION_ID);
-    expect(extractAssetDefinitionIdFromIsiPayload({ object: { definition_id: SAMPLE_ASSET_ALIAS } })).toBe(
-      SAMPLE_ASSET_ALIAS
-    );
-    expect(extractAmountFromIsiPayload({ value: '10' })?.toString()).toBe('10');
-    expect(extractAmountFromIsiPayload({ quantity: '7' })?.toString()).toBe('7');
-    expect(extractAmountFromIsiPayload({ value: { value: '3' } })?.toString()).toBe('3');
-  });
 });

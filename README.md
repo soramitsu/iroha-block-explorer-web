@@ -119,8 +119,8 @@ Supported keys:
 - `toriiRequestTimeoutMs` (positive integer), `toriiRequestRetryCount` and `toriiRequestRetryBaseDelayMs`
   (non-negative integers): bounded public API request retry policy.
 
-Example file: `public/config.json.example` (copy to `public/config.json` for local builds; it is gitignored). Release
-packaging must always install a reviewed `config.json`; absence is a startup error rather than an implicit same-origin
+Example file: `public/config.json.example` (copy to `public/config.json` for local development; it is gitignored). Production builds
+exclude root `config.json`; release packaging must install a reviewed runtime file before recording its digest. Absence is a startup error rather than an implicit same-origin
 or build-time fallback.
 
 ### Local run
