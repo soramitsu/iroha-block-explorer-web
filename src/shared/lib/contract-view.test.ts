@@ -327,7 +327,7 @@ describe('selectPrimaryContractViewInstruction', () => {
       },
     });
 
-    expect(selectPrimaryContractViewInstruction([instruction], 'Wasm')).toBeNull();
+    expect(selectPrimaryContractViewInstruction([instruction], 'Ivm')).toBeNull();
   });
 });
 

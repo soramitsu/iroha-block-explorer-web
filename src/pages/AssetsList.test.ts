@@ -67,7 +67,7 @@ const setupState = {
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: { limit: 10, next_cursor: null, has_more: false },
+      nextCursor: null,
       items: [] as any[],
     },
   },
@@ -114,7 +114,7 @@ describe('AssetsList', () => {
     replaceSpy.mockReset();
     replaceSpy.mockImplementation(applyNavigation);
     setupState.data.data.items = [];
-    setupState.data.data.pagination = { limit: 10, next_cursor: null, has_more: false };
+    setupState.data.data.nextCursor = null;
     currentRoute.value = { name: 'assets', path: '/assets', query: {}, params: {} } as any;
   });
 

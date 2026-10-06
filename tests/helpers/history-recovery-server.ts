@@ -26,14 +26,18 @@ export async function startHistoryRecoveryServer(explorerOrigin: string) {
     const observation = { path: `${url.pathname}${url.search}`, method, status: undefined as number | undefined };
     requests.push(observation);
     response.setHeader('access-control-allow-origin', explorerOrigin);
-    response.setHeader('access-control-allow-methods', 'GET, HEAD, OPTIONS');
+    response.setHeader('access-control-allow-methods', 'GET, HEAD, POST, OPTIONS');
+    response.setHeader('access-control-allow-headers', 'content-type');
     response.setHeader('cache-control', 'no-store');
     if (method === 'OPTIONS') {
       observation.status = 204;
       response.writeHead(204).end();
       return;
     }
-    if (!['GET', 'HEAD'].includes(method)) {
+    const isCollectionRead = method === 'POST' && [
+      '/v1/explorer/transactions/latest/query', '/v1/explorer/blocks/query',
+    ].includes(url.pathname);
+    if (!['GET', 'HEAD'].includes(method) && !isCollectionRead) {
       unexpectedRequests.push(`Write blocked: ${method} ${url.pathname}`);
       observation.status = 405;
       response.writeHead(405).end();
@@ -52,7 +56,7 @@ export async function startHistoryRecoveryServer(explorerOrigin: string) {
       return;
     }
     response.setHeader('content-type', 'application/json');
-    if (url.pathname === '/v1/explorer/transactions/latest') {
+    if (isCollectionRead && url.pathname === '/v1/explorer/transactions/latest/query') {
       latestRequests += 1;
       if (latestRequests === 1) {
         observation.status = 500;
@@ -60,18 +64,12 @@ export async function startHistoryRecoveryServer(explorerOrigin: string) {
         return;
       }
       observation.status = 200;
-      response.end(JSON.stringify({
-        ...tairaHistory.latestTransactions,
-        pagination: { ...tairaHistory.latestTransactions.pagination, limit: Number(url.searchParams.get('limit') ?? 5) },
-      }));
+      response.end(JSON.stringify(tairaHistory.latestTransactions));
       return;
     }
-    if (url.pathname === '/v1/explorer/blocks') {
+    if (isCollectionRead && url.pathname === '/v1/explorer/blocks/query') {
       observation.status = 200;
-      response.end(JSON.stringify({
-        ...tairaHistory.blocks,
-        pagination: { ...tairaHistory.blocks.pagination, limit: Number(url.searchParams.get('limit') ?? 10) },
-      }));
+      response.end(JSON.stringify(tairaHistory.blocks));
       return;
     }
     unexpectedRequests.push(`Unreviewed read: ${method} ${url.pathname}`);

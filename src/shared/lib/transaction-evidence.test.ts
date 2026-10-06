@@ -1,3 +1,4 @@
+import stateFinality from '../../../tests/fixtures/taira-state-finality.json';
 import { describe, expect, it, vi } from 'vitest';
 import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 import {
@@ -189,6 +190,16 @@ describe('transaction evidence orchestration', () => {
     });
   });
 
+  it('does not report a verifier as available when block proof access is unavailable', () => {
+    const result = verifyTransactionBlockEvidence({
+      blockProof: { status: 'unavailable' },
+      referenceBlock: { status: 'unavailable' },
+      requestedTransactionHash: TRANSACTION_HASH,
+      requestedBlockHeight: 42,
+    });
+    expect(result).toMatchObject({ valid: false, pathVerificationAvailable: false, pathVerificationValid: false });
+  });
+
   it('fails closed on missing reference evidence and malformed proof identities', () => {
     const verification = verifyTransactionBlockEvidence({
       blockProof: {
@@ -216,94 +227,77 @@ describe('transaction evidence orchestration', () => {
     });
   });
 
-  it('reports state identity agreement only at the requested height', () => {
-    const matching: TransactionEvidenceBundle<
-      unknown,
-      { height: number; hash: string },
-      { height: number; block_hash: string; state_root: string },
-      { height: number; block_hash: string; state_root: string }
-    > = {
+  function stateBundle(): TransactionEvidenceBundle<
+    unknown,
+    { height: number, hash: string },
+    { height: number, block_hash: string, witnessed_post_state_root: string },
+    { height: number, block_hash: string, witnessed_post_state_root: string }
+  > {
+    return {
       blockProof: { status: 'unavailable' },
       referenceBlock: {
         status: 'available',
-        data: { height: 42, hash: 'hash:block' },
+        data: { height: stateFinality.height, hash: stateFinality.block_hash.slice(5, 69).toLowerCase() },
       },
-      stateRoot: {
-        status: 'available',
-        data: { height: 42, block_hash: 'hash:block', state_root: 'hash:state' },
-      },
-      stateProof: {
-        status: 'available',
-        data: { height: 42, block_hash: 'hash:block', state_root: 'hash:state' },
-      },
+      stateRoot: { status: 'available', data: { ...stateFinality } },
+      stateProof: { status: 'available', data: { ...stateFinality } },
     };
-    expect(stateEvidenceAgreement(matching, 42)).toBe(true);
-    expect(stateEvidenceAgreement(matching, 43)).toBe(false);
-    expect(
-      stateEvidenceAgreement(
-        {
-          ...matching,
-          stateProof: {
-            status: 'available',
-            data: { height: 43, block_hash: 'hash:block', state_root: 'hash:state' },
-          },
-        },
-        42
-      )
-    ).toBe(false);
-    expect(
-      stateEvidenceAgreement(
-        {
-          ...matching,
-          stateProof: {
-            status: 'available',
-            data: { height: 42, block_hash: 'hash:other-block', state_root: 'hash:state' },
-          },
-        },
-        42
-      )
-    ).toBe(false);
-    expect(
-      stateEvidenceAgreement(
-        {
-          ...matching,
-          stateProof: {
-            status: 'available',
-            data: { height: 42, block_hash: 'hash:block', state_root: 'hash:other-state' },
-          },
-        },
-        42
-      )
-    ).toBe(false);
-    expect(
-      stateEvidenceAgreement(
-        {
-          ...matching,
-          referenceBlock: {
-            status: 'available',
-            data: { height: 42, hash: 'hash:another-block' },
-          },
-        },
-        42
-      )
-    ).toBe(false);
-    expect(
-      stateEvidenceAgreement(
-        {
-          ...matching,
-          stateProof: { status: 'unavailable' },
-        },
-        42
-      )
-    ).toBeNull();
-    expect(
-      stateEvidenceAgreement(
-        {
-          ...matching,
-          referenceBlock: { status: 'unavailable' },
-        },
-        42
-      )
-    ).toBeNull();
+  }
+
+  it('compares live bare-hex block hashes with checksummed state-finality identities', () => {
+    const matching = stateBundle();
+    expect(stateEvidenceAgreement(matching, stateFinality.height)).toBe(true);
+    expect(stateEvidenceAgreement(matching, stateFinality.height + 1)).toBe(false);
+    if (matching.stateProof.status !== 'available') throw new Error('expected fixture');
+    matching.stateProof.data.witnessed_post_state_root = stateFinality.witnessed_post_state_root.slice(5, 69).toLowerCase();
+    expect(stateEvidenceAgreement(matching, stateFinality.height)).toBe(true);
   });
+
+  it.each([
+    ['referenceBlock', 'height', stateFinality.height + 1],
+    ['stateRoot', 'height', stateFinality.height + 1],
+    ['stateProof', 'height', stateFinality.height + 1],
+    ['referenceBlock', 'hash', '11'.repeat(32)],
+    ['stateRoot', 'block_hash', '11'.repeat(32)],
+    ['stateProof', 'block_hash', '11'.repeat(32)],
+    ['stateRoot', 'witnessed_post_state_root', '11'.repeat(32)],
+    ['stateProof', 'witnessed_post_state_root', '11'.repeat(32)],
+    ['referenceBlock', 'hash', stateFinality.block_hash.slice(0, -4) + '0000'],
+    ['stateRoot', 'block_hash', stateFinality.block_hash.slice(0, -4) + '0000'],
+    ['stateProof', 'block_hash', stateFinality.block_hash.slice(0, -4) + '0000'],
+    ['stateRoot', 'witnessed_post_state_root', stateFinality.witnessed_post_state_root.slice(0, -4) + '0000'],
+    ['stateProof', 'witnessed_post_state_root', stateFinality.witnessed_post_state_root.slice(0, -4) + '0000'],
+    ['referenceBlock', 'hash', '22'.repeat(32)],
+    ['stateRoot', 'block_hash', '22'.repeat(32)],
+    ['stateProof', 'block_hash', '22'.repeat(32)],
+    ['stateRoot', 'witnessed_post_state_root', '22'.repeat(32)],
+    ['stateProof', 'witnessed_post_state_root', '22'.repeat(32)],
+  ] as const)('fails closed for mismatching or invalid %s.%s', (partName, fieldName, value) => {
+    const bundle = stateBundle();
+    const part = bundle[partName];
+    if (part.status !== 'available') throw new Error('expected fixture');
+    Object.assign(part.data, { [fieldName]: value });
+    expect(stateEvidenceAgreement(bundle, stateFinality.height)).toBe(false);
+  });
+
+  it('never treats two malformed hashes as agreeing because both normalize to null', () => {
+    const bundle = stateBundle();
+    if (bundle.stateRoot.status !== 'available' || bundle.stateProof.status !== 'available') throw new Error('expected fixture');
+    bundle.stateRoot.data.block_hash = 'invalid';
+    bundle.stateProof.data.block_hash = 'invalid';
+    expect(stateEvidenceAgreement(bundle, stateFinality.height)).toBe(false);
+    bundle.stateRoot.data.block_hash = stateFinality.block_hash;
+    bundle.stateProof.data.block_hash = stateFinality.block_hash;
+    bundle.stateRoot.data.witnessed_post_state_root = 'invalid';
+    bundle.stateProof.data.witnessed_post_state_root = 'invalid';
+    expect(stateEvidenceAgreement(bundle, stateFinality.height)).toBe(false);
+  });
+
+  it.each(['referenceBlock', 'stateRoot', 'stateProof'] as const)(
+    'leaves agreement unknown when %s is unavailable', (part) => {
+      const bundle = stateBundle();
+      bundle[part] = { status: 'unavailable' };
+      expect(stateEvidenceAgreement(bundle, stateFinality.height)).toBeNull();
+    }
+  );
 });

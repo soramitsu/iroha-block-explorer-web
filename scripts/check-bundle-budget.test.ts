@@ -1,5 +1,4 @@
 import { gzipSync } from 'node:zlib';
-import { createHash } from 'node:crypto';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -16,7 +15,6 @@ import {
 const temporaryDirectories: string[] = [];
 const wasmFile = '_assets/iroha_js_codec_wasm_bg-fixture.wasm';
 const wasmBytes = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
-const wasmHash = createHash('sha256').update(wasmBytes).digest('hex');
 
 function fixture() {
   const distDir = mkdtempSync(join(tmpdir(), 'explorer-bundle-budget-'));
@@ -31,7 +29,6 @@ function fixture() {
     '_assets/shared.js': 'const shared = "shared";'.repeat(50),
     '_assets/route.js': 'const route = "route";'.repeat(50),
     '_assets/contract.worker-AbCd1234.js': 'const worker = "worker";'.repeat(50),
-    [wasmFile]: wasmBytes,
   };
   for (const [file, contents] of Object.entries(files)) writeFileSync(join(distDir, file), contents);
   const manifest = {
@@ -51,7 +48,6 @@ function fixture() {
       name: 'bootstrap',
       isDynamicEntry: true,
       imports: ['_shared.js', 'index.html'],
-      assets: [wasmFile],
     },
     'src/pages/Route.vue': {
       file: '_assets/route.js',
@@ -59,7 +55,6 @@ function fixture() {
       src: 'src/pages/Route.vue',
       isDynamicEntry: true,
       imports: ['_shared.js', '_bootstrap.js'],
-      assets: [wasmFile],
     },
   };
   const sizes = Object.fromEntries(
@@ -70,7 +65,7 @@ function fixture() {
 
 function budgets(overrides: Record<string, unknown> = {}) {
   return {
-    schema_version: 2,
+    schema_version: 3,
     default_chunk_gzip_bytes: 10_000,
     chunk_gzip_bytes: {
       index: 10_000,
@@ -80,12 +75,6 @@ function budgets(overrides: Record<string, unknown> = {}) {
       'contract.worker': 10_000,
     },
     entry_gzip_bytes: { 'index.html': 10_000 },
-    sdk_wasm: {
-      sha256: wasmHash,
-      raw_bytes: wasmBytes.byteLength,
-      max_raw_bytes: 1024,
-      max_gzip_bytes: 1024,
-    },
     entry_startup_gzip_bytes: { 'index.html': 11_024 },
     route_gzip_bytes: { 'src/pages/Route.vue': 10_000 },
     ...overrides,
@@ -130,9 +119,9 @@ describe('bundle budget checker', () => {
     });
   });
 
-  it('charges the admitted Wasm once, separately from every non-Wasm entry asset', () => {
+  it('charges each startup asset once across shared imports and references', () => {
     const { distDir, manifest, sizes } = fixture();
-    manifest['index.html'].assets.push(wasmFile, wasmFile);
+    manifest['index.html'].assets.push('_assets/font.woff2', '_assets/font.woff2');
     const result = evaluateBundleBudgets({ manifest, budgets: budgets(), distDir });
     const entry = result.entries[0];
     const jsCss = sizes['_assets/index.js'] + sizes['_assets/bootstrap.js']
@@ -141,10 +130,7 @@ describe('bundle budget checker', () => {
 
     expect(entry.categories.js_css.gzip_bytes).toBe(jsCss);
     expect(entry.categories.other_assets.gzip_bytes).toBe(other);
-    expect(entry.categories.sdk_wasm).toEqual({
-      files: [wasmFile], raw_bytes: wasmBytes.byteLength, gzip_bytes: sizes[wasmFile],
-    });
-    expect(entry.total.gzip_bytes).toBe(jsCss + other + sizes[wasmFile]);
+    expect(entry.total.gzip_bytes).toBe(jsCss + other);
     expect(result.measurements).toContainEqual({
       kind: 'entry', name: 'index.html', actual: jsCss + other, limit: 10_000,
     });
@@ -153,30 +139,20 @@ describe('bundle budget checker', () => {
     });
     expect(formatBundleBudgetReport(result)).toContain(`js_css: ${entry.categories.js_css.raw_bytes} raw bytes; ${jsCss} gzip bytes`);
     expect(formatBundleBudgetReport(result)).toContain(`other_assets: ${entry.categories.other_assets.raw_bytes} raw bytes; ${other} gzip bytes`);
-    expect(formatBundleBudgetReport(result)).toContain(`sdk_wasm: ${wasmBytes.byteLength} raw bytes; ${sizes[wasmFile]} gzip bytes`);
     expect(formatBundleBudgetReport(result)).toContain(`total: ${entry.total.raw_bytes} raw bytes; ${entry.total.gzip_bytes} gzip bytes`);
   });
 
-  it('fails each Wasm size bound and total startup independently of the entry cap', () => {
-    const { distDir, manifest, sizes } = fixture();
+  it('fails the total startup budget independently of the entry cap', () => {
+    const { distDir, manifest } = fixture();
     const entryTotal = evaluateBundleBudgets({ manifest, budgets: budgets(), distDir }).entries[0].total.gzip_bytes;
     const result = evaluateBundleBudgets({
       manifest, distDir,
-      budgets: budgets({
-        sdk_wasm: {
-          ...budgets().sdk_wasm,
-          max_raw_bytes: wasmBytes.byteLength - 1,
-          max_gzip_bytes: sizes[wasmFile] - 1,
-        },
-        entry_startup_gzip_bytes: { 'index.html': entryTotal - 1 },
-      }),
+      budgets: budgets({ entry_startup_gzip_bytes: { 'index.html': entryTotal - 1 } }),
     });
     expect(result.failures).toEqual([
-      { kind: 'sdk-wasm', name: wasmFile, actual: wasmBytes.byteLength, limit: wasmBytes.byteLength - 1, unit: 'raw' },
-      { kind: 'sdk-wasm', name: wasmFile, actual: sizes[wasmFile], limit: sizes[wasmFile] - 1 },
       { kind: 'startup', name: 'index.html', actual: entryTotal, limit: entryTotal - 1 },
     ]);
-    expect(formatBundleBudgetReport(result)).toContain('Bundle budget check failed with 3 over-budget artifact(s).');
+    expect(formatBundleBudgetReport(result)).toContain('Bundle budget check failed with 1 over-budget artifact(s).');
   });
 
   it('counts unexpected startup assets against both the entry and total budgets', () => {
@@ -196,51 +172,16 @@ describe('bundle budget checker', () => {
     expect(result.failures.map(({ kind }: { kind: string }) => kind)).toEqual(['entry', 'startup']);
   });
 
-  it('rejects future SDK growth even after its exact artifact pin is updated', () => {
-    const { distDir, manifest } = fixture();
-    const grownWasm = Buffer.alloc(1025, 7);
-    writeFileSync(join(distDir, wasmFile), grownWasm);
-    const result = evaluateBundleBudgets({
-      manifest, distDir,
-      budgets: budgets({
-        sdk_wasm: {
-          ...budgets().sdk_wasm,
-          sha256: createHash('sha256').update(grownWasm).digest('hex'),
-          raw_bytes: grownWasm.byteLength,
-        },
-      }),
-    });
-    expect(result.failures).toEqual([
-      { kind: 'sdk-wasm', name: wasmFile, actual: 1025, limit: 1024, unit: 'raw' },
-    ]);
-  });
+  it.each([wasmFile, '_assets/extra.WASM', '_assets/extra.wasm.gz', '_assets/extra.wasm.br', '_assets/hidden.bin'])(
+    'rejects emitted Wasm even when it is absent from the manifest: %s', (file) => {
+      const { distDir, manifest } = fixture();
+      writeFileSync(join(distDir, file), file.endsWith('.bin') ? wasmBytes : 'artifact bytes');
+      expect(() => evaluateBundleBudgets({ manifest, budgets: budgets(), distDir }))
+        .toThrow(`Wasm artifacts are prohibited: ${file}`);
+    }
+  );
 
-  it.each(['sha256', 'raw_bytes'])('rejects a Wasm whose admitted %s does not match', (field) => {
-    const { distDir, manifest } = fixture();
-    expect(() => evaluateBundleBudgets({
-      manifest, distDir,
-      budgets: budgets({
-        sdk_wasm: { ...budgets().sdk_wasm, [field]: field === 'sha256' ? 'a'.repeat(64) : 100 },
-      }),
-    })).toThrow('Emitted SDK Wasm does not match the admitted SHA-256 and raw size');
-  });
-
-  it('rejects an omitted required Wasm reference even when the asset was emitted', () => {
-    const { distDir, manifest } = fixture();
-    manifest['_bootstrap.js'].assets = [];
-    expect(() => evaluateBundleBudgets({ manifest, budgets: budgets(), distDir }))
-      .toThrow('Required SDK Wasm is missing from the entry startup closure');
-  });
-
-  it.each(['missing', 'duplicate'])('rejects %s emitted Wasm assets', (mode) => {
-    const { distDir, manifest } = fixture();
-    if (mode === 'missing') rmSync(join(distDir, wasmFile));
-    else writeFileSync(join(distDir, '_assets/extra.wasm'), wasmBytes);
-    expect(() => evaluateBundleBudgets({ manifest, budgets: budgets(), distDir }))
-      .toThrow('Expected exactly one emitted SDK Wasm asset');
-  });
-
-  it('rejects a Wasm misclassified as CSS and noncanonical asset aliases', () => {
+  it('rejects non-CSS assets misclassified as CSS and noncanonical asset aliases', () => {
     const { distDir, manifest } = fixture();
     manifest['index.html'].css.push(wasmFile);
     expect(() => evaluateBundleBudgets({ manifest, budgets: budgets(), distDir }))
@@ -251,15 +192,13 @@ describe('bundle budget checker', () => {
       .toThrow('Manifest asset path must be a canonical relative path');
   });
 
-  it('requires the new complete budget schema with valid immutable Wasm pins', () => {
+  it('requires the current complete budget schema and rejects retired Wasm budgets', () => {
     expect(() => validateBundleBudgets(budgets({ schema_version: 1 })))
       .toThrow('Unsupported bundle budget schema');
     expect(() => validateBundleBudgets(budgets({ entry_startup_gzip_bytes: {} })))
-      .toThrow('Every entry must have both a non-Wasm and total startup budget');
-    expect(() => validateBundleBudgets(budgets({ sdk_wasm: { ...budgets().sdk_wasm, sha256: 'wrong' } })))
-      .toThrow('sdk_wasm must pin the admitted SDK Wasm SHA-256');
-    expect(() => validateBundleBudgets(budgets({ sdk_wasm: { ...budgets().sdk_wasm, max_raw_bytes: 0 } })))
-      .toThrow('sdk_wasm.max_raw_bytes must be a positive integer');
+      .toThrow('Every entry must have both an entry and total startup budget');
+    expect(() => validateBundleBudgets(budgets({ sdk_wasm: {} })))
+      .toThrow('Wasm artifacts are prohibited; remove the retired sdk_wasm budget');
   });
 
   it('reports independent route and chunk regressions', () => {

@@ -86,7 +86,7 @@ describe('DomainDetails', () => {
         data: {
           status: SUCCESSFUL_FETCHING,
           data: {
-            pagination: { limit: 10, next_cursor: null, has_more: false },
+            nextCursor: null,
             items: [],
           },
         },
@@ -97,7 +97,7 @@ describe('DomainDetails', () => {
         data: {
           status: SUCCESSFUL_FETCHING,
           data: {
-            pagination: { limit: 10, next_cursor: null, has_more: false },
+            nextCursor: null,
             items: [],
           },
         },
@@ -108,7 +108,7 @@ describe('DomainDetails', () => {
         data: {
           status: SUCCESSFUL_FETCHING,
           data: {
-            pagination: { limit: 10, next_cursor: null, has_more: false },
+            nextCursor: null,
             items: [],
           },
         },

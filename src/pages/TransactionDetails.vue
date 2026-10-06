@@ -58,7 +58,7 @@ const transaction = computed(() =>
 );
 const isSmartContractExecutable = computed(() => {
   const executable = transaction.value?.executable;
-  return executable === 'Wasm' || executable === 'Ivm' || executable === 'IvmProved' || executable === 'ContractCall';
+  return executable === 'Ivm' || executable === 'IvmProved' || executable === 'ContractCall';
 });
 
 function hasOpaqueErrorTag(message: string): boolean {

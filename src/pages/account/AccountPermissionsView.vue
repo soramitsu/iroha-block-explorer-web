@@ -7,26 +7,26 @@ import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
-import { useListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
+import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
 
 const props = defineProps<{
   accountId: string
 }>();
 
-const { page, pageSize } = useListRouteQuery({
-  pageKey: 'permissions_page',
-  pageSizeKey: 'permissions_per_page',
+const { cursor, limit } = useCursorListRouteQuery({
+  cursorKey: 'permissions_cursor',
+  limitKey: 'permissions_limit',
 });
 
 const permissionsResource = setupAsyncData(() =>
   http.fetchAccountPermissions(props.accountId, {
-    page: page.value,
-    per_page: pageSize.value,
+    cursor: cursor.value,
+    limit: limit.value,
   })
 );
 
 watch(
-  [() => props.accountId, page, pageSize],
+  [() => props.accountId, cursor, limit],
   () => {
     permissionsResource.refetch();
   }
@@ -38,7 +38,6 @@ const response = computed(() =>
   apiResult.value?.status === SUCCESSFUL_FETCHING ? apiResult.value.data : null
 );
 const permissions = computed(() => response.value?.items ?? []);
-const totalItems = computed(() => response.value?.total ?? 0);
 </script>
 
 <template>
@@ -121,10 +120,11 @@ const totalItems = computed(() => response.value?.total ?? 0);
 
         <BaseTable
           v-else
-          v-model:page="page"
-          v-model:page-size="pageSize"
+          v-model:cursor="cursor"
+          v-model:page-size="limit"
+          pagination-mode="cursor"
           :loading="permissionsResource.isLoading"
-          :total="totalItems"
+          :cursor-pagination="response"
           :items="permissions"
           container-class="account-permissions__rows"
           :breakpoint="760"

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { ToriiBrowserStreamGapError } from '@iroha/iroha-js/torii-browser';
+import { ToriiStreamGapError } from '@iroha/iroha-js/torii-browser';
 import SmartContractsPage from './SmartContractsPage.vue';
 import { i18n } from '@/shared/lib/localization';
 
@@ -121,7 +121,7 @@ const BaseButtonStub = {
 };
 
 function emptyList() {
-  return { status: 'ok', data: { items: [], total: 0, has_more: false, count_mode: 'exact' } };
+  return { status: 'ok', data: { items: [], nextCursor: null } };
 }
 
 function deploymentInstruction(hash = '0xdeploy') {
@@ -173,7 +173,7 @@ beforeEach(() => {
   apiState.instructions = {
     status: 'ok',
     data: {
-      pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+      nextCursor: null,
       items: [deploymentInstruction()],
     },
   };
@@ -246,7 +246,7 @@ describe('SmartContractsPage route-backed views', () => {
       result_ok: 'false',
     });
     expect(apiMocks.fetchContractActivity).toHaveBeenLastCalledWith(expect.objectContaining({
-      page: 1, per_page: 10,
+      cursor: null, limit: 10,
       authority: accountAlias,
       contract_entrypoint: 'swap',
       result_ok: false,
@@ -268,9 +268,7 @@ describe('SmartContractsPage route-backed views', () => {
           contract_payload: { amount_in: 10, minimum_out: 9 },
           fee_payment: { payer: 'authority' },
         }],
-        total: 1,
-        has_more: false,
-        count_mode: 'exact',
+        nextCursor: null,
       },
     };
     const { wrapper } = await factory({ tab: 'activity', contract_entrypoint: 'swap' });
@@ -294,7 +292,7 @@ describe('SmartContractsPage route-backed views', () => {
   it('sends every event-history query filter and renders semantic event links', async () => {
     apiState.events = {
       status: 'ok',
-      data: { items: [contractEvent()], total: 1, has_more: false, count_mode: 'exact' },
+      data: { items: [contractEvent()], nextCursor: null },
     };
     const { wrapper } = await factory({
       tab: 'events',
@@ -330,11 +328,11 @@ describe('SmartContractsPage live events', () => {
   it('marks a typed gap stale and waits for an explicit history reload before opening another stream', async () => {
     apiState.events = {
       status: 'ok',
-      data: { items: [contractEvent()], total: 1, has_more: false, count_mode: 'exact' },
+      data: { items: [contractEvent()], nextCursor: null },
     };
     apiState.streamImplementation = () => (async function* () {
       yield* [];
-      throw new ToriiBrowserStreamGapError('events were lost', {
+      throw new ToriiStreamGapError('events were lost', {
         code: 'stream_lagged',
         droppedMessages: 4,
         replayAvailable: false,
@@ -360,7 +358,7 @@ describe('SmartContractsPage live events', () => {
   it('shows decoded live events and forwards an explicit stop to the AbortSignal', async () => {
     apiState.events = {
       status: 'ok',
-      data: { items: [contractEvent()], total: 1, has_more: false, count_mode: 'exact' },
+      data: { items: [contractEvent()], nextCursor: null },
     };
     let observedSignal: AbortSignal | undefined;
     apiState.streamImplementation = (_filters, signal) => (async function* () {

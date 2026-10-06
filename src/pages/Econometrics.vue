@@ -140,7 +140,6 @@ interface InstructionScanProgress {
 
 interface InstructionScanMeta extends InstructionScanProgress {
   endedByPagination: boolean
-  snapshot: HistoryScanCursor['snapshot']
 }
 
 const assetDefinitionRowKey = (item: { id: string }) => item.id;
@@ -244,7 +243,7 @@ const assetDefinitionsScope = useParamScope(
 const isAssetDefinitionsLoading = computed(() => !!assetDefinitionsScope.value?.expose.isLoading);
 const assetDefinitionsPagination = computed(() =>
   assetDefinitionsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? assetDefinitionsScope.value.expose.data.data.pagination
+    ? assetDefinitionsScope.value.expose.data.data
     : null
 );
 const assetDefinitions = computed(() =>
@@ -406,7 +405,7 @@ async function fetchAssetHolders(
       throw new Error(t('econometrics.fetchError'));
     }
 
-    const { items, pagination } = res.data;
+    const { items, nextCursor } = res.data;
     for (const item of items) {
       if (holders.length >= opts.maxItems) {
         truncated = true;
@@ -418,11 +417,10 @@ async function fetchAssetHolders(
       state.holdersFetched = holders.length;
       state.holdersTotal = null;
     }
-    if (!pagination.has_more) {
+    if (nextCursor === null) {
       exhausted = true;
       continue;
     }
-    const nextCursor = pagination.next_cursor;
     if (nextCursor === null || visitedCursors.has(nextCursor)) {
       throw new Error(t('econometrics.fetchError'));
     }
@@ -438,6 +436,7 @@ async function scanInstructionsByKind(args: {
   kind: InstructionScanKind
   perPage: number
   maxItems: number
+  maxBlockHeight?: number
   cutoffMs: number
   localNonce: number
   onScanned?: (value: number) => void
@@ -453,9 +452,10 @@ async function scanInstructionsByKind(args: {
     if (args.localNonce !== runNonce) break;
     const response = await http.fetchInstructions({
       cursor: cursor.nextCursor, limit: args.perPage, kind: args.kind, transaction_status: 'Committed',
+      ...(args.maxBlockHeight === undefined ? {} : { max_block_height: args.maxBlockHeight }),
     });
     if (response.status !== SUCCESSFUL_FETCHING) throw new Error(t('econometrics.fetchError'));
-    const continuation = advanceHistoryScanCursor(cursor, response.data.pagination);
+    const continuation = advanceHistoryScanCursor(cursor, response.data);
     const scannedBeforePage = progress.scanned;
     const shouldStop = processInstructionScanPage(args, response.data.items, progress);
     endedByPagination = continuation.nextCursor === null &&
@@ -464,7 +464,7 @@ async function scanInstructionsByKind(args: {
     if (shouldStop || endedByPagination) break;
   }
 
-  return { ...progress, endedByPagination, snapshot: cursor.snapshot };
+  return { ...progress, endedByPagination };
 }
 
 function processInstructionScanPage(
@@ -719,6 +719,7 @@ function updateIssuanceSeries(
 
 async function scanIssuanceKind(args: {
   kind: 'Mint' | 'Burn'
+  maxBlockHeight: number
   definitionId: string
   cutoffMs: number
   localNonce: number
@@ -729,6 +730,7 @@ async function scanIssuanceKind(args: {
     kind: args.kind,
     perPage: 100,
     maxItems: maxIssuanceToScan.value,
+    maxBlockHeight: args.maxBlockHeight,
     cutoffMs: args.cutoffMs,
     localNonce: args.localNonce,
     onScanned: (value) => {
@@ -782,16 +784,17 @@ function finalizeIssuanceWindows(
 }
 
 async function fetchIssuance(definitionId: string, nowMs: number, localNonce: number) {
+  const tip = await http.fetchBlocks({ limit: 1 });
+  if (tip.status !== SUCCESSFUL_FETCHING || tip.data.items.length !== 1) {
+    throw new Error('A committed block is required to bound issuance statistics.');
+  }
+  const maxBlockHeight = tip.data.items[0].height;
   const windowsAcc = initIssuanceWindows(nowMs);
   const series = initIssuanceSeries(nowMs);
   const [mintMeta, burnMeta] = await Promise.all([
-    scanIssuanceKind({ kind: 'Mint', definitionId, cutoffMs: series.startMs, localNonce, windowsAcc, series }),
-    scanIssuanceKind({ kind: 'Burn', definitionId, cutoffMs: series.startMs, localNonce, windowsAcc, series }),
+    scanIssuanceKind({ kind: 'Mint', maxBlockHeight, definitionId, cutoffMs: series.startMs, localNonce, windowsAcc, series }),
+    scanIssuanceKind({ kind: 'Burn', maxBlockHeight, definitionId, cutoffMs: series.startMs, localNonce, windowsAcc, series }),
   ]);
-  if (!mintMeta.snapshot || !burnMeta.snapshot ||
-      mintMeta.snapshot.height !== burnMeta.snapshot.height || mintMeta.snapshot.hash !== burnMeta.snapshot.hash) {
-    throw new Error('Issuance statistics span different ledger snapshots. Refresh to obtain a consistent result.');
-  }
   const buildWindows = () => finalizeIssuanceWindows(windowsAcc, { mintMeta, burnMeta, nowMs });
 
   return {

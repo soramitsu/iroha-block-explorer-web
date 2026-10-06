@@ -1,7 +1,6 @@
 import { fetchToriiWithDeadline } from './transport';
 import { appendSearchParams } from './query';
 import type {
-  PaginationParams,
   CursorPaginationParams,
   AssetSearchParams,
   AssetDefinitionId,
@@ -41,8 +40,7 @@ import type {
 } from '@/shared/api/schemas';
 import {
   Account,
-  CursorPaginated,
-  HistoryCursorPaginated,
+  CollectionPage,
   AssetIdSchema,
   ExplorerAsset,
   AssetDefinition,
@@ -60,8 +58,6 @@ import {
   OnlinePeers,
   PeerPropagation,
   NFT,
-  LatestTransactionsResponse,
-  LatestInstructionsResponse,
   PeerMetrics,
   RWA,
   SorafsPinRegistryResponse,
@@ -103,8 +99,7 @@ import {
   ContractActivityResponse,
   ContractEvent,
   ContractEventResponse,
-  LedgerStateRoot,
-  LedgerStateProof,
+  StateFinalityResponse,
   AccountPermissionsResponse,
   AccountHistoryResponse,
   MultisigSpecResponse,
@@ -116,10 +111,10 @@ import type { ZodType } from 'zod/v4';
 import type { ErrorResponse } from '@/shared/utils/transform-error-response';
 import { transformErrorResponse } from '@/shared/utils/transform-error-response';
 import type { SuccessfulFetching } from '@/shared/api/consts';
-import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
+import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR, NOT_FOUND } from '@/shared/api/consts';
 import { getRuntimeConfig } from '@/shared/runtime-config';
 import { normalizeAccountIdLiteral, normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
-import { ToriiBrowserClient, ToriiBrowserHttpError, ToriiBrowserStreamGapError } from '@iroha/iroha-js/torii-browser';
+import { ToriiBrowserClient, ToriiHttpError, ToriiStreamGapError, field, type Filter, type ListQueryInput } from '@iroha/iroha-js/torii-browser';
 import { NetworkId } from '@iroha/iroha-js/connect-browser';
 import type {
   ToriiBlockProofs,
@@ -128,7 +123,7 @@ import type {
   ToriiSseEvent,
 } from '@iroha/iroha-js/torii-browser';
 export { appendSearchParams } from './query';
-export { ToriiBrowserStreamGapError };
+export { ToriiStreamGapError };
 
 const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim();
 const defaultOrigin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -750,77 +745,43 @@ function normalizeAssetIdForApi(value: AssetId): string {
   return `${normalized.slice(0, -scope[0].length)}#dataspace:${dataspace}`;
 }
 
-function normalizeAccountQueryParams(params?: Record<string, any>): Record<string, any> | undefined {
-  if (!params) return params;
-
-  const normalized = { ...params };
-  for (const key of ['owned_by', 'authority', 'account']) {
-    if (Object.hasOwn(params, key)) normalized[key] = normalizeAccountSelectorForApi(params[key]);
+/** Express active resource selectors through the SDK's canonical filter AST. */
+function collectionQuery(
+  params: (CursorPaginationParams & { max_block_height?: number }) | undefined,
+  selectors: Record<string, string | number | boolean | undefined> = {}
+): ListQueryInput {
+  if (params?.limit !== undefined && (!Number.isInteger(params.limit) || params.limit < 1 || params.limit > 100)) {
+    throw new RangeError('Explorer limit must be an integer in 1..100');
   }
-  return normalized;
-}
-
-function toLimitOffsetParams(params?: PaginationParams): { limit?: number; offset?: number } {
-  if (!params) return {};
+  let filter: Filter | undefined;
+  for (const [name, value] of Object.entries(selectors)) {
+    if (value === undefined || value === '') continue;
+    const predicate = field(name).eq(value);
+    filter = filter ? filter.and(predicate) : predicate;
+  }
+  if (params?.max_block_height !== undefined) {
+    const bound = field('block').lte(params.max_block_height);
+    filter = filter ? filter.and(bound) : bound;
+  }
   return {
-    limit: params.per_page,
-    offset: Math.max(0, params.page - 1) * params.per_page,
+    ...(params?.cursor === undefined || params.cursor === null ? {} : { cursor: params.cursor }),
+    ...(params?.limit === undefined ? {} : { limit: params.limit }),
+    ...(filter ? { filter } : {}),
   };
 }
 
-interface ExplorerCursorSdkParams {
-  cursor?: string;
-  limit?: number;
-}
-
-/** Parse one SDK-backed Torii cursor page without synthesizing numbered-page metadata. */
-async function fetchExplorerCursorPage<T>(
-  params: { cursor?: string | null; limit?: number } | undefined,
-  options: {
-    itemSchema: ZodType<T>;
-    request: (client: ToriiBrowserClient, pagination: ExplorerCursorSdkParams) => Promise<unknown>;
-  }
-): Promise<ResultWithStatus<CursorPaginated<T>>> {
-  const cursor = params?.cursor ?? undefined;
-  const limit = params?.limit;
-  const pagination: ExplorerCursorSdkParams = {
-    ...(cursor === undefined ? {} : { cursor }),
-    ...(limit === undefined ? {} : { limit }),
-  };
-  const response = await parseToriiSdkResult(
-    (client) => options.request(client, pagination),
-    CursorPaginated(options.itemSchema)
-  );
-  if (response.status !== SUCCESSFUL_FETCHING) {
-    return response;
-  }
-
-  const payload = response.data;
-  if (limit !== undefined && payload.pagination.limit !== limit) {
-    throw new TypeError('Explorer response limit must match the requested limit');
-  }
-  if (cursor !== undefined && payload.pagination.next_cursor === cursor) {
-    throw new TypeError('Explorer cursor did not advance');
-  }
-  return { status: SUCCESSFUL_FETCHING, data: payload };
-}
-
-/** Current history pages bind opaque cursors to one immutable ledger snapshot. */
-async function fetchExplorerHistoryPage<T>(
+/** Validate the SDK page and refuse a repeated continuation without inventing totals. */
+async function fetchCollectionPage<T>(
   params: CursorPaginationParams | undefined,
   itemSchema: ZodType<T>,
-  request: (client: ToriiBrowserClient, pagination: ExplorerCursorSdkParams) => Promise<unknown>
-): Promise<ResultWithStatus<HistoryCursorPaginated<T>>> {
-  const cursor = params?.cursor ?? undefined;
-  const limit = params?.limit;
-  const response = await parseToriiSdkResult(
-    (client) => request(client, { cursor, limit }), HistoryCursorPaginated(itemSchema)
-  );
+  request: (client: ToriiBrowserClient) => Promise<unknown>
+): Promise<ResultWithStatus<CollectionPage<T>>> {
+  const response = await parseToriiSdkResult(request, CollectionPage(itemSchema));
   if (response.status === SUCCESSFUL_FETCHING) {
-    if (limit !== undefined && response.data.pagination.limit !== limit) {
-      throw new TypeError('Explorer response limit must match the requested limit');
+    if (params?.limit !== undefined && response.data.items.length > params.limit) {
+      throw new TypeError('Collection response exceeds the requested limit');
     }
-    if (cursor !== undefined && response.data.pagination.next_cursor === cursor) {
+    if (typeof params?.cursor === 'string' && response.data.nextCursor === params.cursor) {
       throw new TypeError('Explorer cursor did not advance');
     }
   }
@@ -968,8 +929,8 @@ async function parseToriiSdkResult<T>(
     const payload = await request(toriiSdkClient());
     return { status: SUCCESSFUL_FETCHING, data: schema.parse(payload) };
   } catch (error) {
-    if (error instanceof ToriiBrowserHttpError) {
-      return await transformErrorResponse(error.response);
+    if (error instanceof ToriiHttpError) {
+      return error.status === 404 ? { status: NOT_FOUND } : { status: UNKNOWN_ERROR, error };
     }
     throw error;
   }
@@ -983,29 +944,23 @@ async function parsePermissionAwareToriiSdkResult<T>(
     const payload = await request(toriiSdkClient());
     return { status: SUCCESSFUL_FETCHING, data: schema.parse(payload) };
   } catch (error) {
-    if (error instanceof ToriiBrowserHttpError) {
+    if (error instanceof ToriiHttpError) {
       if (error.status === 401 || error.status === 403) {
         return {
           status: 'permission-denied',
           error: new Error(error.bodyText || `Torii denied this read with status ${error.status}`),
         };
       }
-      return await transformErrorResponse(error.response);
+      return error.status === 404 ? { status: NOT_FOUND } : { status: UNKNOWN_ERROR, error };
     }
     throw error;
   }
 }
 
-export async function fetchAccounts(params?: AccountSearchParams): Promise<ResultWithStatus<CursorPaginated<Account>>> {
-  return await fetchExplorerCursorPage(params, {
-    itemSchema: Account,
-    request: (client, pagination) =>
-      client.listExplorerAccounts({
-        ...pagination,
-        domain: params?.domain,
-        withAsset: params?.with_asset?.toString(),
-      }),
-  });
+export async function fetchAccounts(params?: AccountSearchParams): Promise<ResultWithStatus<CollectionPage<Account>>> {
+  return await fetchCollectionPage(params, Account, (client) =>
+    client.explorerAccounts.list(collectionQuery(params, { domain: params?.domain, with_asset: params?.with_asset?.toString() }))
+  );
 }
 
 export async function fetchAccount(id: string): Promise<ResultWithStatus<Account>> {
@@ -1013,9 +968,9 @@ export async function fetchAccount(id: string): Promise<ResultWithStatus<Account
   return await parseToriiSdkResult((client) => client.getExplorerAccount(normalizedId), Account);
 }
 
-export type AccountPermissionsSearchParams = PaginationParams;
+export type AccountPermissionsSearchParams = CursorPaginationParams;
 
-export interface AccountHistorySearchParams extends PaginationParams {
+export interface AccountHistorySearchParams extends CursorPaginationParams {
   asset_id?: string;
 }
 
@@ -1023,13 +978,8 @@ export async function fetchAccountPermissions(
   id: string,
   params: AccountPermissionsSearchParams
 ): Promise<PermissionAwareResult<AccountPermissionsResponse>> {
-  const normalizedId = normalizeAccountSelectorForApi(id);
   return await parsePermissionAwareToriiSdkResult(
-    (client) =>
-      client.listAccountPermissions(normalizedId, {
-        ...toLimitOffsetParams(params),
-        countMode: 'exact',
-      }),
+    (client) => client.accountPermissions(normalizeAccountSelectorForApi(id)).list(collectionQuery(params)),
     AccountPermissionsResponse
   );
 }
@@ -1038,14 +988,8 @@ export async function fetchAccountHistory(
   id: string,
   params: AccountHistorySearchParams
 ): Promise<PermissionAwareResult<AccountHistoryResponse>> {
-  const normalizedId = normalizeAccountSelectorForApi(id);
   return await parsePermissionAwareToriiSdkResult(
-    (client) =>
-      client.listAccountHistory(normalizedId, {
-        ...toLimitOffsetParams(params),
-        countMode: 'exact',
-        assetId: params.asset_id?.trim() || undefined,
-      }),
+    (client) => client.accountHistory(normalizeAccountSelectorForApi(id)).list(collectionQuery(params, { asset_id: params.asset_id })),
     AccountHistoryResponse
   );
 }
@@ -1094,19 +1038,10 @@ export async function fetchMultisigProposals(
   );
 }
 
-export async function fetchAssets(
-  params?: AssetSearchParams
-): Promise<ResultWithStatus<CursorPaginated<ExplorerAsset>>> {
-  return await fetchExplorerCursorPage(params, {
-    itemSchema: ExplorerAsset,
-    request: (client, pagination) =>
-      client.listExplorerAssets({
-        ...pagination,
-        ownedBy: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
-        definition: params?.definition?.toString(),
-        assetId: params?.asset_id === undefined ? undefined : normalizeAssetIdForApi(params.asset_id),
-      }),
-  });
+export async function fetchAssets(params?: AssetSearchParams): Promise<ResultWithStatus<CollectionPage<ExplorerAsset>>> {
+  return await fetchCollectionPage(params, ExplorerAsset, (client) =>
+    client.explorerAssets.list(collectionQuery(params, { account_id: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined, definition_id: params?.definition?.toString(), id: params?.asset_id === undefined ? undefined : normalizeAssetIdForApi(params.asset_id) }))
+  );
 }
 
 export async function fetchAsset(id: AssetId): Promise<ResultWithStatus<ExplorerAsset>> {
@@ -1118,18 +1053,10 @@ export async function fetchAsset(id: AssetId): Promise<ResultWithStatus<Explorer
   return { status: SUCCESSFUL_FETCHING, data: ExplorerAsset.parse(response.data) };
 }
 
-export async function fetchAssetDefinitions(
-  params?: AssetDefinitionSearchParams
-): Promise<ResultWithStatus<CursorPaginated<ExplorerAssetDefinition>>> {
-  return await fetchExplorerCursorPage(params, {
-    itemSchema: ExplorerAssetDefinition,
-    request: (client, pagination) =>
-      client.listExplorerAssetDefinitions({
-        ...pagination,
-        owningDomain: params?.domain,
-        ownedBy: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
-      }),
-  });
+export async function fetchAssetDefinitions(params?: AssetDefinitionSearchParams): Promise<ResultWithStatus<CollectionPage<ExplorerAssetDefinition>>> {
+  return await fetchCollectionPage(params, ExplorerAssetDefinition, (client) =>
+    client.explorerAssetDefinitions.list(collectionQuery(params, { owning_domain: params?.domain, owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined }))
+  );
 }
 
 export async function fetchAssetDefinition(id: AssetDefinitionId): Promise<ResultWithStatus<AssetDefinition>> {
@@ -1154,55 +1081,40 @@ export async function fetchAssetDefinitionSnapshot(
   );
 }
 
-export async function fetchNFTs(params?: NFTsSearchParams): Promise<ResultWithStatus<CursorPaginated<NFT>>> {
-  return await fetchExplorerCursorPage(params, {
-    itemSchema: NFT,
-    request: (client, pagination) =>
-      client.listExplorerNfts({
-        ...pagination,
-        domain: params?.domain,
-        ownedBy: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
-      }),
-  });
+export async function fetchNFTs(params?: NFTsSearchParams): Promise<ResultWithStatus<CollectionPage<NFT>>> {
+  return await fetchCollectionPage(params, NFT, (client) =>
+    client.explorerNfts.list(collectionQuery(params, { domain: params?.domain, owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined }))
+  );
 }
 
 export async function fetchNFTById(id: NftId): Promise<ResultWithStatus<NFT>> {
   return await parseToriiSdkResult((client) => client.getExplorerNft(id.toString()), NFT);
 }
 
-export async function fetchRwas(params?: RWASearchParams): Promise<ResultWithStatus<CursorPaginated<RWA>>> {
-  return await fetchExplorerCursorPage(params, {
-    itemSchema: RWA,
-    request: (client, pagination) =>
-      client.listExplorerRwas({
-        ...pagination,
-        domain: params?.domain,
-        ownedBy: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
-      }),
-  });
+export async function fetchRwas(params?: RWASearchParams): Promise<ResultWithStatus<CollectionPage<RWA>>> {
+  return await fetchCollectionPage(params, RWA, (client) =>
+    client.explorerRwas.list(collectionQuery(params, { domain: params?.domain, owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined }))
+  );
 }
 
 export async function fetchRwaById(id: string): Promise<ResultWithStatus<RWA>> {
   return await parseToriiSdkResult((client) => client.getExplorerRwa(id), RWA);
 }
 
-export async function fetchDomains(params?: DomainSearchParams): Promise<ResultWithStatus<CursorPaginated<Domain>>> {
-  return await fetchExplorerCursorPage(params, {
-    itemSchema: Domain,
-    request: (client, pagination) =>
-      client.listExplorerDomains({
-        ...pagination,
-        ownedBy: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
-      }),
-  });
+export async function fetchDomains(params?: DomainSearchParams): Promise<ResultWithStatus<CollectionPage<Domain>>> {
+  return await fetchCollectionPage(params, Domain, (client) =>
+    client.explorerDomains.list(collectionQuery(params, { owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined }))
+  );
 }
 
 export async function fetchDomain(id: string): Promise<ResultWithStatus<Domain>> {
   return await parseToriiSdkResult((client) => client.getExplorerDomain(id), Domain);
 }
 
-export async function fetchBlocks(params?: CursorPaginationParams): Promise<ResultWithStatus<HistoryCursorPaginated<Block>>> {
-  return await fetchExplorerHistoryPage(params, Block, (client, pagination) => client.listExplorerBlocks(pagination));
+export async function fetchBlocks(params?: CursorPaginationParams): Promise<ResultWithStatus<CollectionPage<Block>>> {
+  return await fetchCollectionPage(params, Block, (client) =>
+    client.explorerBlocks.list(collectionQuery(params))
+  );
 }
 
 export async function fetchBlock(heightOrHash: number | string): Promise<ResultWithStatus<Block>> {
@@ -1213,8 +1125,8 @@ export interface TransactionBlockEvidence {
   proof: ToriiBlockProofs;
   /**
    * Browser builds intentionally do not self-anchor a proof response. The
-   * authenticated Rust verifier is unavailable until a digest-pinned WASM
-   * verifier ships, so callers must treat Merkle/finality verification as
+   * authenticated native verifier is unavailable in the browser, so callers
+   * must treat Merkle/finality verification as
    * unavailable rather than copying proof fields into a trusted anchor.
    */
   pathVerification: ToriiBlockProofVerification | null;
@@ -1234,19 +1146,35 @@ export async function fetchLedgerBlockProof(
       },
     };
   } catch (error) {
-    if (error instanceof ToriiBrowserHttpError) {
-      return await transformErrorResponse(error.response);
+    if (error instanceof ToriiHttpError) {
+      if (error.status === 404) return { status: NOT_FOUND };
+      // This binary proof route can return a Norito error body. Keep HTTP and
+      // rejection metadata without rendering undecoded bytes as message text.
+      return {
+        status: UNKNOWN_ERROR,
+        error: new ToriiHttpError({
+          status: error.status,
+          expected: error.expected,
+          code: error.code,
+          rejectCode: error.rejectCode,
+          errorMessage: error.status === 401
+            ? 'Block evidence requires authenticated access.'
+            : error.status === 403
+              ? 'Torii denied access to block evidence.'
+              : 'Block evidence request failed.',
+        }),
+      };
     }
     throw error;
   }
 }
 
-export async function fetchLedgerStateRoot(blockHeight: number): Promise<ResultWithStatus<LedgerStateRoot>> {
-  return await parseToriiSdkResult((client) => client.getLedgerStateRoot(blockHeight), LedgerStateRoot);
+export async function fetchLedgerStateRoot(blockHeight: number): Promise<ResultWithStatus<StateFinalityResponse>> {
+  return await parseToriiSdkResult((client) => client.getLedgerStateRoot(blockHeight), StateFinalityResponse);
 }
 
-export async function fetchLedgerStateProof(blockHeight: number): Promise<ResultWithStatus<LedgerStateProof>> {
-  return await parseToriiSdkResult((client) => client.getLedgerStateProof(blockHeight), LedgerStateProof);
+export async function fetchLedgerStateProof(blockHeight: number): Promise<ResultWithStatus<StateFinalityResponse>> {
+  return await parseToriiSdkResult((client) => client.getLedgerStateProof(blockHeight), StateFinalityResponse);
 }
 
 export async function fetchNetworkMetrics(): Promise<ResultWithStatus<NetworkMetrics>> {
@@ -1375,39 +1303,15 @@ export async function fetchTelemetryPropagation(): Promise<ResultWithStatus<Peer
   return await transformErrorResponse(res.response);
 }
 
-export async function fetchTransactions(
-  params?: TransactionSearchParams
-): Promise<ResultWithStatus<HistoryCursorPaginated<Transaction>>> {
-  return await fetchExplorerHistoryPage(params, Transaction,
-    (client, pagination) =>
-      client.listExplorerTransactions(
-        normalizeAccountQueryParams({
-          ...pagination,
-          authority: params?.authority,
-          block: params?.block,
-          status: params?.status?.toLowerCase(),
-          asset_id: params?.asset_id?.toString(),
-        })
-      )
+export async function fetchTransactions(params?: TransactionSearchParams): Promise<ResultWithStatus<CollectionPage<Transaction>>> {
+  return await fetchCollectionPage(params, Transaction, (client) =>
+    client.explorerTransactions.list(collectionQuery(params, { authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, block: params?.block, status: params?.status, asset_id: params?.asset_id?.toString() }))
   );
 }
 
-export async function fetchLatestTransactions(
-  params?: TransactionSearchParams
-): Promise<ResultWithStatus<LatestTransactionsResponse>> {
-  return await parseToriiSdkResult(
-    (client) =>
-      client.listLatestExplorerTransactions(
-        normalizeAccountQueryParams({
-          cursor: params?.cursor ?? undefined,
-          limit: params?.limit,
-          authority: params?.authority,
-          block: params?.block,
-          status: params?.status?.toLowerCase(),
-          asset_id: params?.asset_id?.toString(),
-        })
-      ),
-    LatestTransactionsResponse
+export async function fetchLatestTransactions(params?: TransactionSearchParams): Promise<ResultWithStatus<CollectionPage<Transaction>>> {
+  return await fetchCollectionPage(params, Transaction, (client) =>
+    client.explorerLatestTransactions.list(collectionQuery(params, { authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, block: params?.block, status: params?.status, asset_id: params?.asset_id?.toString() }))
   );
 }
 
@@ -1415,23 +1319,9 @@ export async function fetchTransaction(hash: string): Promise<ResultWithStatus<D
   return await parseToriiSdkResult((client) => client.getExplorerTransaction(hash), DetailedTransaction);
 }
 
-export async function fetchInstructions(
-  params?: InstructionsSearchParams
-): Promise<ResultWithStatus<HistoryCursorPaginated<Instruction>>> {
-  return await fetchExplorerHistoryPage(params, Instruction,
-    (client, pagination) =>
-      client.listExplorerInstructions(
-        normalizeAccountQueryParams({
-          ...pagination,
-          account: params?.account,
-          authority: params?.authority,
-          kind: params?.kind,
-          transaction_hash: params?.transaction_hash,
-          transaction_status: params?.transaction_status?.toLowerCase(),
-          block: params?.block,
-          asset_id: params?.asset_id?.toString(),
-        })
-      )
+export async function fetchInstructions(params?: InstructionsSearchParams): Promise<ResultWithStatus<CollectionPage<Instruction>>> {
+  return await fetchCollectionPage(params, Instruction, (client) =>
+    client.explorerInstructions.list(collectionQuery(params, { account: normalizeAccountSelectorForApi(params?.account) ?? undefined, authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, kind: params?.kind, transaction_hash: params?.transaction_hash, transaction_status: params?.transaction_status, block: params?.block, asset_id: params?.asset_id?.toString() }))
   );
 }
 
@@ -1445,7 +1335,7 @@ export interface ContractActivityFilters {
   result_ok?: boolean;
 }
 
-export interface ContractActivitySearchParams extends PaginationParams, ContractActivityFilters {}
+export interface ContractActivitySearchParams extends CursorPaginationParams, ContractActivityFilters {}
 
 export interface ContractEventFilters {
   authority?: string;
@@ -1461,7 +1351,7 @@ export interface ContractEventFilters {
   result_ok?: boolean;
 }
 
-export interface ContractEventSearchParams extends PaginationParams, ContractEventFilters {}
+export interface ContractEventSearchParams extends CursorPaginationParams, ContractEventFilters {}
 
 function contractEventSdkOptions(params: ContractEventFilters) {
   return {
@@ -1479,38 +1369,29 @@ function contractEventSdkOptions(params: ContractEventFilters) {
   };
 }
 
-export async function fetchContractActivity(
-  params: ContractActivitySearchParams
-): Promise<ResultWithStatus<ContractActivityResponse>> {
-  return await parseToriiSdkResult(
-    (client) =>
-      client.listContractActivity({
-        ...toLimitOffsetParams(params),
-        countMode: 'exact',
-        authority: params.authority,
-        contractAddress: params.contract_address,
-        contractAlias: params.contract_alias,
-        contractEntrypoint: params.contract_entrypoint,
-        sinceTimestampMs: params.since_timestamp_ms,
-        untilTimestampMs: params.until_timestamp_ms,
-        resultOk: params.result_ok,
-      }),
-    ContractActivityResponse
-  );
+function contractCollectionQuery(params: CursorPaginationParams & ContractActivityFilters & Partial<ContractEventFilters>): ListQueryInput {
+  const query = collectionQuery(params, {
+    authority: params.authority, contract_address: params.contract_address,
+    contract_alias: params.contract_alias, contract_entrypoint: params.contract_entrypoint,
+    module: params.module, event_kind: params.event_kind, participants: params.participant,
+    asset_ids: params.asset_id, provenance: params.provenance, result_ok: params.result_ok,
+  });
+  let filter = query.filter as Filter | undefined;
+  for (const predicate of [
+    params.since_timestamp_ms === undefined ? undefined : field('timestamp_ms').gte(params.since_timestamp_ms),
+    params.until_timestamp_ms === undefined ? undefined : field('timestamp_ms').lte(params.until_timestamp_ms),
+  ]) {
+    if (predicate) filter = filter ? filter.and(predicate) : predicate;
+  }
+  return { ...query, ...(filter ? { filter } : {}) };
 }
 
-export async function fetchContractEvents(
-  params: ContractEventSearchParams
-): Promise<ResultWithStatus<ContractEventResponse>> {
-  return await parseToriiSdkResult(
-    (client) =>
-      client.listContractEvents({
-        ...toLimitOffsetParams(params),
-        countMode: 'exact',
-        ...contractEventSdkOptions(params),
-      }),
-    ContractEventResponse
-  );
+export async function fetchContractActivity(params: ContractActivitySearchParams): Promise<ResultWithStatus<ContractActivityResponse>> {
+  return await parseToriiSdkResult((client) => client.contractActivity.list(contractCollectionQuery(params)), ContractActivityResponse);
+}
+
+export async function fetchContractEvents(params: ContractEventSearchParams): Promise<ResultWithStatus<ContractEventResponse>> {
+  return await parseToriiSdkResult((client) => client.contractEvents.list(contractCollectionQuery(params)), ContractEventResponse);
 }
 
 export type ContractEventStreamMessage = Omit<ToriiSseEvent<unknown>, 'data'> & { data: ContractEvent };
@@ -1530,25 +1411,9 @@ export async function* streamContractEvents(
   }
 }
 
-export async function fetchLatestInstructions(
-  params?: InstructionsSearchParams
-): Promise<ResultWithStatus<LatestInstructionsResponse>> {
-  return await parseToriiSdkResult(
-    (client) =>
-      client.listLatestExplorerInstructions(
-        normalizeAccountQueryParams({
-          cursor: params?.cursor ?? undefined,
-          limit: params?.limit,
-          account: params?.account,
-          authority: params?.authority,
-          kind: params?.kind,
-          transaction_hash: params?.transaction_hash,
-          transaction_status: params?.transaction_status?.toLowerCase(),
-          block: params?.block,
-          asset_id: params?.asset_id?.toString(),
-        })
-      ),
-    LatestInstructionsResponse
+export async function fetchLatestInstructions(params?: InstructionsSearchParams): Promise<ResultWithStatus<CollectionPage<Instruction>>> {
+  return await fetchCollectionPage(params, Instruction, (client) =>
+    client.explorerLatestInstructions.list(collectionQuery(params, { account: normalizeAccountSelectorForApi(params?.account) ?? undefined, authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, kind: params?.kind, transaction_hash: params?.transaction_hash, transaction_status: params?.transaction_status, block: params?.block, asset_id: params?.asset_id?.toString() }))
   );
 }
 

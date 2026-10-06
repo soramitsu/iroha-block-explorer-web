@@ -87,7 +87,7 @@ const assets = computed(() =>
 );
 const assetsPagination = computed(() =>
   assetsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? assetsListScope.value.expose.data.data.pagination
+    ? assetsListScope.value.expose.data.data
     : null
 );
 const assetDefinitionRowKey = (item: AssetDefinition) => item.id.toString();
@@ -111,7 +111,7 @@ const NFTs = computed(() =>
 );
 const NFTsPagination = computed(() =>
   NFTsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? NFTsListScope.value.expose.data.data.pagination
+    ? NFTsListScope.value.expose.data.data
     : null
 );
 const nftRowKey = (item: NFT) => item.id.toString();
@@ -183,7 +183,7 @@ const accounts = computed(() =>
 );
 const accountsPagination = computed(() =>
   accountsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? accountsListScope.value.expose.data.data.pagination
+    ? accountsListScope.value.expose.data.data
     : null
 );
 const accountDisplayId = (item: Account) => getPreferredAccountId(item);

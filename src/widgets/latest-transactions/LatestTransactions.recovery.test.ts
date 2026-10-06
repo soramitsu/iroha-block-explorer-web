@@ -42,7 +42,7 @@ const transaction: Transaction = {
 };
 const snapshot = (items: Transaction[] = []) => ({
   status: 'ok',
-  data: { sampled_at: new Date('2026-09-12T00:00:01Z'), items },
+  data: { nextCursor: null, total: undefined, items },
 });
 const failure = () => ({ status: 'unknown-error', error: new TypeError('history unavailable') });
 const wrappers: Array<ReturnType<typeof mount>> = [];
@@ -99,6 +99,21 @@ describe('LatestTransactions authoritative snapshot recovery', () => {
     expect(stream.data.value).toBeNull();
     await vi.advanceTimersByTimeAsync(10_000);
     expect(mocks.fetchLatestTransactions).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows failed snapshots with a retry action that restores transaction rows', async () => {
+    mocks.fetchLatestTransactions.mockResolvedValueOnce(failure()).mockResolvedValueOnce(snapshot([transaction]));
+    const wrapper = render();
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toContain(i18n.global.t('transactions.unknownError'));
+    expect(wrapper.find('.latest-transactions__row').exists()).toBe(false);
+    await wrapper.get('[data-test="resource-retry"]').trigger('click');
+    await flushPromises();
+
+    expect(mocks.fetchLatestTransactions).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain(transaction.hash);
   });
 
   it('continues recovery while cached rows exist, then accepts an authoritative empty snapshot', async () => {

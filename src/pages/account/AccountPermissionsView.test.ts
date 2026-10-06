@@ -24,11 +24,11 @@ const BaseTableStub = defineComponent({
   name: 'BaseTable',
   props: {
     items: { type: Array, default: () => [] },
-    total: { type: Number, default: 0 },
+    cursorPagination: { type: Object, default: null },
   },
-  emits: ['update:page', 'update:page-size'],
+  emits: ['update:cursor', 'update:pageSize'],
   template: `
-    <div class="base-table-stub" :data-total="total">
+    <div class="base-table-stub" :data-next-cursor="cursorPagination?.nextCursor">
       <slot name="header" />
       <div v-for="item in items" :key="item.name" class="base-table-row">
         <slot name="row" :item="item" />
@@ -48,9 +48,8 @@ function permissionResponse(items: Record<string, unknown>[]) {
     status: 'ok',
     data: {
       items,
-      total: items.length,
-      has_more: false,
-      count_mode: 'exact',
+      total: undefined,
+      nextCursor: 'permissions-next',
     },
   };
 }
@@ -99,19 +98,30 @@ describe('AccountPermissionsView', () => {
       ])
     );
 
-    const wrapper = await factory({ permissions_page: '3', permissions_per_page: '50' });
+    const wrapper = await factory({ permissions_cursor: 'permissions-current', permissions_limit: '50' });
 
-    expect(apiMocks.fetchAccountPermissions).toHaveBeenCalledWith(ACCOUNT, { page: 3, per_page: 50 });
+    expect(apiMocks.fetchAccountPermissions).toHaveBeenCalledWith(ACCOUNT, { cursor: 'permissions-current', limit: 50 });
     expect(wrapper.text()).toContain('CanTransferAsset');
     expect(wrapper.text()).toContain('90071992547409931234567890.000000000000000001');
     expect(wrapper.text()).toContain('private-settlement');
-    expect(wrapper.get('.base-table-stub').attributes('data-total')).toBe('1');
+    expect(wrapper.get('.base-table-stub').attributes('data-next-cursor')).toBe('permissions-next');
+    expect(wrapper.getComponent(BaseTableStub).props('cursorPagination')?.total).toBeUndefined();
     expect(wrapper.get('[data-test="permissions-provenance-notice"]').text()).toContain(
       'does not provide per-entry provenance'
     );
     expect(wrapper.get('[data-test="permissions-provenance-notice"]').text()).toContain(
       'direct grants and permissions inherited from assigned roles'
     );
+  });
+
+  it('requests the opaque continuation returned by Torii', async () => {
+    apiMocks.fetchAccountPermissions.mockResolvedValue(permissionResponse([{ name: 'CanTransferAsset', payload: {} }]));
+    const wrapper = await factory();
+
+    wrapper.getComponent(BaseTableStub).vm.$emit('update:cursor', 'permissions-next');
+    await flushPromises();
+
+    expect(apiMocks.fetchAccountPermissions).toHaveBeenLastCalledWith(ACCOUNT, { cursor: 'permissions-next', limit: 10 });
   });
 
   it.each([

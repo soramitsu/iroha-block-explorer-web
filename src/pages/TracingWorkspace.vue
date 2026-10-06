@@ -808,7 +808,7 @@ async function ingestTransactionSeed(seedHash: string) {
       kind: 'Transfer',
     });
     if (response.status !== SUCCESSFUL_FETCHING) throw new Error(t('tracing.fetchError'));
-    cursor = advanceHistoryScanCursor(cursor, response.data.pagination);
+    cursor = advanceHistoryScanCursor(cursor, response.data);
     for (const instruction of response.data.items) {
       const traceEvents = instructionToTraceEvents(instruction);
       upsertTransactionStateFromInstruction(instruction, traceEvents);
@@ -875,7 +875,7 @@ async function scanCursor(cursor: TraceCursor): Promise<void> {
     return;
   }
   // Validate continuity before ingesting this page or advancing its checkpoint.
-  const continuation = advanceHistoryScanCursor(cursor, response.data.pagination);
+  const continuation = advanceHistoryScanCursor(cursor, response.data);
   state.error = '';
 
   for (const instruction of response.data.items) {
@@ -1081,7 +1081,7 @@ function applyBundle(bundle: TraceBundle) {
   cursors.value = bundle.cursors.map((cursor) => ({ ...cursor }));
   syncCursorSetsFromState();
   refreshGraphSnapshots();
-  state.latestBlock = Math.max(1, ...cursors.value.map((cursor) => cursor.snapshot?.height ?? 0), state.latestBlock);
+  state.latestBlock = Math.max(1, ...bundle.graph.events.map((event) => event.block), state.latestBlock);
   state.discoveredEvents = bundle.graph.events.length;
 
   seedDraft.type = bundle.seed.type;

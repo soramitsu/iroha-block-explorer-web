@@ -105,20 +105,14 @@ const tairaRuntimeConfig = {
 };
 // Synthetic release content exercises the real budget gate without using the
 // admitted production SDK owner or relaxing its separate artifact policy.
-const fixtureSdkWasmPath = '_assets/fixture-sdk-codec.wasm';
-const fixtureSdkWasmBytes = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
+const fixtureSdkModulePath = '_assets/fixture-sdk.js';
+const fixtureSdkModuleBytes = Buffer.from('export const fixture = true;\n');
 const fixtureBundleBudgets = {
-  schema_version: 2,
+  schema_version: 3,
   default_chunk_gzip_bytes: 1_000_000,
   chunk_gzip_bytes: {},
   entry_gzip_bytes: { 'index.html': 1_000_000 },
   entry_startup_gzip_bytes: { 'index.html': 1_000_000 },
-  sdk_wasm: {
-    sha256: createHash('sha256').update(fixtureSdkWasmBytes).digest('hex'),
-    raw_bytes: fixtureSdkWasmBytes.byteLength,
-    max_raw_bytes: 1024,
-    max_gzip_bytes: 1024,
-  },
   route_gzip_bytes: {},
 };
 const temporaryDirectories: string[] = [];
@@ -206,7 +200,7 @@ function writeDist(directory: string, marker: string) {
     `${JSON.stringify(tairaRuntimeConfig)}\n`
   );
   writeFileSync(path.join(directory, '_assets/app.js'), `globalThis.release = ${JSON.stringify(marker)};\n`);
-  writeFileSync(path.join(directory, fixtureSdkWasmPath), fixtureSdkWasmBytes);
+  writeFileSync(path.join(directory, fixtureSdkModulePath), fixtureSdkModuleBytes);
   writeFileSync(path.join(directory, '.vite/build.json'), `${JSON.stringify({ marker })}\n`);
   writeFileSync(
     path.join(directory, '.vite/manifest.json'),
@@ -215,7 +209,7 @@ function writeDist(directory: string, marker: string) {
         file: '_assets/app.js',
         isEntry: true,
         src: 'index.html',
-        assets: [fixtureSdkWasmPath],
+        assets: [fixtureSdkModulePath],
       },
     })}\n`
   );
@@ -413,7 +407,7 @@ describe('release manifest', () => {
     expect(first.release_id).toBe(releaseA);
     expect(first.files.map((file: { path: string }) => file.path)).toEqual([
       '_assets/app.js',
-      fixtureSdkWasmPath,
+      fixtureSdkModulePath,
       '.vite/build.json',
       '.vite/manifest.json',
       'config.json',

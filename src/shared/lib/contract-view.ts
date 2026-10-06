@@ -122,7 +122,7 @@ export function selectPrimaryContractViewInstruction(
     return left.instruction.index - right.instruction.index;
   });
 
-  if (executable === 'Ivm' || executable === 'IvmProved' || executable === 'Wasm') {
+  if (executable === 'Ivm' || executable === 'IvmProved') {
     return preferred[0]?.instruction ?? null;
   }
 

@@ -182,7 +182,7 @@ const scope = useParamScope(
 
 const isLoading = computed(() => scope.value?.expose.isLoading);
 const accountsPagination = computed(() =>
-  scope.value.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.pagination : null
+  scope.value.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data : null
 );
 const accounts = computed(() =>
   scope.value.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []

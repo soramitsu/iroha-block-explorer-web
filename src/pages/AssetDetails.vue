@@ -104,7 +104,7 @@ const assetsListScope = useParamScope(
 const isLoadingAssets = computed(() => !!assetsListScope.value?.expose.isLoading);
 const assetsPagination = computed(() =>
   assetsListScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? assetsListScope.value.expose.data.data.pagination
+    ? assetsListScope.value.expose.data.data
     : null
 );
 const assets = computed(() =>
@@ -115,8 +115,7 @@ const isInitialTerminalEmptyAssetsPage = computed(() =>
   && !holderFilter.value.trim()
   && !isLoadingAssets.value
   && assets.value.length === 0
-  && assetsPagination.value?.has_more === false
-  && assetsPagination.value.next_cursor === null
+  && assetsPagination.value?.nextCursor === null
 );
 
 const assetInstanceRowKey = (item: Asset) => item.id;

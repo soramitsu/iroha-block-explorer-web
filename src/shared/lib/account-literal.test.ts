@@ -11,8 +11,6 @@ import {
   normalizeLooseAccountLiteral,
   normalizeToriiAccountSelectorLiteral,
   parseAccountAliasLiteral,
-  renderCanonicalAccountIdLiteralFromPublicKeyLiteral,
-  renderCanonicalPublicKeyLiteralFromAccountIdLiteral,
 } from './account-literal';
 
 const SAMPLE_I105 =
@@ -26,11 +24,9 @@ const SAMPLE_I105_TEST_MODERN = 'testuﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃa
 const SAMPLE_ALIAS = 'Treasury@Banking.Retail';
 const SAMPLE_NORITO_ACCOUNT = 'norito:4e52543000000001';
 const SAMPLE_NORITO_ASSET = 'norito:4e52543000000002';
-const SAMPLE_ED25519_PUBLIC_KEY = 'ed01201509A611AD6D97B01D871E58ED00C8FD7C3917B6CA61A8C2833A19E000AAC2E4';
-const SAMPLE_SECP256K1_PUBLIC_KEY = 'e701210312273E8810581E58948D3FB8F9E8AD53AAA21492EBB8703915BBB565A21B7FCC';
 
 describe('account literal helpers', () => {
-  it('normalizes canonical halfwidth i105 account ids only', () => {
+  it('preserves exact halfwidth I105 selector text', () => {
     expect(normalizeAccountIdLiteral(SAMPLE_I105_MODERN)).toBe(SAMPLE_I105_MODERN);
     expect(normalizeEncodedAccountLiteral(`  ${SAMPLE_I105_MODERN}  `)).toBe(SAMPLE_I105_MODERN);
   });
@@ -55,8 +51,6 @@ describe('account literal helpers', () => {
     expect(normalizeAccountIdLiteral('sorauﾛ1NﾗOBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE')).toBeNull();
     expect(normalizeAccountIdLiteral('sorauﾛ1NﾗlBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE')).toBeNull();
     expect(normalizeAccountIdLiteral('sora1')).toBeNull();
-    expect(normalizeAccountIdLiteral(`${SAMPLE_I105_MODERN.slice(0, -1)}F`)).toBeNull();
-    expect(normalizeAccountIdLiteral(MIXED_TORSION_I105)).toBeNull();
     expect(normalizeAccountIdLiteral('alice@wonderland')).toBeNull();
     expect(normalizeAccountAliasLiteral('alice')).toBeNull();
     expect(normalizeAccountAliasLiteral('alice@wonder.land.ops')).toBeNull();
@@ -112,53 +106,17 @@ describe('account literal helpers', () => {
     expect(isEncodedAssetLiteral('usd#main')).toBe(false);
   });
 
-  it('renders canonical i105 ids from supported single-key public-key multihashes', () => {
-    const edBare = renderCanonicalAccountIdLiteralFromPublicKeyLiteral(SAMPLE_ED25519_PUBLIC_KEY);
-    const edPrefixed = renderCanonicalAccountIdLiteralFromPublicKeyLiteral(`ed25519:${SAMPLE_ED25519_PUBLIC_KEY}`);
-    const secp = renderCanonicalAccountIdLiteralFromPublicKeyLiteral(SAMPLE_SECP256K1_PUBLIC_KEY);
-
-    expect(edBare).not.toBeNull();
-    expect(edPrefixed).toBe(edBare);
-    expect(edBare?.startsWith('sora')).toBe(true);
-    expect(normalizeAccountIdLiteral(edBare!)).toBe(edBare);
-
-    expect(secp).not.toBeNull();
-    expect(secp?.startsWith('sora')).toBe(true);
-    expect(normalizeAccountIdLiteral(secp!)).toBe(secp);
-    expect(secp).not.toBe(edBare);
+  it('leaves cryptographic identity admission to Torii instead of invoking the unavailable native codec', () => {
+    const invalidChecksum = `${SAMPLE_I105_MODERN.slice(0, -1)}F`;
+    expect(normalizeAccountIdLiteral(invalidChecksum)).toBe(invalidChecksum);
+    expect(normalizeAccountIdLiteral(MIXED_TORSION_I105)).toBe(MIXED_TORSION_I105);
   });
 
-  it('decodes modern canonical i105 ids back into canonical public-key multihashes', () => {
-    const edAccountId = renderCanonicalAccountIdLiteralFromPublicKeyLiteral(SAMPLE_ED25519_PUBLIC_KEY);
-    const secpAccountId = renderCanonicalAccountIdLiteralFromPublicKeyLiteral(SAMPLE_SECP256K1_PUBLIC_KEY);
-
-    expect(renderCanonicalPublicKeyLiteralFromAccountIdLiteral(edAccountId!)).toBe(
-      SAMPLE_ED25519_PUBLIC_KEY.toUpperCase()
-    );
-    expect(renderCanonicalPublicKeyLiteralFromAccountIdLiteral(secpAccountId!)).toBe(
-      SAMPLE_SECP256K1_PUBLIC_KEY.toUpperCase()
-    );
-  });
-
-  it('rejects noncanonical or malformed i105 ids when decoding back into public keys', () => {
-    expect(renderCanonicalPublicKeyLiteralFromAccountIdLiteral(SAMPLE_I105)).toBeNull();
-    expect(renderCanonicalPublicKeyLiteralFromAccountIdLiteral(SAMPLE_I105_MODERN_FULLWIDTH)).toBeNull();
-    expect(renderCanonicalPublicKeyLiteralFromAccountIdLiteral(SAMPLE_ALIAS)).toBeNull();
-    expect(renderCanonicalPublicKeyLiteralFromAccountIdLiteral(`${SAMPLE_I105_MODERN}x`)).toBeNull();
-  });
-
-  it('rejects malformed or unsupported public-key multihashes when rendering i105 ids', () => {
-    expect(renderCanonicalAccountIdLiteralFromPublicKeyLiteral('')).toBeNull();
-    expect(renderCanonicalAccountIdLiteralFromPublicKeyLiteral('ed0120ZZ')).toBeNull();
-    expect(
-      renderCanonicalAccountIdLiteralFromPublicKeyLiteral(
-        'bls:ed01201509A611AD6D97B01D871E58ED00C8FD7C3917B6CA61A8C2833A19E000AAC2E4'
-      )
-    ).toBeNull();
-    expect(
-      renderCanonicalAccountIdLiteralFromPublicKeyLiteral(
-        'ea01201509A611AD6D97B01D871E58ED00C8FD7C3917B6CA61A8C2833A19E000AAC2E4'
-      )
-    ).toBeNull();
+  it('rejects whitespace, aliases and delimiters without rewriting request selectors', () => {
+    expect(normalizeAccountIdLiteral(` ${SAMPLE_I105_MODERN}`)).toBeNull();
+    expect(normalizeAccountIdLiteral(`${SAMPLE_I105_MODERN} `)).toBeNull();
+    expect(normalizeAccountIdLiteral(`${SAMPLE_I105_MODERN}\n`)).toBeNull();
+    expect(normalizeAccountIdLiteral(`${SAMPLE_I105_MODERN}@retail`)).toBeNull();
+    expect(normalizeAccountIdLiteral(`${SAMPLE_I105_MODERN}/extra`)).toBeNull();
   });
 });

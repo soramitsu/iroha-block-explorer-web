@@ -46,9 +46,11 @@ const BaseTableStub = defineComponent({
   props: {
     items: { type: Array, default: () => [] },
     rowKey: { type: Function, required: false, default: undefined },
+    error: { type: Object, default: null },
+    cursorPagination: { type: Object, default: null },
     reversed: { type: Boolean, required: false, default: false },
   },
-  emits: ['update:cursor', 'update:pageSize', 'click:row'],
+  emits: ['update:cursor', 'update:pageSize', 'click:row', 'retry'],
   template: `
     <div data-test="base-table">
       <slot name="header" />
@@ -171,7 +173,8 @@ describe('TransactionsTable', () => {
     fetchTransactionsMock.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
+        total: undefined,
         items: [baseTransaction],
       },
     });
@@ -306,7 +309,8 @@ describe('TransactionsTable', () => {
     const first = deferred<{
       status: string
       data: {
-        pagination: { limit: number, snapshot_height: number, snapshot_hash: string | null, next_cursor: string | null, has_more: boolean }
+        nextCursor: string | null
+        total: undefined
         items: Array<typeof baseTransaction>
       }
     }>();
@@ -338,7 +342,8 @@ describe('TransactionsTable', () => {
     first.resolve({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
+        total: undefined,
         items: empty ? [] : [baseTransaction],
       },
     });
@@ -370,14 +375,16 @@ describe('TransactionsTable', () => {
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: 'next', has_more: true },
+        nextCursor: 'next',
+        total: undefined,
           items: [baseTransaction],
         },
       })
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
+        total: undefined,
           items: [
             {
               ...baseTransaction,
@@ -422,14 +429,16 @@ describe('TransactionsTable', () => {
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: 'next', has_more: true },
+        nextCursor: 'next',
+        total: undefined,
           items: [baseTransaction],
         },
       })
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
+        total: undefined,
           items: [
             {
               ...baseTransaction,
@@ -460,7 +469,8 @@ describe('TransactionsTable', () => {
     const first = deferred<{
       status: string
       data: {
-        pagination: { limit: number, snapshot_height: number, snapshot_hash: string | null, next_cursor: string | null, has_more: boolean }
+        nextCursor: string | null
+        total: undefined
         items: Array<typeof baseTransaction>
       }
     }>();
@@ -470,7 +480,8 @@ describe('TransactionsTable', () => {
       .mockResolvedValue({
         status: SUCCESSFUL_FETCHING,
         data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
+        total: undefined,
           items: [
             baseTransaction,
             {
@@ -502,7 +513,8 @@ describe('TransactionsTable', () => {
     first.resolve({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
+        total: undefined,
         items: [baseTransaction],
       },
     });
@@ -525,4 +537,22 @@ describe('TransactionsTable', () => {
 
     expect(fetchTransactionsMock).toHaveBeenCalledTimes(1);
   });
+
+  it('exposes failed history reads and recovers when the table retries', async () => {
+    fetchTransactionsMock.mockResolvedValueOnce({ status: 'unknown-error', error: new TypeError('offline') });
+    const wrapper = factory();
+    await flushPromises();
+    const table = wrapper.getComponent({ name: 'BaseTable' });
+
+    expect(table.props('error')).toMatchObject({ kind: 'network' });
+    expect(table.props('items')).toEqual([]);
+    table.vm.$emit('retry');
+    await flushPromises();
+
+    expect(fetchTransactionsMock).toHaveBeenCalledTimes(2);
+    expect(table.props('error')).toBeNull();
+    expect(table.props('items')).toEqual([baseTransaction]);
+    expect(table.props('cursorPagination')).toEqual({ items: [baseTransaction], nextCursor: null, total: undefined });
+  });
+
 });

@@ -1,4 +1,4 @@
-import { ToriiBrowserStreamGapError } from '@iroha/iroha-js/torii-browser';
+import { ToriiStreamGapError } from '@iroha/iroha-js/torii-browser';
 import type {
   ContractActivitySearchParams,
   ContractEventFilters,
@@ -110,13 +110,13 @@ function parseFailure<T>(errors: string[], value: T): ContractFilterParseResult<
 
 export function parseContractActivitySearchParams(
   query: Record<string, unknown>,
-  page: number,
-  perPage: number
+  cursor: string | null,
+  limit: number
 ): ContractFilterParseResult<ContractActivitySearchParams> {
   const errors: string[] = [];
   const value: ContractActivitySearchParams = {
-    page,
-    per_page: perPage,
+    cursor,
+    limit,
     ...parseCommonFilters(query, errors),
     contract_entrypoint: parseExactString(query, 'contract_entrypoint', errors),
   };
@@ -125,8 +125,8 @@ export function parseContractActivitySearchParams(
 
 export function parseContractEventSearchParams(
   query: Record<string, unknown>,
-  page: number,
-  perPage: number
+  cursor: string | null,
+  limit: number
 ): ContractFilterParseResult<ContractEventSearchParams> {
   const errors: string[] = [];
   const provenance = parseExactString(query, 'provenance', errors);
@@ -135,8 +135,8 @@ export function parseContractEventSearchParams(
   }
 
   const value: ContractEventSearchParams = {
-    page,
-    per_page: perPage,
+    cursor,
+    limit,
     ...parseCommonFilters(query, errors),
     module: parseExactString(query, 'module', errors),
     event_kind: parseExactString(query, 'event_kind', errors),
@@ -150,7 +150,7 @@ export function parseContractEventSearchParams(
 export function contractEventFiltersFromSearchParams(
   params: ContractEventSearchParams
 ): ContractEventFilters {
-  const { page: _page, per_page: _perPage, ...filters } = params;
+  const { cursor: _cursor, limit: _limit, ...filters } = params;
   return filters;
 }
 
@@ -215,7 +215,7 @@ export type ContractStreamState =
     };
 
 export function contractStreamStaleState(error: unknown): ContractStreamState {
-  if (error instanceof ToriiBrowserStreamGapError) {
+  if (error instanceof ToriiStreamGapError) {
     return {
       status: 'stale',
       message: error.message,

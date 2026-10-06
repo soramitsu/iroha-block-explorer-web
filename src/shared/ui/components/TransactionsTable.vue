@@ -258,7 +258,7 @@ const fetchedTransactions = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
 );
 const payloadPagination = computed(() =>
-  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.pagination : undefined
+  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data : undefined
 );
 
 const hasAuthorityFilter = computed(() => Boolean(authority.value?.trim()));
@@ -449,12 +449,14 @@ watch(
       v-model:cursor="cursor"
       v-model:page-size="limit"
       :loading="isLoading"
+      :error="scope?.expose.error"
       :items="transactions"
       :row-key="transactionRowKey"
       pagination-mode="cursor"
       :cursor-pagination="payloadPagination"
       container-class="transactions-table__container"
       :pagination-breakpoint="1700"
+      @retry="scope?.expose.refetch()"
     >
       <template #row="{ item }">
         <div

@@ -1,11 +1,11 @@
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import type { Instruction, InstructionsSearchParams, HistoryCursorPaginated } from '@/shared/api/schemas';
+import type { Instruction, InstructionsSearchParams, CollectionPage } from '@/shared/api/schemas';
 
 export interface FetchAllTransactionInstructionsOptions {
   transactionHash: string
   fetchInstructions: (params?: InstructionsSearchParams) => Promise<{
     status: string
-    data?: HistoryCursorPaginated<Instruction>
+    data?: CollectionPage<Instruction>
   }>
   limit?: number
   maxPages?: number
@@ -35,22 +35,18 @@ export async function fetchAllTransactionInstructions(
   const collected: Instruction[] = [];
 
   let cursor: string | null = null;
-  let snapshot: string | null = null;
   const seen = new Set<string>();
   for (let page = 1; page <= maxPages; page += 1) {
     const response = await options.fetchInstructions({ cursor, limit, transaction_hash: options.transactionHash });
     if (response.status !== SUCCESSFUL_FETCHING || !response.data) {
       throw new Error(`Failed to fetch transaction instructions page ${page}`);
     }
-    const { pagination, items } = response.data;
-    const currentSnapshot = `${pagination.snapshot_height}:${pagination.snapshot_hash}`;
-    if (snapshot !== null && currentSnapshot !== snapshot) throw new Error('Instruction history snapshot changed');
-    snapshot = currentSnapshot;
+    const { nextCursor, items } = response.data;
     collected.push(...items);
-    if (!pagination.has_more) return uniqueSortedByIndex(collected);
-    if (!pagination.next_cursor || seen.has(pagination.next_cursor)) throw new Error('Instruction history cursor did not advance');
-    seen.add(pagination.next_cursor);
-    cursor = pagination.next_cursor;
+    if (nextCursor === null) return uniqueSortedByIndex(collected);
+    if (!nextCursor || seen.has(nextCursor)) throw new Error('Instruction history cursor did not advance');
+    seen.add(nextCursor);
+    cursor = nextCursor;
   }
   throw new Error('Instruction history exceeded the bounded page limit');
 }

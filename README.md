@@ -66,14 +66,27 @@ sh scripts/bootstrap-exact-toolchain.sh pnpm playwright:install
 
 Build artifacts will be located at `dist` dir.
 
-The SDK dependency is the admitted consumer archive with SHA-256
-`02600597032e3c0074b915c06b6125aea3a98c549f60e0ccee7d75dfdbdbb79f`.
-Install, `pnpm check:sdk`, and normal build verify the archive and all 200 installed
-files against `vendor/iroha-iroha-js-0.0.3.files.json`, including the existing SDK
-JavaScript and Wasm. The checker is read-only: missing distribution files fail
+The SDK dependency is the browser consumer archive built from the clean upstream
+`javascript/iroha_js` package at commit
+`cc8e6620f6cbec846a7753b1cc8fbba3d843f716`, with SHA-256
+`db24d5e042a475a24d204a0045e07f1dd8bafc821c098a64fffe046bf216e15a`.
+Two canonical `npm pack` runs under Node 24.19.0 produced identical archives;
+`prepack` ran the upstream engine check and atomic `build:dist` owner. Its 231-file
+inventory records the source tree, build script and tool versions in
+`vendor/iroha-iroha-js-0.0.3-cc8e6620f6cb.files.json`.
+
+Install, `pnpm check:sdk`, and normal build verify the archive and every installed
+package file. The checker is read-only: missing distribution files fail
 verification. CI checks the archive before dependency installation; postinstall
-checks the installed package. Package integrity does not grant release admission:
-deployment still requires the original signed SDK and application build evidence.
+checks the installed package. The browser HTTP client uses JavaScript; canonical
+account and instruction codecs require native Rust and are unavailable in browsers.
+Retired Wasm artifacts are absent and the bundle gate rejects emitted Wasm. All
+startup assets remain subject to the 540,000-byte gzip entry and total budgets.
+The lazy `iroha-compiler` chunk has an 18,000-byte gzip cap: this SDK adds embedded
+call-schema/Norito validation and expands compiler response validation. The measured
+current chunk is 16,162 bytes; other chunk and route limits remain unchanged.
+Package integrity identifies this consumer build; it does not establish signed
+SDK or application release qualification.
 
 ### Docker
 

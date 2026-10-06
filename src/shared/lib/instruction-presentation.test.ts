@@ -266,7 +266,7 @@ describe('instruction presentation registry', () => {
     expect(cancel?.title).toBe('Multisig cancellation');
   });
 
-  it('decodes and presents nested Norito instructions in an exact multisig proposal', () => {
+  it('preserves encoded nested Norito instructions without claiming native decoding', () => {
     const result = present('Custom', 'Custom', {
       Propose: {
         account: MULTISIG_ACCOUNT,
@@ -277,10 +277,23 @@ describe('instruction presentation registry', () => {
 
     expect(result?.title).toBe('Multisig proposal');
     expect(result?.nestedInstructions).toHaveLength(1);
-    expect(result?.nestedInstructions[0]?.presentation?.registryKey).toBe('Transfer:Asset');
-    expect(result?.nestedInstructions[0]?.presentation?.fields.find((field) => field.key === 'amount')?.value).toBe(
-      '100000'
-    );
+    expect(result?.nestedInstructions[0]).toEqual({
+      index: 0, encoded: LIVE_TRANSFER_INSTRUCTION, presentation: null,
+    });
+  });
+
+  it('preserves every encoded nested instruction and its index without treating base64 as decoded JSON', () => {
+    const instructions = [LIVE_TRANSFER_INSTRUCTION, '%%%', 'aXJvaGEudHJhbnNmZXI='];
+    const result = present('Custom', 'Custom', {
+      Propose: { account: MULTISIG_ACCOUNT, instructions, transaction_ttl_ms: 120_000 },
+    });
+    expect(result?.nestedInstructions).toEqual(instructions.map((encoded, index) => ({
+      index, encoded, presentation: null,
+    })));
+    expect(result?.fields.find(field => field.key === 'ttl')?.value).toBe('120000');
+    expect(present('Custom', 'Custom', {
+      Propose: { account: MULTISIG_ACCOUNT, instructions: [42], transaction_ttl_ms: null },
+    })).toBeNull();
   });
 
   it('requires one explicit multisig tag and never treats an arbitrary first key as a variant', () => {

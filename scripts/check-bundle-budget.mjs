@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,29 +29,21 @@ export function validateBundleBudgets(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('Bundle budgets must be an object');
   }
-  if (value.schema_version !== 2) throw new Error('Unsupported bundle budget schema');
+  if (value.schema_version !== 3) throw new Error('Unsupported bundle budget schema');
   assertPositiveInteger(value.default_chunk_gzip_bytes, 'default_chunk_gzip_bytes');
   const entries = validateBudgetMap(value.entry_gzip_bytes, 'entry_gzip_bytes');
   const startup = validateBudgetMap(value.entry_startup_gzip_bytes, 'entry_startup_gzip_bytes');
   if (Object.keys(entries).length === 0
     || JSON.stringify(Object.keys(entries).sort()) !== JSON.stringify(Object.keys(startup).sort())) {
-    throw new Error('Every entry must have both a non-Wasm and total startup budget');
+    throw new Error('Every entry must have both an entry and total startup budget');
   }
-  const wasm = value.sdk_wasm;
-  if (!wasm || typeof wasm !== 'object' || Array.isArray(wasm)
-    || !/^[a-f0-9]{64}$/u.test(wasm.sha256)) {
-    throw new Error('sdk_wasm must pin the admitted SDK Wasm SHA-256');
-  }
-  for (const field of ['raw_bytes', 'max_raw_bytes', 'max_gzip_bytes']) {
-    assertPositiveInteger(wasm[field], `sdk_wasm.${field}`);
-  }
+  if ('sdk_wasm' in value) throw new Error('Wasm artifacts are prohibited; remove the retired sdk_wasm budget');
   return {
-    schema_version: 2,
+    schema_version: 3,
     default_chunk_gzip_bytes: value.default_chunk_gzip_bytes,
     chunk_gzip_bytes: validateBudgetMap(value.chunk_gzip_bytes, 'chunk_gzip_bytes'),
     entry_gzip_bytes: entries,
     entry_startup_gzip_bytes: startup,
-    sdk_wasm: { ...wasm },
     route_gzip_bytes: validateBudgetMap(value.route_gzip_bytes, 'route_gzip_bytes'),
   };
 }
@@ -151,20 +142,16 @@ function emittedChunkName(file) {
   return stem.replace(/-[A-Za-z0-9_-]{8,}$/u, '');
 }
 
-function measureEntryStartup({ manifest, source, wasmFile, distDir }) {
+function measureEntryStartup({ manifest, source, distDir }) {
   const entryKey = findEntryKey(manifest, source);
   if (!entryKey) throw new Error(`Configured entry is missing from the manifest: ${source}`);
   const keys = collectEntryBootManifestKeys(manifest, entryKey);
   const files = assetFilesForKeys(manifest, keys);
-  if (!files.has(wasmFile)) {
-    throw new Error(`Required SDK Wasm is missing from the entry startup closure: ${source}`);
-  }
   // The HTML document is transferred before its manifest entry module.
   files.add(assertAssetPath(source));
-  const categoryFiles = { js_css: [], other_assets: [], sdk_wasm: [] };
+  const categoryFiles = { js_css: [], other_assets: [] };
   for (const file of files) {
-    const category = file === wasmFile ? 'sdk_wasm'
-      : /\.(?:js|css)$/u.test(file) ? 'js_css' : 'other_assets';
+    const category = /\.(?:js|css)$/u.test(file) ? 'js_css' : 'other_assets';
     categoryFiles[category].push(file);
   }
   const categories = Object.fromEntries(Object.entries(categoryFiles).map(([category, assets]) => [
@@ -187,30 +174,17 @@ export function evaluateBundleBudgets({ manifest, budgets, distDir }) {
   const measurements = [];
   const entries = [];
   const outputFiles = emittedFiles(distDir);
-  const wasmFiles = outputFiles.filter((file) => file.endsWith('.wasm'));
-  if (wasmFiles.length !== 1) {
-    throw new Error(`Expected exactly one emitted SDK Wasm asset; found ${wasmFiles.length}`);
+  for (const file of outputFiles) {
+    const bytes = readFileSync(join(distDir, file));
+    if (/\.wasm(?:\.(?:gz|br))?$/iu.test(file) || bytes.subarray(0, 4).equals(Buffer.from([0, 97, 115, 109]))) {
+      throw new Error(`Wasm artifacts are prohibited: ${file}`);
+    }
   }
-  const wasmFile = wasmFiles[0];
-  const wasmBytes = readFileSync(join(distDir, wasmFile));
-  if (createHash('sha256').update(wasmBytes).digest('hex') !== checkedBudgets.sdk_wasm.sha256
-    || wasmBytes.byteLength !== checkedBudgets.sdk_wasm.raw_bytes) {
-    throw new Error('Emitted SDK Wasm does not match the admitted SHA-256 and raw size');
-  }
-  const wasmGzipBytes = gzipSync(wasmBytes, { level: 9 }).byteLength;
-  measurements.push({
-    kind: 'sdk-wasm', name: wasmFile, actual: wasmBytes.byteLength,
-    limit: checkedBudgets.sdk_wasm.max_raw_bytes, unit: 'raw',
-  }, {
-    kind: 'sdk-wasm', name: wasmFile, actual: wasmGzipBytes,
-    limit: checkedBudgets.sdk_wasm.max_gzip_bytes,
-  });
 
   for (const [source, limit] of Object.entries(checkedBudgets.entry_gzip_bytes)) {
-    const entry = measureEntryStartup({ manifest, source, wasmFile, distDir });
+    const entry = measureEntryStartup({ manifest, source, distDir });
     entries.push(entry);
-    // Preserve the original, stricter entry cap for ALL non-Wasm assets,
-    // including fonts; the independently pinned Wasm has its own two bounds.
+    // Every startup asset, including fonts and the HTML document, is charged.
     const actual = entry.categories.js_css.gzip_bytes + entry.categories.other_assets.gzip_bytes;
     measurements.push({ kind: 'entry', name: source, actual, limit });
     measurements.push({

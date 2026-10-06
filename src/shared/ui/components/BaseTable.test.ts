@@ -170,4 +170,51 @@ describe('BaseTable', () => {
     await row.trigger('keydown', { key: ' ' });
     expect(wrapper.emitted('click:row')).toEqual([[item], [item]]);
   });
+
+  it('reports a failed empty read with retry instead of claiming there is no data', async () => {
+    const wrapper = mount(BaseTable, {
+      props: {
+        loading: false,
+        error: { kind: 'invalid-response', message: 'Unexpected collection response' },
+        disablePagination: true,
+        items: [],
+        containerClass: 'base-table__container',
+      },
+      global: {
+        stubs: { BaseButton: { template: '<button><slot /></button>' } },
+        mocks: { $t: (key: string) => key },
+      },
+    });
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('transactions.unknownError');
+    expect(wrapper.text()).not.toContain('noData');
+    await wrapper.get('[data-test="resource-retry"]').trigger('click');
+    expect(wrapper.emitted('retry')).toEqual([[]]);
+
+    await wrapper.setProps({ error: null });
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('noData');
+  });
+
+  it('preserves existing rows alongside a refresh failure', () => {
+    const wrapper = mount(BaseTable, {
+      props: {
+        loading: false,
+        error: { kind: 'network', message: 'offline' },
+        disablePagination: true,
+        items: [{ id: 'previous-result' }],
+        containerClass: 'base-table__container',
+      },
+      slots: { row: ({ item }: any) => h('div', { class: 'row' }, item.id) },
+      global: {
+        stubs: { BaseButton: { template: '<button><slot /></button>' } },
+        mocks: { $t: (key: string) => key },
+      },
+    });
+
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect(wrapper.get('.row').text()).toBe('previous-result');
+    expect(wrapper.text()).not.toContain('noData');
+  });
+
 });

@@ -11,8 +11,6 @@ import { defineComponent, ref } from 'vue';
 const SAMPLE_I105 = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
 const SAMPLE_I105_ALT = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
 const LIVE_MULTISIG_ACCOUNT = 'soraﾁｷVMXKﾏtKAoQﾅﾛ3qｾヱ8aﾄdNuｷﾀｱｽh9ｻtWﾐBﾒ9AﾏHｼQﾅvﾛﾌｹYﾑﾐﾛCﾎjtQQヰYCbﾎｵPfb6vXcﾖ1176ﾃﾈcﾐｲUEtﾎヱﾅｻﾀiuｦ2MPﾍﾏiﾌhﾓJｶｶgboCｻBpｷ35ｸ15ｼmGｲFK9NﾑoVﾜWvQMKﾃﾎB7ヰdM99EU4V';
-const TAIRA_TRANSFER_SOURCE = '66owaQmAQMuHxPzxUN3bqZ6FJfDa#testﾁｷVMXKﾏtKAoQﾅﾛ3qｾヱ8aﾄdNuｷﾀｱｽh9ｻtWﾐBﾒ9AﾏHｼQﾅvﾛﾌｹYﾑﾐﾛCﾎjtQQヰYCbﾎｵPfb6vXcﾖ1176ﾃﾈcﾐｲUEtﾎヱﾅｻﾀiuｦ2MPﾍﾏiﾌhﾓJｶｶgboCｻBpｷ35ｸ15ｼmGｲFK9NﾑoVﾜWvQMKﾃﾎB7ヰdM99EU4V';
-const TAIRA_TRANSFER_DESTINATION = 'testuﾛ1QEﾄiBzndﾆDwﾉｴxSﾔﾋ6KXﾆ2xﾗﾆrﾐﾚﾄoNqｳZﾘqtHﾛDBCRJ5';
 const LIVE_TRANSFER_INSTRUCTION =
   'TlJUMAAAhip9dwddTSP/bBJh2wJ4EQDSAQAAAAAAABQKMDTp3Yu+Ag8OaXJvaGEudHJhbnNmZXLAA7gBAAAAAAAATlJUMAAApBdMeNY0H4+Y/Cra6O1nuQCQAQAAAAAAAOy4mMbcuTFWAgIAAACKA6oCggIBAAAA/AEBAQICAPUBAwAAAAAAAABOSiEAAAAAAAAAAQABhAExAb0BZQH/ASQBcwHNAacBpwEHAcEBgAH3AcEB5AH2AcQBzAGVASABPQFuAXoBJwFLAYUBswHtAW8BbAE1AgEATkohAAAAAAAAAAEAAbQBJgHPAXIBUQE3Af8B5gEzAbkB7gFJAXQBIAGoAYIB2gGYAW0BNgGxAfMBgQGPASEBkQFsAdUBtQH9AUoB/QIBAE5KIQAAAAAAAAABAAHHAeIB8QH8AZMBSQHvAZ8BkgG6AYEBeAFSAa4BbQGBAV0B2wGyAWABgQHUAWsBrQHiATMBSwERATwBHwF/AWUCAQAgAW4BFQFrAVABEAHmAUUB+AGDAesBgwEZAUYBuAGNAbgEAAAAAA0HAwAAAKCGAQQAAAAATwAAAABKIQAAAAAAAAABAAH9AVUB7wEWAZIB1QGPAYcBkwEvAVkBgAEhAbEB1gEWATkBRwGAAQgBIwHlAb4BuQF0AcoBiAEEAZoByAGaAfc=';
 const FRAMED_SHA256 = `0x${'00'.repeat(32)}`;
@@ -244,7 +242,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [baseInstruction],
       },
     });
@@ -412,11 +410,11 @@ describe('InstructionsTable', () => {
       status: SUCCESSFUL_FETCHING,
       data: cursor === null
         ? {
-            pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: 'next', has_more: true },
+            nextCursor: 'next',
             items: [contractInstruction],
           }
         : {
-            pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+            nextCursor: null,
             items: [manifestInstruction],
           },
     }));
@@ -443,7 +441,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [multisigInstruction],
       },
     });
@@ -468,12 +466,12 @@ describe('InstructionsTable', () => {
     expect(kindField?.find('.data-field__value-text').text()).toBe('Multisig');
   });
 
-  it('renders nested multisig accounts with Taira prefix 369 and preserves raw JSON', async () => {
+  it('labels native-only nested instructions as encoded and preserves raw Torii JSON', async () => {
     const multisigInstruction = makeNestedTransferMultisigInstruction();
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [multisigInstruction],
       },
     });
@@ -491,10 +489,9 @@ describe('InstructionsTable', () => {
 
     expect(wrapper.findAll('[data-test="instruction-semantic-card"]')).toHaveLength(2);
     expect(wrapper.text()).toContain('Multisig proposal');
-    expect(wrapper.text()).toContain('Asset transfer');
-    expect(wrapper.text()).toContain('100000');
-    expect(wrapper.text()).toContain(TAIRA_TRANSFER_SOURCE);
-    expect(wrapper.text()).toContain(TAIRA_TRANSFER_DESTINATION);
+    expect(wrapper.text()).toContain('Encoded instruction');
+    expect(wrapper.text()).toContain(LIVE_TRANSFER_INSTRUCTION);
+    expect(wrapper.text()).not.toContain('Asset transfer');
     expect(rowJson?.props('value')).toEqual(multisigInstruction.box.json);
     expect(detailJson?.props('value')).toEqual(multisigInstruction.box.json);
     expect(multisigInstruction.box.json.payload.value.Propose.instructions).toEqual([LIVE_TRANSFER_INSTRUCTION]);
@@ -505,7 +502,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [customInstruction],
       },
     });
@@ -521,7 +518,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [wireIdInstruction],
       },
     });
@@ -546,7 +543,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [variantInstruction],
       },
     });
@@ -562,7 +559,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [resolvedInstruction],
       },
     });
@@ -721,7 +718,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [],
       },
     });

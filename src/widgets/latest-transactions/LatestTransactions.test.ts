@@ -14,14 +14,16 @@ const mocks = vi.hoisted(() => ({
   fetchLatestTransactions: vi.fn().mockResolvedValue({
     status: 'ok',
     data: {
-      sampled_at: new Date('2026-03-05T00:00:00Z'),
+      nextCursor: null,
+      total: undefined,
       items: [] as Array<Record<string, unknown>>,
     },
   }),
   fetchTransactions: vi.fn().mockResolvedValue({
     status: 'ok',
     data: {
-      pagination: { limit: 5, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+      nextCursor: null,
+      total: undefined,
       items: [],
     },
   }),
@@ -30,7 +32,8 @@ const mocks = vi.hoisted(() => ({
     data: {
       status: 'ok',
       data: {
-        pagination: { limit: 5, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
+        total: undefined,
         items: [] as Array<Record<string, unknown>>,
       },
     },
@@ -133,7 +136,8 @@ describe('LatestTransactions', () => {
     mocks.setupState.data = {
       status: 'ok',
       data: {
-        pagination: { limit: 5, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
+        total: undefined,
         items: [],
       },
     };

@@ -116,13 +116,13 @@ const scope = useParamScope(
 
 const isLoading = computed(() => scope.value?.expose.isLoading);
 const payloadPagination = computed(() =>
-  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.pagination : undefined
+  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data : undefined
 );
 
 const fetchedItems = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value?.expose.data.data.items : []
 );
-const hasMore = computed(() => payloadPagination.value?.has_more ?? false);
+const hasMore = computed(() => Boolean(payloadPagination.value?.nextCursor));
 const items = computed(() => fetchedItems.value);
 
 const instructionRowKey = (item: Instruction) => `${item.transaction_hash}:${item.index}`;

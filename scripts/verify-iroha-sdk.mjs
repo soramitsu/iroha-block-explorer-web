@@ -5,12 +5,13 @@ import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const IROHA_SDK_SPECIFIER = 'file:vendor/iroha-iroha-js-0.0.3.tgz';
-export const IROHA_SDK_ARCHIVE_SHA256 = '02600597032e3c0074b915c06b6125aea3a98c549f60e0ccee7d75dfdbdbb79f';
-export const IROHA_SDK_INVENTORY_SHA256 = '9ef5fecacf6ced1799ad28393ed42dfb3fd64c992076c7eb474fea9ae2c50ba7';
-const archiveBytesLength = 6911208;
-const inventoryBytesLength = 25758;
-const inventoryFilename = 'iroha-iroha-js-0.0.3.files.json';
+export const IROHA_SDK_SPECIFIER = 'file:vendor/iroha-iroha-js-0.0.3-cc8e6620f6cb.tgz';
+export const IROHA_SDK_ARCHIVE_SHA256 = 'db24d5e042a475a24d204a0045e07f1dd8bafc821c098a64fffe046bf216e15a';
+export const IROHA_SDK_INVENTORY_SHA256 = '9cd0272751874d0243d03af4a7b49f44aaff1c165e03dc78a3107f5f8c688880';
+const archiveBytesLength = 976237;
+const inventoryBytesLength = 30355;
+const inventoryFilename = 'iroha-iroha-js-0.0.3-cc8e6620f6cb.files.json';
+export const IROHA_SDK_SOURCE_REVISION = 'cc8e6620f6cbec846a7753b1cc8fbba3d843f716';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 async function regularBytes(filename, expectedSize) {
@@ -39,8 +40,17 @@ async function verifiedArchiveInputs(repositoryRoot) {
   const inventoryBytes = await regularBytes(path.join(repository, 'vendor', inventoryFilename), inventoryBytesLength);
   if (hash(inventoryBytes) !== IROHA_SDK_INVENTORY_SHA256) throw new Error('SDK inventory differs from the pinned consumer artifact');
   const inventory = JSON.parse(inventoryBytes);
-  if (inventory.schema !== 'iroha.sdk-package-inventory.v1' || inventory.archiveSha256 !== IROHA_SDK_ARCHIVE_SHA256 || inventory.files.length !== 200) {
-    throw new Error('SDK inventory does not describe the admitted 200-file package');
+  if (inventory.schema !== 'iroha.sdk-package-inventory.v2' || inventory.archiveSha256 !== IROHA_SDK_ARCHIVE_SHA256 || inventory.files.length !== 231) {
+    throw new Error('SDK inventory does not describe the admitted 231-file package');
+  }
+  if (inventory.source?.revision !== IROHA_SDK_SOURCE_REVISION
+    || inventory.source?.packageGitTree !== '297429298cd4fd06d488be9575a71aeb6cd19524'
+    || inventory.source?.packageSourceClean !== true
+    || inventory.source?.repeatPackSha256 !== IROHA_SDK_ARCHIVE_SHA256) {
+    throw new Error('SDK inventory source identity differs from the pinned package');
+  }
+  if (inventory.files.some(entry => /(?:^|\/)wasm(?:\/|$)|\.wasm$|(?:^|\/)(?:browserCodec(?:Runtime)?\.js|browser-codec\.d\.ts)$/iu.test(entry.path))) {
+    throw new Error('SDK inventory contains a retired browser codec artifact');
   }
   return { repository, inventory };
 }
@@ -51,7 +61,7 @@ export async function verifyIrohaSdkArchive(repositoryRoot) {
   return { files: inventory.files.length, archiveSha256: IROHA_SDK_ARCHIVE_SHA256, inventorySha256: IROHA_SDK_INVENTORY_SHA256, status: 'archive-integrity-verified' };
 }
 
-/** Verify every installed package byte, including the existing glue and Wasm.
+/** Verify every installed package byte, including browser code and declarations.
  * Missing dist files fail; this checker never copies source or builds anything. */
 export async function verifyIrohaSdk(repositoryRoot) {
   const { repository, inventory } = await verifiedArchiveInputs(repositoryRoot);

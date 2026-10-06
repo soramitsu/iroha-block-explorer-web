@@ -159,7 +159,7 @@ describe('TransactionDetails', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 64, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [
           {
             authority: SAMPLE_I105,
@@ -386,7 +386,7 @@ describe('TransactionDetails', () => {
   });
 
   it('passes the primary smart-contract instruction target into the contract panel', async () => {
-    scopeExpose.value.data.data.executable = 'Wasm';
+    scopeExpose.value.data.data.executable = 'Ivm';
 
     const wrapper = factory();
     await flushPromises();
@@ -399,13 +399,13 @@ describe('TransactionDetails', () => {
   });
 
   it('loads every instruction-history page for smart-contract transactions before rendering the contract panel', async () => {
-    scopeExpose.value.data.data.executable = 'Wasm';
+    scopeExpose.value.data.data.executable = 'Ivm';
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockImplementation(async ({ cursor }) => ({
       status: SUCCESSFUL_FETCHING,
       data:
         cursor === null
           ? {
-              pagination: { limit: 100, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: 'next', has_more: true },
+              nextCursor: 'next',
               items: [
                 {
                   authority: SAMPLE_I105,
@@ -428,7 +428,7 @@ describe('TransactionDetails', () => {
               ],
             }
           : {
-              pagination: { limit: 100, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+              nextCursor: null,
               items: [
                 {
                   authority: SAMPLE_I105,

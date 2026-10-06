@@ -26,11 +26,11 @@ const BaseTableStub = defineComponent({
   name: 'BaseTable',
   props: {
     items: { type: Array, default: () => [] },
-    total: { type: Number, default: 0 },
+    cursorPagination: { type: Object, default: null },
   },
-  emits: ['update:page', 'update:page-size'],
+  emits: ['update:cursor', 'update:pageSize'],
   template: `
-    <div class="base-table-stub" role="table" :data-total="total">
+    <div class="base-table-stub" role="table" :data-next-cursor="cursorPagination?.nextCursor">
       <div role="row">
         <slot name="header" />
       </div>
@@ -58,25 +58,8 @@ function historyResponse(items: Record<string, unknown>[]) {
     status: 'ok',
     data: {
       items,
-      total: items.length,
-      has_more: false,
-      count_mode: 'exact',
-      indexed_height: 42,
-      indexed_block_hash: 'f'.repeat(64),
-      query_source: 'account_history_index',
-    },
-  };
-}
-
-function fanoutHistoryResponse(items: Record<string, unknown>[]) {
-  return {
-    status: 'ok',
-    data: {
-      items,
-      total: items.length,
-      has_more: false,
-      count_mode: 'exact',
-      query_source: 'account_history_fanout',
+      total: undefined,
+      nextCursor: 'activity-next',
     },
   };
 }
@@ -112,7 +95,7 @@ describe('AccountActivityView', () => {
     apiMocks.fetchAccountHistory.mockReset();
   });
 
-  it('uses URL pagination/filter state and renders exact indexed values with semantic links', async () => {
+  it('uses URL cursor/filter state and renders exact row values with semantic links', async () => {
     apiMocks.fetchAccountHistory.mockResolvedValue(
       historyResponse([
         {
@@ -135,26 +118,27 @@ describe('AccountActivityView', () => {
     );
 
     const { router, wrapper } = await factory({
-      activity_page: '2',
-      activity_per_page: '20',
+      activity_cursor: 'activity-current',
+      activity_limit: '20',
       activity_asset: 'rose#wonderland',
     });
 
     expect(apiMocks.fetchAccountHistory).toHaveBeenCalledWith(ACCOUNT, {
-      page: 2,
-      per_page: 20,
+      cursor: 'activity-current',
+      limit: 20,
       asset_id: 'rose#wonderland',
     });
     expect(wrapper.get('h2').text()).toBe('Account activity');
-    expect(wrapper.get('[data-test="activity-index-evidence"]').text()).toContain('account_history_index');
-    expect(wrapper.find('a[href="/blocks/42"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="activity-index-evidence"]').exists()).toBe(false);
+    expect(wrapper.find('a[href="/blocks/42"]').exists()).toBe(false);
     expect(wrapper.find('[data-test="activity-fanout-provenance"]').exists()).toBe(false);
     expect(wrapper.text()).toContain(EXACT_AMOUNT);
     expect(wrapper.text()).toContain('1725000000123 ms');
     expect(wrapper.find(`a[href="/accounts/${encodeURIComponent(COUNTERPARTY)}"]`).exists()).toBe(true);
     expect(wrapper.find('a[href="/assets/rose%23wonderland"]').exists()).toBe(true);
     expect(wrapper.find(`a[href="/transactions/${'a'.repeat(64)}"]`).exists()).toBe(true);
-    expect(wrapper.get('.base-table-stub').attributes('data-total')).toBe('1');
+    expect(wrapper.get('.base-table-stub').attributes('data-next-cursor')).toBe('activity-next');
+    expect(wrapper.getComponent(BaseTableStub).props('cursorPagination')?.total).toBeUndefined();
     expect(wrapper.findAll('[role="columnheader"]').map((header) => header.text())).toEqual([
       'Activity',
       'Source / direction',
@@ -169,16 +153,16 @@ describe('AccountActivityView', () => {
 
     expect(router.currentRoute.value.query).toMatchObject({
       activity_asset: 'tea#wonderland',
-      activity_per_page: '20',
+      activity_limit: '20',
     });
-    expect(router.currentRoute.value.query.activity_page).toBeUndefined();
+    expect(router.currentRoute.value.query.activity_cursor).toBeUndefined();
   });
 
-  it('renders multi-route fanout provenance without inventing index evidence', async () => {
+  it('keeps row source without inventing collection-wide index or fanout evidence', async () => {
     apiMocks.fetchAccountHistory.mockResolvedValue(
-      fanoutHistoryResponse([
+      historyResponse([
         {
-          id: 'history-fanout-1',
+          id: 'history-source-1',
           source: 'asset_transfer',
           type: 'TRANSFER',
           status: 'COMMITTED',
@@ -190,12 +174,23 @@ describe('AccountActivityView', () => {
 
     const { wrapper } = await factory();
 
-    const provenance = wrapper.get('[data-test="activity-fanout-provenance"]');
-    expect(provenance.text()).toContain('account_history_fanout');
-    expect(provenance.text()).toContain('multiple Nexus routes');
-    expect(provenance.text()).toContain('no single index checkpoint');
+    expect(wrapper.text()).toContain('asset_transfer');
+    expect(wrapper.text()).toContain('INCOMING');
+    expect(wrapper.find('[data-test="activity-fanout-provenance"]').exists()).toBe(false);
     expect(wrapper.find('[data-test="activity-index-evidence"]').exists()).toBe(false);
     expect(wrapper.find('a[href^="/blocks/"]').exists()).toBe(false);
+  });
+
+  it('requests the opaque continuation while preserving the asset filter', async () => {
+    apiMocks.fetchAccountHistory.mockResolvedValue(historyResponse([{ id: 'history-1', source: 'asset_transfer', type: 'TRANSFER' }]));
+    const { wrapper } = await factory({ activity_asset: 'rose#wonderland' });
+
+    wrapper.getComponent(BaseTableStub).vm.$emit('update:cursor', 'activity-next');
+    await flushPromises();
+
+    expect(apiMocks.fetchAccountHistory).toHaveBeenLastCalledWith(ACCOUNT, {
+      cursor: 'activity-next', limit: 10, asset_id: 'rose#wonderland',
+    });
   });
 
   it.each([

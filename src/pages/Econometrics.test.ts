@@ -6,7 +6,7 @@ import { i18n } from '@/shared/lib/localization';
 import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 import tairaHistory from '../../tests/fixtures/taira-history.json';
 
-const HISTORY_CURSOR = tairaHistory.latestTransactions.pagination.next_cursor;
+const HISTORY_CURSOR = tairaHistory.latestTransactions.next_cursor;
 
 const SAMPLE_ACCOUNT_ID =
   'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
@@ -33,6 +33,7 @@ const apiMocks = vi.hoisted(() => ({
   fetchAssetDefinitionSnapshot: vi.fn(),
   fetchAssets: vi.fn(),
   fetchInstructions: vi.fn(),
+  fetchBlocks: vi.fn(),
   fetchAssetDefinitions: vi.fn(),
   getToriiBaseUrl: vi.fn(() => 'http://localhost'),
 }));
@@ -52,7 +53,7 @@ const setupState = {
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: { limit: 50, next_cursor: null as string | null, has_more: false },
+      nextCursor: null as string | null,
       items: [] as any[],
     },
   },
@@ -124,10 +125,7 @@ function mountHistoryScan(assetSelector = SAMPLE_ASSET_DEFINITION_ID) {
 }
 
 function historyPage(nextCursor: string | null) {
-  return {
-    limit: 100, snapshot_height: 2, snapshot_hash: 'ab'.repeat(32),
-    next_cursor: nextCursor, has_more: nextCursor !== null,
-  };
+  return { nextCursor };
 }
 
 describe('Econometrics', () => {
@@ -139,6 +137,9 @@ describe('Econometrics', () => {
     apiMocks.fetchAssetDefinitionSnapshot.mockReset();
     apiMocks.fetchAssets.mockReset();
     apiMocks.fetchInstructions.mockReset();
+    apiMocks.fetchBlocks.mockReset().mockResolvedValue({
+      status: SUCCESSFUL_FETCHING, data: { items: [{ height: 2 }], nextCursor: null },
+    });
     setupState.data.data.items = [];
     routerMocks.currentRoute.value = { name: 'econometrics', query: {}, params: {} } as any;
     runtimeConfigState.value = { toriiEconometricsEndpointsEnabled: false };
@@ -160,7 +161,7 @@ describe('Econometrics', () => {
     apiMocks.fetchAssets.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 100, next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [],
       },
     });
@@ -168,7 +169,7 @@ describe('Econometrics', () => {
     apiMocks.fetchInstructions.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 100, snapshot_height: 2, snapshot_hash: 'ab'.repeat(32), next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [],
       },
     });
@@ -220,7 +221,7 @@ describe('Econometrics', () => {
     apiMocks.fetchInstructions.mockImplementation(({ kind, cursor }: { kind: string, cursor: string | null }) => ({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPage(kind === 'Transfer' && cursor === null ? HISTORY_CURSOR : null),
+        ...historyPage(kind === 'Transfer' && cursor === null ? HISTORY_CURSOR : null),
         items: kind === 'Transfer' ? [{
           created_at: cursor === null ? new Date(0) : new Date(),
           kind: 'Transfer', transaction_status: 'Committed',
@@ -246,7 +247,7 @@ describe('Econometrics', () => {
     apiMocks.fetchInstructions.mockImplementation(({ kind }: { kind: string }) => ({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPage(kind === 'Transfer' ? `${HISTORY_CURSOR.slice(0, -8)}${(++transferPages).toString(16).padStart(8, '0')}` : null),
+        ...historyPage(kind === 'Transfer' ? `${HISTORY_CURSOR.slice(0, -8)}${(++transferPages).toString(16).padStart(8, '0')}` : null),
         items: kind === 'Transfer' ? oldItems : [],
       },
     }));
@@ -258,16 +259,16 @@ describe('Econometrics', () => {
     wrapper.unmount();
   });
 
-  it('rejects a changed history snapshot before displaying a combined result', async () => {
+  it('rejects a repeating opaque cursor before displaying a combined result', async () => {
     apiMocks.fetchInstructions
-      .mockResolvedValueOnce({ status: SUCCESSFUL_FETCHING, data: { items: [], pagination: historyPage(HISTORY_CURSOR) } })
+      .mockResolvedValueOnce({ status: SUCCESSFUL_FETCHING, data: { items: [], ...historyPage(HISTORY_CURSOR) } })
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
-        data: { items: [], pagination: { ...historyPage(null), snapshot_hash: 'cd'.repeat(32) } },
+        data: { items: [], ...historyPage(HISTORY_CURSOR) },
       });
     const wrapper = mountHistoryScan();
     await flushPromises();
-    expect(wrapper.text()).toContain('Explorer history snapshot changed');
+    expect(wrapper.text()).toContain('Explorer history cursor did not advance');
     expect(apiMocks.fetchInstructions).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
@@ -285,7 +286,7 @@ describe('Econometrics', () => {
       return {
         status: SUCCESSFUL_FETCHING,
         data: {
-          pagination: historyPage(null),
+          ...historyPage(null),
           items: kind === 'Transfer' ? [instruction, { ...instruction, transaction_status: 'Rejected' }] : [instruction],
         },
       };
@@ -307,20 +308,22 @@ describe('Econometrics', () => {
     wrapper.unmount();
   });
 
-  it('rejects combined net issuance when independent filters return different ledger snapshots', async () => {
-    apiMocks.fetchInstructions.mockImplementation(({ kind }: { kind: string }) => ({
-      status: SUCCESSFUL_FETCHING,
-      data: {
-        pagination: kind === 'Burn'
-          ? { ...historyPage(null), snapshot_height: 3, snapshot_hash: 'cd'.repeat(32) }
-          : historyPage(null),
-        items: [],
-      },
-    }));
+  it('uses the same committed upper bound for independent issuance filters', async () => {
     const wrapper = mountHistoryScan();
     await flushPromises();
-    expect(wrapper.get('.econometrics-page__error').text()).toContain('Issuance statistics span different ledger snapshots');
-    expect(wrapper.findAllComponents(BaseTableStub).some((table) => table.props('items')[0]?.net !== undefined)).toBe(false);
+    expect(apiMocks.fetchBlocks).toHaveBeenCalledWith({ limit: 1 });
+    for (const kind of ['Mint', 'Burn']) {
+      expect(apiMocks.fetchInstructions).toHaveBeenCalledWith(expect.objectContaining({ kind, max_block_height: 2 }));
+    }
+    wrapper.unmount();
+  });
+
+  it('does not combine issuance when a committed upper bound is unavailable', async () => {
+    apiMocks.fetchBlocks.mockResolvedValue({ status: UNKNOWN_ERROR, error: new Error('unavailable') });
+    const wrapper = mountHistoryScan();
+    await flushPromises();
+    expect(wrapper.get('.econometrics-page__error').text()).toContain('A committed block is required');
+    expect(apiMocks.fetchInstructions.mock.calls.some(([params]) => params.kind === 'Mint' || params.kind === 'Burn')).toBe(false);
     wrapper.unmount();
   });
 
@@ -328,7 +331,7 @@ describe('Econometrics', () => {
     apiMocks.fetchInstructions.mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPage(null),
+        ...historyPage(null),
         items: [{
           kind: 'Transfer', created_at: new Date(), transaction_status: 'Committed',
           box: { json: { kind: 'Transfer', payload: { variant: 'AssetBatch', value: {
@@ -359,7 +362,7 @@ describe('Econometrics', () => {
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-          pagination: { limit: 100, next_cursor: 'cursor-1', has_more: true },
+          nextCursor: 'cursor-1',
           items: [
             {
               id: `${SAMPLE_ASSET_DEFINITION_ID}#${SAMPLE_ACCOUNT_ID}`,
@@ -373,7 +376,7 @@ describe('Econometrics', () => {
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-          pagination: { limit: 100, next_cursor: null, has_more: false },
+          nextCursor: null,
           items: [],
         },
       });
@@ -419,14 +422,14 @@ describe('Econometrics', () => {
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-          pagination: { limit: 100, next_cursor: 'cursor-1', has_more: true },
+          nextCursor: 'cursor-1',
           items: [],
         },
       })
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-          pagination: { limit: 100, next_cursor: 'cursor-1', has_more: true },
+          nextCursor: 'cursor-1',
           items: [],
         },
       });
@@ -470,7 +473,7 @@ describe('Econometrics', () => {
     apiMocks.fetchAssets.mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 100, next_cursor: 'cursor-2', has_more: true },
+        nextCursor: 'cursor-2',
         items: Array.from({ length: 100 }, (_, index) => ({
           id: `${SAMPLE_ASSET_DEFINITION_ID}#holder-${index}`,
           definition_id: SAMPLE_ASSET_DEFINITION_ID,
@@ -519,7 +522,7 @@ describe('Econometrics', () => {
     apiMocks.fetchAssets.mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 100, next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [
           {
             id: `${SAMPLE_ASSET_DEFINITION_ID}#${SAMPLE_ACCOUNT_ID}`,

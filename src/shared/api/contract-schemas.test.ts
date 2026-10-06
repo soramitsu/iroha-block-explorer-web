@@ -32,18 +32,11 @@ describe('contract activity schemas', () => {
     expect(ContractActivity.parse(activity).contract_payload).toEqual(activity.contract_payload);
   });
 
-  it('accepts only exact counted-list envelopes with a total', () => {
-    expect(ContractActivityResponse.parse({
-      items: [activity],
-      total: 1,
-      has_more: false,
-      count_mode: 'exact',
-    }).total).toBe(1);
-    expect(() => ContractActivityResponse.parse({
-      items: [],
-      has_more: false,
-      count_mode: 'bounded',
-    })).toThrow();
+  it.each([null, 'opaque-contract-continuation'])('accepts native activity collections with cursor %s and no fabricated total', (nextCursor) => {
+    const parsed = ContractActivityResponse.parse({ items: [activity], nextCursor });
+    expect(parsed).toEqual({ items: [activity], nextCursor });
+    expect(parsed).not.toHaveProperty('total');
+    expect(() => ContractActivityResponse.parse({ items: [], total: 0, has_more: false, count_mode: 'exact' })).toThrow();
   });
 
   it('rejects camelCase aliases instead of decoding a second shape', () => {
@@ -66,17 +59,12 @@ describe('contract event schemas', () => {
     expect(() => ContractEvent.parse(payload)).toThrow();
   });
 
-  it('requires exact event history totals', () => {
-    expect(ContractEventResponse.parse({
-      items: [event],
-      total: 1,
-      has_more: false,
-      count_mode: 'exact',
-    }).items).toHaveLength(1);
-    expect(() => ContractEventResponse.parse({
-      items: [],
-      has_more: false,
-      count_mode: 'exact',
-    })).toThrow();
+  it('uses the native event continuation without exact-count metadata', () => {
+    const parsed = ContractEventResponse.parse({ items: [event], nextCursor: null });
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.nextCursor).toBeNull();
+    expect(parsed).not.toHaveProperty('total');
+    expect(() => ContractEventResponse.parse({ items: [], total: 0, has_more: false, count_mode: 'exact' })).toThrow();
+    expect(() => ContractEventResponse.parse({ items: [], nextCursor: 7 })).toThrow();
   });
 });

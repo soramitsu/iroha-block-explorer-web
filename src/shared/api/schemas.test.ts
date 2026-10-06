@@ -1,3 +1,4 @@
+import stateFinality from '../../../tests/fixtures/taira-state-finality.json';
 import { describe, expect, it } from 'vitest';
 import {
   Account,
@@ -18,8 +19,7 @@ import {
   Instruction,
   LatestInstructionsResponse,
   LatestTransactionsResponse,
-  LedgerStateProof,
-  LedgerStateRoot,
+  StateFinalityResponse,
   MinistryAgendaProposalDraftRequest,
   MinistryAgendaProposalDraftResponse,
   MinistryAgendaProposalGetResponse,
@@ -28,7 +28,7 @@ import {
   MultisigSpecResponse,
   NetworkMetrics,
   NFT,
-  HistoryCursorPaginated,
+  CollectionPage,
   PeerMetrics,
   PipelineTransactionStatusResponse,
   RWA,
@@ -224,75 +224,25 @@ describe('Instruction schema', () => {
 });
 
 describe('ledger evidence schemas', () => {
-  const commitQc = {
-    phase: 'Commit',
-    subject_block_hash: 'hash:block',
-    parent_state_root: 'hash:parent',
-    post_state_root: 'hash:state',
-    height: 42,
-    view: 7,
-    epoch: 3,
-    mode_tag: 'sumeragi-v2',
-    highest_qc: null,
-    validator_set_hash: 'hash:validators',
-    validator_set_hash_version: 1,
-    validator_set: ['peer-a', 'peer-b'],
-    aggregate: {
-      signers_bitmap: '03',
-      bls_aggregate_signature: 'cafe',
-    },
-  };
-
-  it('accepts the exact state-root and persisted-QC response shapes', () => {
-    expect(
-      LedgerStateRoot.parse({
-        height: 42,
-        block_hash: 'hash:block',
-        state_root: 'hash:state',
-        source: 'commit_qc',
-        commit_qc: commitQc,
-      }).source
-    ).toBe('commit_qc');
-
-    expect(
-      LedgerStateProof.parse({
-        height: 42,
-        block_hash: 'hash:block',
-        state_root: 'hash:state',
-        commit_qc: commitQc,
-      }).commit_qc.aggregate.signers_bitmap
-    ).toBe('03');
+  it('preserves the current public Taira state-finality carrier without claiming verification', () => {
+    const parsed = StateFinalityResponse.parse(stateFinality);
+    expect(parsed).toEqual(stateFinality);
+    expect(parsed.height).toBe(12);
+    expect(parsed.finality_proof.committee).toHaveLength(4);
+    expect(parsed.finality_proof.block_wire).toHaveLength(16411);
   });
 
-  it('accepts a result-root response without a QC but rejects invented sources and extra fields', () => {
-    expect(
-      LedgerStateRoot.parse({
-        height: 42,
-        block_hash: 'hash:block',
-        state_root: 'hash:state',
-        source: 'result_merkle_root',
-        commit_qc: null,
-      }).commit_qc
-    ).toBeNull();
-
-    expect(() =>
-      LedgerStateRoot.parse({
-        height: 42,
-        block_hash: 'hash:block',
-        state_root: 'hash:state',
-        source: 'fallback',
-        commit_qc: null,
-      })
-    ).toThrow();
-    expect(() =>
-      LedgerStateProof.parse({
-        height: 42,
-        block_hash: 'hash:block',
-        state_root: 'hash:state',
-        commit_qc: commitQc,
-        locally_verified: true,
-      })
-    ).toThrow();
+  it.each([
+    { ...stateFinality, witnessed_post_state_root: undefined },
+    { ...stateFinality, block_header: undefined },
+    { ...stateFinality, finality_proof: undefined },
+    { ...stateFinality, source: 'commit_qc' },
+    { ...stateFinality, state_root: stateFinality.witnessed_post_state_root },
+    { ...stateFinality, locally_verified: true },
+    { ...stateFinality, finality_proof: { ...stateFinality.finality_proof, block_wire: [256] } },
+    { ...stateFinality, finality_proof: { ...stateFinality.finality_proof, committee: [] } },
+  ])('rejects incomplete, retired or malformed finality evidence', (payload) => {
+    expect(() => StateFinalityResponse.parse(payload)).toThrow();
   });
 });
 
@@ -488,17 +438,14 @@ describe('Explorer payload schemas', () => {
     expect(parsed.owned_assets).toBe(1);
   });
 
-  it('preserves exact account permission payloads and requires totals in exact mode', () => {
-    const parsed = AccountPermissionsResponse.parse({
+  it('preserves exact account permission payloads and requires an explicit continuation', () => {
+    const parsed = AccountPermissionsResponse.parse({ nextCursor: null,
       items: [
         {
           name: 'CanTransferAssetWithDefinition',
           payload: { asset_definition: validAssetDefinitionId, limit: '100000000000000000001' },
         },
       ],
-      total: 1,
-      has_more: false,
-      count_mode: 'exact',
     });
 
     expect(parsed.items[0]?.payload).toEqual({
@@ -506,27 +453,21 @@ describe('Explorer payload schemas', () => {
       limit: '100000000000000000001',
     });
     expect(() =>
-      AccountPermissionsResponse.parse({
-        items: [],
-        has_more: false,
-        count_mode: 'exact',
-      })
-    ).toThrow(/total/u);
+      AccountPermissionsResponse.parse({ items: [] })
+    ).toThrow(/nextCursor/u);
   });
 
   it('accepts bounded permission pages without inventing a total', () => {
-    const parsed = AccountPermissionsResponse.parse({
+    const parsed = AccountPermissionsResponse.parse({ nextCursor: null,
       items: [],
-      has_more: true,
-      count_mode: 'bounded',
     });
 
-    expect(parsed.total).toBeUndefined();
-    expect(parsed.has_more).toBe(true);
+    expect('total' in parsed).toBe(false);
+    expect(parsed.nextCursor).toBeNull();
   });
 
   it('preserves exact indexed account-history quantities and evidence fields', () => {
-    const parsed = AccountHistoryResponse.parse({
+    const parsed = AccountHistoryResponse.parse({ nextCursor: null,
       items: [
         {
           id: 'history:1',
@@ -544,20 +485,10 @@ describe('Explorer payload schemas', () => {
           tx_hash: 'ab'.repeat(32),
         },
       ],
-      total: 1,
-      has_more: false,
-      count_mode: 'exact',
-      indexed_height: 42,
-      indexed_block_hash: 'cd'.repeat(32),
-      query_source: 'account_history_index',
     });
 
     expect(parsed.items[0]?.amount).toBe('100000000000000000001.000000000000000001');
-    expect(parsed.query_source).toBe('account_history_index');
-    if (parsed.query_source !== 'account_history_index') {
-      throw new Error('Expected a single-route account-history index response');
-    }
-    expect(parsed.indexed_height).toBe(42);
+    expect(parsed.nextCursor).toBeNull();
     expect(() =>
       AccountHistoryResponse.parse({
         ...parsed,
@@ -566,25 +497,18 @@ describe('Explorer payload schemas', () => {
     ).toThrow();
   });
 
-  it('accepts exact and bounded multi-route account-history fanout envelopes', () => {
-    const exact = AccountHistoryResponse.parse({
+  it('accepts terminal account-history pages without index metadata or totals', () => {
+    const exact = AccountHistoryResponse.parse({ nextCursor: null,
       items: [],
-      total: 0,
-      has_more: false,
-      count_mode: 'exact',
-      query_source: 'account_history_fanout',
     });
-    const bounded = AccountHistoryResponse.parse({
+    const bounded = AccountHistoryResponse.parse({ nextCursor: null,
       items: [],
-      has_more: true,
-      count_mode: 'bounded',
-      query_source: 'account_history_fanout',
     });
 
-    expect(exact.query_source).toBe('account_history_fanout');
+    expect(exact.nextCursor).toBeNull();
     expect('indexed_height' in exact).toBe(false);
-    expect(bounded.total).toBeUndefined();
-    expect(bounded.has_more).toBe(true);
+    expect('total' in bounded).toBe(false);
+    expect(bounded.nextCursor).toBeNull();
   });
 
   it.each([
@@ -623,7 +547,7 @@ describe('Explorer payload schemas', () => {
     {
       query_source: 'account_history_fanout',
     },
-  ])('requires exact $query_source responses to include total', (source) => {
+  ])('rejects retired $query_source counted-history envelopes', (source) => {
     expect(() =>
       AccountHistoryResponse.parse({
         items: [],
@@ -631,7 +555,7 @@ describe('Explorer payload schemas', () => {
         count_mode: 'exact',
         ...source,
       })
-    ).toThrow(/total/u);
+    ).toThrow(/nextCursor/u);
   });
 
   it('parses strict multisig specs and decoded proposal instructions', () => {
@@ -779,10 +703,9 @@ describe('Explorer payload schemas', () => {
     expect(parsed.sampled_at.toISOString()).toBe('2026-03-05T06:00:01.000Z');
   });
 
-  it('parses latest transaction snapshots', () => {
+  it('parses latest transaction collection pages', () => {
     const parsed = LatestTransactionsResponse.parse({
-      pagination: { limit: 10, snapshot_height: 101, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
-      sampled_at: '2026-03-05T06:00:02Z',
+      nextCursor: null,
       items: [
         {
           authority: validAccountId,
@@ -800,8 +723,7 @@ describe('Explorer payload schemas', () => {
 
   it('preserves halfwidth latest transaction authorities from Torii', () => {
     const parsed = LatestTransactionsResponse.parse({
-      pagination: { limit: 10, snapshot_height: 101, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
-      sampled_at: '2026-03-05T06:00:02Z',
+      nextCursor: null,
       items: [
         {
           authority: validAccountId,
@@ -820,8 +742,7 @@ describe('Explorer payload schemas', () => {
   it('rejects noncanonical fullwidth latest transaction authorities', () => {
     expect(() =>
       LatestTransactionsResponse.parse({
-      pagination: { limit: 10, snapshot_height: 101, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
-        sampled_at: '2026-03-05T06:00:02Z',
+      nextCursor: null,
         items: [
           {
             authority: 'sorauロ1NラhBUd2BツヲトiヤニツヌKSテaリメモQラrメoリナnウリbQウQJニLJ5HSE',
@@ -836,15 +757,9 @@ describe('Explorer payload schemas', () => {
     ).toThrow();
   });
 
-  it('parses snapshot-bound transaction history with live mixed Base58 + kana authority ids', () => {
-    const parsed = HistoryCursorPaginated(Transaction).parse({
-      pagination: {
-        limit: 10,
-        snapshot_height: 37,
-        snapshot_hash: 'a'.repeat(64),
-        next_cursor: null,
-        has_more: false,
-      },
+  it('parses transaction collections with exact mixed Base58 + kana authority ids', () => {
+    const parsed = CollectionPage(Transaction).parse({
+      nextCursor: null,
       items: [
         {
           authority: validAccountIdModern,
@@ -862,21 +777,17 @@ describe('Explorer payload schemas', () => {
   });
 
   it.each([
-    { snapshot_height: 0, snapshot_hash: 'a'.repeat(64) },
-    { snapshot_height: 37, snapshot_hash: null },
-    { snapshot_height: 37, snapshot_hash: 'A'.repeat(64) },
-    { snapshot_height: Number.MAX_SAFE_INTEGER + 1, snapshot_hash: 'a'.repeat(64) },
-  ])('rejects an inconsistent or imprecise history snapshot %j', (snapshot) => {
-    expect(HistoryCursorPaginated(Transaction).safeParse({
-      items: [],
-      pagination: { limit: 10, next_cursor: null, has_more: false, ...snapshot },
-    }).success).toBe(false);
+    { items: [], pagination: { next_cursor: null } },
+    { items: [], nextCursor: '' },
+    { items: [], nextCursor: null, total: 0 },
+    { items: [], nextCursor: null, snapshot_height: 37 },
+  ])('rejects retired metadata and invalid collection continuations %j', (page) => {
+    expect(CollectionPage(Transaction).safeParse(page).success).toBe(false);
   });
 
-  it('parses latest instruction snapshots', () => {
+  it('parses latest instruction collection pages', () => {
     const parsed = LatestInstructionsResponse.parse({
-      pagination: { limit: 10, snapshot_height: 101, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
-      sampled_at: '2026-03-05T06:00:02Z',
+      nextCursor: null,
       items: [
         {
           ...baseInstruction,

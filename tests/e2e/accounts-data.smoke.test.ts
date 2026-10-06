@@ -88,9 +88,9 @@ const BaseTableStub = defineComponent({
         </div>
       </div>
       <button
-        v-if="cursorPagination?.next_cursor"
+        v-if="cursorPagination?.nextCursor"
         data-test="cursor-next"
-        @click="$emit('update:cursor', cursorPagination.next_cursor)"
+        @click="$emit('update:cursor', cursorPagination.nextCursor)"
       >Next</button>
     </div>
   `,
@@ -151,9 +151,7 @@ describe('Accounts data smoke', () => {
     fetchAccountsMock.mockImplementation((params) => Promise.resolve({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: params?.cursor
-          ? { limit: 10, next_cursor: null, has_more: false }
-          : { limit: 10, next_cursor: 'YWNjb3VudHMtY3Vyc29yLTI', has_more: true },
+        nextCursor: params?.cursor ? null : 'YWNjb3VudHMtY3Vyc29yLTI',
         items: mockAccounts,
       },
     }));

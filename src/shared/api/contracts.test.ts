@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { jsonResponse } from '../../../tests/fixtures/http-response';
 import { ToriiBrowserClient } from '@iroha/iroha-js/torii-browser';
 import {
   fetchContractActivity,
@@ -41,101 +42,65 @@ const event = {
   fee_payment: { payer: 'authority' },
 };
 
+function predicates(filter: { op: string, args: unknown[] }): unknown[][] {
+  return filter.op === 'and'
+    ? filter.args.flatMap((child) => predicates(child as { op: string, args: unknown[] }))
+    : [[filter.op, ...filter.args]];
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   globalThis.fetch = nativeFetch;
 });
 
 describe('contract route API wrappers', () => {
-  it('requests exact contract activity with route-specific limit/offset filters', async () => {
-    const spy = vi.spyOn(ToriiBrowserClient.prototype, 'listContractActivity').mockResolvedValue({
-      items: [activity],
-      total: 1,
-      has_more: false,
-      count_mode: 'exact',
-    });
-
+  it('requests contract activity through canonical predicates and opaque continuation', async () => {
+    const spy = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ items: [activity], next_cursor: 'next' }));
+    globalThis.fetch = spy;
     const result = await fetchContractActivity({
-      page: 3,
-      per_page: 20,
-      authority: 'treasury@banking.retail',
-      contract_address: 'tairac1router',
-      contract_alias: 'router',
-      contract_entrypoint: 'swap',
-      since_timestamp_ms: 100,
-      until_timestamp_ms: 200,
-      result_ok: true,
+      cursor: 'previous', limit: 20, authority: 'treasury@banking.retail',
+      contract_address: 'tairac1router', contract_alias: 'router', contract_entrypoint: 'swap',
+      since_timestamp_ms: 100, until_timestamp_ms: 200, result_ok: true,
     });
-
-    expect(spy).toHaveBeenCalledWith({
-      limit: 20,
-      offset: 40,
-      countMode: 'exact',
-      authority: 'treasury@banking.retail',
-      contractAddress: 'tairac1router',
-      contractAlias: 'router',
-      contractEntrypoint: 'swap',
-      sinceTimestampMs: 100,
-      untilTimestampMs: 200,
-      resultOk: true,
-    });
-    expect(result).toEqual({
-      status: 'ok',
-      data: { items: [activity], total: 1, has_more: false, count_mode: 'exact' },
-    });
+    expect(new URL(String(spy.mock.calls[0][0])).pathname).toBe('/v1/contracts/activity/query');
+    expect(spy.mock.calls[0][1]?.method).toBe('POST');
+    const body = JSON.parse(String(spy.mock.calls[0][1]?.body));
+    expect(body.limit).toBe(20);
+    expect(body.cursor).toBe('previous');
+    expect(Object.keys(body).sort()).toEqual(['cursor', 'filter', 'limit']);
+    expect(predicates(body.filter)).toEqual([
+      ['eq', 'authority', 'treasury@banking.retail'], ['eq', 'contract_address', 'tairac1router'],
+      ['eq', 'contract_alias', 'router'], ['eq', 'contract_entrypoint', 'swap'], ['eq', 'result_ok', true],
+      ['gte', 'timestamp_ms', 100], ['lte', 'timestamp_ms', 200],
+    ]);
+    expect(result).toEqual({ status: 'ok', data: { items: [activity], nextCursor: 'next' } });
   });
 
-  it('requests exact event history with every authoritative event filter', async () => {
-    const spy = vi.spyOn(ToriiBrowserClient.prototype, 'listContractEvents').mockResolvedValue({
-      items: [event],
-      total: 1,
-      has_more: false,
-      count_mode: 'exact',
-    });
-
+  it('requests event history with all authoritative selectors and no invented count', async () => {
+    const spy = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ items: [event], next_cursor: null }));
+    globalThis.fetch = spy;
     const result = await fetchContractEvents({
-      page: 2,
-      per_page: 10,
-      authority: 'treasury@banking.retail',
-      contract_address: 'tairac1router',
-      contract_alias: 'router',
-      module: 'router',
-      event_kind: 'swap_failed',
-      participant: 'treasury@banking.retail',
-      asset_id: 'usd#issuer.main',
-      provenance: 'derived',
-      since_timestamp_ms: 100,
-      until_timestamp_ms: 200,
-      result_ok: false,
+      limit: 10, authority: 'treasury@banking.retail', contract_address: 'tairac1router',
+      contract_alias: 'router', module: 'router', event_kind: 'swap_failed',
+      participant: 'treasury@banking.retail', asset_id: 'usd#issuer.main', provenance: 'derived',
+      since_timestamp_ms: 100, until_timestamp_ms: 200, result_ok: false,
     });
-
-    expect(spy).toHaveBeenCalledWith({
-      limit: 10,
-      offset: 10,
-      countMode: 'exact',
-      authority: 'treasury@banking.retail',
-      contractAddress: 'tairac1router',
-      contractAlias: 'router',
-      module: 'router',
-      eventKind: 'swap_failed',
-      participant: 'treasury@banking.retail',
-      assetId: 'usd#issuer.main',
-      provenance: 'derived',
-      sinceTimestampMs: 100,
-      untilTimestampMs: 200,
-      resultOk: false,
-    });
-    expect(result.status).toBe('ok');
+    expect(new URL(String(spy.mock.calls[0][0])).pathname).toBe('/v1/contracts/events/query');
+    const body = JSON.parse(String(spy.mock.calls[0][1]?.body));
+    expect(Object.keys(body).sort()).toEqual(['filter', 'limit']);
+    expect(predicates(body.filter)).toEqual([
+      ['eq', 'authority', 'treasury@banking.retail'], ['eq', 'contract_address', 'tairac1router'],
+      ['eq', 'contract_alias', 'router'], ['eq', 'module', 'router'], ['eq', 'event_kind', 'swap_failed'],
+      ['eq', 'participants', 'treasury@banking.retail'], ['eq', 'asset_ids', 'usd#issuer.main'],
+      ['eq', 'provenance', 'derived'], ['eq', 'result_ok', false],
+      ['gte', 'timestamp_ms', 100], ['lte', 'timestamp_ms', 200],
+    ]);
+    expect(result).toEqual({ status: 'ok', data: { items: [event], nextCursor: null } });
   });
 
-  it('rejects a bounded payload because exact pagination requires total', async () => {
-    vi.spyOn(ToriiBrowserClient.prototype, 'listContractActivity').mockResolvedValue({
-      items: [],
-      has_more: false,
-      count_mode: 'bounded',
-    });
-
-    await expect(fetchContractActivity({ page: 1, per_page: 10 })).rejects.toThrow();
+  it('rejects the retired exact-count envelope rather than fabricating a continuation', async () => {
+    globalThis.fetch = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ items: [], total: 0, has_more: false, count_mode: 'exact' }));
+    await expect(fetchContractActivity({ limit: 10 })).rejects.toThrow();
   });
 
   it('passes one AbortSignal-backed stream through the SDK and validates decoded events', async () => {

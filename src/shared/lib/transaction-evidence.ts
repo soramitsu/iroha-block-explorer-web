@@ -121,7 +121,7 @@ export function verifyTransactionBlockEvidence({
   const proofEntryRoot = normalizeIrohaHash32(proof?.proof.entry_commitment.root);
   const blockTransactionsHash = normalizeIrohaHash32(block?.transactions_hash);
 
-  const pathVerificationAvailable = proof?.pathVerification !== null;
+  const pathVerificationAvailable = proof !== null && proof.pathVerification !== null;
   const pathVerificationValid = proof?.pathVerification?.valid === true;
   const transactionHashMatches = requestedHash !== null && proofEntryHash !== null && requestedHash === proofEntryHash;
   const proofHeightMatches = proof !== null && blockHeightMatches(proof.proof.block_height, requestedBlockHeight);
@@ -151,8 +151,8 @@ export function stateEvidenceAgreement(
   bundle: TransactionEvidenceBundle<
     unknown,
     StateReferenceBlockIdentity,
-    { height: number; block_hash: string; state_root: string },
-    { height: number; block_hash: string; state_root: string }
+    { height: number; block_hash: string; witnessed_post_state_root: string },
+    { height: number; block_hash: string; witnessed_post_state_root: string }
   >,
   requestedBlockHeight: number
 ): boolean | null {
@@ -164,12 +164,17 @@ export function stateEvidenceAgreement(
     return null;
   }
   if (!Number.isSafeInteger(requestedBlockHeight) || requestedBlockHeight < 0) return false;
+  const referenceHash = normalizeIrohaHash32(bundle.referenceBlock.data.hash);
+  const stateHash = normalizeIrohaHash32(bundle.stateRoot.data.block_hash);
+  const proofHash = normalizeIrohaHash32(bundle.stateProof.data.block_hash);
+  const stateRoot = normalizeIrohaHash32(bundle.stateRoot.data.witnessed_post_state_root);
+  const proofRoot = normalizeIrohaHash32(bundle.stateProof.data.witnessed_post_state_root);
   return (
     bundle.referenceBlock.data.height === requestedBlockHeight &&
     bundle.stateRoot.data.height === requestedBlockHeight &&
     bundle.stateProof.data.height === requestedBlockHeight &&
-    bundle.referenceBlock.data.hash === bundle.stateRoot.data.block_hash &&
-    bundle.stateRoot.data.block_hash === bundle.stateProof.data.block_hash &&
-    bundle.stateRoot.data.state_root === bundle.stateProof.data.state_root
+    referenceHash !== null && stateHash !== null && proofHash !== null &&
+    stateRoot !== null && proofRoot !== null &&
+    referenceHash === stateHash && stateHash === proofHash && stateRoot === proofRoot
   );
 }

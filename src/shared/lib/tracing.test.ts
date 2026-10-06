@@ -266,7 +266,7 @@ describe('tracing helpers', () => {
       filters: { committed_only: true, transfer_variants: 'all' },
       graph: { nodes, edges, events },
       cursors: [
-        { accountId: nodeA, depth: 0, nextCursor: null, snapshot: null, visitedCursors: [], exhausted: false },
+        { accountId: nodeA, depth: 0, nextCursor: null, visitedCursors: [], exhausted: false },
       ],
       labels: {},
       csv,

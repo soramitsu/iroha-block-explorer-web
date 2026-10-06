@@ -12,8 +12,8 @@ importers:
         specifier: npm:@jsr/iroha__core@0.5.0-alpha
         version: '@jsr/iroha__core@0.5.0-alpha'
       '@iroha/iroha-js':
-        specifier: file:vendor/iroha-iroha-js-0.0.3.tgz
-        version: file:vendor/iroha-iroha-js-0.0.3.tgz
+        specifier: file:vendor/iroha-iroha-js-0.0.3-cc8e6620f6cb.tgz
+        version: file:vendor/iroha-iroha-js-0.0.3-cc8e6620f6cb.tgz
       '@ngneat/falso':
         specifier: ^8.0.2
         version: 8.0.2
@@ -537,10 +537,10 @@ packages:
     resolution: {integrity: sha512-Om86EjuQtA69hdNj3GQec9ZC0L0vPSAnXzB3gP/gyJ7+mA7t06d9aOAiqMZ+xEOsumGP4eEBlfl8zF2LOTzf2A==}
     engines: {node: '>= 16'}
 
-  '@iroha/iroha-js@file:vendor/iroha-iroha-js-0.0.3.tgz':
-    resolution: {integrity: sha512-c7jX2C7nDcEQL6fbumiSyj8XBMQ+P/f93ZPTm+uW51yJ7alq7Via8O3iOiZ9wub8bxaqTm8IwwWk5eCfK+pR+w==, tarball: file:vendor/iroha-iroha-js-0.0.3.tgz}
+  '@iroha/iroha-js@file:vendor/iroha-iroha-js-0.0.3-cc8e6620f6cb.tgz':
+    resolution: {integrity: sha512-ZQDuDeWsHI82VxQYtPKvJa/wHvP2ZapddPyOwkSJz+jonEf73Sxsg+fkv7juh4SnJOEyopzcgDBbkv7pFAsjdQ==, tarball: file:vendor/iroha-iroha-js-0.0.3-cc8e6620f6cb.tgz}
     version: 0.0.3
-    engines: {node: '>=18'}
+    engines: {node: '>=20.19.0'}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -3561,7 +3561,7 @@ snapshots:
 
   '@intlify/shared@11.1.12': {}
 
-  '@iroha/iroha-js@file:vendor/iroha-iroha-js-0.0.3.tgz':
+  '@iroha/iroha-js@file:vendor/iroha-iroha-js-0.0.3-cc8e6620f6cb.tgz':
     dependencies:
       '@noble/ciphers': 1.3.0
       '@noble/curves': 1.9.7

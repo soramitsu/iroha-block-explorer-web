@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import type { Block, LedgerStateProof, LedgerStateRoot } from '@/shared/api/schemas';
+import type { Block, StateFinalityResponse } from '@/shared/api/schemas';
 import type { TransactionBlockEvidence } from '@/shared/api';
 import * as http from '@/shared/api';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
@@ -20,7 +20,7 @@ const props = defineProps<{
   transactionHash: string;
 }>();
 
-type EvidenceBundle = TransactionEvidenceBundle<TransactionBlockEvidence, Block, LedgerStateRoot, LedgerStateProof>;
+type EvidenceBundle = TransactionEvidenceBundle<TransactionBlockEvidence, Block, StateFinalityResponse, StateFinalityResponse>;
 
 const evidenceResource = setupAsyncData<EvidenceBundle>(() =>
   loadTransactionEvidence({
@@ -65,6 +65,11 @@ const rawBlockProof = computed(() => {
   return part?.status === 'available' ? JSON.stringify(part.data.proof, null, 2) : '';
 });
 
+const rawStateProof = computed(() => {
+  const part = evidenceResource.data?.stateProof;
+  return part?.status === 'available' ? JSON.stringify(part.data, null, 2) : '';
+});
+
 watch(
   () => [props.blockHeight, props.transactionHash] as const,
   ([height, hash], previous) => {
@@ -96,10 +101,9 @@ watch(
     >
       <div v-if="evidenceResource.data" class="transaction-evidence__body">
         <p class="transaction-evidence__scope row-text">
-          The decoded proof identity is compared with the requested transaction and reference-block metadata. This
-          browser does not claim Merkle or finality verification: the current SDK requires a caller-authenticated
-          anchor, and no digest-pinned browser finality-verifier WASM is shipped. State roots and quorum certificates
-          are displayed exactly as this node supplied them; this browser does not verify their BLS aggregate signature.
+          Evidence is supplied by the selected node. Matching identifiers show agreement between responses.
+          This browser does not independently authenticate Merkle paths, state roots, committee membership
+          or finality signatures.
         </p>
 
         <section class="transaction-evidence__section" aria-labelledby="transaction-evidence-merkle">
@@ -236,7 +240,7 @@ watch(
           </p>
 
           <details v-if="rawBlockProof">
-            <summary>Canonical decoded proof</summary>
+            <summary>Node-supplied block proof</summary>
             <pre>{{ rawBlockProof }}</pre>
           </details>
         </section>
@@ -249,8 +253,8 @@ watch(
             </span>
           </div>
           <div v-if="evidenceResource.data.stateRoot.status === 'available'" class="transaction-evidence__grid">
-            <DataField title="State root" :hash="evidenceResource.data.stateRoot.data.state_root" copy />
-            <DataField title="Source" :value="evidenceResource.data.stateRoot.data.source" />
+            <DataField title="Witnessed post-state root" :hash="evidenceResource.data.stateRoot.data.witnessed_post_state_root" copy />
+            <DataField title="Block height" :value="evidenceResource.data.stateRoot.data.height" />
             <DataField title="Block hash" :hash="evidenceResource.data.stateRoot.data.block_hash" copy />
           </div>
           <p
@@ -264,11 +268,11 @@ watch(
           </p>
         </section>
 
-        <section class="transaction-evidence__section" aria-labelledby="transaction-evidence-qc">
+        <section class="transaction-evidence__section" aria-labelledby="transaction-evidence-finality">
           <div class="transaction-evidence__heading">
-            <h3 id="transaction-evidence-qc">Commit quorum certificate</h3>
+            <h3 id="transaction-evidence-finality">State finality evidence</h3>
             <span class="transaction-evidence__claim transaction-evidence__claim--provided">
-              Node-provided · BLS not verified here
+              Node-provided · finality not verified here
             </span>
           </div>
           <div
@@ -276,28 +280,22 @@ watch(
             class="transaction-evidence__grid"
             data-test="state-proof-available"
           >
-            <DataField title="Phase" :value="evidenceResource.data.stateProof.data.commit_qc.phase" />
+            <DataField title="Header height" :value="evidenceResource.data.stateProof.data.block_header.height" />
             <DataField
-              title="View / epoch"
-              :value="`${evidenceResource.data.stateProof.data.commit_qc.view} / ${evidenceResource.data.stateProof.data.commit_qc.epoch}`"
+              title="View-change index"
+              :value="evidenceResource.data.stateProof.data.block_header.view_change_index"
             />
             <DataField
-              title="Validator-set entries"
-              :value="evidenceResource.data.stateProof.data.commit_qc.validator_set.length"
+              title="Committee entries"
+              :value="evidenceResource.data.stateProof.data.finality_proof.committee.length"
             />
             <DataField
-              title="Signer bitmap"
-              :hash="evidenceResource.data.stateProof.data.commit_qc.aggregate.signers_bitmap"
-              copy
+              title="Encoded block bytes"
+              :value="evidenceResource.data.stateProof.data.finality_proof.block_wire.length"
             />
             <DataField
-              title="Validator-set hash"
-              :hash="evidenceResource.data.stateProof.data.commit_qc.validator_set_hash"
-              copy
-            />
-            <DataField
-              title="Aggregate signature"
-              :hash="evidenceResource.data.stateProof.data.commit_qc.aggregate.bls_aggregate_signature"
+              title="Block hash"
+              :hash="evidenceResource.data.stateProof.data.block_hash"
               copy
             />
           </div>
@@ -306,11 +304,16 @@ watch(
             class="transaction-evidence__message row-text"
             data-test="state-proof-unavailable"
           >
-            No persisted commit quorum certificate is available from this node.
+            No state finality evidence is available from this node.
           </p>
           <p v-else class="transaction-evidence__message transaction-evidence__message--error row-text" role="alert">
-            Quorum-certificate request failed: {{ evidenceResource.data.stateProof.problem.message }}
+            State-finality request failed: {{ evidenceResource.data.stateProof.problem.message }}
           </p>
+
+          <details v-if="rawStateProof" data-test="state-proof-raw">
+            <summary>Node-supplied state finality evidence</summary>
+            <pre>{{ rawStateProof }}</pre>
+          </details>
 
           <p
             v-if="stateAgreement !== null"
@@ -322,8 +325,8 @@ watch(
           >
             {{
               stateAgreement
-                ? 'The node-provided state-root and state-proof envelopes identify the requested block and have identical block hashes and state roots.'
-                : 'Warning: the node-provided state-root and state-proof envelopes do not identify the same requested block and state root.'
+                ? 'The node-provided state-root and state-proof envelopes identify the requested block and have identical block hashes and witnessed post-state roots.'
+                : 'Warning: the node-provided state-root and state-proof envelopes do not identify the same requested block and witnessed post-state root.'
             }}
           </p>
         </section>

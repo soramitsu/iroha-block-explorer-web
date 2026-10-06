@@ -123,7 +123,6 @@ export default defineConfig(({ mode }) => {
       // They must not run as maintained source tests against this checkout.
       exclude: [...configDefaults.exclude, 'output/**'],
       globalSetup: 'test-globals.ts',
-      setupFiles: ['tests/setup/browser-codec.ts'],
       // Node v25 + forked pools can intermittently crash with EPIPE on worker IPC.
       // Threads avoid child-process IPC and keep default parallel `vitest run` stable.
       pool: 'threads',

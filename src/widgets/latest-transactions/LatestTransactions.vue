@@ -47,6 +47,11 @@
         <span>({{ $t(latestSampleToneKey) }})</span>
       </div>
 
+      <BaseResourceState
+        v-if="scope?.expose.error"
+        :snapshot="{ status: 'error', problem: scope?.expose.error }"
+        @retry="scope?.expose.refetch()"
+      />
       <div v-if="!isInitialLoading">
         <div
           v-for="transaction in transactions"
@@ -102,6 +107,7 @@ import BaseHash from '@/shared/ui/components/BaseHash.vue';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import * as http from '@/shared/api';
 import TimeStamp from '@/shared/ui/components/TimeStamp.vue';
 import { useParamScope } from '@vue-kakuyaku/core';

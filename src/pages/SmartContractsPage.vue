@@ -158,7 +158,7 @@
           v-model:page-size="deploymentLimit"
           :loading="false"
           pagination-mode="cursor"
-          :cursor-pagination="data.pagination"
+          :cursor-pagination="data"
           :items="data.items"
           :row-key="deploymentRowKey"
           container-class="smart-contracts-page__container"
@@ -243,10 +243,11 @@
       </template>
       <template #default="{ data }">
         <BaseTable
-          v-model:page="page"
-          v-model:page-size="pageSize"
+          v-model:cursor="cursor"
+          v-model:page-size="limit"
+          pagination-mode="cursor"
           :loading="false"
-          :total="data.total"
+          :cursor-pagination="data"
           :items="data.items"
           :row-key="activityRowKey"
           container-class="smart-contracts-page__container"
@@ -452,10 +453,11 @@
         </template>
         <template #default="{ data }">
           <BaseTable
-            v-model:page="page"
-            v-model:page-size="pageSize"
+            v-model:cursor="cursor"
+            v-model:page-size="limit"
+          pagination-mode="cursor"
             :loading="false"
-            :total="data.total"
+            :cursor-pagination="data"
             :items="data.items"
             :row-key="eventRowKey"
             container-class="smart-contracts-page__container"
@@ -594,7 +596,7 @@
 import { computed, onScopeDispose, reactive, ref, shallowRef, watch } from 'vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import * as http from '@/shared/api';
-import type { ContractActivity, ContractEvent, HistoryCursorPaginated } from '@/shared/api/schemas';
+import type { ContractActivity, ContractEvent, CollectionContinuation } from '@/shared/api/schemas';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
@@ -608,7 +610,7 @@ import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import type { ResourceSnapshot } from '@/shared/utils/resource-state';
 import { apiProblemFromError } from '@/shared/utils/resource-state';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
-import { useListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
+import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
 import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 import { extractSmartContractDeployment, type SmartContractDeployment } from '@/shared/lib/smart-contracts';
 import {
@@ -650,7 +652,7 @@ const filterKeys = [
 const eventOnlyFilterKeys = ['module', 'event_kind', 'participant', 'asset_id', 'provenance'] as const;
 
 const navigation = useScopedExplorerNavigation();
-const { route, page, pageSize, updateListQuery } = useListRouteQuery();
+const { route, cursor, limit, updateListQuery } = useCursorListRouteQuery();
 const activeTab = computed(() => parseContractExplorerTab(route.query.tab));
 const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full', lg: 'medium', xs: 'two-line' }, 'short');
 const addressHashType = useAdaptiveHash({ xxl: 'full', xl: 'full', lg: 'medium', md: 'short' }, 'two-line');
@@ -718,7 +720,7 @@ const deploymentScope = useParamScope(
 
 interface DeploymentList {
   items: SmartContractDeployment[]
-  pagination: HistoryCursorPaginated<unknown>['pagination']
+  nextCursor: CollectionContinuation['nextCursor']
 }
 
 const deploymentSnapshot = computed<ResourceSnapshot<DeploymentList>>(() => {
@@ -734,14 +736,14 @@ const deploymentSnapshot = computed<ResourceSnapshot<DeploymentList>>(() => {
   if (items.length === 0) return { status: 'not-found' };
   return {
     status: 'ready',
-    data: { items, pagination: snapshot.data.data.pagination },
+    data: { items, nextCursor: snapshot.data.data.nextCursor },
     isRefreshing: snapshot.isRefreshing,
     refreshError: snapshot.refreshError,
   };
 });
 
 const activityParams = computed(() =>
-  parseContractActivitySearchParams(route.query, page.value, pageSize.value)
+  parseContractActivitySearchParams(route.query, cursor.value, limit.value)
 );
 const activityScope = useParamScope(
   () => ({
@@ -762,7 +764,7 @@ const activitySnapshot = computed(() => unwrapContractListSnapshot(
 ));
 
 const eventParams = computed(() =>
-  parseContractEventSearchParams(route.query, page.value, pageSize.value)
+  parseContractEventSearchParams(route.query, cursor.value, limit.value)
 );
 const eventScope = useParamScope(
   () => ({

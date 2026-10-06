@@ -1,88 +1,70 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchBlocks, fetchLatestTransactions } from './index';
-import { Block, HistoryCursorPaginated, HistoryCursorPagination, LatestTransactionsResponse } from './schemas';
+import { fetchBlocks, fetchInstructions, fetchLatestTransactions } from './index';
+import { Block, CollectionPage, CollectionContinuation, LatestTransactionsResponse } from './schemas';
 import { jsonResponse } from '../../../tests/fixtures/http-response';
 import tairaHistory from '../../../tests/fixtures/taira-history.json';
 
-// Recorded from the public Taira v1 API on 2026-09-12. The deployed Explorer's
-// former 192-character history limit rejected both successful HTTP responses.
-const blockCursor = tairaHistory.blocks.pagination.next_cursor;
+// DTO rows are retained from public Taira; pagination is the current collection contract.
+const blockCursor = 'opaque_server_cursor_2026';
+const blocks = { items: tairaHistory.blocks.items, next_cursor: blockCursor };
+const latest = { items: tairaHistory.latestTransactions.items, next_cursor: null };
 const nativeFetch = globalThis.fetch;
 
-afterEach(() => {
-  globalThis.fetch = nativeFetch;
-});
+afterEach(() => { globalThis.fetch = nativeFetch; });
 
-describe('current snapshot-bound Taira history contract', () => {
-  it('parses the complete public block and latest-transaction responses', () => {
-    expect(blockCursor).toHaveLength(204);
-    const blocks = HistoryCursorPaginated(Block).parse(tairaHistory.blocks);
-    const latest = LatestTransactionsResponse.parse(tairaHistory.latestTransactions);
-
-    expect(blocks.pagination).toEqual(tairaHistory.blocks.pagination);
-    expect(blocks.items[0].height).toBe(835);
-    expect(blocks.items[0].created_at).toEqual(new Date('2026-09-12T03:30:05.553Z'));
-    expect(latest.pagination).toEqual(tairaHistory.latestTransactions.pagination);
-    expect(latest.items[0].authority).toBe(tairaHistory.latestTransactions.items[0].authority);
+describe('opaque Taira collection continuations', () => {
+  it('parses SDK block and latest transaction pages without client snapshot metadata', () => {
+    const parsed = CollectionPage(Block).parse({ items: blocks.items, nextCursor: blockCursor });
+    expect(parsed.items[0].height).toBe(835);
+    expect(parsed.items[0].created_at).toEqual(new Date('2026-09-12T03:30:05.553Z'));
+    expect(parsed.nextCursor).toBe(blockCursor);
+    expect(LatestTransactionsResponse.parse({ items: latest.items, nextCursor: null }).items[0].authority)
+      .toBe(latest.items[0].authority);
   });
 
-  it.each([
-    ['retired short frame', blockCursor.slice(0, 192)],
-    ['truncated frame', blockCursor.slice(0, 203)],
-    ['oversized frame', `${blockCursor}A`],
-    ['decoder admission ceiling', `${blockCursor}AAAA`],
-    ['collection cursor limit', `SUhDMg${'A'.repeat(1418)}`],
-    ['retired IHC1 marker', `SUhDMQ${blockCursor.slice(6)}`],
-    ['padded base64', `${blockCursor.slice(0, -1)}=`],
-    ['non-base64url data', `${blockCursor.slice(0, -1)}+`],
-  ])('rejects %s instead of accepting another history format', (_, nextCursor) => {
-    expect(HistoryCursorPagination.safeParse({
-      ...tairaHistory.blocks.pagination,
-      next_cursor: nextCursor,
-    }).success).toBe(false);
+  it.each(['opaque', 'A'.repeat(192), 'B'.repeat(204), 'C'.repeat(1500)])(
+    'does not guess a server cursor frame from its length or prefix', (nextCursor) => {
+      expect(CollectionContinuation.parse({ nextCursor }).nextCursor).toBe(nextCursor);
+    }
+  );
+
+  it('requires a continuation or explicit exhaustion and rejects retired envelopes', () => {
+    expect(CollectionContinuation.parse({ nextCursor: null })).toEqual({ nextCursor: null });
+    expect(CollectionContinuation.safeParse({ nextCursor: '' }).success).toBe(false);
+    expect(CollectionPage(Block).safeParse(tairaHistory.blocks).success).toBe(false);
   });
 
-  it('accepts an exhausted snapshot and rejects inconsistent continuation metadata', () => {
-    const exhausted = { ...tairaHistory.blocks.pagination, next_cursor: null, has_more: false };
-    expect(HistoryCursorPagination.parse(exhausted)).toEqual(exhausted);
-    expect(HistoryCursorPagination.safeParse({ ...exhausted, has_more: true }).success).toBe(false);
-    expect(HistoryCursorPagination.safeParse({ ...exhausted, next_cursor: blockCursor }).success).toBe(false);
-  });
-
-  it('loads a block page through the installed SDK and forwards its opaque cursor unchanged', async () => {
-    const fetchSpy = vi.fn()
-      .mockResolvedValueOnce(jsonResponse(tairaHistory.blocks))
-      .mockResolvedValueOnce(jsonResponse({
-        items: [],
-        pagination: { ...tairaHistory.blocks.pagination, next_cursor: null, has_more: false },
-      }));
+  it('uses the installed SDK POST query and forwards an empty-page continuation unchanged', async () => {
+    const fetchSpy = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ items: [], next_cursor: blockCursor }))
+      .mockResolvedValueOnce(jsonResponse({ items: blocks.items, next_cursor: null }));
     globalThis.fetch = fetchSpy;
-
     const first = await fetchBlocks({ limit: 2 });
-    expect(first.status).toBe('ok');
-    if (first.status !== 'ok') throw new Error('Expected the public Taira block page to load');
-    expect(first.data.items).toHaveLength(2);
-    expect(first.data.pagination.next_cursor).toBe(blockCursor);
-
-    const second = await fetchBlocks({ limit: 2, cursor: first.data.pagination.next_cursor });
+    if (first.status !== 'ok') throw new Error('Expected successful collection page');
+    expect(first.data.items).toEqual([]);
+    const second = await fetchBlocks({ limit: 2, cursor: first.data.nextCursor });
     expect(second.status).toBe('ok');
-    const url = new URL(String(fetchSpy.mock.calls[1][0]));
-    expect(url.pathname).toBe('/v1/explorer/blocks');
-    expect(url.searchParams.get('limit')).toBe('2');
-    expect(url.searchParams.get('cursor')).toBe(blockCursor);
+    expect(new URL(String(fetchSpy.mock.calls[1][0])).pathname).toBe('/v1/explorer/blocks/query');
+    expect(fetchSpy.mock.calls[1][1]?.method).toBe('POST');
+    expect(JSON.parse(String(fetchSpy.mock.calls[1][1]?.body))).toEqual({ limit: 2, cursor: blockCursor });
   });
 
-  it('loads latest transactions through the installed SDK with the complete history envelope', async () => {
-    const fetchSpy = vi.fn().mockResolvedValue(jsonResponse(tairaHistory.latestTransactions));
+  it('loads the current latest endpoint without requiring sampling metadata', async () => {
+    const fetchSpy = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(latest));
     globalThis.fetch = fetchSpy;
+    const result = await fetchLatestTransactions({ limit: 2 });
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') expect(result.data.items).toHaveLength(2);
+    expect(new URL(String(fetchSpy.mock.calls[0][0])).pathname).toBe('/v1/explorer/transactions/latest/query');
+  });
 
-    const latest = await fetchLatestTransactions({ limit: 2 });
-    expect(latest.status).toBe('ok');
-    if (latest.status !== 'ok') throw new Error('Expected the public Taira transaction page to load');
-    expect(latest.data.items).toHaveLength(2);
-    expect(latest.data.pagination).toEqual(tairaHistory.latestTransactions.pagination);
-    const url = new URL(String(fetchSpy.mock.calls[0][0]));
-    expect(url.pathname).toBe('/v1/explorer/transactions/latest');
-    expect(url.searchParams.get('limit')).toBe('2');
+  it('retains an explicit committed block bound across filtered instruction scans', async () => {
+    const fetchSpy = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ items: [], next_cursor: null }));
+    globalThis.fetch = fetchSpy;
+    await fetchInstructions({ limit: 10, kind: 'Mint', max_block_height: 12 });
+    const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body));
+    expect(body.filter).toEqual({ op: 'and', args: [
+      { op: 'eq', args: ['kind', 'Mint'] }, { op: 'lte', args: ['block', 12] },
+    ] });
   });
 });

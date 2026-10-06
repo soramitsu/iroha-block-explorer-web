@@ -10,15 +10,15 @@ import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
-import { useListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
+import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
 
 const props = defineProps<{
   accountId: string
 }>();
 
-const { route, page, pageSize, updateListQuery } = useListRouteQuery({
-  pageKey: 'activity_page',
-  pageSizeKey: 'activity_per_page',
+const { route, cursor, limit, updateListQuery } = useCursorListRouteQuery({
+  cursorKey: 'activity_cursor',
+  limitKey: 'activity_limit',
 });
 
 const assetFilter = computed({
@@ -30,14 +30,14 @@ const assetFilter = computed({
 
 const historyResource = setupAsyncData(() =>
   http.fetchAccountHistory(props.accountId, {
-    page: page.value,
-    per_page: pageSize.value,
+    cursor: cursor.value,
+    limit: limit.value,
     asset_id: assetFilter.value || undefined,
   })
 );
 
 watch(
-  [() => props.accountId, page, pageSize, assetFilter],
+  [() => props.accountId, cursor, limit, assetFilter],
   () => {
     historyResource.refetch();
   }
@@ -49,7 +49,6 @@ const history = computed(() =>
 );
 const permissionDenied = computed(() => apiResult.value?.status === 'permission-denied');
 const historyItems = computed(() => history.value?.items ?? []);
-const totalItems = computed(() => history.value?.total ?? 0);
 const rowKey = (item: AccountHistoryItem) => item.id;
 </script>
 
@@ -115,32 +114,6 @@ const rowKey = (item: AccountHistoryItem) => item.id;
       </div>
 
       <template v-else-if="history">
-        <div
-          v-if="history.query_source === 'account_history_index'"
-          class="account-activity__provenance row-text"
-          data-test="activity-index-evidence"
-        >
-          <span>Source: <strong>{{ history.query_source }}</strong> (single route)</span>
-          <span>
-            Indexed height:
-            <BaseLink
-              :to="`/blocks/${history.indexed_height}`"
-              monospace
-            >
-              {{ history.indexed_height }}
-            </BaseLink>
-          </span>
-          <span>Indexed block hash: <code>{{ history.indexed_block_hash ?? 'not provided' }}</code></span>
-        </div>
-        <div
-          v-else
-          class="account-activity__provenance row-text"
-          data-test="activity-fanout-provenance"
-        >
-          <span>Source: <strong>{{ history.query_source }}</strong> (multiple Nexus routes)</span>
-          <span>Torii merged this page across multiple readable routes; no single index checkpoint applies.</span>
-        </div>
-
         <label class="account-activity__filter">
           <span>Asset ID, definition ID, or active alias</span>
           <input
@@ -162,10 +135,11 @@ const rowKey = (item: AccountHistoryItem) => item.id;
 
         <BaseTable
           v-else
-          v-model:page="page"
-          v-model:page-size="pageSize"
+          v-model:cursor="cursor"
+          v-model:page-size="limit"
+          pagination-mode="cursor"
           :loading="historyResource.isLoading"
-          :total="totalItems"
+          :cursor-pagination="history"
           :items="historyItems"
           :row-key
           container-class="account-activity__rows"

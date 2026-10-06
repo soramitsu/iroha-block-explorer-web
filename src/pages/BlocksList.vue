@@ -21,11 +21,13 @@
       v-model:cursor="cursor"
       v-model:page-size="limit"
       :loading="isLoading"
+      :error="scope?.expose.error"
       pagination-mode="cursor"
       :cursor-pagination="payloadPagination"
       :items="blocks"
       :row-key="blockRowKey"
       container-class="blocks-list-page__container"
+      @retry="scope?.expose.refetch()"
     >
       <template #header>
         <div
@@ -184,7 +186,7 @@ refetchLatestBlocks = () => scope.value?.expose.refetch?.();
 
 const isLoading = computed(() => scope.value?.expose.isLoading);
 const payloadPagination = computed(() =>
-  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.pagination : undefined
+  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data : undefined
 );
 const blocks = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []

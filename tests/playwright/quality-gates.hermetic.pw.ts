@@ -28,21 +28,27 @@ interface MockResponse {
   contentType?: string
 }
 
-type MockResolver = (url: URL) => MockResponse | null;
+interface QueryFilter {
+  op: string
+  args: unknown[]
+}
+interface CollectionQuery {
+  cursor?: string
+  limit?: number
+  filter?: QueryFilter
+}
+interface ObservedRequest {
+  url: URL
+  method: string
+  query: CollectionQuery
+}
+type MockResolver = (url: URL, query: CollectionQuery) => MockResponse | null;
+const READ_QUERY_PATHS = new Set([
+  '/v1/explorer/blocks/query', '/v1/explorer/transactions/latest/query',
+  '/v1/explorer/instructions/query', '/v1/explorer/accounts/query',
+]);
 
-const emptyHistoryPage = (url: URL) => {
-  const limit = Number(url.searchParams.get('limit') ?? 10);
-  return {
-    pagination: {
-      limit,
-      snapshot_height: 42,
-      snapshot_hash: HASH,
-      next_cursor: null,
-      has_more: false,
-    },
-    items: [],
-  };
-};
+const emptyHistoryPage = (_url: URL) => ({ items: [], next_cursor: null });
 
 function block(hash: string) {
   return {
@@ -100,13 +106,25 @@ function transferInstruction() {
   };
 }
 
-async function installHermeticApi(page: Page, resolver: MockResolver, requests: URL[] = []) {
+async function installHermeticApi(page: Page, resolver: MockResolver, requests: ObservedRequest[] = []) {
   await page.route('**/v1/**', async (route: Route) => {
     const url = new URL(route.request().url());
-    requests.push(url);
-    const response = resolver(url) ?? { status: 404, body: { message: `No fixture for ${url.pathname}` } };
+    const method = route.request().method();
+    const headers = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, HEAD, POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
+    if (method === 'OPTIONS') return await route.fulfill({ status: 204, headers });
+    const isCollectionRead = method === 'POST' && READ_QUERY_PATHS.has(url.pathname);
+    expect(['GET', 'HEAD'].includes(method) || isCollectionRead).toBe(true);
+    if (READ_QUERY_PATHS.has(url.pathname)) expect(method).toBe('POST');
+    const query = isCollectionRead ? route.request().postDataJSON() as CollectionQuery : {};
+    if (isCollectionRead) {
+      expect(url.search).toBe('');
+      expect(Object.keys(query).every(key => ['filter', 'limit', 'cursor'].includes(key))).toBe(true);
+    }
+    requests.push({ url, method, query });
+    const response = resolver(url, query) ?? { status: 404, body: { message: `No fixture for ${url.pathname}` } };
     await route.fulfill({
       status: response.status ?? 200,
+      headers,
       contentType: response.contentType ?? 'application/json',
       body: JSON.stringify(response.body ?? {}),
     });
@@ -126,38 +144,44 @@ function exactSearchResolver(url: URL): MockResponse | null {
   if (blockHash === FAILURE_HASH || transactionHash === FAILURE_HASH) {
     return { status: 500, body: { message: 'exact index unavailable' } };
   }
-  if (url.pathname === '/v1/explorer/blocks') return { body: emptyHistoryPage(url) };
-  if (url.pathname === '/v1/explorer/transactions/latest') {
-    return { body: { sampled_at: CREATED_AT, ...emptyHistoryPage(url) } };
+  if (url.pathname === '/v1/explorer/blocks/query') return { body: emptyHistoryPage(url) };
+  if (url.pathname === '/v1/explorer/transactions/latest/query') {
+    return { body: emptyHistoryPage(url) };
   }
   return null;
 }
 
-function countTransactionRequests(requests: URL[], hash: string): number {
-  return requests.filter((url) => url.pathname.endsWith(hash) && url.pathname.includes('/transactions/')).length;
+function countTransactionRequests(requests: ObservedRequest[], hash: string): number {
+  return requests.filter(({ url }) => url.pathname.endsWith(hash) && url.pathname.includes('/transactions/')).length;
 }
 
-function requestedInstructionKind(requests: URL[], kind: string): boolean {
-  return requests.some((url) => url.pathname === '/v1/explorer/instructions' && url.searchParams.get('kind') === kind);
+function matchesQueryField(filter: QueryFilter | undefined, name: string, value: string): boolean {
+  if (!filter) return false;
+  if (filter.op === 'eq') return filter.args[0] === name && filter.args[1] === value;
+  return filter.op === 'and' && filter.args.some(child => matchesQueryField(child as QueryFilter, name, value));
+}
+
+function requestedInstructionKind(requests: ObservedRequest[], kind: string): boolean {
+  return requests.some(({ url, query }) => url.pathname === '/v1/explorer/instructions/query' && matchesQueryField(query.filter, 'kind', kind));
 }
 
 function requestedAccountsCursor(
-  requests: URL[],
+  requests: ObservedRequest[],
   expected: { domain: string, cursor: string | null, limit: string }
 ): boolean {
   return requests.some(
-    (url) =>
-      url.searchParams.get('domain') === expected.domain &&
-      url.searchParams.get('cursor') === expected.cursor &&
-      url.searchParams.get('limit') === expected.limit
+    ({ query }) =>
+      matchesQueryField(query.filter, 'domain', expected.domain) &&
+      (query.cursor ?? null) === expected.cursor &&
+      String(query.limit) === expected.limit
   );
 }
 
 test.describe('hermetic Explorer quality gates', () => {
   test('keeps full search examples accessible and within the viewport in both directions', async ({ page }) => {
     await installHermeticApi(page, (url) => {
-      if (url.pathname === '/v1/explorer/blocks') return { body: tairaHistory.blocks };
-      if (url.pathname === '/v1/explorer/transactions/latest') return { body: tairaHistory.latestTransactions };
+      if (url.pathname === '/v1/explorer/blocks/query') return { body: tairaHistory.blocks };
+      if (url.pathname === '/v1/explorer/transactions/latest/query') return { body: tairaHistory.latestTransactions };
       return null;
     });
     for (const colorScheme of ['light', 'dark'] as const) {
@@ -212,8 +236,8 @@ test.describe('hermetic Explorer quality gates', () => {
 
   test('keeps real transaction status, identifiers and timestamps separate in both themes', async ({ page }) => {
     await installHermeticApi(page, (url) => {
-      if (url.pathname === '/v1/explorer/blocks') return { body: tairaHistory.blocks };
-      if (url.pathname === '/v1/explorer/transactions/latest') return { body: tairaHistory.latestTransactions };
+      if (url.pathname === '/v1/explorer/blocks/query') return { body: tairaHistory.blocks };
+      if (url.pathname === '/v1/explorer/transactions/latest/query') return { body: tairaHistory.latestTransactions };
       return null;
     });
     for (const colorScheme of ['light', 'dark'] as const) {
@@ -247,26 +271,21 @@ test.describe('hermetic Explorer quality gates', () => {
     }
   });
 
-  test('renders native Taira history and follows its snapshot cursor unchanged', async ({ page }) => {
+  test('renders native Taira history and follows its opaque cursor unchanged', async ({ page }) => {
     const firstBlock = tairaHistory.blocks.items[0];
     const secondBlock = tairaHistory.blocks.items[1];
-    const cursor = tairaHistory.blocks.pagination.next_cursor;
-    await installHermeticApi(page, (url) => {
-      if (url.pathname === '/v1/explorer/blocks') {
-        const isNextPage = url.searchParams.has('cursor');
+    const cursor = tairaHistory.blocks.next_cursor;
+    await installHermeticApi(page, (url, query) => {
+      if (url.pathname === '/v1/explorer/blocks/query') {
+        const isNextPage = query.cursor !== undefined;
         return {
           body: {
-            pagination: {
-              ...tairaHistory.blocks.pagination,
-              limit: Number(url.searchParams.get('limit') ?? 10),
-              next_cursor: isNextPage ? null : cursor,
-              has_more: !isNextPage,
-            },
+            next_cursor: isNextPage ? null : cursor,
             items: [isNextPage ? secondBlock : firstBlock],
           },
         };
       }
-      if (url.pathname === '/v1/explorer/transactions/latest') {
+      if (url.pathname === '/v1/explorer/transactions/latest/query') {
         return { body: tairaHistory.latestTransactions };
       }
       return null;
@@ -277,11 +296,11 @@ test.describe('hermetic Explorer quality gates', () => {
     await page.goto('/blocks');
     await expect(page.locator(`a[href="/blocks/${firstBlock.height}"]:visible`).first()).toBeVisible();
     const nextRequest = page.waitForRequest((request) =>
-      new URL(request.url()).pathname === '/v1/explorer/blocks'
-      && new URL(request.url()).searchParams.get('cursor') === cursor
+      new URL(request.url()).pathname === '/v1/explorer/blocks/query'
+      && request.method() === 'POST' && request.postDataJSON().cursor === cursor
     );
     await page.getByRole('button', { name: 'Next cursor page' }).click();
-    expect(new URL((await nextRequest).url()).searchParams.get('cursor')).toBe(cursor);
+    expect((await nextRequest).postDataJSON().cursor).toBe(cursor);
     await expect(page.locator(`a[href="/blocks/${secondBlock.height}"]:visible`).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Next cursor page' })).toBeDisabled();
   });
@@ -301,7 +320,7 @@ test.describe('hermetic Explorer quality gates', () => {
   });
 
   test('keeps a successful probe visible on partial failure and exposes a full failure retry', async ({ page }) => {
-    const requests: URL[] = [];
+    const requests: ObservedRequest[] = [];
     await installHermeticApi(page, exactSearchResolver, requests);
 
     await page.goto(`/search?q=${PARTIAL_HASH}`);
@@ -324,12 +343,12 @@ test.describe('hermetic Explorer quality gates', () => {
 
   test('shows semantic, raw, and unavailable evidence states and supports keyboard tabs', async ({ page }) => {
     const instruction = transferInstruction();
-    const requests: URL[] = [];
+    const requests: ObservedRequest[] = [];
     await installHermeticApi(
       page,
       (url) => {
         if (url.pathname === `/v1/explorer/transactions/${HASH}`) return { body: transaction() };
-        if (url.pathname === '/v1/explorer/instructions') {
+        if (url.pathname === '/v1/explorer/instructions/query') {
           return {
             body: {
               ...emptyHistoryPage(url),
@@ -370,19 +389,14 @@ test.describe('hermetic Explorer quality gates', () => {
   });
 
   test('restores URL filters and activates cursor pagination from the keyboard', async ({ page }) => {
-    const accountRequests: URL[] = [];
-    await installHermeticApi(page, (url) => {
-      if (url.pathname !== '/v1/explorer/accounts') return null;
-      const cursor = url.searchParams.get('cursor');
-      const limit = Number(url.searchParams.get('limit') ?? 10);
-      accountRequests.push(url);
+    const accountRequests: ObservedRequest[] = [];
+    await installHermeticApi(page, (url, query) => {
+      if (url.pathname !== '/v1/explorer/accounts/query') return null;
+      const cursor = query.cursor ?? null;
+      accountRequests.push({ url, method: 'POST', query });
       return {
         body: {
-          pagination: {
-            limit,
-            next_cursor: cursor === null ? 'cursor-1' : null,
-            has_more: cursor === null,
-          },
+          next_cursor: cursor === null ? 'cursor-1' : null,
           items: [
             {
               id: ACCOUNT,
@@ -427,11 +441,10 @@ test.describe('hermetic Explorer quality gates', () => {
     // Exact account from the captured Taira account list that exposed the split address.
     const accountId = 'testuﾛ1NiﾗNｼGﾜiｿｵ8ﾌVoXﾂﾅﾛTKﾏRｷi5ｹﾌﾊﾗﾍBﾁﾁPﾜpﾌDmQWB5Q6';
     await installHermeticApi(page, (url) => {
-      if (url.pathname !== '/v1/explorer/accounts') return null;
-      const limit = Number(url.searchParams.get('limit') ?? 10);
+      if (url.pathname !== '/v1/explorer/accounts/query') return null;
       return {
         body: {
-          pagination: { limit, next_cursor: null, has_more: false },
+          next_cursor: null,
           items: [
             {
               id: accountId,

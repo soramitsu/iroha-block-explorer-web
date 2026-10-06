@@ -6,7 +6,6 @@ import { createApp } from 'vue';
 import { loadRuntimeConfig } from '@/shared/runtime-config';
 
 let bootstrapPending = false;
-let codecReady = false;
 let mounted = false;
 
 async function bootstrap() {
@@ -17,19 +16,11 @@ async function bootstrap() {
     if (root) {
       const loading = document.createElement('p');
       loading.setAttribute('role', 'status');
-      loading.setAttribute('data-testid', 'browser-codec-loading');
+      loading.setAttribute('data-testid', 'explorer-loading');
       loading.textContent = 'Loading Explorer…';
       root.replaceChildren(loading);
     }
     const config = await loadRuntimeConfig();
-    // The SDK owns its Rust/Wasm source and loading path. Import inside the
-    // guarded bootstrap so loading failures produce the same safe retry UI.
-    // No API or account-dependent consumer may run before codec readiness.
-    if (!codecReady) {
-      const { initializeBrowserCodec } = await import('@iroha/iroha-js/browser-codec');
-      await initializeBrowserCodec();
-      codecReady = true;
-    }
     // Do not evaluate API consumers (including their saved-node state) until the
     // runtime profile is valid. Apply its forced endpoint before loading the app.
     const { setToriiBaseUrlFromConfig } = await import('@/shared/api');

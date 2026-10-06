@@ -4,12 +4,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { IROHA_SDK_SPECIFIER, verifyIrohaSdk, verifyIrohaSdkArchive } from './verify-iroha-sdk.mjs';
+import { IROHA_SDK_SPECIFIER, IROHA_SDK_SOURCE_REVISION, verifyIrohaSdk, verifyIrohaSdkArchive } from './verify-iroha-sdk.mjs';
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const roots: string[] = [];
-const archiveName = 'iroha-iroha-js-0.0.3.tgz';
-const inventoryName = 'iroha-iroha-js-0.0.3.files.json';
+const archiveName = 'iroha-iroha-js-0.0.3-cc8e6620f6cb.tgz';
+const inventoryName = 'iroha-iroha-js-0.0.3-cc8e6620f6cb.files.json';
 
 async function fixture({ installed = true } = {}) {
   const root = await realpath(await mkdtemp(path.join(tmpdir(), 'explorer-sdk-integrity-')));
@@ -31,22 +31,38 @@ afterEach(async () => {
 });
 
 describe('admitted SDK package integrity', () => {
-  it('checks all 200 installed files without changing the real package', async () => {
-    const wasm = path.join(repository, 'node_modules/@iroha/iroha-js/dist/wasm/iroha_js_codec_wasm_bg.wasm');
-    const before = await lstat(wasm);
+  it('checks all 231 installed files without changing the real package', async () => {
+    const browserClient = path.join(repository, 'node_modules/@iroha/iroha-js/dist/toriiBrowserClient.js');
+    const before = await lstat(browserClient);
     expect(await verifyIrohaSdk(repository)).toEqual({
-      files: 200,
-      archiveSha256: '02600597032e3c0074b915c06b6125aea3a98c549f60e0ccee7d75dfdbdbb79f',
-      inventorySha256: '9ef5fecacf6ced1799ad28393ed42dfb3fd64c992076c7eb474fea9ae2c50ba7',
+      files: 231,
+      archiveSha256: 'db24d5e042a475a24d204a0045e07f1dd8bafc821c098a64fffe046bf216e15a',
+      inventorySha256: '9cd0272751874d0243d03af4a7b49f44aaff1c165e03dc78a3107f5f8c688880',
       status: 'package-integrity-verified',
     });
-    const after = await lstat(wasm);
+    const after = await lstat(browserClient);
     expect([after.ino, after.size, after.mtimeMs, after.ctimeMs]).toEqual([before.ino, before.size, before.mtimeMs, before.ctimeMs]);
+  });
+
+  it('records the clean source package and contains no retired browser codec artifacts', async () => {
+    const inventory = JSON.parse(await readFile(path.join(repository, 'vendor', inventoryName), 'utf8'));
+    expect(inventory.source).toMatchObject({
+      revision: IROHA_SDK_SOURCE_REVISION,
+      packageGitTree: '297429298cd4fd06d488be9575a71aeb6cd19524',
+      packageSourceClean: true,
+      repeatPackSha256: inventory.archiveSha256,
+      nodeVersion: '24.19.0',
+    });
+    expect(inventory.files.some(({ path: name }: { path: string }) => (
+      /(?:^|\/)wasm(?:\/|$)|\.wasm$|browserCodec|browser-codec/iu.test(name)
+    ))).toBe(false);
+    const sdkPackage = JSON.parse(await readFile(path.join(repository, 'node_modules/@iroha/iroha-js/package.json'), 'utf8'));
+    expect(sdkPackage.exports['./browser-codec']).toBeUndefined();
   });
 
   it('authenticates archive inputs before installation without claiming installed-package integrity', async () => {
     const { root } = await fixture({ installed: false });
-    expect(await verifyIrohaSdkArchive(root)).toMatchObject({ files: 200, status: 'archive-integrity-verified' });
+    expect(await verifyIrohaSdkArchive(root)).toMatchObject({ files: 231, status: 'archive-integrity-verified' });
     await expect(lstat(path.join(root, 'node_modules'))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(verifyIrohaSdk(root)).rejects.toMatchObject({ code: 'ENOENT' });
   });
@@ -66,11 +82,11 @@ describe('admitted SDK package integrity', () => {
   });
 
   it.each([
-    'dist/wasm/iroha_js_codec_wasm_bg.wasm',
-    'dist/wasm/iroha_js_codec_wasm.js',
-    'dist/public/browserCodec.js',
+    'dist/toriiBrowserClient.js',
+    'dist/public/address.js',
+    'dist/public/transactionCodec.js',
     'native/iroha_js_host.checksums.json',
-    'browser-codec.d.ts',
+    'torii-browser.d.ts',
     'package.json',
   ])('rejects altered installed %s bytes', async name => {
     const { root, packageRoot } = await fixture();

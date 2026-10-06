@@ -1,12 +1,5 @@
 {
   "blocks": {
-    "pagination": {
-      "limit": 2,
-      "snapshot_height": 835,
-      "snapshot_hash": "9e4a2ac3198943bd580588c4f1dfe22de4549cdbe60328784c37028ed3e156f1",
-      "next_cursor": "SUhDMgEAAAAAAAADQ55KKsMZiUO9WAWIxPHf4i3kVJzb5gMoeEw3Ao7T4Vbxbir587HwaGwgsnWcf-VAmV2FwQV2eztesyJI_uxfAVftENGD_jIVKJmv72wqbmr78ayWLAZUO40Hy2DaDcFcaAAAAAAAAANBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-      "has_more": true
-    },
     "items": [
       {
         "hash": "9e4a2ac3198943bd580588c4f1dfe22de4549cdbe60328784c37028ed3e156f1",
@@ -26,17 +19,10 @@
         "transactions_rejected": 0,
         "transactions_total": 1
       }
-    ]
+    ],
+    "next_cursor": "SUhDMgEAAAAAAAADQ55KKsMZiUO9WAWIxPHf4i3kVJzb5gMoeEw3Ao7T4Vbxbir587HwaGwgsnWcf-VAmV2FwQV2eztesyJI_uxfAVftENGD_jIVKJmv72wqbmr78ayWLAZUO40Hy2DaDcFcaAAAAAAAAANBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
   },
   "latestTransactions": {
-    "sampled_at": "2026-09-12T03:32:12.896930907Z",
-    "pagination": {
-      "limit": 2,
-      "snapshot_height": 835,
-      "snapshot_hash": "9e4a2ac3198943bd580588c4f1dfe22de4549cdbe60328784c37028ed3e156f1",
-      "next_cursor": "SUhDMgMAAAAAAAADQ55KKsMZiUO9WAWIxPHf4i3kVJzb5gMoeEw3Ao7T4VbxlJKtDTjEB5gJVGsZl6t95vtnY0FcM6MYb2GMnY_nfZXtENGD_jIVKJmv72wqbmr78ayWLAZUO40Hy2DaDcFcaAAAAAAAAANCxK0nDqHPfGgNJwsaC5buTk6nNhO5yPSgSFFafzYCgIMAAAAA",
-      "has_more": true
-    },
     "items": [
       {
         "authority": "testuﾛ1NﾑDヰｻｿﾌfXPｹﾜｹｴbｱvkｱJﾃrDﾆﾅｷi7zfsﾜjKcﾁkkﾔXTQE7A",
@@ -54,6 +40,7 @@
         "executable": "Instructions",
         "status": "Committed"
       }
-    ]
+    ],
+    "next_cursor": "SUhDMgMAAAAAAAADQ55KKsMZiUO9WAWIxPHf4i3kVJzb5gMoeEw3Ao7T4VbxlJKtDTjEB5gJVGsZl6t95vtnY0FcM6MYb2GMnY_nfZXtENGD_jIVKJmv72wqbmr78ayWLAZUO40Hy2DaDcFcaAAAAAAAAANCxK0nDqHPfGgNJwsaC5buTk6nNhO5yPSgSFFafzYCgIMAAAAA"
   }
 }

@@ -10,7 +10,7 @@ describe('BaseCursorPagination', () => {
         items: 3,
         pageSize: 10,
         cursor: null,
-        pagination: { limit: 10, next_cursor: null, has_more: false },
+        pagination: { nextCursor: null },
       },
       global: { plugins: [i18n] },
     });
@@ -29,7 +29,7 @@ describe('BaseCursorPagination', () => {
         items: 10,
         pageSize: 10,
         cursor: null,
-        pagination: { limit: 10, next_cursor: 'cursor-1', has_more: true },
+        pagination: { nextCursor: 'cursor-1' },
       },
       global: { plugins: [i18n] },
     });
@@ -48,7 +48,7 @@ describe('BaseCursorPagination', () => {
         items: 10,
         pageSize: 10,
         cursor: 'cursor-1',
-        pagination: { limit: 10, next_cursor: 'cursor-2', has_more: true },
+        pagination: { nextCursor: 'cursor-2' },
       },
       global: { plugins: [i18n] },
     });
@@ -56,7 +56,7 @@ describe('BaseCursorPagination', () => {
     await wrapper.get('[data-testid="cursor-next"]').trigger('click');
     await wrapper.setProps({
       cursor: 'cursor-2',
-      pagination: { limit: 10, next_cursor: 'cursor-1', has_more: true },
+      pagination: { nextCursor: 'cursor-1' },
     });
 
     expect(wrapper.get('[data-testid="cursor-repeat-error"]').attributes('role')).toBe('alert');
@@ -70,7 +70,7 @@ describe('BaseCursorPagination', () => {
         items: 10,
         pageSize: 10,
         cursor: 'cursor-1',
-        pagination: { limit: 10, next_cursor: 'cursor-2', has_more: true },
+        pagination: { nextCursor: 'cursor-2' },
       },
       global: { plugins: [i18n] },
     });
@@ -78,11 +78,11 @@ describe('BaseCursorPagination', () => {
     await wrapper.get('[data-testid="cursor-next"]').trigger('click');
     await wrapper.setProps({
       cursor: 'cursor-2',
-      pagination: { limit: 10, next_cursor: null, has_more: false },
+      pagination: { nextCursor: null },
     });
     await wrapper.setProps({
       cursor: 'cursor-1',
-      pagination: { limit: 10, next_cursor: 'cursor-2', has_more: true },
+      pagination: { nextCursor: 'cursor-2' },
     });
 
     expect(wrapper.find('[data-testid="cursor-repeat-error"]').exists()).toBe(false);

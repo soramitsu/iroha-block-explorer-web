@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import BlocksList from './BlocksList.vue';
 import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import type { ApiProblem } from '@/shared/utils/resource-state';
 
 const mockBlocks = [
   {
@@ -31,10 +32,12 @@ vi.mock('@vueuse/core', async (importOriginal) => {
 
 const mainState = {
   isLoading: false,
+  error: null as ApiProblem | null,
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+      nextCursor: null,
+      total: undefined,
       items: mockBlocks,
     },
   },
@@ -46,7 +49,8 @@ const probeState = {
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: { limit: 1, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+      nextCursor: null,
+      total: undefined,
       items: [{ ...mockBlocks[0], height: mockBlocks[0].height }],
     },
   },
@@ -70,8 +74,8 @@ const BaseContentBlockStub = {
 
 const BaseTableStub = {
   name: 'BaseTable',
-  props: ['items', 'reversed', 'rowKey'],
-  emits: ['update:cursor', 'update:pageSize'],
+  props: ['items', 'reversed', 'rowKey', 'error', 'cursorPagination'],
+  emits: ['update:cursor', 'update:pageSize', 'retry'],
   template: '<div><slot name="row" v-for="item in items" :item="item" /></div>',
 };
 
@@ -99,6 +103,7 @@ describe('BlocksList', () => {
   beforeEach(() => {
     scrollY.value = 0;
     mainState.isLoading = false;
+    mainState.error = null;
     mainState.data.data.items = [...mockBlocks];
     mainState.refetch = vi.fn();
     probeState.isLoading = false;
@@ -158,4 +163,23 @@ describe('BlocksList', () => {
     expect(mainState.refetch).toHaveBeenCalled();
     expect(wrapper.find('[data-test=\"pending-refresh\"]').exists()).toBe(false);
   });
+
+  it('passes read failures and retry through to the table', async () => {
+    mainState.data.data.items = [];
+    mainState.error = { kind: 'invalid-response', message: 'Unexpected collection response' };
+    const wrapper = factory();
+    await flushPromises();
+
+    const table = wrapper.getComponent({ name: 'BaseTable' });
+    expect(table.props('error')).toEqual(mainState.error);
+    table.vm.$emit('retry');
+    expect(mainState.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes the native collection continuation directly to pagination', async () => {
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.getComponent({ name: 'BaseTable' }).props('cursorPagination')).toEqual(mainState.data.data);
+  });
+
 });

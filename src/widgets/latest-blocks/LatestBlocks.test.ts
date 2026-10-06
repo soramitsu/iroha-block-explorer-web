@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import LatestBlocks from './LatestBlocks.vue';
 import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import type { ApiProblem } from '@/shared/utils/resource-state';
 
 const mockBlocks = [
   {
@@ -61,10 +62,12 @@ vi.mock('@/shared/ui/composables/useBlockStream', () => ({
 
 const setupState = {
   isLoading: false,
+  error: null as ApiProblem | null,
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: { limit: 10, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+      nextCursor: null,
+      total: undefined,
       items: mockBlocks,
     },
   },
@@ -114,6 +117,7 @@ describe('LatestBlocks', () => {
   beforeEach(() => {
     pushSpy.mockReset();
     setupState.isLoading = false;
+    setupState.error = null;
     setupState.data.data.items = [...mockBlocks];
     setupState.refetch = vi.fn();
     connectFromMock.mockReset();
@@ -223,4 +227,26 @@ describe('LatestBlocks', () => {
     expect(badge.attributes('data-tone')).toBe('unknown');
     expect(badge.text()).toContain(i18n.global.t('telemetry.dataUnknown'));
   });
+
+  it('shows an explicit read failure with retry when no blocks have loaded', async () => {
+    setupState.data.data.items = [];
+    setupState.error = { kind: 'invalid-response', message: 'Unexpected collection response' };
+    const wrapper = factory();
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toContain(i18n.global.t('transactions.unknownError'));
+    expect(wrapper.find('.latest-blocks__row').exists()).toBe(false);
+    await wrapper.get('[data-test="resource-retry"]').trigger('click');
+    expect(setupState.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps previously loaded blocks visible when refresh fails', async () => {
+    setupState.error = { kind: 'network', message: 'offline' };
+    const wrapper = factory();
+    await flushPromises();
+
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect(wrapper.findAll('.latest-blocks__row')).toHaveLength(mockBlocks.length);
+  });
+
 });

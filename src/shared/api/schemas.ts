@@ -37,78 +37,22 @@ export interface PaginationParams {
   per_page: number;
 }
 
-export const CursorPagination = z
-  .object({
-    limit: z.number().int().min(1).max(100),
-    next_cursor: z
-      .string()
-      .min(1)
-      .max(1424)
-      .regex(/^[A-Za-z0-9_-]+$/u)
-      .nullable(),
-    has_more: z.boolean(),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    if (value.has_more !== (value.next_cursor !== null)) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'has_more must match next_cursor availability',
-        path: ['has_more'],
-      });
-    }
-  });
+/** Server-issued continuation; clients never interpret the cursor contents. */
+export const CollectionContinuation = z.object({ nextCursor: z.string().min(1).nullable() });
+export type CollectionContinuation = z.infer<typeof CollectionContinuation>;
 
-export type CursorPagination = z.infer<typeof CursorPagination>;
+/** SDK collection model. Explorer feeds are bounded and do not return totals. */
+export const CollectionPage = <T extends z.ZodType>(item: T) =>
+  CollectionContinuation.extend({ items: item.array(), total: z.undefined().optional() }).strict()
+    .transform(({ items, nextCursor }) => ({ items, nextCursor }));
 
-export const CursorPaginated = <T extends z.ZodType>(item: T) =>
-  z
-    .object({
-      pagination: CursorPagination,
-      items: item.array(),
-    })
-    .strict()
-    .superRefine((value, ctx) => {
-      if (value.items.length > value.pagination.limit) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'items must not exceed the cursor page limit',
-          path: ['items'],
-        });
-      }
-    });
-
-export interface CursorPaginated<T> {
-  pagination: CursorPagination;
+export interface CollectionPage<T> extends CollectionContinuation {
   items: T[];
 }
 
 export interface CursorPaginationParams {
   cursor?: string | null;
   limit?: number;
-}
-
-// Torii's current IHC2 history frame is exactly 153 bytes, or 204 base64url
-// characters without padding. Keep it distinct from variable-length IXC1
-// collection cursors; Torii remains responsible for interpreting the token.
-const HistoryCursor = z.string().length(204).regex(/^SUhDMg[A-Za-z0-9_-]{198}$/u);
-
-export const HistoryCursorPagination = CursorPagination.safeExtend({
-  next_cursor: HistoryCursor.nullable(),
-  snapshot_height: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-  snapshot_hash: z.string().regex(/^[0-9a-f]{64}$/u).nullable(),
-}).superRefine((value, ctx) => {
-  if ((value.snapshot_height === 0) !== (value.snapshot_hash === null)) {
-    ctx.addIssue({ code: 'custom', message: 'snapshot hash must be null exactly at height zero' });
-  }
-});
-
-export const HistoryCursorPaginated = <T extends z.ZodType>(item: T) =>
-  CursorPaginated(item).safeExtend({ pagination: HistoryCursorPagination });
-
-export interface HistoryCursorPaginated<T> {
-  pagination: z.infer<typeof HistoryCursorPagination>;
-  items: T[];
 }
 
 const Metadata = z.record(z.string(), z.json());
@@ -222,7 +166,7 @@ const AssetDescription = z
   .nullable();
 const CanonicalAccountId = exactNormalizedStringSchema(
   normalizeAccountIdLiteral,
-  'Account ID response must be an exact canonical halfwidth i105 literal'
+  'Account ID response must be exact I105 account selector text'
 );
 
 function equalIgnoringAsciiCase(left: string, right: string): boolean {
@@ -246,7 +190,7 @@ function normalizeNftIdLiteral(value: string): string | null {
 
 export const AccountIdSchema = normalizedStringSchema(
   normalizeAccountIdLiteral,
-  'Account ID must use a canonical halfwidth i105 literal'
+  'Account ID must use exact I105 account selector text'
 );
 export const AccountSelectorSchema = normalizedStringSchema(
   normalizeAccountSelectorLiteral,
@@ -324,15 +268,6 @@ export const Account = z
 
 export type Account = z.infer<typeof Account>;
 
-export const ToriiCountMode = z.enum(['bounded', 'exact']);
-export type ToriiCountMode = z.infer<typeof ToriiCountMode>;
-
-const CountedListEnvelope = z.object({
-  has_more: z.boolean(),
-  count_mode: ToriiCountMode,
-  total: z.number().int().nonnegative().optional(),
-});
-
 export const AccountPermission = z
   .object({
     name: z.string().min(1),
@@ -341,17 +276,7 @@ export const AccountPermission = z
   .strict();
 export type AccountPermission = z.infer<typeof AccountPermission>;
 
-export const AccountPermissionsResponse = CountedListEnvelope.extend({
-  items: AccountPermission.array(),
-}).superRefine((value, ctx) => {
-  if (value.count_mode === 'exact' && value.total === undefined) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['total'],
-      message: 'Exact counted-list responses must include total',
-    });
-  }
-});
+export const AccountPermissionsResponse = CollectionPage(AccountPermission);
 export type AccountPermissionsResponse = z.infer<typeof AccountPermissionsResponse>;
 
 export const AccountHistoryItem = z
@@ -360,6 +285,9 @@ export const AccountHistoryItem = z
     source: z.string().min(1),
     type: z.string().min(1),
     timestamp_ms: z.number().int().nonnegative().optional(),
+    block_height: z.number().int().nonnegative().optional(),
+    block_index: z.number().int().nonnegative().optional(),
+    movement_index: z.number().int().nonnegative().optional(),
     status: z.string().min(1),
     result_ok: z.boolean().optional(),
     direction: z.string().min(1),
@@ -377,29 +305,7 @@ export const AccountHistoryItem = z
   .strict();
 export type AccountHistoryItem = z.infer<typeof AccountHistoryItem>;
 
-const AccountHistoryIndexResponse = CountedListEnvelope.extend({
-  items: AccountHistoryItem.array(),
-  indexed_height: z.number().int().nonnegative(),
-  indexed_block_hash: z.string().min(1).nullable(),
-  query_source: z.literal('account_history_index'),
-}).strict();
-
-const AccountHistoryFanoutResponse = CountedListEnvelope.extend({
-  items: AccountHistoryItem.array(),
-  query_source: z.literal('account_history_fanout'),
-}).strict();
-
-export const AccountHistoryResponse = z
-  .discriminatedUnion('query_source', [AccountHistoryIndexResponse, AccountHistoryFanoutResponse])
-  .superRefine((value, ctx) => {
-    if (value.count_mode === 'exact' && value.total === undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['total'],
-        message: 'Exact counted-list responses must include total',
-      });
-    }
-  });
+export const AccountHistoryResponse = CollectionPage(AccountHistoryItem);
 export type AccountHistoryResponse = z.infer<typeof AccountHistoryResponse>;
 
 export const ContractActivity = z
@@ -417,14 +323,7 @@ export const ContractActivity = z
   .strict();
 export type ContractActivity = z.infer<typeof ContractActivity>;
 
-export const ContractActivityResponse = z
-  .object({
-    items: ContractActivity.array(),
-    total: z.number().int().nonnegative(),
-    has_more: z.boolean(),
-    count_mode: z.literal('exact'),
-  })
-  .strict();
+export const ContractActivityResponse = CollectionPage(ContractActivity);
 export type ContractActivityResponse = z.infer<typeof ContractActivityResponse>;
 
 export const ContractEvent = z
@@ -451,14 +350,7 @@ export const ContractEvent = z
   .strict();
 export type ContractEvent = z.infer<typeof ContractEvent>;
 
-export const ContractEventResponse = z
-  .object({
-    items: ContractEvent.array(),
-    total: z.number().int().nonnegative(),
-    has_more: z.boolean(),
-    count_mode: z.literal('exact'),
-  })
-  .strict();
+export const ContractEventResponse = CollectionPage(ContractEvent);
 export type ContractEventResponse = z.infer<typeof ContractEventResponse>;
 
 export const MultisigProposalStatus = z.enum(['COLLECTING_SIGNATURES', 'FINALIZED', 'CANCELED', 'EXPIRED']);
@@ -874,7 +766,7 @@ export const Transaction = z.object({
   hash: z.string(),
   block: z.number(),
   created_at: z.coerce.date(),
-  executable: z.enum(['Instructions', 'Wasm', 'Ivm', 'IvmProved', 'ContractCall']),
+  executable: z.enum(['Instructions', 'Ivm', 'IvmProved', 'ContractCall']),
   status: TransactionStatus,
 });
 
@@ -884,11 +776,7 @@ export const ExplorerHealth = z.object({
   sampled_at: z.coerce.date(),
 });
 
-export const LatestTransactionsResponse = z.object({
-  sampled_at: z.coerce.date(),
-  pagination: HistoryCursorPagination,
-  items: Transaction.array(),
-});
+export const LatestTransactionsResponse = CollectionPage(Transaction);
 
 const RejectionReason = z
   .object({
@@ -924,62 +812,45 @@ export const Block = z.object({
 
 export type Block = z.infer<typeof Block>;
 
-export const LedgerCommitQc = z
-  .object({
-    phase: z.string(),
-    subject_block_hash: z.string(),
-    parent_state_root: z.string(),
-    post_state_root: z.string(),
-    height: z.number(),
-    view: z.number(),
-    epoch: z.number(),
-    mode_tag: z.string(),
-    highest_qc: z
-      .object({
-        height: z.number(),
-        view: z.number(),
-        epoch: z.number(),
-        subject_block_hash: z.string(),
-        phase: z.string(),
-      })
-      .strict()
-      .nullable(),
-    validator_set_hash: z.string(),
-    validator_set_hash_version: z.number(),
-    validator_set: z.string().array(),
-    aggregate: z
-      .object({
-        signers_bitmap: z.string(),
-        bls_aggregate_signature: z.string(),
-      })
-      .strict(),
-  })
-  .strict();
+const LedgerEvidenceBytes = z.number().int().min(0).max(255).array();
+const LedgerHeader = z.object({
+  height: z.number().int().positive(),
+  prev_block_hash: z.string().nullable(),
+  merkle_root: z.string().nullable(),
+  da_proof_policies_hash: z.string().nullable(),
+  da_commitments_hash: z.string().nullable(),
+  da_pin_intents_hash: z.string().nullable(),
+  npos_effects_hash: z.string().nullable(),
+  creation_time_ms: z.number().int().nonnegative(),
+  view_change_index: z.number().int().nonnegative(),
+  confidential_features: z.object({
+    vk_set_hash: LedgerEvidenceBytes.length(32),
+    poseidon_params_id: U32.nullable(),
+    pedersen_params_id: U32.nullable(),
+    conf_rules_version: U32,
+    zk_policy_hash: LedgerEvidenceBytes.length(32),
+  }).strict().nullable(),
+  execution_context_hash: z.string().nullable(),
+  global_beacon_pulse_hash: z.string().nullable(),
+}).strict();
 
-export type LedgerCommitQc = z.infer<typeof LedgerCommitQc>;
+/** Node-supplied state-finality evidence; parsing does not authenticate its committee or signatures. */
+export const StateFinalityResponse = z.object({
+  height: z.number().int().min(2),
+  block_hash: z.string(),
+  witnessed_post_state_root: z.string(),
+  block_header: LedgerHeader,
+  finality_proof: z.object({
+    block_header: LedgerHeader,
+    block_wire: LedgerEvidenceBytes.min(1),
+    committee: z.object({
+      public_key: z.string().min(1),
+      proof_of_possession: LedgerEvidenceBytes.min(1),
+    }).strict().array().min(1),
+  }).strict(),
+}).strict();
 
-export const LedgerStateRoot = z
-  .object({
-    height: z.number(),
-    block_hash: z.string(),
-    state_root: z.string(),
-    source: z.enum(['commit_qc', 'result_merkle_root']),
-    commit_qc: LedgerCommitQc.nullable(),
-  })
-  .strict();
-
-export type LedgerStateRoot = z.infer<typeof LedgerStateRoot>;
-
-export const LedgerStateProof = z
-  .object({
-    height: z.number(),
-    block_hash: z.string(),
-    state_root: z.string(),
-    commit_qc: LedgerCommitQc,
-  })
-  .strict();
-
-export type LedgerStateProof = z.infer<typeof LedgerStateProof>;
+export type StateFinalityResponse = z.infer<typeof StateFinalityResponse>;
 
 export const NetworkMetrics = z.object({
   peers: z.number(),
@@ -1431,6 +1302,8 @@ export const SumeragiTelemetry = z.object({
 export type SumeragiTelemetry = z.infer<typeof SumeragiTelemetry>;
 
 export interface InstructionsSearchParams extends CursorPaginationParams {
+  /** Committed upper bound shared across independently filtered scans. */
+  max_block_height?: number;
   account?: string;
   authority?: string;
   kind?: string;
@@ -1485,11 +1358,7 @@ export const Instruction = z.preprocess((input) => {
 }, InstructionRaw);
 export type Instruction = z.infer<typeof Instruction>;
 
-export const LatestInstructionsResponse = z.object({
-  sampled_at: z.coerce.date(),
-  pagination: HistoryCursorPagination,
-  items: Instruction.array(),
-});
+export const LatestInstructionsResponse = CollectionPage(Instruction);
 export type LatestInstructionsResponse = z.infer<typeof LatestInstructionsResponse>;
 
 export const ContractViewAccessHints = z.object({

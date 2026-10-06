@@ -40,6 +40,11 @@
         <span v-else>{{ $t('telemetry.dataUnknown') }}</span>
         <span>({{ $t(latestSampleToneKey) }})</span>
       </div>
+      <BaseResourceState
+        v-if="setup.error"
+        :snapshot="{ status: 'error', problem: setup.error }"
+        @retry="setup.refetch()"
+      />
       <div v-if="!isInitialLoading">
         <template
           v-for="block in blocks"
@@ -80,6 +85,7 @@ import * as http from '@/shared/api';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import { computed, ref, watch } from 'vue';
 import TimeStamp from '@/shared/ui/components/TimeStamp.vue';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';

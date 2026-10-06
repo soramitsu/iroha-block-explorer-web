@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TransactionEvidencePanel from './TransactionEvidencePanel.vue';
+import stateFinality from '../../../../tests/fixtures/taira-state-finality.json';
 import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 
 const api = vi.hoisted(() => ({
@@ -12,12 +13,13 @@ const api = vi.hoisted(() => ({
 
 vi.mock('@/shared/api', () => api);
 
+const BLOCK_HEIGHT = stateFinality.height;
 const TRANSACTION_HASH = '11'.repeat(32);
 const ENTRY_ROOT = '33'.repeat(32);
 
 const proof = {
   proof: {
-    block_height: '42',
+    block_height: String(BLOCK_HEIGHT),
     block_hash: '44'.repeat(32),
     executed_block_wire_hash: '55'.repeat(32),
     entry_hash: TRANSACTION_HASH,
@@ -30,28 +32,9 @@ const proof = {
   pathVerification: null,
 };
 
-const qc = {
-  phase: 'Commit',
-  subject_block_hash: 'hash:block',
-  parent_state_root: 'hash:parent',
-  post_state_root: 'hash:state',
-  height: 42,
-  view: 7,
-  epoch: 3,
-  mode_tag: 'sumeragi-v2',
-  highest_qc: null,
-  validator_set_hash: 'hash:validators',
-  validator_set_hash_version: 1,
-  validator_set: ['peer-a', 'peer-b'],
-  aggregate: {
-    signers_bitmap: '03',
-    bls_aggregate_signature: 'cafe',
-  },
-};
-
 function mountPanel() {
   return mount(TransactionEvidencePanel, {
-    props: { blockHeight: 42, transactionHash: TRANSACTION_HASH },
+    props: { blockHeight: BLOCK_HEIGHT, transactionHash: TRANSACTION_HASH },
     global: {
       stubs: {
         BaseContentBlock: {
@@ -82,8 +65,8 @@ describe('TransactionEvidencePanel', () => {
     api.fetchBlock.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        hash: 'hash:block',
-        height: 42,
+        hash: stateFinality.block_hash.slice(5, 69).toLowerCase(),
+        height: BLOCK_HEIGHT,
         created_at: new Date('2026-07-23T00:00:00Z'),
         prev_block_hash: 'hash:previous',
         transactions_hash: ENTRY_ROOT,
@@ -91,20 +74,8 @@ describe('TransactionEvidencePanel', () => {
         transactions_total: 1,
       },
     });
-    api.fetchLedgerStateRoot.mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: {
-        height: 42,
-        block_hash: 'hash:block',
-        state_root: 'hash:state',
-        source: 'commit_qc',
-        commit_qc: qc,
-      },
-    });
-    api.fetchLedgerStateProof.mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: { height: 42, block_hash: 'hash:block', state_root: 'hash:state', commit_qc: qc },
-    });
+    api.fetchLedgerStateRoot.mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: stateFinality });
+    api.fetchLedgerStateProof.mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: stateFinality });
   });
 
   it('keeps browser proof authentication unavailable while exposing decoded evidence', async () => {
@@ -113,13 +84,52 @@ describe('TransactionEvidencePanel', () => {
 
     expect(wrapper.get('[data-test="block-proof-available"]').text()).toContain('Not authenticated in this browser');
     expect(wrapper.get('[data-test="block-proof-claim"]').text()).toBe('Local verification incomplete');
-    expect(wrapper.text()).toContain('requires a caller-authenticated anchor');
-    expect(wrapper.text()).toContain('no digest-pinned browser finality-verifier WASM is shipped');
+    expect(wrapper.text()).toContain('does not independently authenticate Merkle paths');
+    expect(wrapper.text()).not.toMatch(/wasm/iu);
     expect(wrapper.get('[data-test="reference-block-available"]').text()).toContain('Reference transactions root');
     expect(wrapper.text()).toContain('Node-provided · not cryptographically verified here');
-    expect(wrapper.text()).toContain('Node-provided · BLS not verified here');
+    expect(wrapper.text()).toContain('Node-provided · finality not verified here');
     expect(wrapper.text()).toContain('identify the requested block');
-    expect(wrapper.text()).toContain('Canonical decoded proof');
+    expect(wrapper.text()).toContain('Node-supplied block proof');
+  });
+
+  it('shows the current state-finality response without inventing quorum-certificate fields', async () => {
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(`Witnessed post-state root: ${stateFinality.witnessed_post_state_root}`);
+    const fields = wrapper.get('[data-test="state-proof-available"]').text();
+    expect(fields).toContain('Header height: 12');
+    expect(fields).toContain('View-change index: 476');
+    expect(fields).toContain('Committee entries: 4');
+    expect(fields).toContain('Encoded block bytes: 16411');
+    expect(fields).not.toContain('Signer bitmap');
+    expect(wrapper.text()).not.toContain('Commit quorum certificate');
+    expect(JSON.parse(wrapper.get('[data-test="state-proof-raw"] pre').text())).toEqual(stateFinality);
+  });
+
+  it('shows a block-proof authentication requirement while retaining public state evidence', async () => {
+    api.fetchLedgerBlockProof.mockResolvedValue({
+      status: UNKNOWN_ERROR,
+      error: new Error('Block proofs require authenticated account access (HTTP 401).'),
+    });
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Block proofs require authenticated account access (HTTP 401).');
+    expect(wrapper.find('[data-test="block-proof-claim"]').exists()).toBe(false);
+    expect(wrapper.get('[data-test="state-proof-available"]').text()).toContain('Committee entries: 4');
+    expect(wrapper.text()).toContain('finality not verified here');
+  });
+
+  it('reports a state-finality failure without hiding the independently available state root', async () => {
+    api.fetchLedgerStateProof.mockRejectedValue(new Error('state proof route failed'));
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('State-finality request failed: state proof route failed');
+    expect(wrapper.text()).toContain(stateFinality.witnessed_post_state_root);
+    expect(wrapper.find('[data-test="state-proof-raw"]').exists()).toBe(false);
   });
 
   it('keeps unavailable and failed evidence explicit and retries only on user action', async () => {
@@ -136,7 +146,7 @@ describe('TransactionEvidencePanel', () => {
 
     expect(wrapper.get('[data-test="block-proof-unavailable"]').text()).toContain('no block proof');
     expect(wrapper.get('[data-test="reference-block-error"]').text()).toContain('reference route failed');
-    expect(wrapper.get('[data-test="state-proof-unavailable"]').text()).toContain('No persisted');
+    expect(wrapper.get('[data-test="state-proof-unavailable"]').text()).toContain('No state finality evidence');
     expect(wrapper.text()).toContain('state route failed');
     expect(api.fetchLedgerBlockProof).toHaveBeenCalledTimes(1);
 
@@ -192,13 +202,23 @@ describe('TransactionEvidencePanel', () => {
   it('warns when state responses share a root but identify different blocks', async () => {
     api.fetchLedgerStateProof.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
-      data: { height: 43, block_hash: 'hash:other-block', state_root: 'hash:state', commit_qc: qc },
+      data: { ...stateFinality, height: BLOCK_HEIGHT + 1, block_hash: 'hash:other-block' },
     });
 
     const wrapper = mountPanel();
     await flushPromises();
 
-    expect(wrapper.text()).toContain('do not identify the same requested block and state root');
+    expect(wrapper.text()).toContain('do not identify the same requested block and witnessed post-state root');
+  });
+
+  it('warns when a state-finality block hash has an invalid checksum', async () => {
+    api.fetchLedgerStateProof.mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: { ...stateFinality, block_hash: stateFinality.block_hash.slice(0, -4) + '0000' },
+    });
+    const wrapper = mountPanel();
+    await flushPromises();
+    expect(wrapper.text()).toContain('do not identify the same requested block and witnessed post-state root');
   });
 
   it('reloads evidence when the routed transaction identity changes', async () => {

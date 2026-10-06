@@ -12,7 +12,7 @@ const setupState = {
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: { limit: 10, next_cursor: null as string | null, has_more: false },
+      nextCursor: null as string | null,
       items: [] as any[],
     },
   },
@@ -76,7 +76,7 @@ describe('AccountsList', () => {
     vi.useFakeTimers();
     updateListQuery.mockClear();
     setupState.data.data.items = [];
-    setupState.data.data.pagination = { limit: 10, next_cursor: null, has_more: false };
+    setupState.data.data.nextCursor = null;
   });
 
   afterEach(() => {
@@ -161,13 +161,13 @@ describe('AccountsList', () => {
   });
 
   it('passes authoritative cursor metadata to the table without an exact total', async () => {
-    setupState.data.data.pagination = { limit: 10, next_cursor: 'cursor-1', has_more: true };
+    setupState.data.data.nextCursor = 'cursor-1';
     const wrapper = factory();
     await flushPromises();
 
     const table = wrapper.getComponent({ name: 'BaseTableStub' });
     expect(table.props('paginationMode')).toBe('cursor');
-    expect(table.props('cursorPagination')).toEqual(setupState.data.data.pagination);
+    expect(table.props('cursorPagination')).toEqual(setupState.data.data);
     expect(table.props('total')).toBeUndefined();
   });
 });

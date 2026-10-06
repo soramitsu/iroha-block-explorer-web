@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ToriiBrowserStreamGapError } from '@iroha/iroha-js/torii-browser';
+import { ToriiStreamGapError } from '@iroha/iroha-js/torii-browser';
 import type { ContractEvent } from '@/shared/api/schemas';
 import {
   appendLiveContractEvent,
@@ -48,11 +48,11 @@ describe('contract explorer route state', () => {
       since_timestamp_ms: '0',
       until_timestamp_ms: '200',
       result_ok: 'false',
-    }, 3, 20)).toEqual({
+    }, 'opaque-next', 20)).toEqual({
       ok: true,
       value: {
-        page: 3,
-        per_page: 20,
+        cursor: 'opaque-next',
+        limit: 20,
         authority: accountAlias,
         contract_address: 'tairac1router',
         contract_alias: 'router',
@@ -72,7 +72,7 @@ describe('contract explorer route state', () => {
     [{ contract_alias: ['one', 'two'] }, 'provided once'],
     [{ contract_address: null }, 'must be a string value'],
   ])('rejects invalid or ambiguous activity query filters %#', (query, message) => {
-    const parsed = parseContractActivitySearchParams(query, 1, 10);
+    const parsed = parseContractActivitySearchParams(query, null, 10);
     expect(parsed.ok).toBe(false);
     if (!parsed.ok) expect(parsed.error).toContain(message);
   });
@@ -85,7 +85,7 @@ describe('contract explorer route state', () => {
       asset_id: 'usd#issuer.main',
       provenance: 'derived',
       result_ok: 'true',
-    }, 2, 50);
+    }, 'event-next', 50);
 
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -105,7 +105,7 @@ describe('contract explorer route state', () => {
   });
 
   it('rejects an event provenance outside the route contract', () => {
-    const parsed = parseContractEventSearchParams({ provenance: 'synthetic' }, 1, 10);
+    const parsed = parseContractEventSearchParams({ provenance: 'synthetic' }, null, 10);
     expect(parsed.ok).toBe(false);
     if (!parsed.ok) expect(parsed.error).toContain('provenance must be emitted or derived');
   });
@@ -165,7 +165,7 @@ describe('contract explorer semantic links and live state', () => {
   });
 
   it('preserves typed stream-gap evidence and marks replay unavailable', () => {
-    const state = contractStreamStaleState(new ToriiBrowserStreamGapError('events were lost', {
+    const state = contractStreamStaleState(new ToriiStreamGapError('events were lost', {
       code: 'stream_lagged',
       droppedMessages: 4,
       replayAvailable: false,

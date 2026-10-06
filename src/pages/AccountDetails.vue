@@ -131,7 +131,7 @@ const domainsScope = useParamScope(
 const isDomainsLoading = computed(() => !!domainsScope.value?.expose.isLoading);
 const domainsPagination = computed(() =>
   domainsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? domainsScope.value.expose.data.data.pagination
+    ? domainsScope.value.expose.data.data
     : null
 );
 const domains = computed(() =>
@@ -174,7 +174,7 @@ const assetsScope = useParamScope(
 const isAssetsLoading = computed(() => !!assetsScope.value?.expose.isLoading);
 const assetsPagination = computed(() =>
   assetsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? assetsScope.value.expose.data.data.pagination
+    ? assetsScope.value.expose.data.data
     : null
 );
 const assets = computed(() =>
@@ -198,7 +198,7 @@ const NFTsScope = useParamScope(
 const isNFTsLoading = computed(() => !!NFTsScope.value?.expose.isLoading);
 const NFTsPagination = computed(() =>
   NFTsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? NFTsScope.value.expose.data.data.pagination
+    ? NFTsScope.value.expose.data.data
     : null
 );
 const nfts = computed(() =>
@@ -220,7 +220,7 @@ const rwasScope = useParamScope(
 
 const isRwasLoading = computed(() => !!rwasScope.value?.expose.isLoading);
 const rwasPagination = computed(() =>
-  rwasScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? rwasScope.value.expose.data.data.pagination : null
+  rwasScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? rwasScope.value.expose.data.data : null
 );
 const rwas = computed(() =>
   rwasScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? rwasScope.value.expose.data.data.items : []
@@ -233,7 +233,7 @@ const isRwasListEmpty = computed(
     rwasScope.value?.expose.data?.status === SUCCESSFUL_FETCHING &&
     assetsListState.cursor === null &&
     rwas.value.length === 0 &&
-    rwasPagination.value?.has_more === false
+    rwasPagination.value?.nextCursor === null
 );
 
 const transactionsTab = ref<TabAccountTransactions>('transactions');

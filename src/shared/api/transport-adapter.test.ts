@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { jsonResponse } from '../../../tests/fixtures/http-response';
-import { initializeTestBrowserCodec } from '../../../tests/helpers/initialize-browser-codec';
 
 const captured = vi.hoisted(() => ({ fetch: undefined as typeof fetch | undefined }));
 
@@ -26,12 +25,11 @@ const fetchMock = vi.fn<typeof fetch>();
 
 beforeEach(async () => {
   vi.resetModules();
-  await initializeTestBrowserCodec();
   fetchMock.mockReset();
   vi.stubGlobal('fetch', fetchMock);
   captured.fetch = undefined;
   fetchMock.mockResolvedValue(jsonResponse({
-    items: [], pagination: { limit: 10, snapshot_height: 0, snapshot_hash: null, next_cursor: null, has_more: false },
+    items: [], next_cursor: null,
   }));
   api = await import('./index');
   await api.fetchBlocks({ limit: 10 });

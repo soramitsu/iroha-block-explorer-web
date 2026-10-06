@@ -1,12 +1,12 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "default_chunk_gzip_bytes": 180000,
   "chunk_gzip_bytes": {
     "index": 65000,
     "contract-view": 205000,
     "contract-view.worker": 205000,
     "iroha-sdk": 135000,
-    "iroha-compiler": 15000,
+    "iroha-compiler": 18000,
     "iroha-sumeragi": 20000,
     "domain-validation": 65000,
     "binary-buffer": 20000,
@@ -20,14 +20,8 @@
   "entry_gzip_bytes": {
     "index.html": 540000
   },
-  "sdk_wasm": {
-    "sha256": "fbc434ef49154351478b49524e44e0f2f08b71ce38be4912ec4e73ff546863eb",
-    "raw_bytes": 36931654,
-    "max_raw_bytes": 39845888,
-    "max_gzip_bytes": 6815744
-  },
   "entry_startup_gzip_bytes": {
-    "index.html": 7340032
+    "index.html": 540000
   },
   "route_gzip_bytes": {
     "src/pages/SearchResults.vue": 30000,

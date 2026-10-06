@@ -2,15 +2,9 @@ import { z } from 'zod';
 import { requireNetworkPrefix } from '@/shared/lib/network-prefix';
 import type { Instruction } from '@/shared/api/schemas';
 import { AccountSelectorSchema, AssetDefinitionSelectorSchema, AssetIdSchema, NftIdSchema } from '@/shared/api/schemas';
-import { buildMultisigCustomDisplayPayload } from '@/shared/lib/multisig-custom';
 
 type AnyRecord = Record<string, unknown>;
-interface PresentationContext {
-  networkPrefix: number
-  depth: number
-}
-type PresentationBuilder = (value: unknown, rawPayload: unknown, context: PresentationContext) => InstructionPresentation | null;
-const MAX_NESTED_INSTRUCTION_DEPTH = 8;
+type PresentationBuilder = (value: unknown) => InstructionPresentation | null;
 type EntityRouteKind = 'account' | 'asset' | 'asset-definition' | 'domain' | 'nft';
 
 export interface InstructionPresentationField {
@@ -518,19 +512,15 @@ function multisigRegisterBuilder(value: unknown): InstructionPresentation | null
   });
 }
 
-function multisigProposeBuilder(value: unknown, rawPayload: unknown, context: PresentationContext): InstructionPresentation | null {
-  if (context.depth >= MAX_NESTED_INSTRUCTION_DEPTH) return null;
+function multisigProposeBuilder(value: unknown): InstructionPresentation | null {
   const parsed = MultisigProposeSchema.safeParse(value);
   if (!parsed.success) return null;
-  const decoded = buildMultisigCustomDisplayPayload(rawPayload, context.networkPrefix);
-  if (!decoded || decoded.multisig.variant !== 'Propose') return null;
-  const nestedInstructions = decoded.multisig.decoded_instructions.map((instruction, index) => ({
-    index: instruction.index,
-    encoded: parsed.data.instructions[index] ?? '',
-    presentation: buildDecodedPresentation(instruction.instruction, {
-      networkPrefix: context.networkPrefix,
-      depth: context.depth + 1,
-    }),
+  // Torii supplies encoded nested instructions here. The canonical decoder is
+  // native-only; retain the exact bytes instead of inventing browser semantics.
+  const nestedInstructions = parsed.data.instructions.map((encoded, index) => ({
+    index,
+    encoded,
+    presentation: null,
   }));
   const fields = [
     field('account', 'Multisig account', parsed.data.account, 'account'),
@@ -821,22 +811,20 @@ const DECODED_DIRECT_VARIANTS: Readonly<Record<string, { family: string; variant
 };
 
 function buildRegisteredPresentation(
-  ...[family, variant, value, rawPayload, context]: [
+  ...[family, variant, value]: [
     family: string,
     variant: string,
     value: unknown,
-    rawPayload: unknown,
-    context: PresentationContext,
   ]
 ): InstructionPresentation | null {
-  return registry[`${family}:${variant}`]?.(value, rawPayload, context) ?? null;
+  return registry[`${family}:${variant}`]?.(value) ?? null;
 }
 
 export function buildInstructionPresentation(
   instruction: Pick<Instruction, 'kind' | 'box'>,
   networkPrefix: number
 ): InstructionPresentation | null {
-  const context = { networkPrefix: requireNetworkPrefix(networkPrefix), depth: 0 };
+  requireNetworkPrefix(networkPrefix);
   const payload = ExplorerEnvelopeSchema.safeParse(instruction.box.json.payload);
   if (!payload.success) return null;
   const family = instruction.box.json.kind;
@@ -845,17 +833,18 @@ export function buildInstructionPresentation(
     if (payload.data.variant !== 'Custom') return null;
     const tagged = exactTaggedValue(payload.data.value, CUSTOM_MULTISIG_VARIANTS);
     if (!tagged) return null;
-    return buildRegisteredPresentation('Custom', tagged.variant, tagged.value, payload.data, context);
+    return buildRegisteredPresentation('Custom', tagged.variant, tagged.value);
   }
 
-  return buildRegisteredPresentation(family, payload.data.variant, payload.data.value, payload.data, context);
+  return buildRegisteredPresentation(family, payload.data.variant, payload.data.value);
 }
 
 export function buildDecodedInstructionPresentation(decoded: unknown, networkPrefix: number): InstructionPresentation | null {
-  return buildDecodedPresentation(decoded, { networkPrefix: requireNetworkPrefix(networkPrefix), depth: 0 });
+  requireNetworkPrefix(networkPrefix);
+  return buildDecodedPresentation(decoded);
 }
 
-function buildDecodedPresentation(decoded: unknown, context: PresentationContext): InstructionPresentation | null {
+function buildDecodedPresentation(decoded: unknown): InstructionPresentation | null {
   const root = asRecord(decoded);
   if (!root || Object.keys(root).length !== 1) return null;
 
@@ -864,28 +853,19 @@ function buildDecodedPresentation(decoded: unknown, context: PresentationContext
     if (!custom || Object.keys(custom).length !== 1 || !Object.prototype.hasOwnProperty.call(custom, 'payload')) return null;
     const tagged = exactTaggedValue(custom.payload, CUSTOM_MULTISIG_VARIANTS);
     if (!tagged) return null;
-    return buildRegisteredPresentation('Custom', tagged.variant, tagged.value, {
-      variant: 'Custom',
-      value: custom.payload,
-    }, context);
+    return buildRegisteredPresentation('Custom', tagged.variant, tagged.value);
   }
 
   for (const [family, variants] of Object.entries(DECODED_BOX_VARIANTS)) {
     if (!Object.prototype.hasOwnProperty.call(root, family)) continue;
     const tagged = exactTaggedValue(root[family], variants);
     if (!tagged) return null;
-    return buildRegisteredPresentation(family, tagged.variant, tagged.value, {
-      variant: tagged.variant,
-      value: tagged.value,
-    }, context);
+    return buildRegisteredPresentation(family, tagged.variant, tagged.value);
   }
 
   for (const [rootVariant, target] of Object.entries(DECODED_DIRECT_VARIANTS)) {
     if (!Object.prototype.hasOwnProperty.call(root, rootVariant)) continue;
-    return buildRegisteredPresentation(target.family, target.variant, root[rootVariant], {
-      variant: target.variant,
-      value: root[rootVariant],
-    }, context);
+    return buildRegisteredPresentation(target.family, target.variant, root[rootVariant]);
   }
 
   return null;

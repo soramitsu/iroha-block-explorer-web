@@ -33,11 +33,11 @@ describe('fetchAllTransactionInstructions', () => {
       status: SUCCESSFUL_FETCHING,
       data: cursor === null
         ? {
-            pagination: { limit: 2, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: 'next', has_more: true },
+            nextCursor: 'next',
             items: [makeInstruction(1), makeInstruction(0)],
           }
         : {
-            pagination: { limit: 2, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: null, has_more: false },
+            nextCursor: null,
             items: [makeInstruction(1), makeInstruction(2)],
           },
     }));
@@ -66,7 +66,7 @@ describe('fetchAllTransactionInstructions', () => {
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-          pagination: { limit: 1, snapshot_height: 1, snapshot_hash: 'a'.repeat(64), next_cursor: 'next', has_more: true },
+          nextCursor: 'next',
           items: [makeInstruction(0)],
         },
       })
@@ -80,22 +80,21 @@ describe('fetchAllTransactionInstructions', () => {
       limit: 1,
     })).rejects.toThrow('Failed to fetch transaction instructions page 2');
   });
-  it.each(['snapshot', 'cursor', 'bound'])('rejects incomplete or inconsistent history: %s', async (kind) => {
-    let calls = 0;
+  it.each(['cursor', 'bound'])('rejects incomplete history: %s', async (kind) => {
     const fetchInstructions = vi.fn(async () => ({
       status: SUCCESSFUL_FETCHING,
-      data: {
-        pagination: {
-          limit: 1, snapshot_height: 1,
-          snapshot_hash: (kind === 'snapshot' && calls++ ? 'b' : 'a').repeat(64),
-          next_cursor: 'next', has_more: true,
-        },
-        items: [makeInstruction(0)],
-      },
+      data: { nextCursor: 'next', items: [makeInstruction(0)] },
     }));
     await expect(fetchAllTransactionInstructions({
       transactionHash: '0xtest', fetchInstructions, limit: 1, maxPages: kind === 'bound' ? 1 : 3,
-    })).rejects.toThrow(/snapshot changed|cursor did not advance|bounded page limit/);
+    })).rejects.toThrow(/cursor did not advance|bounded page limit/);
   });
 
+  it('follows an empty page with a continuation instead of truncating the transaction', async () => {
+    const fetchInstructions = vi.fn()
+      .mockResolvedValueOnce({ status: SUCCESSFUL_FETCHING, data: { items: [], nextCursor: 'next' } })
+      .mockResolvedValueOnce({ status: SUCCESSFUL_FETCHING, data: { items: [makeInstruction(0)], nextCursor: null } });
+    expect(await fetchAllTransactionInstructions({ transactionHash: '0xtest', fetchInstructions })).toHaveLength(1);
+    expect(fetchInstructions).toHaveBeenCalledTimes(2);
+  });
 });

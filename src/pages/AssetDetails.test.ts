@@ -41,7 +41,7 @@ const assetDetailsStates = vi.hoisted((): any => ({
     data: {
       status: 'ok',
       data: {
-        pagination: { limit: 10, next_cursor: null, has_more: false },
+        nextCursor: null,
         items: [],
       },
     },
@@ -97,7 +97,7 @@ describe('AssetDetails', () => {
     setupStateQueue.splice(0);
     assetDetailsStates.asset.data.data.owning_domain = 'issuer.main';
     assetDetailsStates.assets.data.data.items = [];
-    assetDetailsStates.assets.data.data.pagination = { limit: 10, next_cursor: null, has_more: false };
+    assetDetailsStates.assets.data.data.nextCursor = null;
     assetDetailsStates.asset.snapshot = {
       status: 'ready',
       data: assetDetailsStates.asset.data,
@@ -152,11 +152,7 @@ describe('AssetDetails', () => {
   });
 
   it('does not claim zero holders while Torii exposes a continuation cursor', async () => {
-    assetDetailsStates.assets.data.data.pagination = {
-      limit: 10,
-      next_cursor: 'holder_cursor_2',
-      has_more: true,
-    };
+    assetDetailsStates.assets.data.data.nextCursor = 'holder_cursor_2';
     const wrapper = factory();
     await flushPromises();
 
