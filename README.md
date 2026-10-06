@@ -102,8 +102,18 @@ network is selected.
 On `taira-explorer.sora.org` and `explorer-bpng.soramitsu.io`, configuration contains exactly
 `toriiBaseUrl: "https://taira.sora.org"`, `toriiForceBaseUrl: true`, the authenticated deployment's canonical checked
 `networkId`, and `networkPrefix: 369`. These production hosts reject proxy endpoints, absent or different prefixes,
-and extra settings. Other hosts must explicitly configure their selected network's integer prefix from 0 through
+and extra settings. Unpinned development hosts must explicitly configure their selected network's integer prefix from 0 through
 65535; all instruction decoding receives that same value without inferring it from addresses or payloads.
+
+On `bokolo-explorer.soramitsu.io`, the only accepted four-field configuration binds
+`toriiBaseUrl: "https://bokolo.soramitsu.io"` and `toriiForceBaseUrl: true`.
+`networkId` must be the canonical checked identity and `networkPrefix` must be the
+integer prefix from authenticated CBSI deployment metadata; neither value is copied
+from Taira or selected by the browser. The separate Bokolo website remains at the
+Torii origin's `/` route. Publish this Explorer config only after the Bokolo
+`/v1/*` routes, CORS for the Explorer origin, native revision, signed SDK and
+application artifact have been verified together. The Taira-only release tool in
+`ops/taira` does not authorize a CBSI Explorer release.
 
 Supported keys:
 

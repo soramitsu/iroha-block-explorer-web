@@ -37,6 +37,19 @@ const TairaRuntimeConfigSchema = z
   })
   .strict();
 
+// The CBSI Explorer is a separate public application. Its node is the
+// operator-designated Bokolo Torii origin, with an identity and address prefix
+// supplied by authenticated CBSI deployment metadata rather than copied from
+// the public Taira profile.
+const CbsiRuntimeConfigSchema = z
+  .object({
+    toriiBaseUrl: z.literal('https://bokolo.soramitsu.io'),
+    toriiForceBaseUrl: z.literal(true),
+    networkId: CheckedNetworkIdSchema,
+    networkPrefix: NetworkPrefixSchema,
+  })
+  .strict();
+
 export type RuntimeConfig = z.infer<typeof RuntimeConfigSchema>;
 
 const CONFIGURATION_ERROR_MESSAGE = 'Explorer runtime configuration is unavailable or invalid.';
@@ -62,7 +75,11 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
     const primaryUrl = `${normalizedBaseUrl}config.json`;
     const requiresTairaProfile = ['taira-explorer.sora.org', 'explorer-bpng.soramitsu.io']
       .includes(window.location.hostname);
-    const schema = requiresTairaProfile ? TairaRuntimeConfigSchema : RuntimeConfigSchema;
+    const schema = requiresTairaProfile
+      ? TairaRuntimeConfigSchema
+      : window.location.hostname === 'bokolo-explorer.soramitsu.io'
+        ? CbsiRuntimeConfigSchema
+        : RuntimeConfigSchema;
 
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 1500);

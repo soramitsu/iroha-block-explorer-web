@@ -16,6 +16,12 @@ describe('runtime config', () => {
     networkId: checkedNetworkId,
     networkPrefix: 369,
   };
+  const cbsiConfig = {
+    toriiBaseUrl: 'https://bokolo.soramitsu.io',
+    toriiForceBaseUrl: true,
+    networkId: checkedNetworkId,
+    networkPrefix: 42, // Synthetic fixture; CBSI deployment must supply its authenticated prefix.
+  };
 
   function useHost(hostname: string) {
     vi.stubGlobal('window', {
@@ -288,6 +294,46 @@ describe('runtime config', () => {
       await expect(module.loadRuntimeConfig()).resolves.toEqual(tairaConfig);
       expect(module.getRuntimeConfig()).toEqual(tairaConfig);
       expect(module.getRuntimeConfig().networkId).toBe(checkedNetworkId);
+    });
+  });
+
+  describe('bokolo-explorer.soramitsu.io profile', () => {
+    beforeEach(() => useHost('bokolo-explorer.soramitsu.io'));
+
+    it('loads only the direct CBSI Torii origin with an explicit checked identity and prefix', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => cbsiConfig }));
+      const module = await import('./runtime-config');
+
+      await expect(module.loadRuntimeConfig()).resolves.toEqual(cbsiConfig);
+      expect(module.getRuntimeConfig().networkId).toBe(checkedNetworkId);
+      expect(module.getRuntimeNetworkPrefix()).toBe(42);
+    });
+
+    it.each([
+      ['missing config', null],
+      ['missing endpoint', { toriiForceBaseUrl: true, networkId: checkedNetworkId, networkPrefix: 42 }],
+      ['public Taira endpoint', { ...cbsiConfig, toriiBaseUrl: 'https://taira.sora.org' }],
+      ['same-origin Explorer endpoint', { ...cbsiConfig, toriiBaseUrl: 'https://bokolo-explorer.soramitsu.io' }],
+      ['relative endpoint', { ...cbsiConfig, toriiBaseUrl: '/v1/explorer' }],
+      ['insecure endpoint', { ...cbsiConfig, toriiBaseUrl: 'http://bokolo.soramitsu.io' }],
+      ['trailing slash', { ...cbsiConfig, toriiBaseUrl: 'https://bokolo.soramitsu.io/' }],
+      ['unforced endpoint', { ...cbsiConfig, toriiForceBaseUrl: false }],
+      ['missing identity', { ...cbsiConfig, networkId: undefined }],
+      ['raw identity', { ...cbsiConfig, networkId: legacyNetworkId }],
+      ['missing prefix', { ...cbsiConfig, networkPrefix: undefined }],
+      ['string prefix', { ...cbsiConfig, networkPrefix: '42' }],
+      ['extra failover setting', { ...cbsiConfig, toriiFailoverEnabled: true }],
+      ['extra dataspace setting', { ...cbsiConfig, dataspaceId: 'cbsi' }],
+    ])('rejects %s', async (_label, config) => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        config === null ? { ok: false, status: 404 } : { ok: true, json: async () => config }
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      const module = await import('./runtime-config');
+
+      await expect(module.loadRuntimeConfig()).rejects.toThrow(configurationError);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(module.getRuntimeConfig()).toEqual({});
     });
   });
 });
