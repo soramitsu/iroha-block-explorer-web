@@ -271,7 +271,7 @@ export function extractTransferEdgesFromPayload(
 }
 
 export function extractTransferEdgesFromInstruction(instruction: Instruction): ParsedTransferEdge[] {
-  return extractTransferEdgesFromPayload(instruction.box.json.payload, {
+  return extractTransferEdgesFromPayload(instruction.box.json?.payload, {
     authority: instruction.authority,
     fallbackVariant: instruction.kind,
   });

@@ -53,6 +53,7 @@ const compilerDiagnostic = {
   phase: 'parse',
   message: 'Unexpected character',
   primary_span: {
+    package_identity: null,
     source: 'studio.ko',
     start: { line: 2, column: 3 },
     end: { line: 2, column: 4 },
@@ -62,6 +63,8 @@ const compilerDiagnostic = {
   notes: [],
   help: null,
   fix: null,
+  alternative_fixes: [],
+  localized: null,
 } satisfies KotodamaCompilerDiagnostic;
 
 describe('kotodama studio compiler-service helper', () => {

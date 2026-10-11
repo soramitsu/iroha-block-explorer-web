@@ -8,8 +8,8 @@ import { IROHA_SDK_SPECIFIER, IROHA_SDK_SOURCE_REVISION, verifyIrohaSdk, verifyI
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const roots: string[] = [];
-const archiveName = 'iroha-iroha-js-0.0.3-cc8e6620f6cb.tgz';
-const inventoryName = 'iroha-iroha-js-0.0.3-cc8e6620f6cb.files.json';
+const archiveName = 'iroha-iroha-js-0.0.3-46654decf09c.tgz';
+const inventoryName = 'iroha-iroha-js-0.0.3-46654decf09c.files.json';
 
 async function fixture({ installed = true } = {}) {
   const root = await realpath(await mkdtemp(path.join(tmpdir(), 'explorer-sdk-integrity-')));
@@ -31,25 +31,26 @@ afterEach(async () => {
 });
 
 describe('admitted SDK package integrity', () => {
-  it('checks all 231 installed files without changing the real package', async () => {
+  it('checks all 241 installed files without changing the real package', async () => {
     const browserClient = path.join(repository, 'node_modules/@iroha/iroha-js/dist/toriiBrowserClient.js');
     const before = await lstat(browserClient);
     expect(await verifyIrohaSdk(repository)).toEqual({
-      files: 231,
-      archiveSha256: 'db24d5e042a475a24d204a0045e07f1dd8bafc821c098a64fffe046bf216e15a',
-      inventorySha256: '9cd0272751874d0243d03af4a7b49f44aaff1c165e03dc78a3107f5f8c688880',
+      files: 241,
+      archiveSha256: '46654decf09ca855e573209fcc040e2380b81d262dc7f0a576d4d750edf57178',
+      inventorySha256: '01a11499e212eb1428cebb5f7ea69378463ca820d710dc18487b7702796295ee',
       status: 'package-integrity-verified',
     });
     const after = await lstat(browserClient);
     expect([after.ino, after.size, after.mtimeMs, after.ctimeMs]).toEqual([before.ino, before.size, before.mtimeMs, before.ctimeMs]);
   });
 
-  it('records the clean source package and contains no retired browser codec artifacts', async () => {
+  it('records the actual canonical source package and contains no retired browser codec artifacts', async () => {
     const inventory = JSON.parse(await readFile(path.join(repository, 'vendor', inventoryName), 'utf8'));
     expect(inventory.source).toMatchObject({
       revision: IROHA_SDK_SOURCE_REVISION,
-      packageGitTree: '297429298cd4fd06d488be9575a71aeb6cd19524',
-      packageSourceClean: true,
+      packageGitTree: 'e9a35192efb57d2e5c793582140e8fd949fcab35',
+      packageSourceClean: false,
+      sourceInventorySha256: '26c082be865e4b588208e9a73362f044e90b7f49d0e9c8f62676f6a97917e666',
       repeatPackSha256: inventory.archiveSha256,
       nodeVersion: '24.19.0',
     });
@@ -58,11 +59,14 @@ describe('admitted SDK package integrity', () => {
     ))).toBe(false);
     const sdkPackage = JSON.parse(await readFile(path.join(repository, 'node_modules/@iroha/iroha-js/package.json'), 'utf8'));
     expect(sdkPackage.exports['./browser-codec']).toBeUndefined();
+    expect(inventory.files.filter(({ path: name }: { path: string }) => name.startsWith('native/')).map(({ path: name }: { path: string }) => name))
+      .toEqual(['native/iroha_js_host.checksums.json']);
+    expect(inventory.files.some(({ path: name }: { path: string }) => name.endsWith('.node'))).toBe(false);
   });
 
   it('authenticates archive inputs before installation without claiming installed-package integrity', async () => {
     const { root } = await fixture({ installed: false });
-    expect(await verifyIrohaSdkArchive(root)).toMatchObject({ files: 231, status: 'archive-integrity-verified' });
+    expect(await verifyIrohaSdkArchive(root)).toMatchObject({ files: 241, status: 'archive-integrity-verified' });
     await expect(lstat(path.join(root, 'node_modules'))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(verifyIrohaSdk(root)).rejects.toMatchObject({ code: 'ENOENT' });
   });
@@ -85,7 +89,7 @@ describe('admitted SDK package integrity', () => {
     'dist/toriiBrowserClient.js',
     'dist/public/address.js',
     'dist/public/transactionCodec.js',
-    'native/iroha_js_host.checksums.json',
+    'dist/native.browser.js',
     'torii-browser.d.ts',
     'package.json',
   ])('rejects altered installed %s bytes', async name => {

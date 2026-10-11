@@ -64,7 +64,7 @@
           />
           <DataField
             :title="$t('dataspaces.dataspaceType')"
-            :value="dataspaceType(dataspace)"
+            :value="laneGovernance?.visibility ?? '-'"
           />
           <DataField
             :title="$t('dataspaces.description')"
@@ -102,15 +102,7 @@
     <BaseContentBlock :title="$t('dataspaces.laneGovernanceTitle')">
       <template #default>
         <p
-          v-if="state.governanceError"
-          class="dataspace-details-page__error"
-          data-test="dataspace-details-governance-error"
-        >
-          {{ state.governanceError }}
-        </p>
-
-        <p
-          v-else-if="!laneGovernance"
+          v-if="!laneGovernance"
           class="dataspace-details-page__empty row-text"
           data-test="dataspace-details-governance-empty"
         >
@@ -123,35 +115,17 @@
           data-test="dataspace-details-governance"
         >
           <DataField
-            :title="$t('dataspaces.governanceMode')"
-            :value="laneGovernance.governance || $t('none')"
-          />
-          <DataField
-            :title="$t('dataspaces.quorum')"
-            :value="laneGovernance.quorum ?? $t('none')"
-            monospace
-          />
-          <DataField
             :title="$t('dataspaces.manifestRequired')"
-            :value="laneGovernance.manifest_required ? 'Yes' : 'No'"
+            :value="laneGovernance.manifest_required === undefined ? '-' : laneGovernance.manifest_required ? 'Yes' : 'No'"
           />
           <DataField
             :title="$t('dataspaces.manifestReady')"
-            :value="laneGovernance.manifest_ready ? 'Yes' : 'No'"
+            :value="laneGovernance.manifest_ready === undefined ? '-' : laneGovernance.manifest_ready ? 'Yes' : 'No'"
           />
           <DataField
             :title="$t('dataspaces.manifestPath')"
             :value="laneGovernance.manifest_path || $t('none')"
             monospace
-          />
-          <DataField
-            :title="$t('dataspaces.validators')"
-            :value="laneGovernance.validator_ids.join(', ') || $t('none')"
-            monospace
-          />
-          <DataField
-            :title="$t('dataspaces.protectedNamespaces')"
-            :value="laneGovernance.protected_namespaces.join(', ') || $t('none')"
           />
         </div>
       </template>
@@ -251,7 +225,7 @@ import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
 import * as http from '@/shared/api';
-import type { NexusPublicStatus, NexusStatusDataspaceBacklog, SumeragiStatus } from '@/shared/api/schemas';
+import { DataspaceId, type NexusPublicStatus, type NexusStatusDataspaceBacklog } from '@/shared/api/schemas';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import {
   listDataspacePublicNodes,
@@ -273,16 +247,12 @@ const navigation = useScopedExplorerNavigation();
 const state = reactive<{
   isLoading: boolean
   error: string | null
-  governanceError: string | null
   nexusStatus: NexusPublicStatus | null
-  sumeragiStatus: SumeragiStatus | null
   lastUpdated: string | null
 }>({
   isLoading: false,
   error: null,
-  governanceError: null,
   nexusStatus: null,
-  sumeragiStatus: null,
   lastUpdated: null,
 });
 
@@ -303,8 +273,8 @@ const laneId = computed(() => {
 const dataspaceId = computed(() => {
   const raw = route.params.dataspaceId;
   const value = Array.isArray(raw) ? raw[0] : raw;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  const parsed = DataspaceId.safeParse(value);
+  return parsed.success ? parsed.data : null;
 });
 
 const hasValidParams = computed(() => laneId.value !== null && dataspaceId.value !== null);
@@ -312,7 +282,11 @@ const hasValidParams = computed(() => laneId.value !== null && dataspaceId.value
 const dataspace = computed<NexusStatusDataspaceBacklog | null>(() => {
   if (!hasValidParams.value) return null;
   const lane = laneId.value as number;
-  const id = dataspaceId.value as number;
+  const id = dataspaceId.value as string;
+  const registered = state.nexusStatus?.dataspace_catalog.some(
+    (entry) => entry.lane_id === lane && entry.dataspace_id === id
+  );
+  if (!registered) return null;
   const rows = state.nexusStatus?.teu_dataspace_backlog ?? [];
   return rows.find((item) => item.lane_id === lane && item.dataspace_id === id) ?? null;
 });
@@ -320,8 +294,9 @@ const dataspace = computed<NexusStatusDataspaceBacklog | null>(() => {
 const laneGovernance = computed(() => {
   if (!hasValidParams.value) return null;
   const lane = laneId.value as number;
-  const rows = state.sumeragiStatus?.lane_governance ?? [];
-  return rows.find((item) => item.lane_id === lane) ?? null;
+  const id = dataspaceId.value as string;
+  // Public catalog fields describe this exact binding without operator-only telemetry.
+  return state.nexusStatus?.dataspace_catalog.find((item) => item.lane_id === lane && item.dataspace_id === id) ?? null;
 });
 
 const storageScope = computed(() => {
@@ -329,16 +304,12 @@ const storageScope = computed(() => {
   return {
     registryNode: http.getConfiguredToriiBaseUrl(),
     laneId: laneId.value as number,
-    dataspaceId: dataspaceId.value as number,
+    dataspaceId: dataspaceId.value as string,
   };
 });
 
 function dataspaceLabel(item: NexusStatusDataspaceBacklog): string {
   return item.alias ? `${item.alias} (#${item.dataspace_id})` : `#${item.dataspace_id}`;
-}
-
-function dataspaceType(item: NexusStatusDataspaceBacklog) {
-  return item.dataspace_id >= 10 ? t('dataspaces.typeCustom') : t('dataspaces.typeSystem');
 }
 
 function deriveNodeLabel(url: string): string {
@@ -359,32 +330,20 @@ async function loadDetails() {
   if (!hasValidParams.value) {
     state.error = t('dataspaces.detailInvalidRoute');
     state.nexusStatus = null;
-    state.sumeragiStatus = null;
     return;
   }
 
   state.isLoading = true;
   state.error = null;
-  state.governanceError = null;
 
   try {
-    const [nexusResponse, sumeragiResponse] = await Promise.all([
-      http.fetchNexusPublicStatus(),
-      http.fetchSumeragiStatus(),
-    ]);
+    const nexusResponse = await http.fetchNexusPublicStatus();
 
     if (nexusResponse.status === SUCCESSFUL_FETCHING) {
       state.nexusStatus = nexusResponse.data;
     } else {
       state.nexusStatus = null;
       state.error = t('dataspaces.loadFailed');
-    }
-
-    if (sumeragiResponse.status === SUCCESSFUL_FETCHING) {
-      state.sumeragiStatus = sumeragiResponse.data;
-    } else {
-      state.sumeragiStatus = null;
-      state.governanceError = t('dataspaces.laneGovernanceLoadFailed');
     }
 
     if (state.nexusStatus && !dataspace.value) {
@@ -395,7 +354,6 @@ async function loadDetails() {
     refreshPublicNodes();
   } catch {
     state.nexusStatus = null;
-    state.sumeragiStatus = null;
     state.error = t('dataspaces.loadFailed');
   } finally {
     state.isLoading = false;
@@ -405,9 +363,7 @@ async function loadDetails() {
 function refreshDetails() {
   loadDetails().catch(() => {
     state.nexusStatus = null;
-    state.sumeragiStatus = null;
     state.error = t('dataspaces.loadFailed');
-    state.governanceError = t('dataspaces.laneGovernanceLoadFailed');
     state.isLoading = false;
   });
 }

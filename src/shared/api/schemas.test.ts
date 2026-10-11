@@ -1,6 +1,8 @@
+import nativeLogFixture from '../../../tests/fixtures/taira-ce5-log-instruction.json';
 import stateFinality from '../../../tests/fixtures/taira-state-finality.json';
 import { describe, expect, it } from 'vitest';
 import {
+  DataspaceId,
   Account,
   AccountHistoryResponse,
   AccountPermissionsResponse,
@@ -92,134 +94,37 @@ describe('Instruction schema', () => {
     ).toThrow();
   });
 
-  it('preserves structured Norito payloads with wire metadata', () => {
-    const parsed = Instruction.parse({
-      ...baseInstruction,
-      kind: 'Transfer',
-      box: {
-        encoded: '0x02',
-        framed_sha256: validFramedInstructionSha256,
-        json: {
-          kind: 'Transfer',
-          payload: { object: validAssetId, source: validAccountId, destination: validAccountIdAlt },
-          wire_id: 'iroha.transferAsset',
-          encoded: '0xdeadbeef',
-        },
-      },
-    });
-
-    expect(parsed.box.json.kind).toBe('Transfer');
-    expect(parsed.box.framed_sha256).toBe(validFramedInstructionSha256);
-    expect(parsed.box.json.payload).toEqual({
-      object: validAssetId,
-      source: validAccountId,
-      destination: validAccountIdAlt,
-    });
-    expect(parsed.box.json.wire_id).toBe('iroha.transferAsset');
-    expect(parsed.box.json.encoded).toBe('0xdeadbeef');
+  it('rejects retired decoded JSON as a native network envelope', () => {
+    expect(() => Instruction.parse({
+      ...baseInstruction, kind: 'Transfer',
+      box: { encoded: '0x02', framed_sha256: validFramedInstructionSha256,
+        json: { kind: 'Transfer', payload: { object: validAssetId, source: validAccountId, destination: validAccountIdAlt } } },
+    })).toThrow();
   });
 
-  it('rejects missing or malformed canonical framed-instruction digests', () => {
-    const instruction = {
-      ...baseInstruction,
-      kind: 'Transfer',
-      box: {
-        encoded: '0x02',
-        json: {
-          kind: 'Transfer',
-          payload: { object: validAssetId, source: validAccountId, destination: validAccountIdAlt },
-        },
-      },
-    };
-
-    expect(() => Instruction.parse(instruction)).toThrow();
-    for (const framedSha256 of [
-      validFramedInstructionSha256.slice(2),
-      '0xC7e4bbea488a546f542484289d335695684a5fc6180b18b3584abd7505f1cc43',
-      '0xc7e4',
-    ]) {
-      expect(() =>
-        Instruction.parse({
-          ...instruction,
-          box: {
-            ...instruction.box,
-            framed_sha256: framedSha256,
-          },
-        })
-      ).toThrow();
+  it('requires the exact raw SHA-256 of canonical native frame bytes', () => {
+    expect(() => Instruction.parse({ ...nativeLogFixture, box: { ...nativeLogFixture.box, framed_sha256: undefined } })).toThrow();
+    for (const digest of ['0'.repeat(64), `0x${nativeLogFixture.box.framed_sha256}`, nativeLogFixture.box.framed_sha256.toUpperCase()]) {
+      expect(() => Instruction.parse({ ...nativeLogFixture, box: { ...nativeLogFixture.box, framed_sha256: digest } })).toThrow();
     }
   });
 
-  it('accepts instruction payloads that use r#box instead of box', () => {
-    const parsed = Instruction.parse({
-      ...baseInstruction,
-      kind: 'Log',
-      'r#box': {
-        encoded: '0x03',
-        framed_sha256: validFramedInstructionSha256,
-        json: {
-          kind: 'Log',
-          payload: {
-            value: { level: 'DEBUG', msg: 'hello' },
-            variant: 'Log',
-          },
-          wire_id: 'iroha_data_model::isi::transparent::Log',
-        },
-      },
-    });
-
-    expect(parsed.box.encoded).toBe('0x03');
-    expect(parsed.box.json.kind).toBe('Log');
+  it('requires the canonical box field rather than a retired raw-identifier alias', () => {
+    const { box, ...rest } = nativeLogFixture;
+    expect(() => Instruction.parse({ ...rest, 'r#box': box })).toThrow();
   });
 
-  it('rejects instruction payloads that use scale instead of encoded', () => {
-    expect(() =>
-      Instruction.parse({
-        ...baseInstruction,
-        kind: 'Transfer',
-        box: {
-          scale: '0x04',
-          framed_sha256: validFramedInstructionSha256,
-          json: {
-            kind: 'Transfer',
-            payload: { object: validAssetId, source: validAccountId, destination: validAccountIdAlt },
-            wire_id: 'iroha_data_model::isi::transfer::TransferBox',
-          },
-        },
-      })
-    ).toThrow();
+  it('rejects scale bytes in place of the native instruction field', () => {
+    const { instruction, ...rest } = nativeLogFixture.box;
+    expect(() => Instruction.parse({ ...nativeLogFixture, box: { ...rest, scale: instruction } })).toThrow();
   });
 
-  it('accepts concrete ISI names in top-level kind while keeping structured box kind', () => {
-    const parsed = Instruction.parse({
-      ...baseInstruction,
-      kind: 'SubmitOfflineToOnlineTransfer',
-      box: {
-        encoded: '0x05',
-        framed_sha256: validFramedInstructionSha256,
-        json: {
-          kind: 'Custom',
-          payload: {
-            variant: 'SubmitOfflineToOnlineTransfer',
-            value: {
-              wire_id: 'iroha_data_model::isi::offline::SubmitOfflineToOnlineTransfer',
-              encoded: '0x05',
-            },
-          },
-          wire_id: 'iroha_data_model::isi::offline::SubmitOfflineToOnlineTransfer',
-        },
-      },
-    });
-
-    expect(parsed.kind).toBe('SubmitOfflineToOnlineTransfer');
-    expect(parsed.box.json.kind).toBe('Custom');
-    expect(parsed.box.json.payload).toEqual({
-      variant: 'SubmitOfflineToOnlineTransfer',
-      value: {
-        wire_id: 'iroha_data_model::isi::offline::SubmitOfflineToOnlineTransfer',
-        encoded: '0x05',
-      },
-    });
+  it('preserves the authoritative kind and wire identity without a decoded payload', () => {
+    const parsed = Instruction.parse(nativeLogFixture);
+    expect(parsed.kind).toBe('Log');
+    expect(parsed.box.wire_id).toBe('iroha.log');
+    expect(parsed.box.encoded).toBe(nativeLogFixture.box.instruction);
+    expect(parsed.box.json).toBeNull();
   });
 });
 
@@ -786,28 +691,9 @@ describe('Explorer payload schemas', () => {
   });
 
   it('parses latest instruction collection pages', () => {
-    const parsed = LatestInstructionsResponse.parse({
-      nextCursor: null,
-      items: [
-        {
-          ...baseInstruction,
-          kind: 'Register',
-          box: {
-            encoded: '0x01',
-            framed_sha256: validFramedInstructionSha256,
-            json: {
-              kind: 'Register',
-              payload: {
-                object: { type: 'Domain', id: 'wonderland' },
-                owner: validAccountId,
-              },
-            },
-          },
-        },
-      ],
-    });
-
-    expect(parsed.items[0]?.kind).toBe('Register');
+    const parsed = LatestInstructionsResponse.parse({ nextCursor: null, items: [nativeLogFixture] });
+    expect(parsed.items[0]?.kind).toBe('Log');
+    expect(parsed.items[0]?.box.encoded).toBe(nativeLogFixture.box.instruction);
   });
 
   it('parses soracloud status snapshots with control-plane sections', () => {
@@ -1540,6 +1426,7 @@ describe('Explorer payload schemas', () => {
   it('parses the full asset-definition record and preserves detail-only alias binding data', () => {
     const exactAlias = 'USD#Issuer.Main';
     const parsed = AssetDefinition.parse({
+      spec: { scale: 2 }, balance_scope_policy: 'Global', confidential_policy: { mode: 'TransparentOnly', vk_set_hash: null, poseidon_params_id: null, pedersen_params_id: null, pending_transition: null },
       id: validAssetDefinitionId,
       owning_domain: 'issuer.main',
       alias: exactAlias,
@@ -1570,6 +1457,7 @@ describe('Explorer payload schemas', () => {
 
   it('parses nullable ownership and alias fields on the full asset-definition route', () => {
     const parsed = AssetDefinition.parse({
+      spec: { scale: 2 }, balance_scope_policy: 'Global', confidential_policy: { mode: 'TransparentOnly', vk_set_hash: null, poseidon_params_id: null, pedersen_params_id: null, pending_transition: null },
       id: validAssetDefinitionId,
       owning_domain: null,
       alias: null,
@@ -1586,6 +1474,35 @@ describe('Explorer payload schemas', () => {
     expect(parsed.alias).toBeNull();
     expect(parsed.alias_binding).toBeNull();
     expect(parsed.total_quantity.toString()).toBe('0');
+  });
+
+  it('preserves exact direct-dataspace homes on full and Explorer definition records', () => {
+    const full = { spec: { scale: 2 }, balance_scope_policy: 'Global', confidential_policy: { mode: 'TransparentOnly', vk_set_hash: null, poseidon_params_id: null, pedersen_params_id: null, pending_transition: null }, id: validAssetDefinitionId, owning_domain: null, alias: null, name: 'usd',
+      description: null, mintable: 'Infinitely', logo: null, metadata: {}, owned_by: validAccountId, total_quantity: '0' };
+    const list = { id: validAssetDefinitionId, owning_domain: null, mintable: 'Infinitely', logo: null,
+      metadata: {}, owned_by: validAccountId, assets: 0, total_quantity: '0', locked_quantity: null, circulating_quantity: null };
+    for (const owning_dataspace of ['1', '8648377547929788715', '18446744073709551615']) {
+      expect(AssetDefinition.parse({ ...full, owning_dataspace }).owning_dataspace).toBe(owning_dataspace);
+      expect(ExplorerAssetDefinition.parse({ ...list, owning_dataspace }).owning_dataspace).toBe(owning_dataspace);
+    }
+    expect(AssetDefinition.parse(full).owning_dataspace).toBeUndefined();
+    expect(ExplorerAssetDefinition.parse(list).owning_dataspace).toBeUndefined();
+    expect(AssetDefinition.parse({ ...full, owning_domain: 'issuer.main', owning_dataspace: null }).owning_dataspace).toBeNull();
+    expect(ExplorerAssetDefinition.parse({ ...list, owning_domain: 'issuer.main', owning_dataspace: null }).owning_dataspace).toBeNull();
+  });
+
+  it('rejects conflicting homes and noncanonical or rounded direct-dataspace IDs', () => {
+    const full = { spec: { scale: 2 }, balance_scope_policy: 'Global', confidential_policy: { mode: 'TransparentOnly', vk_set_hash: null, poseidon_params_id: null, pedersen_params_id: null, pending_transition: null }, id: validAssetDefinitionId, owning_domain: null, alias: null, name: 'usd',
+      description: null, mintable: 'Infinitely', logo: null, metadata: {}, owned_by: validAccountId, total_quantity: '0' };
+    const list = { id: validAssetDefinitionId, owning_domain: null, mintable: 'Infinitely', logo: null,
+      metadata: {}, owned_by: validAccountId, assets: 0, total_quantity: '0', locked_quantity: null, circulating_quantity: null };
+    for (const owning_dataspace of ['', '0', '00', '01', '-1', '+1', ' 1', '1 ', '1.0', '1e3',
+      '18446744073709551616', '86483775479297887150', 8648377547929788715]) {
+      expect(AssetDefinition.safeParse({ ...full, owning_dataspace }).success).toBe(false);
+      expect(ExplorerAssetDefinition.safeParse({ ...list, owning_dataspace }).success).toBe(false);
+    }
+    expect(AssetDefinition.safeParse({ ...full, owning_domain: 'issuer.main', owning_dataspace: '1' }).success).toBe(false);
+    expect(ExplorerAssetDefinition.safeParse({ ...list, owning_domain: 'issuer.main', owning_dataspace: '1' }).success).toBe(false);
   });
 
   it('parses the exact current Explorer asset-definition DTO', () => {
@@ -1614,6 +1531,7 @@ describe('Explorer payload schemas', () => {
 
   it('preserves valid on-chain alias spelling and enforces asset text/domain bounds', () => {
     const payload = {
+      spec: { scale: 2 }, balance_scope_policy: 'Global', confidential_policy: { mode: 'TransparentOnly', vk_set_hash: null, poseidon_params_id: null, pedersen_params_id: null, pending_transition: null },
       id: validAssetDefinitionId,
       owning_domain: 'issuer.main',
       name: 'USD',
@@ -2237,5 +2155,18 @@ describe('Explorer payload schemas', () => {
       kind: 'ValidationFail',
       details: { instruction: 0, reason: 'bad signature' },
     });
+  });
+});
+
+
+describe('exact public status dataspace IDs', () => {
+  it('preserves the complete u64 range and zero without rounding', () => {
+    expect(DataspaceId.parse(0)).toBe('0');
+    expect(DataspaceId.parse(8648377547929788715n)).toBe('8648377547929788715');
+    expect(DataspaceId.parse('18446744073709551615')).toBe('18446744073709551615');
+  });
+
+  it.each([8648377547929788000, -1, 1.5, '01', '1e3', '-1', '18446744073709551616'])('rejects an inexact or noncanonical identity %s', (value) => {
+    expect(DataspaceId.safeParse(value).success).toBe(false);
   });
 });

@@ -15,10 +15,11 @@ const mockRoute = ref({
 });
 
 const replaceSpy = vi.fn().mockResolvedValue(undefined);
-const instructionsListState = ref({
+const instructionsListState = ref<{ isLoading: boolean; hasMore: boolean; itemsCount: number; hasError?: boolean }>({
   isLoading: false,
   hasMore: false,
   itemsCount: 1,
+  hasError: false,
 });
 const scopeExpose = ref<any>({
   isLoading: false,
@@ -499,6 +500,15 @@ describe('TransactionDetails', () => {
     expect(overview.text()).toContain('Signature');
     expect(overview.text()).toContain('deadbeef');
     expect(overview.text()).toContain('Validation failed: instruction failed');
+  });
+
+  it('does not misreport an instruction fetch failure as an empty transaction', async () => {
+    scopeExpose.value.data.data.executable = 'Instructions';
+    instructionsListState.value = { isLoading: false, hasMore: false, itemsCount: 0, hasError: true };
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.find('[data-test="transaction-instructions-overview"]').exists()).toBe(false);
+    expect(wrapper.find('.instructions-table-stub').exists()).toBe(true);
   });
 
   it('hides empty-instructions overview while instruction list is still loading', async () => {

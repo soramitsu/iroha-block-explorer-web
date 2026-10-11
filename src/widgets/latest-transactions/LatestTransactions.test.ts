@@ -98,7 +98,8 @@ const BaseButtonStub = {
 
 const BaseHashStub = {
   name: 'BaseHash',
-  template: '<span><slot /></span>',
+  props: ['link', 'hash', 'type', 'copy'],
+  template: '<a :href="link"><slot /></a>',
 };
 
 const TransactionStatusStub = {
@@ -167,6 +168,17 @@ describe('LatestTransactions', () => {
     wrappers.push(wrapper);
     return wrapper;
   };
+
+  it('keeps a checksum-bearing transaction hash inside the route segment', async () => {
+    const hash = 'hash:66BF60AB1C762607F02BBDFC834E2D832243EF413D0C24BBFF8EE3D00A2830DB#DB6C';
+    mocks.setupState.data.data.items = [{ authority: SAMPLE_I105, hash, block: 9,
+      created_at: new Date(), executable: 'Instructions', status: 'Committed' }];
+    const wrapper = factory();
+    await flushPromises();
+    const url = new URL(wrapper.get('.latest-transactions__hash').attributes('href')!, 'https://explorer.example');
+    expect(decodeURIComponent(url.pathname)).toBe(`/transactions/${hash}`);
+    expect(url.hash).toBe('');
+  });
 
   it('fetches transactions on mount', async () => {
     factory();

@@ -46,7 +46,7 @@
             <DataField
               :title="$t('blocks.blockHash')"
               :hash="data.block.value.hash"
-              :link="`/blocks/${data.block.value.hash}`"
+              :link="`/blocks/${encodeURIComponent(data.block.value.hash)}`"
               copy
             />
             <DataField
@@ -68,7 +68,7 @@
             <DataField
               :title="$t('transactions.transactionHash')"
               :hash="data.transaction.value.hash"
-              :link="`/transactions/${data.transaction.value.hash}`"
+              :link="`/transactions/${encodeURIComponent(data.transaction.value.hash)}`"
               copy
             />
             <DataField

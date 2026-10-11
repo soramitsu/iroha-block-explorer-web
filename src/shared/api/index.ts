@@ -1,4 +1,5 @@
 import { fetchToriiWithDeadline } from './transport';
+import { parse as parseLosslessJson, parseNumberAndBigInt } from 'lossless-json';
 import { appendSearchParams } from './query';
 import type {
   CursorPaginationParams,
@@ -45,6 +46,7 @@ import {
   ExplorerAsset,
   AssetDefinition,
   ExplorerAssetDefinition,
+  CanonicalDataspaceId,
   AssetDefinitionEconometrics,
   AssetDefinitionSnapshot,
   Domain,
@@ -114,6 +116,7 @@ import type { SuccessfulFetching } from '@/shared/api/consts';
 import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR, NOT_FOUND } from '@/shared/api/consts';
 import { getRuntimeConfig } from '@/shared/runtime-config';
 import { normalizeAccountIdLiteral, normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
+import { requireIrohaHash32 } from '@/shared/lib/iroha-hash';
 import { ToriiBrowserClient, ToriiHttpError, ToriiStreamGapError, field, type Filter, type ListQueryInput } from '@iroha/iroha-js/torii-browser';
 import { NetworkId } from '@iroha/iroha-js/connect-browser';
 import type {
@@ -1054,8 +1057,12 @@ export async function fetchAsset(id: AssetId): Promise<ResultWithStatus<Explorer
 }
 
 export async function fetchAssetDefinitions(params?: AssetDefinitionSearchParams): Promise<ResultWithStatus<CollectionPage<ExplorerAssetDefinition>>> {
+  const owningDataspace = params?.dataspace === undefined ? undefined : CanonicalDataspaceId.parse(params.dataspace);
+  if (owningDataspace !== undefined && params?.domain !== undefined) {
+    throw new TypeError('Asset definition home filters must select either a domain or a dataspace');
+  }
   return await fetchCollectionPage(params, ExplorerAssetDefinition, (client) =>
-    client.explorerAssetDefinitions.list(collectionQuery(params, { owning_domain: params?.domain, owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined }))
+    client.explorerAssetDefinitions.list(collectionQuery(params, { owning_domain: params?.domain, owning_dataspace: owningDataspace, owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined }))
   );
 }
 
@@ -1118,7 +1125,10 @@ export async function fetchBlocks(params?: CursorPaginationParams): Promise<Resu
 }
 
 export async function fetchBlock(heightOrHash: number | string): Promise<ResultWithStatus<Block>> {
-  return await parseToriiSdkResult((client) => client.getExplorerBlock(heightOrHash), Block);
+  return await parseToriiSdkResult((client) => client.getExplorerBlock(
+    typeof heightOrHash === 'number' || /^[1-9][0-9]{0,19}$/u.test(heightOrHash)
+      ? heightOrHash : requireIrohaHash32(heightOrHash)
+  ), Block);
 }
 
 export interface TransactionBlockEvidence {
@@ -1137,7 +1147,7 @@ export async function fetchLedgerBlockProof(
   transactionHash: string
 ): Promise<ResultWithStatus<TransactionBlockEvidence>> {
   try {
-    const proof = await toriiSdkClient().getLedgerBlockProof(blockHeight, transactionHash);
+    const proof = await toriiSdkClient().getLedgerBlockProof(blockHeight, requireIrohaHash32(transactionHash));
     return {
       status: SUCCESSFUL_FETCHING,
       data: {
@@ -1316,12 +1326,12 @@ export async function fetchLatestTransactions(params?: TransactionSearchParams):
 }
 
 export async function fetchTransaction(hash: string): Promise<ResultWithStatus<DetailedTransaction>> {
-  return await parseToriiSdkResult((client) => client.getExplorerTransaction(hash), DetailedTransaction);
+  return await parseToriiSdkResult((client) => client.getExplorerTransaction(requireIrohaHash32(hash)), DetailedTransaction);
 }
 
 export async function fetchInstructions(params?: InstructionsSearchParams): Promise<ResultWithStatus<CollectionPage<Instruction>>> {
   return await fetchCollectionPage(params, Instruction, (client) =>
-    client.explorerInstructions.list(collectionQuery(params, { account: normalizeAccountSelectorForApi(params?.account) ?? undefined, authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, kind: params?.kind, transaction_hash: params?.transaction_hash, transaction_status: params?.transaction_status, block: params?.block, asset_id: params?.asset_id?.toString() }))
+    client.explorerInstructions.list(collectionQuery(params, { account: normalizeAccountSelectorForApi(params?.account) ?? undefined, authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, kind: params?.kind, transaction_hash: params?.transaction_hash ? requireIrohaHash32(params.transaction_hash) : undefined, transaction_status: params?.transaction_status, block: params?.block, asset_id: params?.asset_id?.toString() }))
   );
 }
 
@@ -1340,12 +1350,11 @@ export interface ContractActivitySearchParams extends CursorPaginationParams, Co
 export interface ContractEventFilters {
   authority?: string;
   contract_address?: string;
-  contract_alias?: string;
-  module?: string;
   event_kind?: string;
   participant?: string;
   asset_id?: string;
-  provenance?: 'emitted' | 'derived';
+  /** Native contract events are committed native emissions. */
+  provenance?: 'emitted';
   since_timestamp_ms?: number;
   until_timestamp_ms?: number;
   result_ok?: boolean;
@@ -1357,8 +1366,6 @@ function contractEventSdkOptions(params: ContractEventFilters) {
   return {
     authority: params.authority,
     contractAddress: params.contract_address,
-    contractAlias: params.contract_alias,
-    module: params.module,
     eventKind: params.event_kind,
     participant: params.participant,
     assetId: params.asset_id,
@@ -1373,7 +1380,7 @@ function contractCollectionQuery(params: CursorPaginationParams & ContractActivi
   const query = collectionQuery(params, {
     authority: params.authority, contract_address: params.contract_address,
     contract_alias: params.contract_alias, contract_entrypoint: params.contract_entrypoint,
-    module: params.module, event_kind: params.event_kind, participants: params.participant,
+    event_kind: params.event_kind, participants: params.participant,
     asset_ids: params.asset_id, provenance: params.provenance, result_ok: params.result_ok,
   });
   let filter = query.filter as Filter | undefined;
@@ -1413,7 +1420,7 @@ export async function* streamContractEvents(
 
 export async function fetchLatestInstructions(params?: InstructionsSearchParams): Promise<ResultWithStatus<CollectionPage<Instruction>>> {
   return await fetchCollectionPage(params, Instruction, (client) =>
-    client.explorerLatestInstructions.list(collectionQuery(params, { account: normalizeAccountSelectorForApi(params?.account) ?? undefined, authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, kind: params?.kind, transaction_hash: params?.transaction_hash, transaction_status: params?.transaction_status, block: params?.block, asset_id: params?.asset_id?.toString() }))
+    client.explorerLatestInstructions.list(collectionQuery(params, { account: normalizeAccountSelectorForApi(params?.account) ?? undefined, authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, kind: params?.kind, transaction_hash: params?.transaction_hash ? requireIrohaHash32(params.transaction_hash) : undefined, transaction_status: params?.transaction_status, block: params?.block, asset_id: params?.asset_id?.toString() }))
   );
 }
 
@@ -1421,7 +1428,7 @@ export async function fetchInstructionDetail(
   transactionHash: string,
   index: number
 ): Promise<ResultWithStatus<Instruction>> {
-  return await parseToriiSdkResult((client) => client.getExplorerInstruction(transactionHash, index), Instruction);
+  return await parseToriiSdkResult((client) => client.getExplorerInstruction(requireIrohaHash32(transactionHash), index), Instruction);
 }
 
 export async function fetchInstructionContractView(
@@ -1429,7 +1436,7 @@ export async function fetchInstructionContractView(
   index: number
 ): Promise<ResultWithStatus<ContractCodeView>> {
   return await parseToriiSdkResult(
-    (client) => client.getExplorerInstructionContractView(transactionHash, index),
+    (client) => client.getExplorerInstructionContractView(requireIrohaHash32(transactionHash), index),
     ContractCodeView
   );
 }
@@ -1525,7 +1532,14 @@ export async function fetchNexusPublicStatus(): Promise<ResultWithStatus<NexusPu
       markToriiHealthy();
     }
 
-    return { status: SUCCESSFUL_FETCHING, data: NexusPublicStatus.parse(await res.json()) };
+    // Preserve u64 dataspace identifiers before schema validation; JSON.parse rounds them.
+    const payload = parseLosslessJson(await res.text(), undefined, {
+      parseNumber: (literal) => {
+        const value = parseNumberAndBigInt(literal);
+        return typeof value === 'bigint' && Number.isSafeInteger(Number(value)) ? Number(value) : value;
+      },
+    });
+    return { status: SUCCESSFUL_FETCHING, data: NexusPublicStatus.parse(payload) };
   }
 
   if (FAILOVER_STATUSES.has(res.status)) {
@@ -1705,7 +1719,7 @@ export async function fetchPipelineTransactionStatus(
   scope: 'local' | 'auto' | 'global' = 'auto'
 ): Promise<ResultWithStatus<PipelineTransactionStatusResponse | null>> {
   const response = await get<PipelineTransactionStatusResponse>('/pipeline/transactions/status', {
-    hash: hashHex,
+    hash: requireIrohaHash32(hashHex),
     scope,
   });
 

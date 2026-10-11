@@ -26,7 +26,7 @@
   "route_gzip_bytes": {
     "src/pages/SearchResults.vue": 30000,
     "src/pages/TransactionDetails.vue": 40000,
-    "src/pages/KotodamaStudio.vue": 115000,
+    "src/pages/KotodamaStudio.vue": 118000,
     "src/pages/NodesTelemetry.vue": 45000,
     "src/pages/SorafsRegistry.vue": 60000
   }

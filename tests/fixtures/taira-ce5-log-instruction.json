@@ -1,0 +1,14 @@
+{
+  "authority": "testu\uff9b1N\uff8eH\uff8bi\uff73wD\uff7bW\uff8b\uff7f\uff7fe\uff99\uff7e\uff712V\uff9b\uff8cf\uff66fVbm\uff8dnw\uff89\uff89tQA\uff8d7R\uff867UXM3T",
+  "block": 10,
+  "box": {
+    "framed_sha256": "825186e5f4a95e747c2c7030cd2a0b8c4d366568222fcfdcfe54a54223271780",
+    "instruction": "TlJUMAAAhip9dwddTSP/bBJh2wJ4EQBvAAAAAAAAANfVDCa3uUXYAgoJaXJvaGEubG9nY1sAAAAAAAAATlJUMAAAjlXAO0IeIhMdvKRLC965VwAzAAAAAAAAACe8BhW6x8vXAgQBAAAALSxUYWlyYSBjYXRhbG9nOCBzaWduZWQgY2U1ZCBxdWFsaWZpY2F0aW9uIGxvZw==",
+    "wire_id": "iroha.log"
+  },
+  "created_at": "2026-10-09T15:10:12.003Z",
+  "index": 0,
+  "kind": "Log",
+  "transaction_hash": "hash:4ABD59BA77D552E94686494DEA0CE39B8DB16EEADA98CA75F30EC84D78CCE0B5#F3A2",
+  "transaction_status": "Committed"
+}

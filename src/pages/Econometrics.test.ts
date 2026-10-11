@@ -327,6 +327,21 @@ describe('Econometrics', () => {
     wrapper.unmount();
   });
 
+  it('reports opaque native activity as semantically unavailable without inventing amounts', async () => {
+    apiMocks.fetchInstructions.mockResolvedValueOnce({
+      status: SUCCESSFUL_FETCHING, data: { ...historyPage(null), items: [{
+        kind: 'Transfer', created_at: new Date(), transaction_status: 'Committed',
+        box: { json: null, wire_id: 'iroha.transfer', encoded: 'opaque-native-frame' },
+      }] },
+    });
+    const wrapper = mountHistoryScan();
+    await flushPromises();
+    expect(wrapper.get('.econometrics-page__error').text()).toContain('does not expose a decoded semantic payload');
+    expect(wrapper.text()).not.toContain('unexpected instruction kind');
+    expect(wrapper.findAllComponents(BaseTableStub).some((table) => table.props('items')[0]?.transfers !== undefined)).toBe(false);
+    wrapper.unmount();
+  });
+
   it('shows batch statistics as unavailable without inventing settled amounts', async () => {
     apiMocks.fetchInstructions.mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,

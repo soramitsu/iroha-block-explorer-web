@@ -96,6 +96,7 @@ describe('AssetDetails', () => {
     };
     setupStateQueue.splice(0);
     assetDetailsStates.asset.data.data.owning_domain = 'issuer.main';
+    delete assetDetailsStates.asset.data.data.owning_dataspace;
     assetDetailsStates.assets.data.data.items = [];
     assetDetailsStates.assets.data.data.nextCursor = null;
     assetDetailsStates.asset.snapshot = {
@@ -206,6 +207,35 @@ describe('AssetDetails', () => {
 
     expect(wrapper.text()).toContain('Asset definition not found');
     expect(wrapper.find('input').exists()).toBe(false);
+  });
+
+  it('displays the exact direct-dataspace home without inferring a domain or lane link', async () => {
+    assetDetailsStates.asset.data.data.owning_domain = null;
+    assetDetailsStates.asset.data.data.owning_dataspace = '8648377547929788715';
+    assetDetailsStates.assets.data.data.items = [{
+      id: `66owaQmAQMuHxPzxUN3bqZ6FJfDa#${SAMPLE_ACCOUNT_ID}`,
+      definition_id: '66owaQmAQMuHxPzxUN3bqZ6FJfDa', account_id: SAMPLE_ACCOUNT_ID, value: '11',
+    }];
+    const wrapper = factory();
+    await flushPromises();
+    const homeField = wrapper.findAll('[data-test="data-field"]')
+      .find((field) => field.attributes('data-title') === i18n.global.t('dataspaces.dataspaceId'));
+    expect(homeField?.attributes('data-value')).toBe('8648377547929788715');
+    expect(homeField?.attributes('data-link')).toBeUndefined();
+    expect(wrapper.text()).toContain('8648377547929788715');
+    expect(wrapper.find('a[href^="/domains/"]').exists()).toBe(false);
+    expect(wrapper.find('a[href^="/dataspaces/"]').exists()).toBe(false);
+  });
+
+  it('shows no direct-dataspace home when the authoritative field is null', async () => {
+    assetDetailsStates.asset.data.data.owning_domain = null;
+    assetDetailsStates.asset.data.data.owning_dataspace = null;
+    const wrapper = factory();
+    await flushPromises();
+    const homeField = wrapper.findAll('[data-test="data-field"]')
+      .find((field) => field.attributes('data-title') === i18n.global.t('domain'));
+    expect(homeField?.attributes('data-value')).toBe('-');
+    expect(homeField?.attributes('data-link')).toBeUndefined();
   });
 
   it('does not retry a terminal error until the user activates retry', async () => {

@@ -63,15 +63,15 @@ function readSingleKeyVariant(payload: unknown): string | null {
 }
 
 function instructionVariantCandidates(instruction: Pick<Instruction, 'kind' | 'box'>): string[] {
-  const payload = instruction.box.json.payload;
+  const payload = instruction.box.json?.payload;
   const nestedValue = payload && typeof payload === 'object'
     ? (payload as Record<string, unknown>).value
     : null;
 
   return [
     normalizeVariant(instruction.kind),
-    normalizeVariant(instruction.box.json.kind),
-    normalizeVariant(instruction.box.json.wire_id),
+    normalizeVariant(instruction.box.json?.kind),
+    normalizeVariant(instruction.box.json?.wire_id),
     payload && typeof payload === 'object' ? normalizeVariant((payload as Record<string, unknown>).variant) : null,
     readSingleKeyVariant(payload),
     readSingleKeyVariant(nestedValue),
@@ -204,7 +204,7 @@ function decodeBase64Bytes(value: string): Uint8Array | null {
 function extractRegisterSmartContractBytesPayload(
   instruction: Pick<Instruction, 'kind' | 'box'>
 ): RegisterSmartContractBytesPayload | null {
-  const payload = unwrapVariantRecord(instruction.box.json.payload, 'RegisterSmartContractBytes');
+  const payload = unwrapVariantRecord(instruction.box.json?.payload, 'RegisterSmartContractBytes');
   if (!payload) return null;
 
   const encodedCode = readString(payload.code);
@@ -309,7 +309,7 @@ function normalizeManifest(value: unknown): LocalManifest | null {
 function extractRegisterSmartContractCodeManifest(
   instruction: Pick<Instruction, 'kind' | 'box'>
 ): LocalManifest | null {
-  const payload = unwrapVariantRecord(instruction.box.json.payload, 'RegisterSmartContractCode');
+  const payload = unwrapVariantRecord(instruction.box.json?.payload, 'RegisterSmartContractCode');
   if (!payload) return null;
   return normalizeManifest(payload.manifest);
 }

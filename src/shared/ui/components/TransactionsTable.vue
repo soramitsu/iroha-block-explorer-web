@@ -481,7 +481,7 @@ watch(
             <BaseHash
               :hash="item.hash"
               :type="hashType"
-              :link="`/transactions/${item.hash}`"
+              :link="`/transactions/${encodeURIComponent(item.hash)}`"
               copy
             />
 

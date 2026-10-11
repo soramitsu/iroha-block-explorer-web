@@ -495,6 +495,9 @@ function processInstructionScanPage(
       continue;
     }
 
+    if (!instruction.box.json) {
+      throw new Error('Asset activity statistics are unavailable: the native instruction envelope does not expose a decoded semantic payload');
+    }
     if (instruction.kind !== args.kind || instruction.box.json.kind !== args.kind) {
       throw new Error('Asset activity history returned an unexpected instruction kind');
     }

@@ -36,7 +36,7 @@
           placeholder="tairac1…"
         >
       </label>
-      <label>
+      <label v-if="activeTab === 'activity'">
         <span>Contract alias</span>
         <input
           v-model="filterDraft.contract_alias"
@@ -53,14 +53,6 @@
         >
       </label>
       <template v-else>
-        <label>
-          <span>Module</span>
-          <input
-            v-model="filterDraft.module"
-            name="module"
-            placeholder="router"
-          >
-        </label>
         <label>
           <span>Event kind</span>
           <input
@@ -93,7 +85,6 @@
           >
             <option value="">Any</option>
             <option value="emitted">Emitted</option>
-            <option value="derived">Derived</option>
           </select>
         </label>
       </template>
@@ -421,12 +412,12 @@
             class="smart-contracts-page__live-event"
           >
             <div>
-              <strong>{{ event.module }} · {{ event.event_kind }}</strong>
+              <strong>{{ event.event_kind }}</strong>
               <small>{{ event.provenance }} · block {{ event.block_height }}</small>
             </div>
             <BaseHash
-              :hash="event.tx_hash_hex"
-              :link="transactionPath(event.tx_hash_hex)"
+              :hash="event.execution_hash_hex"
+              :link="transactionPath(event.execution_hash_hex)"
               :type="hashType"
               copy
             />
@@ -487,7 +478,7 @@
                     :type="hashType"
                     copy
                   />
-                  <small>{{ item.module }} · {{ item.event_kind }} · {{ item.provenance }}</small>
+                  <small>{{ item.event_kind }} · {{ item.provenance }}</small>
                   <time
                     v-if="item.timestamp_ms !== undefined"
                     :datetime="new Date(item.timestamp_ms).toISOString()"
@@ -501,7 +492,6 @@
                     :type="addressHashType"
                     copy
                   />
-                  <small>{{ item.contract_alias ?? 'No alias' }}</small>
                   <BaseHash
                     v-if="item.authority"
                     :hash="item.authority"
@@ -555,8 +545,8 @@
                 </div>
                 <div role="cell">
                   <BaseHash
-                    :hash="item.tx_hash_hex"
-                    :link="transactionPath(item.tx_hash_hex)"
+                    :hash="item.execution_hash_hex"
+                    :link="transactionPath(item.execution_hash_hex)"
                     :type="hashType"
                     copy
                   />
@@ -640,7 +630,6 @@ const filterKeys = [
   'contract_address',
   'contract_alias',
   'contract_entrypoint',
-  'module',
   'event_kind',
   'participant',
   'asset_id',
@@ -649,7 +638,7 @@ const filterKeys = [
   'since_timestamp_ms',
   'until_timestamp_ms',
 ] as const;
-const eventOnlyFilterKeys = ['module', 'event_kind', 'participant', 'asset_id', 'provenance'] as const;
+const eventOnlyFilterKeys = ['event_kind', 'participant', 'asset_id', 'provenance'] as const;
 
 const navigation = useScopedExplorerNavigation();
 const { route, cursor, limit, updateListQuery } = useCursorListRouteQuery();
@@ -682,6 +671,7 @@ function selectTab(value: string) {
     for (const key of eventOnlyFilterKeys) patch[key] = null;
   } else {
     patch.contract_entrypoint = null;
+    patch.contract_alias = null;
   }
   updateListQuery(patch, { history: 'push' }).catch(() => {});
 }
@@ -689,14 +679,14 @@ function selectTab(value: string) {
 function applyFilters() {
   const relevant = activeTab.value === 'activity'
     ? filterKeys.filter((key) => !eventOnlyFilterKeys.includes(key as (typeof eventOnlyFilterKeys)[number]))
-    : filterKeys.filter((key) => key !== 'contract_entrypoint');
+    : filterKeys.filter((key) => key !== 'contract_entrypoint' && key !== 'contract_alias');
   const patch = Object.fromEntries(filterKeys.map((key) => [key, null])) as Record<string, RouteQueryPatchValue>;
   for (const key of relevant) patch[key] = filterDraft[key].trim() || null;
   updateListQuery(patch).catch(() => {});
 }
 
 function clearFilters() {
-  const patch = Object.fromEntries(filterKeys.map((key) => [key, null])) as Record<string, null>;
+  const patch = Object.fromEntries([...filterKeys, 'module'].map((key) => [key, null])) as Record<string, null>;
   updateListQuery(patch).catch(() => {});
 }
 

@@ -67,7 +67,7 @@
           <BaseHash
             :hash="transaction.hash"
             type="medium"
-            :link="`/transactions/${transaction.hash}`"
+            :link="`/transactions/${encodeURIComponent(transaction.hash)}`"
             class="latest-transactions__hash"
             copy
           />

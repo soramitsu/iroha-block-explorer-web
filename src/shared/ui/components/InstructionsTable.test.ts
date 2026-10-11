@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import InstructionsTable from './InstructionsTable.vue';
+import { Instruction } from '@/shared/api/schemas';
+import nativeLogFixture from '../../../../tests/fixtures/taira-ce5-log-instruction.json';
 import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import * as api from '@/shared/api';
@@ -305,6 +307,41 @@ describe('InstructionsTable', () => {
       mountedWrappers.push(wrapper);
       return wrapper;
     })();
+
+  it('renders the verified native Log envelope without fabricating decoded fields', async () => {
+    const instruction = Instruction.parse(nativeLogFixture);
+    vi.mocked(api.fetchInstructions).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING, data: { nextCursor: null, items: [instruction] },
+    });
+    vi.mocked(api.fetchInstructionDetail).mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: instruction });
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.get('.instructions-table__row').text()).toContain('Log');
+    expect(wrapper.getComponent(BaseJsonStub).props('value')).toEqual(nativeLogFixture.box);
+    expect(wrapper.emitted('list-state')?.at(-1)?.[0]).toMatchObject({ itemsCount: 1, hasError: false });
+    await wrapper.get('.instructions-table__action-button').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-test="instruction-encoded-payload"]').text()).toBe(nativeLogFixture.box.instruction);
+    expect(wrapper.find('.contract-code-view-stub').exists()).toBe(false);
+    expect(wrapper.findAllComponents(BaseJsonStub).at(-1)?.props('value')).toEqual(nativeLogFixture.box);
+  });
+
+  it('keeps parse failures visible and retries the actual instruction query', async () => {
+    vi.mocked(api.fetchInstructions).mockRejectedValue(new Error('Instruction frame digest mismatch'));
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect(wrapper.find('.instructions-table__row').exists()).toBe(false);
+    expect(wrapper.emitted('list-state')?.at(-1)?.[0]).toMatchObject({ itemsCount: 0, hasError: true });
+    vi.mocked(api.fetchInstructions).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING, data: { nextCursor: null, items: [Instruction.parse(nativeLogFixture)] },
+    });
+    await wrapper.get('[data-test="resource-retry"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.get('.instructions-table__row').text()).toContain('Log');
+    expect(wrapper.emitted('list-state')?.at(-1)?.[0]).toMatchObject({ itemsCount: 1, hasError: false });
+  });
 
   it('does not pass a blank authority selector for a transaction-scoped list', async () => {
     factory();
@@ -638,6 +675,24 @@ describe('InstructionsTable', () => {
     expect(clipboardCopySpy).toHaveBeenLastCalledWith(expect.stringContaining('instruction=0'));
   });
 
+  it('shares the complete canonical hash with instruction and current scope query intact', async () => {
+    const hash = 'hash:66BF60AB1C762607F02BBDFC834E2D832243EF413D0C24BBFF8EE3D00A2830DB#DB6C';
+    window.history.replaceState(null, '', '/transactions/old?torii=https%3A%2F%2Ftaira.sora.org&dataspaceLaneId=7&dataspaceId=42&foo=bar#obsolete');
+    const instruction = { ...baseInstruction, transaction_hash: hash };
+    vi.mocked(api.fetchInstructions).mockResolvedValueOnce({ status: SUCCESSFUL_FETCHING,
+      data: { items: [instruction], nextCursor: null } });
+    vi.mocked(api.fetchInstructionDetail).mockResolvedValueOnce({ status: SUCCESSFUL_FETCHING, data: instruction });
+    const wrapper = factory();
+    await flushPromises();
+    await wrapper.find('.instructions-table__action-button').trigger('click');
+    await flushPromises();
+    await wrapper.find('.instructions-detail__share').trigger('click');
+    const url = new URL(clipboardCopySpy.mock.lastCall![0]);
+    expect(decodeURIComponent(url.pathname)).toBe(`/transactions/${hash}`);
+    expect(url.hash).toBe('');
+    expect(Object.fromEntries(url.searchParams)).toEqual({ instruction: '0', torii: 'https://taira.sora.org', dataspaceLaneId: '7', dataspaceId: '42', foo: 'bar' });
+  });
+
   it('does not auto-refetch on stream updates when not on the first page', async () => {
     const fetchMock = api.fetchInstructions as unknown as ReturnType<typeof vi.fn>;
 
@@ -652,6 +707,8 @@ describe('InstructionsTable', () => {
 
     eventSourceData.value = JSON.stringify({
       ...baseInstruction,
+      kind: nativeLogFixture.kind,
+      box: nativeLogFixture.box,
       authority: SAMPLE_I105,
       index: 1,
     });
@@ -664,6 +721,8 @@ describe('InstructionsTable', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     eventSourceData.value = JSON.stringify({
       ...baseInstruction,
+      kind: nativeLogFixture.kind,
+      box: nativeLogFixture.box,
       authority: SAMPLE_I105,
       index: 2,
     });
@@ -671,19 +730,20 @@ describe('InstructionsTable', () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
-  it('auto-refetches for Custom filter when stream kind is concrete ISI and box kind is Custom', async () => {
+  it('auto-refetches using the native top-level kind without decoded JSON', async () => {
     const fetchMock = api.fetchInstructions as unknown as ReturnType<typeof vi.fn>;
 
     const wrapper = factory();
     await flushPromises();
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    wrapper.getComponent({ name: 'InstructionTypeFilter' }).vm.$emit('update:modelValue', 'Custom');
+    wrapper.getComponent({ name: 'InstructionTypeFilter' }).vm.$emit('update:modelValue', 'Log');
     await flushPromises();
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     eventSourceData.value = JSON.stringify({
-      ...makeResolvedWireIdCustomInstruction(),
+      ...nativeLogFixture,
+      transaction_hash: baseInstruction.transaction_hash,
       authority: SAMPLE_I105,
       index: 11,
     });
@@ -701,6 +761,8 @@ describe('InstructionsTable', () => {
     windowScrollY.value = 200;
     eventSourceData.value = JSON.stringify({
       ...baseInstruction,
+      kind: nativeLogFixture.kind,
+      box: nativeLogFixture.box,
       index: 1,
     });
     await flushPromises();

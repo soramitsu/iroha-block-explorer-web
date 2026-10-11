@@ -24,16 +24,17 @@ const activity = {
 const event = {
   event_id: 'entrypoint-hash:0',
   schema_version: 1,
-  provenance: 'derived' as const,
+  output_index: 0,
+  emission_index: 0,
+  emission: null,
+  provenance: 'emitted' as const,
   authority: 'treasury@banking.retail',
   timestamp_ms: 124,
-  tx_hash_hex: 'entrypoint-hash',
+  execution_hash_hex: 'entrypoint-hash',
   block_height: 9,
   block_hash_hex: 'block-hash',
-  result_ok: false,
+  result_ok: true,
   contract_address: 'tairac1router',
-  contract_alias: 'router',
-  module: 'router',
   event_kind: 'swap_failed',
   participants: ['treasury@banking.retail'],
   asset_ids: ['usd#issuer.main'],
@@ -81,18 +82,18 @@ describe('contract route API wrappers', () => {
     globalThis.fetch = spy;
     const result = await fetchContractEvents({
       limit: 10, authority: 'treasury@banking.retail', contract_address: 'tairac1router',
-      contract_alias: 'router', module: 'router', event_kind: 'swap_failed',
-      participant: 'treasury@banking.retail', asset_id: 'usd#issuer.main', provenance: 'derived',
-      since_timestamp_ms: 100, until_timestamp_ms: 200, result_ok: false,
+      event_kind: 'swap_failed',
+      participant: 'treasury@banking.retail', asset_id: 'usd#issuer.main', provenance: 'emitted',
+      since_timestamp_ms: 100, until_timestamp_ms: 200, result_ok: true,
     });
     expect(new URL(String(spy.mock.calls[0][0])).pathname).toBe('/v1/contracts/events/query');
     const body = JSON.parse(String(spy.mock.calls[0][1]?.body));
     expect(Object.keys(body).sort()).toEqual(['filter', 'limit']);
     expect(predicates(body.filter)).toEqual([
       ['eq', 'authority', 'treasury@banking.retail'], ['eq', 'contract_address', 'tairac1router'],
-      ['eq', 'contract_alias', 'router'], ['eq', 'module', 'router'], ['eq', 'event_kind', 'swap_failed'],
+      ['eq', 'event_kind', 'swap_failed'],
       ['eq', 'participants', 'treasury@banking.retail'], ['eq', 'asset_ids', 'usd#issuer.main'],
-      ['eq', 'provenance', 'derived'], ['eq', 'result_ok', false],
+      ['eq', 'provenance', 'emitted'], ['eq', 'result_ok', true],
       ['gte', 'timestamp_ms', 100], ['lte', 'timestamp_ms', 200],
     ]);
     expect(result).toEqual({ status: 'ok', data: { items: [event], nextCursor: null } });
@@ -116,21 +117,18 @@ describe('contract route API wrappers', () => {
     }) as typeof ToriiBrowserClient.prototype.streamContractEvents);
 
     const iterator = streamContractEvents({
-      module: 'router',
-      event_kind: 'swap_failed',
-      provenance: 'derived',
+        event_kind: 'swap_failed',
+      provenance: 'emitted',
     }, controller.signal);
     const first = await iterator.next();
 
     expect(spy).toHaveBeenCalledWith({
       authority: undefined,
       contractAddress: undefined,
-      contractAlias: undefined,
-      module: 'router',
-      eventKind: 'swap_failed',
+        eventKind: 'swap_failed',
       participant: undefined,
       assetId: undefined,
-      provenance: 'derived',
+      provenance: 'emitted',
       sinceTimestampMs: undefined,
       untilTimestampMs: undefined,
       resultOk: undefined,
@@ -165,7 +163,7 @@ describe('contract route API wrappers', () => {
       });
     });
 
-    const iterator = streamContractEvents({ module: 'router' }, abortController.signal);
+    const iterator = streamContractEvents({ event_kind: 'swap_filled' }, abortController.signal);
     expect((await iterator.next()).value?.data.event_id).toBe(event.event_id);
     expect(requestSignal).toBe(abortController.signal);
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);

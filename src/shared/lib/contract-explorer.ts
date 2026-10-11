@@ -96,7 +96,6 @@ function parseCommonFilters(query: Record<string, unknown>, errors: string[]) {
   return {
     authority: parseExactString(query, 'authority', errors),
     contract_address: parseExactString(query, 'contract_address', errors),
-    contract_alias: parseExactString(query, 'contract_alias', errors),
     since_timestamp_ms: sinceTimestampMs,
     until_timestamp_ms: untilTimestampMs,
     result_ok: parseResult(query, errors),
@@ -118,6 +117,7 @@ export function parseContractActivitySearchParams(
     cursor,
     limit,
     ...parseCommonFilters(query, errors),
+    contract_alias: parseExactString(query, 'contract_alias', errors),
     contract_entrypoint: parseExactString(query, 'contract_entrypoint', errors),
   };
   return parseFailure(errors, value);
@@ -129,20 +129,22 @@ export function parseContractEventSearchParams(
   limit: number
 ): ContractFilterParseResult<ContractEventSearchParams> {
   const errors: string[] = [];
+  for (const retired of ['module', 'contract_alias']) {
+    if (query[retired] !== undefined) errors.push(`${retired} is not a contract event filter`);
+  }
   const provenance = parseExactString(query, 'provenance', errors);
-  if (provenance !== undefined && provenance !== 'emitted' && provenance !== 'derived') {
-    errors.push('provenance must be emitted or derived');
+  if (provenance !== undefined && provenance !== 'emitted') {
+    errors.push('provenance must be emitted');
   }
 
   const value: ContractEventSearchParams = {
     cursor,
     limit,
     ...parseCommonFilters(query, errors),
-    module: parseExactString(query, 'module', errors),
     event_kind: parseExactString(query, 'event_kind', errors),
     participant: parseExactString(query, 'participant', errors),
     asset_id: parseExactString(query, 'asset_id', errors),
-    provenance: provenance === 'emitted' || provenance === 'derived' ? provenance : undefined,
+    provenance: provenance === 'emitted' ? provenance : undefined,
   };
   return parseFailure(errors, value);
 }

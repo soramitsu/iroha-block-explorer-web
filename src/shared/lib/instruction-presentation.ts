@@ -825,6 +825,7 @@ export function buildInstructionPresentation(
   networkPrefix: number
 ): InstructionPresentation | null {
   requireNetworkPrefix(networkPrefix);
+  if (instruction.box.json === null) return null;
   const payload = ExplorerEnvelopeSchema.safeParse(instruction.box.json.payload);
   if (!payload.success) return null;
   const family = instruction.box.json.kind;

@@ -23,6 +23,8 @@ function compilerFailureResponse() {
       notes: [],
       help: null,
       fix: null,
+      alternative_fixes: [],
+      localized: null,
     }]),
   }), {
     status: 200,
@@ -31,7 +33,7 @@ function compilerFailureResponse() {
 }
 
 describe('current Iroha Kotodama compiler package boundary', () => {
-  it('installs the compiler boundary from the reviewed unsigned development archive', () => {
+  it('installs the compiler boundary from the current canonical consumer archive', () => {
     const explorerPackage = JSON.parse(
       readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8')
     ) as { dependencies: Record<string, string> };
@@ -44,7 +46,7 @@ describe('current Iroha Kotodama compiler package boundary', () => {
     );
 
     expect(explorerPackage.dependencies['@iroha/iroha-js'])
-      .toBe('file:vendor/iroha-iroha-js-0.0.3-cc8e6620f6cb.tgz');
+      .toBe('file:vendor/iroha-iroha-js-0.0.3-46654decf09c.tgz');
     expect(installedPackage.name).toBe('@iroha/iroha-js');
     expect(installedPackage.dependencies['@scure/bip39']).toBe('^2.2.0');
     expect(installedDeclaration).toContain('compileKotodamaProgram');
@@ -104,6 +106,7 @@ describe('current Iroha Kotodama compiler package boundary', () => {
       source: SOURCE,
       sourceName: 'studio.ko',
       zk: false,
+      artifacts: [],
     });
   });
 

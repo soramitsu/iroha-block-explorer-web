@@ -16,13 +16,15 @@ const activity = {
 const event = {
   event_id: 'tx-hash:0',
   schema_version: 1,
+  output_index: 0,
+  emission_index: 0,
+  emission: null,
   provenance: 'emitted',
-  tx_hash_hex: 'tx-hash',
+  execution_hash_hex: 'tx-hash',
   block_height: 4,
   block_hash_hex: 'block-hash',
   result_ok: true,
   contract_address: 'tairac1router',
-  module: 'router',
   event_kind: 'swap',
   payload: { amount: 10 },
 };
@@ -52,9 +54,15 @@ describe('contract event schemas', () => {
   });
 
   it.each([
+    [{ ...event, provenance: 'derived' }],
     [{ ...event, provenance: 'synthetic' }],
     [{ ...event, block_height: -1 }],
     [{ ...event, schema_version: 1.5 }],
+    [{ ...event, result_ok: false }],
+    [{ ...event, output_index: -1 }],
+    [{ ...event, tx_hash_hex: 'retired' }],
+    [{ ...event, contract_alias: 'retired' }],
+    [{ ...event, module: 'retired' }],
   ])('rejects malformed event projections %#', (payload) => {
     expect(() => ContractEvent.parse(payload)).toThrow();
   });

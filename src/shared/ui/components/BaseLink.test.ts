@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, ref, type Ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import BaseLink from './BaseLink.vue';
+import { createMemoryHistory, createRouter } from 'vue-router';
 import type { ExplorerRouteScope } from '@/shared/lib/explorer-scope';
 
 const scopeState = ref<ExplorerRouteScope | null>(null) as Ref<ExplorerRouteScope | null>;
@@ -81,6 +82,22 @@ describe('BaseLink', () => {
     expect(to).toContain('torii=https%3A%2F%2Fpublic-node.example%3A8080');
     expect(to).toContain('dataspaceLaneId=7');
     expect(to).toContain('dataspaceId=42');
+  });
+
+  it('retains encoded hash checksums, explicit query, and inherited scope together', () => {
+    const hash = 'hash:66BF60AB1C762607F02BBDFC834E2D832243EF413D0C24BBFF8EE3D00A2830DB#DB6C';
+    scopeState.value = { torii: 'https://taira.sora.org', dataspaceLaneId: '7', dataspaceId: '42' };
+    const wrapper = mount(BaseLink, {
+      props: { to: `/transactions/${encodeURIComponent(hash)}?instruction=2&foo=bar` },
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    });
+    const router = createRouter({ history: createMemoryHistory(), routes: [
+      { path: '/transactions/:hash', component: { template: '<div />' } },
+    ] });
+    const resolved = router.resolve(wrapper.get('[data-test="router-link"]').attributes('data-to')!);
+    expect(resolved.params.hash).toBe(hash);
+    expect(resolved.hash).toBe('');
+    expect(resolved.query).toEqual({ instruction: '2', foo: 'bar', torii: 'https://taira.sora.org', dataspaceLaneId: '7', dataspaceId: '42' });
   });
 
   it('does not rewrite home exit links', () => {

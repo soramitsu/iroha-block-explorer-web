@@ -50,6 +50,7 @@ const asset = computed(() =>
 const assetDefinitionId = computed(() => asset.value?.id ?? assetDefinitionSelector.value);
 const assetDefinitionName = computed(() => getAssetDefinitionDisplayName(asset.value ?? assetDefinitionSelector.value));
 const assetDefinitionDomain = computed(() => asset.value?.owning_domain ?? null);
+const assetDefinitionDataspace = computed(() => asset.value?.owning_dataspace ?? null);
 
 const listState = reactive({
   cursor: null as string | null,
@@ -151,8 +152,8 @@ const assetInstanceDefinitionName = (item: Asset) => getAssetDefinitionDisplayNa
             />
             <div class="asset-details__information-data">
               <DataField
-                :title="$t('domain')"
-                :value="assetDefinitionDomain ?? '-'"
+                :title="$t(assetDefinitionDataspace !== null ? 'dataspaces.dataspaceId' : 'domain')"
+                :value="assetDefinitionDataspace ?? assetDefinitionDomain ?? '-'"
                 :link="assetDefinitionDomain ? `/domains/${assetDefinitionDomain}` : undefined"
               />
               <DataField :title="$t('mintable')" :value="asset.mintable" />
@@ -198,7 +199,7 @@ const assetInstanceDefinitionName = (item: Asset) => getAssetDefinitionDisplayNa
           <template #header>
             <div class="asset-details__assets-table-list-row" role="presentation">
               <span class="h-sm" role="columnheader">{{ $t('name') }}</span>
-              <span class="h-sm" role="columnheader">{{ $t('domain') }}</span>
+              <span class="h-sm" role="columnheader">{{ $t(assetDefinitionDataspace !== null ? 'dataspaces.dataspaceId' : 'domain') }}</span>
               <span class="h-sm" role="columnheader">{{ $t('accountId') }}</span>
               <span class="h-sm" role="columnheader">{{ $t('value') }}</span>
             </div>
@@ -216,7 +217,7 @@ const assetInstanceDefinitionName = (item: Asset) => getAssetDefinitionDisplayNa
                 <BaseLink v-if="assetDefinitionDomain" :to="`/domains/${assetDefinitionDomain}`">
                   {{ assetDefinitionDomain }}
                 </BaseLink>
-                <span v-else class="row-text-monospace">-</span>
+                <span v-else class="row-text-monospace">{{ assetDefinitionDataspace ?? '-' }}</span>
               </div>
 
               <div class="row-text" role="cell">
@@ -244,11 +245,11 @@ const assetInstanceDefinitionName = (item: Asset) => getAssetDefinitionDisplayNa
               </div>
 
               <div class="asset-details__assets-table-mobile-list-row-data row-text">
-                <span class="h-sm">{{ $t('domain') }}</span>
+                <span class="h-sm">{{ $t(assetDefinitionDataspace !== null ? 'dataspaces.dataspaceId' : 'domain') }}</span>
                 <BaseLink v-if="assetDefinitionDomain" :to="`/domains/${assetDefinitionDomain}`">
                   {{ assetDefinitionDomain }}
                 </BaseLink>
-                <span v-else class="row-text-monospace">-</span>
+                <span v-else class="row-text-monospace">{{ assetDefinitionDataspace ?? '-' }}</span>
               </div>
 
               <div class="asset-details__assets-table-mobile-list-row-data row-text">

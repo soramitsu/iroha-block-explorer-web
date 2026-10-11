@@ -6,6 +6,7 @@ import { i18n } from '@/shared/lib/localization';
 import QRCode from 'qrcode';
 import AccountDetails from './AccountDetails.vue';
 import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
+import { ExplorerAsset } from '@/shared/api/schemas';
 
 const validAccountId =
   'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
@@ -195,6 +196,37 @@ describe('AccountDetails', () => {
       params: { id: validAccountId },
       query: {},
     };
+  });
+
+  it('renders the current metadata-free native asset holding with its exact decimal value', async () => {
+    const definitionId = '6TEAJqbb8oEPmLncoNiMRbLEK6tw';
+    const holding = ExplorerAsset.parse({
+      id: `${definitionId}#${validAccountId}`,
+      definition_id: definitionId,
+      account_id: validAccountId,
+      value: '24999.99245',
+    });
+    scopeExposeQueue = [
+      { isLoading: false, refetch: vi.fn(), data: { status: SUCCESSFUL_FETCHING, data: {
+        id: validAccountId, i105_address: validAccountId, network_prefix: 753,
+        metadata: {}, owned_domains: 0, owned_assets: 1, owned_nfts: 0,
+      } } },
+      { isLoading: false, refetch: vi.fn(), data: { status: SUCCESSFUL_FETCHING, data: { items: [], nextCursor: null } } },
+      { isLoading: false, refetch: vi.fn(), data: { status: SUCCESSFUL_FETCHING, data: { items: [holding], nextCursor: 'native_cursor' } } },
+    ];
+    const wrapper = mount(AccountDetails, {
+      global: { plugins: [i18n], stubs: {
+        BaseContentBlock: BaseContentBlockStub, BaseTabs: BaseTabsStub,
+        BaseTable: BaseTableStub, BaseLink: BaseLinkStub, BaseLoading: true,
+        DataField: true, TransactionsTable: true, InstructionsTable: true,
+        AccountActivityView: true, CopyIcon: true,
+      } },
+    });
+    await flushPromises();
+    const rows = wrapper.findAll('.base-table-stub__row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].text()).toContain(definitionId);
+    expect(rows[0].text()).toContain('24999.99245');
   });
 
   it('routes to tracing workspace when tracing tab is selected', async () => {

@@ -66,14 +66,14 @@ sh scripts/bootstrap-exact-toolchain.sh pnpm playwright:install
 
 Build artifacts will be located at `dist` dir.
 
-The SDK dependency is the browser consumer archive built from the clean upstream
-`javascript/iroha_js` package at commit
-`cc8e6620f6cbec846a7753b1cc8fbba3d843f716`, with SHA-256
-`db24d5e042a475a24d204a0045e07f1dd8bafc821c098a64fffe046bf216e15a`.
+The SDK dependency is the current browser consumer archive built in the canonical
+`../iroha/javascript/iroha_js` checkout at HEAD `499e093b156d54d038fd68e5d3a421d10e2072a3`,
+including the pending native account-inspection and multisig transport modules.
+Its SHA-256 is `46654decf09ca855e573209fcc040e2380b81d262dc7f0a576d4d750edf57178`.
 Two canonical `npm pack` runs under Node 24.19.0 produced identical archives;
-`prepack` ran the upstream engine check and atomic `build:dist` owner. Its 231-file
-inventory records the source tree, build script and tool versions in
-`vendor/iroha-iroha-js-0.0.3-cc8e6620f6cb.files.json`.
+`prepack` ran the upstream engine check and atomic `build:dist` owner. The 241-file
+inventory records exact package bytes, actual source hashes and build tools in
+`vendor/iroha-iroha-js-0.0.3-46654decf09c.files.json`; it does not claim a clean source tree.
 
 Install, `pnpm check:sdk`, and normal build verify the archive and every installed
 package file. The checker is read-only: missing distribution files fail
@@ -84,7 +84,11 @@ Retired Wasm artifacts are absent and the bundle gate rejects emitted Wasm. All
 startup assets remain subject to the 540,000-byte gzip entry and total budgets.
 The lazy `iroha-compiler` chunk has an 18,000-byte gzip cap: this SDK adds embedded
 call-schema/Norito validation and expands compiler response validation. The measured
-current chunk is 16,162 bytes; other chunk and route limits remain unchanged.
+current chunk is 17,971 bytes. The lazy KotodamaStudio route is 115,969 gzip
+bytes with the current SDK’s locked-package and diagnostic contracts; its cap is
+118,000 bytes. The 540,000-byte startup cap and all other chunk/route caps remain
+unchanged. The app consumes only `compileKotodamaProgram` plus erased type imports;
+no new broad browser import contributes to this increase.
 Package integrity identifies this consumer build; it does not establish signed
 SDK or application release qualification.
 
@@ -245,3 +249,18 @@ release. Complete the one-time baseline initialization in `ops/taira/README.md` 
 
 This frontend tracks the current upstream `../iroha` Torii route surface. There is no `/v2` compatibility layer in the
 Explorer routing code; update this repo when Torii routes move.
+
+### Ledger hash routes
+
+Explorer responses contain checksum-bound `hash:<HEX>#<CRC>` identifiers. Keep
+that complete identifier when displaying or linking it, and percent-encode each
+route segment so `#` is not interpreted as a URL fragment. Before calling Torii
+transaction, block, instruction, pipeline, or proof selectors, the API adapter
+uses `requireIrohaHash32` to validate the checksum and Iroha marker bit and then
+sends raw lowercase hexadecimal. Malformed identifiers fail before a request;
+there is no alternate endpoint or unchecked checksum stripping. Instruction
+share links retain the current query scope and select the requested instruction.
+
+### Prepared Taira reset candidate (2026-10-09)
+
+The Sogeri candidate uses the current canonical browser SDK identified by the exact archive and source inventory above. Contract events expose committed native emissions, with `emitted` provenance, execution hashes and output/emission indices; the retired derived-event shape and module/alias event filters are rejected. The fresh NetworkId must come from the signed genesis before runtime configuration and publication. Local build and fixture tests do not establish live readiness.

@@ -71,7 +71,7 @@
           <div class="cell" role="cell">
             <BaseHash
               :hash="item.hash"
-              :link="`/blocks/${item.hash}`"
+              :link="`/blocks/${encodeURIComponent(item.hash)}`"
               :type="hashType"
               copy
             />

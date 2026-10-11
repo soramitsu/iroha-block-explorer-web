@@ -51,10 +51,11 @@ const nexusStatusPayload = {
   txs_approved: 20,
   txs_rejected: 1,
   queue_size: 3,
+  dataspace_catalog: [{ lane_id: 7, dataspace_id: '42', alias: 'lane-seven', visibility: 'restricted', manifest_required: true, manifest_ready: true, manifest_path: '/manifests/lane7.json' }],
   teu_dataspace_backlog: [
     {
       lane_id: 7,
-      dataspace_id: 42,
+      dataspace_id: '42',
       fault_tolerance: 2,
       backlog: 9,
       age_slots: 6,
@@ -64,78 +65,6 @@ const nexusStatusPayload = {
       description: 'Lane seven dataspace',
     },
   ],
-};
-
-const sumeragiPayload = {
-  leader_index: 0,
-  view_change_index: 0,
-  highest_qc: { height: 1, view: 1, subject_block_hash: null },
-  locked_qc: { height: 1, view: 1, subject_block_hash: null },
-  tx_queue: { depth: 0, capacity: 10, saturated: false },
-  epoch: { length_blocks: 1, commit_deadline_offset: 1, reveal_deadline_offset: 1 },
-  membership: { height: 1, view: 1, epoch: 1, view_hash: null },
-  prf: { height: 1, view: 1, epoch_seed: null },
-  gossip_fallback_total: 0,
-  bg_post_inline_post_total: 0,
-  bg_post_inline_broadcast_total: 0,
-  block_created_dropped_by_lock_total: 0,
-  block_created_hint_mismatch_total: 0,
-  block_created_proposal_mismatch_total: 0,
-  settlement: {
-    dvp: { success_total: 0, failure_total: 0, final_state_totals: {}, failure_reasons: {}, last_event: null },
-    pvp: { success_total: 0, failure_total: 0, final_state_totals: {}, failure_reasons: {}, last_event: null },
-  },
-  pacemaker_backpressure_deferrals_total: 0,
-  rbc_retry_attempts_total: 0,
-  rbc_retry_abort_total: 0,
-  da_reschedule_total: 0,
-  rbc_store: { sessions: 0, bytes: 0, pressure_level: 0, backpressure_deferrals_total: 0, evictions_total: 0, recent_evictions: [] },
-  view_change_proof_accepted_total: 0,
-  view_change_proof_stale_total: 0,
-  view_change_proof_rejected_total: 0,
-  view_change_suggest_total: 0,
-  view_change_install_total: 0,
-  vrf_penalty_epoch: 0,
-  vrf_committed_no_reveal_total: 0,
-  vrf_no_participation_total: 0,
-  vrf_late_reveals_total: 0,
-  consensus_penalties_applied_total: 0,
-  consensus_penalties_pending: 0,
-  vrf_penalties_applied_total: 0,
-  vrf_penalties_pending: 0,
-  lane_governance_sealed_total: 0,
-  lane_governance_sealed_aliases: [],
-  lane_governance: [
-    {
-      lane_id: 7,
-      alias: 'lane-seven',
-      governance: 'managed',
-      manifest_required: true,
-      manifest_ready: true,
-      manifest_path: '/manifests/lane7.json',
-      validator_ids: ['validator-a', 'validator-b'],
-      quorum: 2,
-      protected_namespaces: ['bank', 'gov'],
-      runtime_upgrade: null,
-      privacy_commitments: [],
-    },
-  ],
-  nexus_fee: {
-    charged_total: 0,
-    charged_via_payer_total: 0,
-    charged_via_sponsor_total: 0,
-    sponsor_disabled_total: 0,
-    sponsor_cap_exceeded_total: 0,
-    config_errors_total: 0,
-    transfer_failures_total: 0,
-    last_amount: null,
-    last_asset_id: null,
-    last_payer: null,
-    last_payer_id: null,
-    last_error: null,
-  },
-  nexus_staking: { lanes: [] },
-  npos_election: null,
 };
 
 const BaseContentBlockStub = {
@@ -162,6 +91,8 @@ const DataFieldStub = {
 
 describe('Dataspace details page', () => {
   beforeEach(() => {
+    routeState.params.laneId = '7';
+    routeState.params.dataspaceId = '42';
     vi.clearAllMocks();
     pushSpy.mockReset();
     pushSpy.mockReturnValue(Promise.resolve());
@@ -173,10 +104,7 @@ describe('Dataspace details page', () => {
       status: SUCCESSFUL_FETCHING,
       data: nexusStatusPayload,
     });
-    (api.fetchSumeragiStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: sumeragiPayload,
-    });
+
   });
 
   const factory = () =>
@@ -192,15 +120,90 @@ describe('Dataspace details page', () => {
       },
     });
 
-  it('renders matched backlog row and matched lane governance fields', async () => {
+  it('renders exact public catalog policy without operator telemetry', async () => {
     const wrapper = factory();
     await flushPromises();
 
     expect(api.fetchNexusPublicStatus).toHaveBeenCalledTimes(1);
-    expect(api.fetchSumeragiStatus).toHaveBeenCalledTimes(1);
+    expect(api.fetchSumeragiStatus).not.toHaveBeenCalled();
     expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain('lane-seven (#42)');
-    expect(wrapper.get('[data-test="dataspace-details-governance"]').text()).toContain('validator-a, validator-b');
+    expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain('restricted');
+    expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.quorum'));
+    expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.validators'));
+    expect(wrapper.find('[data-test="dataspace-details-governance-error"]').exists()).toBe(false);
     expect(wrapper.get('[data-test="dataspace-details-governance"]').text()).toContain('/manifests/lane7.json');
+  });
+
+  it.each([
+    [3, '9884542487407331249', 'dpn', 'restricted', true],
+    [4, '9700280040122529948', 'is2', 'restricted', true],
+    [5, '8648377547929788715', 'bpng', 'public', false],
+    [6, '6983892400042691068', 'cbsi', 'restricted', true],
+    [7, '6647857470246403404', 'is', 'restricted', true],
+  ] as const)('shows exact public policy for lane%s without inventing operator fields', async (lane, id, alias, visibility, required) => {
+    routeState.params.laneId = String(lane);
+    routeState.params.dataspaceId = id;
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        ...nexusStatusPayload,
+        dataspace_catalog: [{ lane_id: lane, dataspace_id: id, alias, visibility, manifest_required: required, manifest_ready: required }],
+        teu_dataspace_backlog: [{ ...nexusStatusPayload.teu_dataspace_backlog[0], lane_id: lane, dataspace_id: id, alias }],
+      },
+    });
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain(visibility);
+    const values = wrapper.get('[data-test="dataspace-details-governance"]').findAll('.data-field__value');
+    expect(values.map((field) => field.text())).toEqual([required ? 'Yes' : 'No', required ? 'Yes' : 'No', i18n.global.t('none')]);
+    expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.quorum'));
+    expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.validators'));
+    expect(api.fetchSumeragiStatus).not.toHaveBeenCalled();
+  });
+
+  it('keeps absent public manifest observations unknown instead of turning them into No', async () => {
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: { ...nexusStatusPayload, dataspace_catalog: [{ lane_id: 7, dataspace_id: '42', alias: 'lane-seven' }] },
+    });
+    const wrapper = factory();
+    await flushPromises();
+    const values = wrapper.get('[data-test="dataspace-details-governance"]').findAll('.data-field__value');
+    expect(values.map((field) => field.text())).toEqual(['-', '-', i18n.global.t('none')]);
+  });
+
+  it('retains the real BPNG ID and lane8 in the saved public-node scope', async () => {
+    const id = '8648377547929788715';
+    routeState.params.laneId = '8';
+    routeState.params.dataspaceId = id;
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        ...nexusStatusPayload,
+        dataspace_catalog: [{ lane_id: 8, dataspace_id: id, alias: 'bpng' }],
+        teu_dataspace_backlog: [{ ...nexusStatusPayload.teu_dataspace_backlog[0], lane_id: 8, dataspace_id: id, alias: 'bpng' }],
+      },
+    });
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain(`bpng (#${id})`);
+    const inputs = wrapper.findAll('input');
+    await inputs[0].setValue('BPNG public node');
+    await inputs[1].setValue('https://taira.sora.org');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    await wrapper.get('[data-test="dataspace-details-open-scoped"]').trigger('click');
+    expect(pushSpy).toHaveBeenCalledWith({ path: '/blocks', query: { torii: 'https://taira.sora.org', dataspaceLaneId: '8', dataspaceId: id } });
+  });
+
+  it('refuses an unregistered lane even when its backlog row exists', async () => {
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: { ...nexusStatusPayload, dataspace_catalog: [{ lane_id: 8, dataspace_id: '42', alias: 'lane-eight' }] },
+    });
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.find('[data-test="dataspace-details-core"]').exists()).toBe(false);
   });
 
   it('adds and removes a saved public node', async () => {

@@ -11,7 +11,7 @@ import {
   stringifyTraceBundle,
   type TraceBundle,
 } from './tracing';
-import { Instruction } from '@/shared/api/schemas';
+import type { Instruction } from '@/shared/api/schemas';
 
 const SAMPLE_I105 =
   'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
@@ -91,10 +91,10 @@ describe('tracing helpers', () => {
     expect(nftEdge[0]?.variant).toBe('Nft');
   });
 
-  it('converts transfer instructions to trace events', () => {
-    const instruction = Instruction.parse({
+  it('converts locally decoded transfer instruction views to trace events', () => {
+    const instruction: Instruction = {
       authority: SAMPLE_I105,
-      created_at: '2026-02-26T00:00:00Z',
+      created_at: new Date('2026-02-26T00:00:00Z'),
       kind: 'Transfer',
       index: 0,
       transaction_hash: '0xabc',
@@ -115,7 +115,7 @@ describe('tracing helpers', () => {
           },
         },
       },
-    });
+    };
 
     const events = instructionToTraceEvents(instruction);
     expect(events).toHaveLength(1);

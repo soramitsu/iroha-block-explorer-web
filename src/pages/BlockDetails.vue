@@ -114,7 +114,7 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
                 :title="$t('blocks.parentBlockHash')"
                 :hash="block.prev_block_hash"
                 :type="metricsHashType"
-                :link="`/blocks/${block.prev_block_hash}`"
+                :link="`/blocks/${encodeURIComponent(block.prev_block_hash)}`"
                 copy
               />
 

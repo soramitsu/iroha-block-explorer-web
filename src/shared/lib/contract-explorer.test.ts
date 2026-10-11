@@ -21,13 +21,15 @@ function event(eventId: string): ContractEvent {
   return {
     event_id: eventId,
     schema_version: 1,
+    output_index: 0,
+    emission_index: 0,
+    emission: null,
     provenance: 'emitted',
-    tx_hash_hex: `tx-${eventId}`,
+    execution_hash_hex: `tx-${eventId}`,
     block_height: 12,
     block_hash_hex: 'block-hash',
     result_ok: true,
     contract_address: 'tairac1router',
-    module: 'router',
     event_kind: 'swap',
   };
 }
@@ -79,11 +81,10 @@ describe('contract explorer route state', () => {
 
   it('maps all event-only filters and strips pagination for the live stream', () => {
     const parsed = parseContractEventSearchParams({
-      module: 'router',
-      event_kind: 'swap_filled',
+        event_kind: 'swap_filled',
       participant: accountAlias,
       asset_id: 'usd#issuer.main',
-      provenance: 'derived',
+      provenance: 'emitted',
       result_ok: 'true',
     }, 'event-next', 50);
 
@@ -92,22 +93,26 @@ describe('contract explorer route state', () => {
     expect(contractEventFiltersFromSearchParams(parsed.value)).toEqual({
       authority: undefined,
       contract_address: undefined,
-      contract_alias: undefined,
-      module: 'router',
-      event_kind: 'swap_filled',
+        event_kind: 'swap_filled',
       participant: accountAlias,
       asset_id: 'usd#issuer.main',
-      provenance: 'derived',
+      provenance: 'emitted',
       since_timestamp_ms: undefined,
       until_timestamp_ms: undefined,
       result_ok: true,
     });
   });
 
-  it('rejects an event provenance outside the route contract', () => {
-    const parsed = parseContractEventSearchParams({ provenance: 'synthetic' }, null, 10);
+  it.each(['module', 'contract_alias'])('rejects unsupported event filter %s', (key) => {
+    const parsed = parseContractEventSearchParams({ [key]: 'router' }, null, 10);
     expect(parsed.ok).toBe(false);
-    if (!parsed.ok) expect(parsed.error).toContain('provenance must be emitted or derived');
+    if (!parsed.ok) expect(parsed.error).toContain(`${key} is not a contract event filter`);
+  });
+
+  it.each(['derived', 'synthetic'])('rejects event provenance %s outside the native contract', (provenance) => {
+    const parsed = parseContractEventSearchParams({ provenance }, null, 10);
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.error).toContain('provenance must be emitted');
   });
 });
 

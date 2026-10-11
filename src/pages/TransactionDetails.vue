@@ -38,6 +38,7 @@ const instructionsListState = ref({
   isLoading: true,
   hasMore: false,
   itemsCount: 0,
+  hasError: false,
 });
 
 const txHash = computed(() => {
@@ -92,7 +93,7 @@ const traceWorkspaceRoute = computed(() => ({
 }));
 const shouldShowEmptyInstructionsOverview = computed(() => {
   if (!transaction.value || isSmartContractExecutable.value) return false;
-  if (instructionsListState.value.isLoading) return false;
+  if (instructionsListState.value.isLoading || instructionsListState.value.hasError) return false;
   return !instructionsListState.value.hasMore && instructionsListState.value.itemsCount === 0;
 });
 
@@ -165,8 +166,8 @@ function handleInstructionClosed() {
   updateInstructionQuery(null);
 }
 
-function handleInstructionsListState(payload: { isLoading: boolean; hasMore: boolean; itemsCount: number }) {
-  instructionsListState.value = payload;
+function handleInstructionsListState(payload: { isLoading: boolean; hasMore: boolean; itemsCount: number; hasError?: boolean }) {
+  instructionsListState.value = { ...payload, hasError: Boolean(payload.hasError) };
 }
 
 watch(
@@ -176,6 +177,7 @@ watch(
       isLoading: true,
       hasMore: false,
       itemsCount: 0,
+      hasError: false,
     };
   },
   { immediate: true }

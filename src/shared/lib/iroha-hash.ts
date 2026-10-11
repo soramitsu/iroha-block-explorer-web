@@ -60,3 +60,10 @@ export function normalizeIrohaHash32(value: unknown): string | null {
   const hex = body.toLowerCase();
   return (Number.parseInt(hex.slice(-2), 16) & 1) === 1 ? hex : null;
 }
+
+/** Validate a ledger hash before projecting it to Torii's raw-hex selector. */
+export function requireIrohaHash32(value: unknown): string {
+  const normalized = normalizeIrohaHash32(value);
+  if (!normalized) throw new TypeError('Expected a valid 32-byte Iroha hash with its marker bit and, for literals, checksum');
+  return normalized;
+}

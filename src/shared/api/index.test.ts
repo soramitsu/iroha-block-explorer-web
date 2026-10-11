@@ -1,3 +1,4 @@
+import nativeLogFixture from '../../../tests/fixtures/taira-ce5-log-instruction.json';
 import stateFinality from '../../../tests/fixtures/taira-state-finality.json';
 import { jsonResponse, testResponse } from '../../../tests/fixtures/http-response';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
@@ -18,6 +19,9 @@ const SAMPLE_ASSET_ID = `${SAMPLE_ASSET_DEFINITION_ID}#${SAMPLE_I105}`;
 const SAMPLE_RWA_ID = `${'00'.repeat(31)}01$commodities.main`;
 const SAMPLE_PARENT_RWA_ID = `${'ff'.repeat(32)}$commodities.main`;
 const SAMPLE_FRAMED_INSTRUCTION_SHA256 = '0xc7e4bbea488a546f542484289d335695684a5fc6180b18b3584abd7505f1cc43';
+const SAMPLE_LEDGER_HASH = 'ab'.repeat(32);
+const REAL_TAIRA_HASH = 'hash:66BF60AB1C762607F02BBDFC834E2D832243EF413D0C24BBFF8EE3D00A2830DB#DB6C';
+const REAL_TAIRA_HEX = '66bf60ab1c762607f02bbdfc834e2d832243ef413d0c24bbff8ee3d00a2830db';
 const TORII_API_VERSION_HEADER = 'x-iroha-api-version';
 
 const eventSourceStore = vi.hoisted(() => ({
@@ -1078,6 +1082,7 @@ describe('Explorer accounts API helpers', () => {
           {
             id: SAMPLE_ASSET_DEFINITION_ID,
             owning_domain: 'issuer.main',
+            owning_dataspace: null,
             mintable: 'Infinitely',
             logo: null,
             metadata: {},
@@ -1116,6 +1121,7 @@ describe('Explorer accounts API helpers', () => {
           {
             id: SAMPLE_ASSET_DEFINITION_ID,
             owning_domain: null,
+            owning_dataspace: null,
             name: 'usd',
             description: null,
             alias: null,
@@ -1136,11 +1142,41 @@ describe('Explorer accounts API helpers', () => {
     await expect(fetchAssetDefinitions({ limit: 1 })).rejects.toThrow(/missing or unsupported fields/u);
   });
 
+  it('sends the exact direct-dataspace definition filter without rounding its u64', async () => {
+    global.fetch = vi.fn().mockImplementation(() => jsonResponse({ next_cursor: null, items: [{
+      id: SAMPLE_ASSET_DEFINITION_ID, owning_domain: null, owning_dataspace: '8648377547929788715',
+      mintable: 'Infinitely', logo: null, metadata: {}, owned_by: SAMPLE_I105,
+      assets: 0, total_quantity: '0', locked_quantity: null, circulating_quantity: null,
+    }] })) as any;
+    const { fetchAssetDefinitions } = await importApiModule({ VITE_API_URL: 'https://torii.example/v1/explorer' });
+    const result = await fetchAssetDefinitions({ limit: 1, dataspace: '8648377547929788715' });
+    expect(queryValue(vi.mocked(global.fetch), 0, 'owning_dataspace')).toBe('8648377547929788715');
+    expect(queryValue(vi.mocked(global.fetch), 0, 'owning_domain')).toBeNull();
+    expect(result.status).toBe(SUCCESSFUL_FETCHING);
+    if (result.status === SUCCESSFUL_FETCHING) {
+      expect(result.data.items[0]?.owning_dataspace).toBe('8648377547929788715');
+      expect(result.data.items[0]?.owning_domain).toBeNull();
+    }
+  });
+
+  it('refuses invalid and conflicting home filters before transport', async () => {
+    global.fetch = vi.fn();
+    const { fetchAssetDefinitions } = await importApiModule({ VITE_API_URL: 'https://torii.example/v1/explorer' });
+    for (const dataspace of ['', '0', '01', '18446744073709551616', ' 8648377547929788715']) {
+      await expect(fetchAssetDefinitions({ dataspace })).rejects.toThrow();
+    }
+    await expect(fetchAssetDefinitions({ domain: 'issuer.main', dataspace: '8648377547929788715' }))
+      .rejects.toThrow('either a domain or a dataspace');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('fetchAssetDefinition prefers the v1 asset-definition detail route', async () => {
     const fetchSpy = vi.fn().mockImplementation(() =>
       jsonResponse({
+        spec: { scale: 2 }, balance_scope_policy: 'Global', confidential_policy: { mode: 'TransparentOnly', vk_set_hash: null, poseidon_params_id: null, pedersen_params_id: null, pending_transition: null },
         id: SAMPLE_ASSET_DEFINITION_ID,
         owning_domain: null,
+        owning_dataspace: null,
         alias: SAMPLE_ASSET_ALIAS,
         alias_binding: {
           alias: SAMPLE_ASSET_ALIAS,
@@ -1641,21 +1677,10 @@ describe('Explorer latest/health API helpers', () => {
             block: 10,
             transaction_hash: '0xabc',
             index: 0,
-            kind: 'Mint',
+            kind: 'Log',
             transaction_status: 'Committed',
             created_at: '2026-03-05T06:00:01Z',
-            box: {
-              encoded: '',
-              framed_sha256: SAMPLE_FRAMED_INSTRUCTION_SHA256,
-              json: {
-                kind: 'Mint',
-                payload: {
-                  object: 'xor#wonderland',
-                  destination_id: SAMPLE_I105,
-                  amount: '1',
-                },
-              },
-            },
+            box: nativeLogFixture.box,
           },
         ],
       })
@@ -1671,7 +1696,7 @@ describe('Explorer latest/health API helpers', () => {
     expect(result.status).toBe(SUCCESSFUL_FETCHING);
     if (result.status === SUCCESSFUL_FETCHING) {
       expect(result.data.items).toHaveLength(1);
-      expect(result.data.items[0]?.kind).toBe('Mint');
+      expect(result.data.items[0]?.kind).toBe('Log');
     }
   });
 });
@@ -1883,6 +1908,7 @@ describe('Nexus dataspaces API helpers', () => {
         txs_approved: 52,
         txs_rejected: 0,
         queue_size: 0,
+        dataspace_catalog: [{ lane_id: 0, dataspace_id: 0, alias: 'universal' }],
         teu_dataspace_backlog: [
           {
             lane_id: 0,
@@ -1918,6 +1944,24 @@ describe('Nexus dataspaces API helpers', () => {
       expect(result.data.txs_approved).toBe(52);
       expect(result.data.teu_dataspace_backlog[0]?.alias).toBe('universal');
     }
+  });
+
+  it('fetchNexusPublicStatus preserves full-width u64 originals in backlog and catalogue', async () => {
+    const body = '{"blocks":18,"txs_approved":18,"txs_rejected":0,"queue_size":0,"teu_dataspace_backlog":[{"lane_id":8,"dataspace_id":8648377547929788715,"fault_tolerance":1,"backlog":0,"age_slots":0,"virtual_finish":0,"tx_served":0,"alias":"bpng","description":null}],"dataspace_catalog":[{"lane_id":8,"dataspace_id":8648377547929788715,"alias":"bpng"},{"lane_id":9,"dataspace_id":18446744073709551615,"alias":"maximum"}]}';
+    global.fetch = vi.fn().mockResolvedValueOnce(testResponse(body, { status: 200, headers: { 'content-type': 'application/json' } })) as any;
+    const { fetchNexusPublicStatus } = await importApiModule({ VITE_API_URL: 'https://torii.example/v1/explorer' });
+    const result = await fetchNexusPublicStatus();
+    expect(result.status).toBe(SUCCESSFUL_FETCHING);
+    if (result.status === SUCCESSFUL_FETCHING) {
+      expect(result.data.teu_dataspace_backlog[0]?.dataspace_id).toBe('8648377547929788715');
+      expect(result.data.dataspace_catalog.map((entry) => entry.dataspace_id)).toEqual(['8648377547929788715', '18446744073709551615']);
+    }
+  });
+
+  it('fetchNexusPublicStatus rejects duplicate identity fields rather than choosing one', async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce(testResponse('{"blocks":18,"blocks":19}', { status: 200 })) as any;
+    const { fetchNexusPublicStatus } = await importApiModule({ VITE_API_URL: 'https://torii.example/v1/explorer' });
+    await expect(fetchNexusPublicStatus()).rejects.toThrow(/duplicate/i);
   });
 
   it('fetchNexusPublicStatus returns not-found when /status is unavailable', async () => {
@@ -2602,51 +2646,33 @@ describe('Instruction API helpers', () => {
     expect(firstCall.searchParams.has('address_format')).toBe(false);
   });
 
-  it('fetchInstructions parses payloads using the box field name', async () => {
-    const fetchSpy = vi.fn().mockImplementation(() =>
-      jsonResponse({
-        next_cursor: null,
-        items: [
-          {
-            authority: SAMPLE_I105,
-            created_at: '2026-02-11T12:00:00.000Z',
-            kind: 'Log',
-            box: {
-              encoded: '0x01',
-              framed_sha256: SAMPLE_FRAMED_INSTRUCTION_SHA256,
-              json: {
-                kind: 'Log',
-                payload: {
-                  value: { level: 'DEBUG', msg: 'hello' },
-                  variant: 'Log',
-                },
-                wire_id: 'iroha_data_model::isi::transparent::Log',
-              },
-            },
-            transaction_hash: '0xabc',
-            transaction_status: 'Committed',
-            block: 1,
-            index: 0,
-          },
-        ],
-      })
-    );
+  it('preserves the current native opaque envelope through the SDK collection boundary', async () => {
+    const fetchSpy = vi.fn().mockImplementation(() => jsonResponse({ next_cursor: null, items: [nativeLogFixture] }));
     global.fetch = fetchSpy as any;
-
     const { fetchInstructions } = await importApiModule(toriiEnv);
-    const result = await fetchInstructions({ limit: 10, transaction_hash: '0xabc' });
-
-    const firstCall = fetchSpy.mock.calls[0]?.[0] as URL;
-    expect(firstCall.toString()).toContain('/v1/explorer/instructions/query');
-    expect(firstCall.searchParams.has('address_format')).toBe(false);
+    const result = await fetchInstructions({ limit: 10, transaction_hash: nativeLogFixture.transaction_hash });
     expect(result.status).toBe(SUCCESSFUL_FETCHING);
-    if (result.status === SUCCESSFUL_FETCHING) {
-      expect(result.data.items).toHaveLength(1);
-      expect(result.data.items[0].box.encoded).toBe('0x01');
-      expect(result.data.items[0].box.framed_sha256).toBe(SAMPLE_FRAMED_INSTRUCTION_SHA256);
-      expect(result.data.items[0].box.json.kind).toBe('Log');
-    }
+    if (result.status !== SUCCESSFUL_FETCHING) throw new Error('Native instruction response was rejected');
+    expect(result.data.nextCursor).toBeNull();
+    expect(result.data.items).toHaveLength(1);
+    expect(result.data.items[0].box).toEqual({
+      encoded: nativeLogFixture.box.instruction,
+      framed_sha256: `0x${nativeLogFixture.box.framed_sha256}`,
+      wire_id: nativeLogFixture.box.wire_id,
+      json: null,
+    });
   });
+
+  it('refuses retired decoded wire payloads rather than fabricating native instruction bytes', async () => {
+    global.fetch = vi.fn().mockImplementation(() => jsonResponse({
+      next_cursor: null, items: [{ ...nativeLogFixture,
+        box: { encoded: '0x01', framed_sha256: SAMPLE_FRAMED_INSTRUCTION_SHA256, json: { kind: 'Log', payload: {} } },
+      }],
+    })) as any;
+    const { fetchInstructions } = await importApiModule(toriiEnv);
+    await expect(fetchInstructions({ limit: 10, transaction_hash: nativeLogFixture.transaction_hash })).rejects.toThrow();
+  });
+
 });
 
 describe('Transaction API helpers', () => {
@@ -2702,10 +2728,10 @@ describe('Transaction API helpers', () => {
     global.fetch = fetchSpy as any;
 
     const { fetchTransaction } = await importApiModule(toriiEnv);
-    await fetchTransaction('0xdeadbeef');
+    await fetchTransaction(SAMPLE_LEDGER_HASH);
 
     const firstCall = fetchSpy.mock.calls[0]?.[0] as URL;
-    expect(firstCall.pathname).toBe('/v1/explorer/transactions/0xdeadbeef');
+    expect(firstCall.pathname).toBe(`/v1/explorer/transactions/${SAMPLE_LEDGER_HASH}`);
     expect(firstCall.searchParams.has('address_format')).toBe(false);
   });
 
@@ -2764,9 +2790,9 @@ describe('Transaction API helpers', () => {
     };
     const proofSpy = vi.spyOn(ToriiBrowserClient.prototype, 'getLedgerBlockProof').mockResolvedValue(decoded as any);
 
-    const result = await module.fetchLedgerBlockProof(42, 'a'.repeat(64));
+    const result = await module.fetchLedgerBlockProof(42, SAMPLE_LEDGER_HASH);
 
-    expect(proofSpy).toHaveBeenCalledWith(42, 'a'.repeat(64));
+    expect(proofSpy).toHaveBeenCalledWith(42, SAMPLE_LEDGER_HASH);
     expect(result.status).toBe(SUCCESSFUL_FETCHING);
     if (result.status === SUCCESSFUL_FETCHING) {
       expect(result.data.proof).toBe(decoded);
@@ -2783,7 +2809,7 @@ describe('Transaction API helpers', () => {
       ) as any;
     const { fetchLedgerBlockProof } = await importApiModule(toriiEnv);
 
-    const result = await fetchLedgerBlockProof(42, 'a'.repeat(64));
+    const result = await fetchLedgerBlockProof(42, SAMPLE_LEDGER_HASH);
 
     expect(result.status).toBe(NOT_FOUND);
   });
@@ -2794,17 +2820,7 @@ describe('Transaction API helpers', () => {
         authority: sampleAuthority,
         created_at: '2026-03-10T12:00:00Z',
         kind: 'Log',
-        box: {
-          encoded: '',
-          framed_sha256: SAMPLE_FRAMED_INSTRUCTION_SHA256,
-          json: {
-            kind: 'Log',
-            payload: {
-              value: { level: 'DEBUG', msg: 'hello' },
-              variant: 'Log',
-            },
-          },
-        },
+        box: nativeLogFixture.box,
         transaction_hash: '0xdeadbeef',
         transaction_status: 'Committed',
         block: 42,
@@ -2814,10 +2830,10 @@ describe('Transaction API helpers', () => {
     global.fetch = fetchSpy as any;
 
     const { fetchInstructionDetail } = await importApiModule(toriiEnv);
-    await fetchInstructionDetail('0xdeadbeef', 0);
+    await fetchInstructionDetail(SAMPLE_LEDGER_HASH, 0);
 
     const firstCall = fetchSpy.mock.calls[0]?.[0] as URL;
-    expect(firstCall.pathname).toBe('/v1/explorer/instructions/0xdeadbeef/0');
+    expect(firstCall.pathname).toBe(`/v1/explorer/instructions/${SAMPLE_LEDGER_HASH}/0`);
     expect(firstCall.searchParams.has('address_format')).toBe(false);
   });
 
@@ -2842,10 +2858,10 @@ describe('Transaction API helpers', () => {
     global.fetch = fetchSpy as any;
 
     const { fetchInstructionContractView } = await importApiModule(toriiEnv);
-    await fetchInstructionContractView('0xdeadbeef', 1);
+    await fetchInstructionContractView(SAMPLE_LEDGER_HASH, 1);
 
     const firstCall = fetchSpy.mock.calls[0]?.[0] as URL;
-    expect(firstCall.pathname).toBe('/v1/explorer/instructions/0xdeadbeef/1/contract-view');
+    expect(firstCall.pathname).toBe(`/v1/explorer/instructions/${SAMPLE_LEDGER_HASH}/1/contract-view`);
     expect(firstCall.searchParams.get('address_format')).toBeNull();
   });
 
@@ -2898,7 +2914,7 @@ describe('Transaction API helpers', () => {
     global.fetch = fetchSpy as any;
 
     const { fetchTransaction } = await importApiModule(toriiEnv);
-    const result = await fetchTransaction('0xdeadbeef');
+    const result = await fetchTransaction(SAMPLE_LEDGER_HASH);
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const firstCall = fetchSpy.mock.calls[0]?.[0] as URL;
@@ -2916,7 +2932,7 @@ describe('Transaction API helpers', () => {
     global.fetch = fetchSpy as any;
 
     const { fetchTransaction } = await importApiModule(toriiEnv);
-    const result = await fetchTransaction('not-a-hash');
+    const result = await fetchTransaction(SAMPLE_LEDGER_HASH);
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(result.status).not.toBe(SUCCESSFUL_FETCHING);
@@ -2932,7 +2948,7 @@ describe('Transaction API helpers', () => {
     global.fetch = fetchSpy as any;
 
     const { fetchTransaction } = await importApiModule(toriiEnv);
-    const result = await fetchTransaction('0xmissing');
+    const result = await fetchTransaction(SAMPLE_LEDGER_HASH);
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(result.status).toBe(NOT_FOUND);
@@ -3045,5 +3061,62 @@ describe('ZK prover report helpers', () => {
     expect(secondCall.toString()).toContain('/v1/zk/prover/reports/count');
     expect(reportsResult.status).toBe(SUCCESSFUL_FETCHING);
     expect(countResult.status).toBe(SUCCESSFUL_FETCHING);
+  });
+});
+
+
+describe('Validated ledger hash API selectors', () => {
+  const env = { VITE_API_URL: 'https://torii.example/v1/explorer' };
+
+  it.each([
+    ['transaction', (api: ApiModule) => api.fetchTransaction(REAL_TAIRA_HASH), `/transactions/${REAL_TAIRA_HEX}`],
+    ['block hash', (api: ApiModule) => api.fetchBlock(REAL_TAIRA_HASH), `/blocks/${REAL_TAIRA_HEX}`],
+    ['instruction', (api: ApiModule) => api.fetchInstructionDetail(REAL_TAIRA_HASH, 2), `/instructions/${REAL_TAIRA_HEX}/2`],
+    ['contract view', (api: ApiModule) => api.fetchInstructionContractView(REAL_TAIRA_HASH, 2), `/instructions/${REAL_TAIRA_HEX}/2/contract-view`],
+    ['numeric height', (api: ApiModule) => api.fetchBlock(9), '/blocks/9'],
+    ['string height', (api: ApiModule) => api.fetchBlock('9'), '/blocks/9'],
+    ['numeric-looking hash', (api: ApiModule) => api.fetchBlock('11'.repeat(32)), `/blocks/${'11'.repeat(32)}`],
+  ])('projects %s into the exact selector accepted by Torii', async (_label, request, suffix) => {
+    const fetchSpy = vi.fn(async (_input: RequestInfo | URL) => testResponse('missing', { status: 404 }));
+    global.fetch = fetchSpy;
+    const api = await importApiModule(env);
+    await request(api);
+    const url = fetchSpy.mock.calls[0]?.[0] as unknown as URL;
+    expect(url.pathname).toBe(`/v1/explorer${suffix}`);
+    expect(url.hash).toBe('');
+  });
+
+  it.each(['fetchInstructions', 'fetchLatestInstructions'] as const)('preserves filters and paging in %s while projecting the validated hash', async (method) => {
+    const fetchSpy = vi.fn(async () => jsonResponse({ next_cursor: null, items: [] }));
+    global.fetch = fetchSpy;
+    const api = await importApiModule(env);
+    await api[method]({ transaction_hash: REAL_TAIRA_HASH, block: 9, kind: 'Log', limit: 5, cursor: 'next-page' });
+    expect(queryValue(fetchSpy, 0, 'transaction_hash')).toBe(REAL_TAIRA_HEX);
+    expect(queryValue(fetchSpy, 0, 'block')).toBe('9');
+    expect(queryValue(fetchSpy, 0, 'kind')).toBe('Log');
+    expect(queryValue(fetchSpy, 0, 'limit')).toBe('5');
+    expect(queryValue(fetchSpy, 0, 'cursor')).toBe('next-page');
+  });
+
+  it('preserves the requested pipeline scope and validates before network access', async () => {
+    const fetchSpy = vi.fn(async (_input: RequestInfo | URL) => testResponse('missing', { status: 404 }));
+    global.fetch = fetchSpy;
+    const api = await importApiModule(env);
+    await api.fetchPipelineTransactionStatus(REAL_TAIRA_HASH, 'global');
+    const url = fetchSpy.mock.calls[0]?.[0] as unknown as URL;
+    expect(url.searchParams.get('hash')).toBe(REAL_TAIRA_HEX);
+    expect(url.searchParams.get('scope')).toBe('global');
+  });
+
+  it.each([REAL_TAIRA_HASH.replace('#DB6C', '#0000'), 'hash:' + REAL_TAIRA_HEX, '10'.repeat(32), 'bad-hash'])('rejects invalid hash %s without any request', async (hash) => {
+    const fetchSpy = vi.fn(); global.fetch = fetchSpy;
+    const api = await importApiModule(env);
+    for (const request of [
+      () => api.fetchTransaction(hash), () => api.fetchBlock(hash),
+      () => api.fetchInstructionDetail(hash, 0), () => api.fetchInstructionContractView(hash, 0),
+      () => api.fetchInstructions({ transaction_hash: hash }), () => api.fetchLatestInstructions({ transaction_hash: hash }),
+      () => api.fetchPipelineTransactionStatus(hash), () => api.fetchLedgerBlockProof(9, hash),
+    ]) await expect(request()).rejects.toThrow('valid 32-byte Iroha hash');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

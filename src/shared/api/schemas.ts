@@ -11,6 +11,7 @@ import {
   parseAssetIdLiteral,
 } from '@/shared/lib/asset-definition-literal';
 import { normalizeDomainIdLiteral, normalizeRwaIdLiteral } from '@/shared/lib/rwa-id';
+import { NativeInstructionEnvelope } from './instruction-envelope';
 
 const Pagination = z.object({
   page: z.number(),
@@ -142,6 +143,11 @@ const CanonicalName = z.string().refine(isCanonicalName, 'expected a canonical I
 const CanonicalDomainId = exactNormalizedStringSchema(
   normalizeDomainIdLiteral,
   'expected a canonical fully-qualified domain.dataspace ID'
+);
+/** Exact nonzero direct-home DataSpaceId text; never round a u64 through a JSON number. */
+export const CanonicalDataspaceId = z.string().refine(
+  (value) => /^[1-9][0-9]{0,19}$/u.test(value) && BigInt(value) <= (1n << 64n) - 1n,
+  'expected a canonical nonzero u64 decimal dataspace ID'
 );
 const CanonicalAssetId = exactNormalizedStringSchema(
   normalizeAssetIdLiteral,
@@ -330,16 +336,17 @@ export const ContractEvent = z
   .object({
     event_id: z.string().min(1),
     schema_version: z.number().int().nonnegative(),
-    provenance: z.enum(['emitted', 'derived']),
+    provenance: z.literal('emitted'),
     authority: z.string().min(1).optional(),
     timestamp_ms: z.number().int().nonnegative().optional(),
-    tx_hash_hex: z.string().min(1),
+    execution_hash_hex: z.string().min(1),
     block_height: z.number().int().nonnegative(),
     block_hash_hex: z.string().min(1),
-    result_ok: z.boolean(),
+    output_index: z.number().int().nonnegative(),
+    emission_index: z.number().int().nonnegative(),
+    emission: z.json(),
+    result_ok: z.literal(true),
     contract_address: z.string().min(1),
-    contract_alias: z.string().min(1).optional(),
-    module: z.string().min(1),
     event_kind: z.string().min(1),
     participants: z.string().min(1).array().optional(),
     asset_ids: z.string().min(1).array().optional(),
@@ -465,8 +472,8 @@ export const ExplorerAsset = z
     id: CanonicalAssetId,
     definition_id: AssetDefinitionIdSchema,
     account_id: CanonicalAccountId,
-    asset_name: AssetHumanName,
-    asset_alias: ExactAssetDefinitionAlias.nullable(),
+    asset_name: AssetHumanName.optional(),
+    asset_alias: ExactAssetDefinitionAlias.nullable().optional(),
     value: QuantityValue,
   })
   .strict()
@@ -479,7 +486,12 @@ export const ExplorerAsset = z
         path: ['id'],
       });
     }
-    if (!aliasMatchesAssetName(value.asset_alias, value.asset_name)) {
+    // Current native holdings omit display metadata. Retain the shipped enriched
+    // pair only when both fields are present and their existing binding is valid.
+    if ((value.asset_name === undefined) !== (value.asset_alias === undefined)) {
+      ctx.addIssue({ code: 'custom', message: 'asset_name and asset_alias must be supplied together' });
+    }
+    if (value.asset_name !== undefined && !aliasMatchesAssetName(value.asset_alias ?? null, value.asset_name)) {
       ctx.addIssue({
         code: 'custom',
         message: 'asset alias name segment must match asset_name',
@@ -489,6 +501,8 @@ export const ExplorerAsset = z
   })
   .transform((value) => ({
     ...value,
+    asset_name: value.asset_name ?? null,
+    asset_alias: value.asset_alias ?? null,
     scope: value.id.match(/#(dataspace:\d+)$/u)?.[1] ?? null,
   }));
 
@@ -496,6 +510,7 @@ export type ExplorerAsset = z.infer<typeof ExplorerAsset>;
 
 export interface AssetDefinitionSearchParams extends CursorPaginationParams {
   domain?: string;
+  dataspace?: string;
   owned_by?: string;
 }
 
@@ -540,6 +555,7 @@ export const ExplorerAssetDefinition = z
   .object({
     id: AssetDefinitionIdSchema,
     owning_domain: CanonicalDomainId.nullable(),
+    owning_dataspace: CanonicalDataspaceId.nullish(),
     mintable: AssetDefinitionMintable,
     logo: z.string().nullable(),
     metadata: Metadata,
@@ -550,6 +566,11 @@ export const ExplorerAssetDefinition = z
     circulating_quantity: QuantityValue.nullable(),
   })
   .strict()
+  .superRefine((value, ctx) => {
+    if (value.owning_domain !== null && value.owning_dataspace !== null && value.owning_dataspace !== undefined) {
+      ctx.addIssue({ code: 'custom', message: 'asset definition cannot have both domain and dataspace homes', path: ['owning_dataspace'] });
+    }
+  })
   .transform((value) => ({
     ...value,
     // The Explorer list DTO does not publish these detail-only fields.
@@ -562,11 +583,32 @@ export const ExplorerAssetDefinition = z
 
 export type ExplorerAssetDefinition = z.infer<typeof ExplorerAssetDefinition>;
 
+const ConfidentialPolicyMode = z.enum(['TransparentOnly', 'ShieldedOnly', 'Convertible']);
+const ConfidentialPolicyHeight = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const ConfidentialPolicyHash = z.string().regex(/^[0-9a-fA-F]{64}$/u);
+const AssetConfidentialPolicy = z.object({
+  mode: ConfidentialPolicyMode,
+  vk_set_hash: ConfidentialPolicyHash.nullable(),
+  poseidon_params_id: U32.nullable(),
+  pedersen_params_id: U32.nullable(),
+  pending_transition: z.object({
+    new_mode: ConfidentialPolicyMode,
+    effective_height: ConfidentialPolicyHeight,
+    previous_mode: ConfidentialPolicyMode,
+    transition_id: ConfidentialPolicyHash,
+    conversion_window: ConfidentialPolicyHeight.nullable(),
+  }).strict().nullable(),
+}).strict();
+
 /** Full asset-definition record from `/v1/assets/definitions/:id`, including alias bindings. */
 export const AssetDefinition = z
   .object({
     id: AssetDefinitionIdSchema,
     owning_domain: CanonicalDomainId.nullable(),
+    owning_dataspace: CanonicalDataspaceId.nullish(),
+    spec: z.object({ scale: z.number().int().min(0).max(MAX_NUMERIC_SCALE).nullable() }).strict(),
+    balance_scope_policy: z.enum(['Global', 'DataspaceRestricted']),
+    confidential_policy: AssetConfidentialPolicy,
     name: AssetHumanName,
     description: AssetDescription,
     alias: ExactAssetDefinitionAlias.nullable(),
@@ -579,6 +621,9 @@ export const AssetDefinition = z
   })
   .strict()
   .superRefine((value, ctx) => {
+    if (value.owning_domain !== null && value.owning_dataspace !== null && value.owning_dataspace !== undefined) {
+      ctx.addIssue({ code: 'custom', message: 'asset definition cannot have both domain and dataspace homes', path: ['owning_dataspace'] });
+    }
     if (!aliasMatchesAssetName(value.alias, value.name)) {
       ctx.addIssue({
         code: 'custom',
@@ -1316,23 +1361,20 @@ export interface InstructionsSearchParams extends CursorPaginationParams {
 const InstructionKind = z.string().min(1);
 export type InstructionKind = z.infer<typeof InstructionKind>;
 
-const InstructionBoxStructured = z
-  .object({
-    kind: InstructionKind,
-    payload: z.unknown(),
-    wire_id: z.string().optional(),
-    encoded: z.string().optional(),
-  })
-  .strict();
+/** Semantic views are local UI input; the native network decoder never accepts them. */
+export interface DecodedInstructionBox {
+  encoded: string;
+  framed_sha256: string;
+  json: { kind: InstructionKind; payload: unknown; wire_id?: string; encoded?: string };
+}
 
-const InstructionBox = z
-  .object({
-    encoded: z.string().optional().default(''),
-    framed_sha256: z.string().regex(/^0x[0-9a-f]{64}$/u),
-    json: InstructionBoxStructured,
-  })
-  .strict();
-export type InstructionBox = z.infer<typeof InstructionBox>;
+const InstructionBox = NativeInstructionEnvelope.transform((envelope) => ({
+  encoded: envelope.instruction,
+  framed_sha256: `0x${envelope.framed_sha256}`,
+  wire_id: envelope.wire_id,
+  json: null,
+}));
+export type InstructionBox = z.infer<typeof InstructionBox> | DecodedInstructionBox;
 const InstructionRaw = z.object({
   authority: AccountIdSchema,
   created_at: z.coerce.date(),
@@ -1344,19 +1386,10 @@ const InstructionRaw = z.object({
   block: z.number(),
 });
 
-export const Instruction = z.preprocess((input) => {
-  if (!input || typeof input !== 'object') return input;
-  const payload = { ...(input as Record<string, unknown>) };
-
-  // Torii may expose the Rust raw identifier form `r#box`.
-  // Keep parser forward-compatible by aliasing it to canonical `box`.
-  if (payload.box === undefined && payload['r#box'] !== undefined) {
-    payload.box = payload['r#box'];
-  }
-
-  return payload;
-}, InstructionRaw);
-export type Instruction = z.infer<typeof Instruction>;
+/** Decode only the authoritative native opaque-envelope wire contract. */
+export const Instruction = InstructionRaw;
+/** Existing semantic presentation helpers may also consume locally decoded values. */
+export type Instruction = Omit<z.infer<typeof Instruction>, 'box'> & { box: InstructionBox };
 
 export const LatestInstructionsResponse = CollectionPage(Instruction);
 export type LatestInstructionsResponse = z.infer<typeof LatestInstructionsResponse>;
@@ -1657,9 +1690,28 @@ export const NexusDataspacesAccountSummary = z.object({
 });
 export type NexusDataspacesAccountSummary = z.infer<typeof NexusDataspacesAccountSummary>;
 
+// Public status includes the universal dataspace (zero) and full-width u64 IDs.
+// Unsafe numbers have already lost identity and must never be converted to text.
+export const DataspaceId = z.union([z.string(), z.bigint(), z.number().int().safe()])
+  .transform(String)
+  .pipe(z.string().refine(
+    (value) => /^(0|[1-9][0-9]{0,19})$/u.test(value) && BigInt(value) <= (1n << 64n) - 1n,
+    'expected an exact canonical u64 decimal dataspace ID'
+  ));
+
+export const NexusDataspaceCatalogEntry = z.object({
+  lane_id: z.number().int().nonnegative(),
+  dataspace_id: DataspaceId,
+  alias: z.string().nullable(),
+  visibility: z.enum(['public', 'restricted']).optional(),
+  manifest_required: z.boolean().optional(),
+  manifest_ready: z.boolean().optional(),
+  manifest_path: z.string().nullable().optional(),
+}).passthrough();
+
 export const NexusStatusDataspaceBacklog = z.object({
   lane_id: z.number(),
-  dataspace_id: z.number(),
+  dataspace_id: DataspaceId,
   fault_tolerance: z.number(),
   backlog: z.number(),
   age_slots: z.number(),
@@ -1677,6 +1729,7 @@ export const NexusPublicStatus = z
     txs_rejected: z.number(),
     queue_size: z.number(),
     teu_dataspace_backlog: NexusStatusDataspaceBacklog.array(),
+    dataspace_catalog: NexusDataspaceCatalogEntry.array(),
   })
   .passthrough();
 export type NexusPublicStatus = z.infer<typeof NexusPublicStatus>;

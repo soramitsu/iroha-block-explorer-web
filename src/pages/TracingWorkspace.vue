@@ -1519,7 +1519,7 @@ watch(
                   <BaseHash
                     :hash="transaction.hash"
                     type="short"
-                    :link="`/transactions/${transaction.hash}`"
+                    :link="`/transactions/${encodeURIComponent(transaction.hash)}`"
                     copy
                   />
                   <span :class="statusBadgeClass(transaction.status)">
@@ -1594,7 +1594,7 @@ watch(
                     :key="hash"
                     :hash
                     type="short"
-                    :link="`/transactions/${hash}`"
+                    :link="`/transactions/${encodeURIComponent(hash)}`"
                     copy
                   />
                 </div>
@@ -1620,7 +1620,7 @@ watch(
                   <BaseHash
                     :hash="event.transactionHash"
                     type="short"
-                    :link="`/transactions/${event.transactionHash}`"
+                    :link="`/transactions/${encodeURIComponent(event.transactionHash)}`"
                     copy
                   />
                   <span :class="statusBadgeClass(event.transactionStatus)">

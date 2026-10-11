@@ -151,16 +151,17 @@ function contractEvent() {
   return {
     event_id: '0xevent:0',
     schema_version: 1,
-    provenance: 'derived',
+    output_index: 0,
+    emission_index: 0,
+    emission: null,
+    provenance: 'emitted',
     authority: accountAlias,
     timestamp_ms: 1_750_000_000_000,
-    tx_hash_hex: '0xevent',
+    execution_hash_hex: '0xevent',
     block_height: 77,
     block_hash_hex: '0xblock',
     result_ok: true,
     contract_address: contractAddress,
-    contract_alias: 'router',
-    module: 'router',
     event_kind: 'swap_filled',
     participants: [accountAlias],
     asset_ids: ['usd#issuer.main'],
@@ -289,6 +290,14 @@ describe('SmartContractsPage route-backed views', () => {
     expect(wrapper.get('.resource-state').attributes('data-status')).toBe('error');
   });
 
+  it('rejects derived-provenance bookmarks and offers only the native emitted filter', async () => {
+    const { wrapper } = await factory({ tab: 'events', provenance: 'derived' });
+    expect(apiMocks.fetchContractEvents).not.toHaveBeenCalled();
+    expect(wrapper.get('.resource-error').text()).toContain('provenance must be emitted');
+    expect(wrapper.find('option[value="derived"]').exists()).toBe(false);
+    expect(wrapper.find('option[value="emitted"]').exists()).toBe(true);
+  });
+
   it('sends every event-history query filter and renders semantic event links', async () => {
     apiState.events = {
       status: 'ok',
@@ -296,22 +305,20 @@ describe('SmartContractsPage route-backed views', () => {
     };
     const { wrapper } = await factory({
       tab: 'events',
-      module: 'router',
-      event_kind: 'swap_filled',
+        event_kind: 'swap_filled',
       participant: accountAlias,
       asset_id: 'usd#issuer.main',
-      provenance: 'derived',
+      provenance: 'emitted',
       result_ok: 'true',
       since_timestamp_ms: '100',
       until_timestamp_ms: '200',
     });
 
     expect(apiMocks.fetchContractEvents).toHaveBeenCalledWith(expect.objectContaining({
-      module: 'router',
-      event_kind: 'swap_filled',
+        event_kind: 'swap_filled',
       participant: accountAlias,
       asset_id: 'usd#issuer.main',
-      provenance: 'derived',
+      provenance: 'emitted',
       result_ok: true,
       since_timestamp_ms: 100,
       until_timestamp_ms: 200,
@@ -338,7 +345,7 @@ describe('SmartContractsPage live events', () => {
         replayAvailable: false,
       });
     })();
-    const { wrapper } = await factory({ tab: 'events', module: 'router' });
+    const { wrapper } = await factory({ tab: 'events', event_kind: 'swap_filled' });
 
     await wrapper.get('[data-test="start-contract-stream"]').trigger('click');
     await flushPromises();
@@ -372,7 +379,7 @@ describe('SmartContractsPage live events', () => {
 
     await wrapper.get('[data-test="start-contract-stream"]').trigger('click');
     await flushPromises();
-    expect(wrapper.text()).toContain('router · swap_filled');
+    expect(wrapper.text()).toContain('swap_filled');
     expect(wrapper.text()).toContain('1 event retained');
 
     await wrapper.get('[data-test="stop-contract-stream"]').trigger('click');

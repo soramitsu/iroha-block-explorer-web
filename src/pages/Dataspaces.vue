@@ -25,9 +25,6 @@
           {{ $t('dataspaces.overviewHint') }}
         </p>
         <p class="dataspaces-page__meta">
-          {{ $t('dataspaces.overviewSystemIds') }}
-        </p>
-        <p class="dataspaces-page__meta">
           {{ $t('dataspaces.overviewLifetimeTx') }}
         </p>
 
@@ -91,10 +88,11 @@
     >
       <template #default>
         <BaseTable
+          class="dataspaces-page__table"
           :items="dataspaces"
           :loading="state.isLoading"
           :row-key="dataspaceRowKey"
-          container-class="dataspaces-page__table"
+          container-class="dataspaces-page__rows"
           :disable-pagination="true"
           row-pointer
           @click:row="openDataspace"
@@ -202,24 +200,14 @@ const state = reactive<{
   lastUpdated: null,
 });
 
-const CANONICAL_LANE_BY_ALIAS: Record<string, number> = {
-  universal: 0,
-  governance: 1,
-  zk: 2,
-  sbp: 3,
-  cbuae: 4,
-};
-
-function pickRepresentativeLane(rows: NexusStatusDataspaceBacklog[]): number {
-  const alias = rows[0]?.alias?.toLowerCase() ?? '';
-  const preferredLane = CANONICAL_LANE_BY_ALIAS[alias];
-  if (typeof preferredLane === 'number' && rows.some((item) => item.lane_id === preferredLane)) return preferredLane;
-  return rows[0]?.lane_id ?? 0;
-}
-
 const dataspaces = computed<DataspaceOverviewRow[]>(() => {
-  const entries = state.status?.teu_dataspace_backlog ?? [];
-  const grouped = new Map<number, NexusStatusDataspaceBacklog[]>();
+  const catalog = state.status?.dataspace_catalog ?? [];
+  // Scheduler telemetry includes every lane/dataspace pair; only the catalog
+  // establishes registered bindings and which rows contribute to each total.
+  const entries = (state.status?.teu_dataspace_backlog ?? []).filter((item) => catalog.some(
+    (entry) => entry.dataspace_id === item.dataspace_id && entry.lane_id === item.lane_id
+  ));
+  const grouped = new Map<string, NexusStatusDataspaceBacklog[]>();
 
   for (const entry of entries) {
     const existing = grouped.get(entry.dataspace_id);
@@ -231,11 +219,14 @@ const dataspaces = computed<DataspaceOverviewRow[]>(() => {
   }
 
   return [...grouped.entries()]
-    .sort(([left], [right]) => left - right)
-    .map(([, rows]) => {
+    .sort(([left], [right]) => BigInt(left) < BigInt(right) ? -1 : BigInt(left) > BigInt(right) ? 1 : 0)
+    .flatMap(([id, rows]) => {
       const sortedRows = [...rows].sort((left, right) => left.lane_id - right.lane_id);
-      const representativeLane = pickRepresentativeLane(sortedRows);
-      const primary = sortedRows.find((item) => item.lane_id === representativeLane) ?? sortedRows[0];
+      const primary = sortedRows.find((item) => catalog.some(
+        (entry) => entry.dataspace_id === id && entry.lane_id === item.lane_id
+      ));
+      if (!primary) return [];
+      const representativeLane = primary.lane_id;
       const laneIds = sortedRows.map((item) => item.lane_id);
 
       return {
@@ -254,7 +245,7 @@ const summaryStats = computed(() => {
   const entries = dataspaces.value;
   return {
     totalDataspaces: entries.length,
-    customDataspaces: entries.filter((item) => item.dataspace_id >= 10).length,
+    customDataspaces: entries.filter((item) => BigInt(item.dataspace_id) >= 10n).length,
     totalBacklog: entries.reduce((sum, item) => sum + item.backlog, 0),
     totalTxServed: entries.reduce((sum, item) => sum + item.tx_served, 0),
     blocks: state.status?.blocks ?? 0,

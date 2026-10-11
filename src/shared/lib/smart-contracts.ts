@@ -65,7 +65,7 @@ function readHashLiteral(value: unknown): string | null {
 export function extractActivateContractInstancePayload(
   instruction: Pick<Instruction, 'kind' | 'box'>
 ): ActivateContractInstancePayload | null {
-  const payload = unwrapVariantRecord(instruction.box.json.payload, 'ActivateContractInstance');
+  const payload = unwrapVariantRecord(instruction.box.json?.payload, 'ActivateContractInstance');
   if (!payload) return null;
 
   return {

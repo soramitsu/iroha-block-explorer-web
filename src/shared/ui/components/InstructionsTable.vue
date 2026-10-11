@@ -6,6 +6,7 @@ import TransactionStatus from '@/entities/transaction/TransactionStatus.vue';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
 import ContractCodeViewPanel from '@/shared/ui/components/ContractCodeViewPanel.vue';
 import type { Instruction, InstructionsSearchParams } from '@/shared/api/schemas';
@@ -52,7 +53,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'details-opened', payload: { transactionHash: string, index: number }): void
   (e: 'details-closed'): void
-  (e: 'list-state', payload: { isLoading: boolean, hasMore: boolean, itemsCount: number }): void
+  (e: 'list-state', payload: { isLoading: boolean, hasMore: boolean, itemsCount: number, hasError: boolean }): void
 }>();
 
 const presentationCache = new WeakMap<Instruction, InstructionPresentation | null>();
@@ -115,6 +116,8 @@ const scope = useParamScope(
 );
 
 const isLoading = computed(() => scope.value?.expose.isLoading);
+const listSnapshot = computed(() => scope.value.expose.snapshot);
+const hasError = computed(() => Boolean(scope.value.expose.error));
 const payloadPagination = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data : undefined
 );
@@ -251,8 +254,18 @@ function closeInstructionDetails() {
 const selectedInstructionJson = computed(() => {
   const instruction = detailState.data;
   if (!instruction) return null;
-  return instruction.box.json;
+  return instructionPayloadView(instruction);
 });
+
+/** Render the exact native envelope when this browser has no semantic decoder. */
+function instructionPayloadView(instruction: Instruction) {
+  if (instruction.box.json) return instruction.box.json;
+  return {
+    wire_id: instruction.box.wire_id,
+    instruction: instruction.box.encoded,
+    framed_sha256: instruction.box.framed_sha256.slice(2),
+  };
+}
 
 const selectedInstructionPresentation = computed(() => {
   const instruction = detailState.data;
@@ -284,8 +297,9 @@ const relatedContractInstructions = computed(() => {
 const shareLink = computed(() => {
   if (!lastSelection.value) return null;
   if (typeof window === 'undefined') return null;
-  const url = new URL(window.location.origin);
-  url.pathname = `/transactions/${lastSelection.value.transactionHash}`;
+  const url = new URL(window.location.href);
+  url.hash = '';
+  url.pathname = `/transactions/${encodeURIComponent(lastSelection.value.transactionHash)}`;
   url.searchParams.set('instruction', String(lastSelection.value.index));
   return url.toString();
 });
@@ -375,7 +389,7 @@ watch(
     const instructionKindMatches =
       listState.kind === 'All' ||
       instruction.kind === listState.kind ||
-      instruction.box.json.kind === listState.kind;
+      instruction.box.json?.kind === listState.kind;
     if (!instructionKindMatches) return;
     if (listState.transaction_status && instruction.transaction_status !== listState.transaction_status) return;
 
@@ -394,12 +408,13 @@ watch(
 );
 
 watch(
-  () => [isLoading.value, hasMore.value, items.value.length] as const,
-  ([tableLoading, currentHasMore, currentItemsCount]) => {
+  () => [isLoading.value, hasMore.value, items.value.length, hasError.value] as const,
+  ([tableLoading, currentHasMore, currentItemsCount, currentHasError]) => {
     emit('list-state', {
       isLoading: Boolean(tableLoading),
       hasMore: currentHasMore,
       itemsCount: currentItemsCount,
+      hasError: currentHasError,
     });
   },
   { immediate: true }
@@ -437,153 +452,155 @@ watch(
       </BaseButton>
     </div>
 
-    <BaseTable
-      v-model:cursor="listState.cursor"
-      v-model:page-size="listState.limit"
-      :loading="isLoading"
-      pagination-mode="cursor"
-      :cursor-pagination="payloadPagination"
-      :items
-      :row-key="instructionRowKey"
-      container-class="instructions-table__container"
-      :pagination-breakpoint="1441"
-    >
-      <template #row="{ item }">
-        <div
-          class="instructions-table__row"
-          :class="{ 'instructions-table__row_with-value': props.showValue }"
-          role="presentation"
-        >
-          <TransactionStatus
-            type="tooltip"
-            class="instructions-table__icon"
-            :committed="item.transaction_status === 'Committed'"
-            role="cell"
-          />
-
+    <BaseResourceState :snapshot="listSnapshot" @retry="scope.expose.refetch()">
+      <BaseTable
+        v-model:cursor="listState.cursor"
+        v-model:page-size="listState.limit"
+        :loading="isLoading"
+        pagination-mode="cursor"
+        :cursor-pagination="payloadPagination"
+        :items
+        :row-key="instructionRowKey"
+        container-class="instructions-table__container"
+        :pagination-breakpoint="1441"
+      >
+        <template #row="{ item }">
           <div
-            class="instructions-table__column"
-            role="cell"
-          >
-            <div class="instructions-table__label">
-              {{ $t('transactions.transactionID') }}
-            </div>
-
-            <BaseHash
-              :hash="item.transaction_hash"
-              :type="hashType"
-              :link="`/transactions/${item.transaction_hash}`"
-              copy
-            />
-
-            <time
-              class="instructions-table__time row-text-monospace"
-              :datetime="item.created_at.toISOString()"
-            >
-              {{ defaultFormat(item.created_at) }}
-            </time>
-          </div>
-
-          <div
-            class="instructions-table__columns"
+            class="instructions-table__row"
+            :class="{ 'instructions-table__row_with-value': props.showValue }"
             role="presentation"
           >
-            <div
-              v-if="shouldShowKind"
-              class="instructions-table__column"
+            <TransactionStatus
+              type="tooltip"
+              class="instructions-table__icon"
+              :committed="item.transaction_status === 'Committed'"
               role="cell"
-            >
-              <div class="instructions-table__label">
-                {{ $t('kind') }}
-              </div>
-
-              <span
-                class="row-text instructions-table__kind-badge"
-                data-test="instruction-kind-label"
-              >{{ getInstructionKindLabel(item) }}</span>
-            </div>
+            />
 
             <div
               class="instructions-table__column"
               role="cell"
             >
               <div class="instructions-table__label">
-                {{ $t('entity') }}
+                {{ $t('transactions.transactionID') }}
               </div>
 
-              <BaseLink
-                v-if="getInstructionPrimaryEntity(item)?.link"
-                :to="getInstructionPrimaryEntity(item)?.link ?? ''"
-                monospace
-              >
-                {{ getInstructionPrimaryEntity(item)?.value }}
-              </BaseLink>
-              <span
-                v-else
-                class="row-text"
-              >{{ getInstructionPrimaryEntity(item)?.value ?? '—' }}</span>
-            </div>
-
-            <div
-              class="instructions-table__column-block"
-              role="cell"
-            >
-              <div class="instructions-table__label">
-                {{ $t('transactions.block') }}
-              </div>
-
-              <BaseLink
-                :to="`/blocks/${item.block}`"
-                monospace
-              >
-                {{ item.block }}
-              </BaseLink>
-            </div>
-          </div>
-
-          <div
-            v-if="props.showValue"
-            class="instructions-table__column-value"
-            role="cell"
-          >
-            <div class="instructions-table__label">
-              {{ $t('value') }}
-            </div>
-
-            <div class="instructions-table__value-content">
-              <InstructionSemanticCard
-                v-if="getInstructionPresentation(item)"
-                :presentation="getInstructionPresentation(item)!"
-                compact
+              <BaseHash
+                :hash="item.transaction_hash"
+                :type="hashType"
+                :link="`/transactions/${encodeURIComponent(item.transaction_hash)}`"
+                copy
               />
-              <details
-                class="instructions-table__raw-disclosure"
-                data-test="instruction-row-raw-json"
+
+              <time
+                class="instructions-table__time row-text-monospace"
+                :datetime="item.created_at.toISOString()"
               >
-                <summary>Raw instruction JSON</summary>
-                <BaseJson
-                  class="instructions-table__value-json"
-                  :value="item.box.json"
+                {{ defaultFormat(item.created_at) }}
+              </time>
+            </div>
+
+            <div
+              class="instructions-table__columns"
+              role="presentation"
+            >
+              <div
+                v-if="shouldShowKind"
+                class="instructions-table__column"
+                role="cell"
+              >
+                <div class="instructions-table__label">
+                  {{ $t('kind') }}
+                </div>
+
+                <span
+                  class="row-text instructions-table__kind-badge"
+                  data-test="instruction-kind-label"
+                >{{ getInstructionKindLabel(item) }}</span>
+              </div>
+
+              <div
+                class="instructions-table__column"
+                role="cell"
+              >
+                <div class="instructions-table__label">
+                  {{ $t('entity') }}
+                </div>
+
+                <BaseLink
+                  v-if="getInstructionPrimaryEntity(item)?.link"
+                  :to="getInstructionPrimaryEntity(item)?.link ?? ''"
+                  monospace
+                >
+                  {{ getInstructionPrimaryEntity(item)?.value }}
+                </BaseLink>
+                <span
+                  v-else
+                  class="row-text"
+                >{{ getInstructionPrimaryEntity(item)?.value ?? '—' }}</span>
+              </div>
+
+              <div
+                class="instructions-table__column-block"
+                role="cell"
+              >
+                <div class="instructions-table__label">
+                  {{ $t('transactions.block') }}
+                </div>
+
+                <BaseLink
+                  :to="`/blocks/${item.block}`"
+                  monospace
+                >
+                  {{ item.block }}
+                </BaseLink>
+              </div>
+            </div>
+
+            <div
+              v-if="props.showValue"
+              class="instructions-table__column-value"
+              role="cell"
+            >
+              <div class="instructions-table__label">
+                {{ $t('value') }}
+              </div>
+
+              <div class="instructions-table__value-content">
+                <InstructionSemanticCard
+                  v-if="getInstructionPresentation(item)"
+                  :presentation="getInstructionPresentation(item)!"
+                  compact
                 />
-              </details>
+                <details
+                  class="instructions-table__raw-disclosure"
+                  data-test="instruction-row-raw-json"
+                >
+                  <summary>Raw instruction JSON</summary>
+                  <BaseJson
+                    class="instructions-table__value-json"
+                    :value="instructionPayloadView(item)"
+                  />
+                </details>
+              </div>
+            </div>
+
+            <div
+              class="instructions-table__actions"
+              role="cell"
+            >
+              <button
+                class="instructions-table__action-button"
+                type="button"
+                @click="openInstructionDetails(item)"
+              >
+                {{ $t('transactions.viewInstruction') }}
+              </button>
             </div>
           </div>
-
-          <div
-            class="instructions-table__actions"
-            role="cell"
-          >
-            <button
-              class="instructions-table__action-button"
-              type="button"
-              @click="openInstructionDetails(item)"
-            >
-              {{ $t('transactions.viewInstruction') }}
-            </button>
-          </div>
-        </div>
-      </template>
-    </BaseTable>
+        </template>
+      </BaseTable>
+    </BaseResourceState>
 
     <section
       v-if="detailState.isOpen"
@@ -650,7 +667,7 @@ watch(
             <BaseHash
               :hash="detailState.data.transaction_hash"
               type="short"
-              :link="`/transactions/${detailState.data.transaction_hash}`"
+              :link="`/transactions/${encodeURIComponent(detailState.data.transaction_hash)}`"
             />
           </DataField>
           <DataField :title="$t('transactions.block')">
@@ -695,7 +712,7 @@ watch(
           <BaseJson
             class="instructions-detail__json-tree"
             full
-            :value="selectedInstructionJson ?? detailState.data.box.json"
+            :value="selectedInstructionJson ?? instructionPayloadView(detailState.data)"
           />
         </div>
 

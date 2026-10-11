@@ -145,7 +145,7 @@ function computeCodeHash(bytes: Uint8Array): string {
 }
 
 function readDeclaredCodeHash(instruction: Instruction): string {
-  const payload = instruction.box.json.payload as { code_hash?: string };
+  const payload = instruction.box.json?.payload as { code_hash?: string };
   return payload.code_hash ?? '';
 }
 
