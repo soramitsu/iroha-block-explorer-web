@@ -477,10 +477,14 @@ describe('Explorer payload schemas', () => {
       proposals: [
         {
           proposal_id: 'aa'.repeat(32),
-          instructions_hash: 'aa'.repeat(32),
+          instructions_hash: 'bb'.repeat(32),
           operation_type: 'TRANSFER',
           intent: null,
           proposal: {
+            network_id: 'hash:5C3E66C94E079079FF4FC46F59810B9C4EC7B2646DD45CE937831C0FDCE20C9B#44D9',
+            proposal_nonce: 'cc'.repeat(32),
+            proposal_id: 'aa'.repeat(32),
+            transaction_ttl_ms: null,
             instructions: [
               {
                 Transfer: {
@@ -495,7 +499,6 @@ describe('Explorer payload schemas', () => {
             proposed_at_ms: 1_700_000_000_000,
             expires_at_ms: 1_700_000_060_000,
             approvals: [validAccountId],
-            is_relayed: null,
           },
           status: 'COLLECTING_SIGNATURES',
           terminal_at_ms: null,
@@ -506,6 +509,30 @@ describe('Explorer payload schemas', () => {
 
     expect(spec.spec.signatories[validAccountId]).toBe(2);
     expect(proposals.proposals[0]?.proposal.instructions[0]).toHaveProperty('Transfer.Asset');
+    const entry = proposals.proposals[0]!;
+    expect(entry.proposal_id).not.toBe(entry.instructions_hash);
+    const parsePayload = (payload: Record<string, unknown>) => MultisigProposalsQueryResponse.parse({
+      ...proposals,
+      proposals: [{ ...entry, proposal: payload }],
+    });
+    for (const field of ['network_id', 'proposal_nonce', 'proposal_id', 'transaction_ttl_ms']) {
+      const missing = { ...entry.proposal } as Record<string, unknown>;
+      delete missing[field];
+      expect(() => parsePayload(missing), `missing ${field}`).toThrow();
+    }
+    for (const changed of [
+      { is_relayed: null },
+      { proposal_nonce: '0'.repeat(64) },
+      { proposal_nonce: 'CC'.repeat(32) },
+      { proposal_id: 'dd'.repeat(32) },
+      { network_id: '11'.repeat(32) },
+      { transaction_ttl_ms: 0 },
+      { transaction_ttl_ms: Number.MAX_SAFE_INTEGER + 1 },
+      { proposed_at_ms: Number.MAX_SAFE_INTEGER + 1 },
+    ]) {
+      expect(() => parsePayload({ ...entry.proposal, ...changed })).toThrow();
+    }
+    expect(parsePayload({ ...entry.proposal, transaction_ttl_ms: 60_000 }).proposals[0]?.proposal.transaction_ttl_ms).toBe(60_000);
     expect(() =>
       MultisigProposalsQueryResponse.parse({
         ...proposals,
@@ -1497,7 +1524,7 @@ describe('Explorer payload schemas', () => {
     const list = { id: validAssetDefinitionId, owning_domain: null, mintable: 'Infinitely', logo: null,
       metadata: {}, owned_by: validAccountId, assets: 0, total_quantity: '0', locked_quantity: null, circulating_quantity: null };
     for (const owning_dataspace of ['', '0', '00', '01', '-1', '+1', ' 1', '1 ', '1.0', '1e3',
-      '18446744073709551616', '86483775479297887150', 8648377547929788715]) {
+      '18446744073709551616', '86483775479297887150', Number('8648377547929788715')]) {
       expect(AssetDefinition.safeParse({ ...full, owning_dataspace }).success).toBe(false);
       expect(ExplorerAssetDefinition.safeParse({ ...list, owning_dataspace }).success).toBe(false);
     }

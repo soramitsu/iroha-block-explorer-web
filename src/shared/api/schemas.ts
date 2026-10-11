@@ -1,5 +1,6 @@
 import { z } from 'zod/v4';
 import BigNumber from 'bignumber.js';
+import { NetworkId } from '@iroha/iroha-js/connect-browser';
 import { normalizeAccountIdLiteral, normalizeAccountSelectorLiteral } from '@/shared/lib/account-literal';
 import {
   isAssetDefinitionAliasLiteral,
@@ -382,11 +383,17 @@ export type MultisigSpecResponse = z.infer<typeof MultisigSpecResponse>;
 
 export const MultisigProposalPayload = z
   .object({
+    network_id: z.string().refine((value) => {
+      try { return NetworkId.parse(value).literal === value; }
+      catch { return false; }
+    }, 'expected a canonical network ID'),
+    proposal_nonce: z.string().regex(/^[0-9a-f]{64}$/u).refine((value) => value !== '0'.repeat(64)),
+    proposal_id: z.string().regex(/^[0-9a-f]{64}$/u).refine((value) => value !== '0'.repeat(64)),
+    transaction_ttl_ms: z.number().int().safe().positive().nullable(),
     instructions: z.array(z.record(z.string(), z.json())),
-    proposed_at_ms: z.number().int().nonnegative(),
-    expires_at_ms: z.number().int().nonnegative(),
+    proposed_at_ms: z.number().int().safe().nonnegative(),
+    expires_at_ms: z.number().int().safe().nonnegative(),
     approvals: AccountIdSchema.array(),
-    is_relayed: z.boolean().nullable().optional(),
   })
   .strict();
 export type MultisigProposalPayload = z.infer<typeof MultisigProposalPayload>;
@@ -401,7 +408,11 @@ export const MultisigProposalEntry = z
     status: MultisigProposalStatus,
     terminal_at_ms: z.number().int().nonnegative().nullable().optional(),
   })
-  .strict();
+  .strict()
+  .refine((value) => value.proposal_id === value.proposal.proposal_id, {
+    message: 'proposal occurrence ID differs from its retained payload',
+    path: ['proposal', 'proposal_id'],
+  });
 export type MultisigProposalEntry = z.infer<typeof MultisigProposalEntry>;
 
 export const MultisigProposalsQueryResponse = z

@@ -85,6 +85,10 @@ const PROPOSAL = {
   operation_type: 'TRANSFER_ASSET',
   intent: { memo: 'treasury payment' },
   proposal: {
+    network_id: 'hash:5C3E66C94E079079FF4FC46F59810B9C4EC7B2646DD45CE937831C0FDCE20C9B#44D9',
+    proposal_nonce: 'c'.repeat(64),
+    proposal_id: 'a'.repeat(64),
+    transaction_ttl_ms: null,
     instructions: [
       {
         Transfer: {
@@ -99,7 +103,6 @@ const PROPOSAL = {
     proposed_at_ms: 1_725_000_000_123,
     expires_at_ms: 1_725_086_400_123,
     approvals: [SIGNATORY],
-    is_relayed: false,
   },
   status: 'COLLECTING_SIGNATURES',
   terminal_at_ms: null,
