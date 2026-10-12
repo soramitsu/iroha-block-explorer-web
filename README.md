@@ -69,11 +69,11 @@ Build artifacts will be located at `dist` dir.
 The SDK dependency is the current browser consumer archive built in the canonical
 `../iroha/javascript/iroha_js` checkout at HEAD `499e093b156d54d038fd68e5d3a421d10e2072a3`,
 including the pending native account-inspection, multisig transport and occurrence modules.
-Its SHA-256 is `8c6b474a8783c3382489740f324325a7fca32ae9659c9ddbfd813ef9259fa5be`.
+Its SHA-256 is `30f03657061ee78ef70883a8021d9c93e8fc32ae51c4538c48d32eac6204d7a2`.
 Two canonical `npm pack` runs under Node 24.19.0 produced identical archives;
 `prepack` ran the upstream engine check and atomic `build:dist` owner. The 243-file
 inventory records exact package bytes, actual source hashes and build tools in
-`vendor/iroha-iroha-js-0.0.3-8c6b474a8783.files.json`; it does not claim a clean source tree.
+`vendor/iroha-iroha-js-0.0.3-30f03657061e.files.json`; it does not claim a clean source tree.
 
 Install, `pnpm check:sdk`, and normal build verify the archive and every installed
 package file. The checker is read-only: missing distribution files fail

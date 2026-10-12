@@ -1,12 +1,12 @@
 {
   "schema": "iroha.sdk-package-inventory.v2",
-  "archiveSha256": "8c6b474a8783c3382489740f324325a7fca32ae9659c9ddbfd813ef9259fa5be",
+  "archiveSha256": "30f03657061ee78ef70883a8021d9c93e8fc32ae51c4538c48d32eac6204d7a2",
   "source": {
     "revision": "499e093b156d54d038fd68e5d3a421d10e2072a3",
     "packageGitTree": "e9a35192efb57d2e5c793582140e8fd949fcab35",
     "packagePath": "javascript/iroha_js",
     "packageSourceClean": false,
-    "sourceInventorySha256": "5bf37e05f67a5dfcd9a5e3aa300d38c963fed46622e28d298e94ad96d662bc91",
+    "sourceInventorySha256": "92c1175bbe9d941635d1c5c4083909725ce285210ec23d7d6e4fa4e1e9961301",
     "sourceInventory": {
       ".eslintrc.json": "2b9aa376e41e95d5206b1b949d628da2fb0f8a50fcb9155ea82cdb39fa7ab907",
       "LICENSE": "7c0558c365d644b7588d481e22f26421cd3ba23492d2c0ce0fd382466aad2c13",
@@ -265,14 +265,14 @@
       "src/toriiBoundedResponse.js": "f846f5b387968adaa46764af8beb58b4bdcf79373f1a8f6f160df18acdd9b528",
       "src/toriiBrowserClient.js": "309290b637bd0805bfeccfc5dfb14a096cb97209a9150f2660760ca4e704e119",
       "src/toriiBrowserExplorerTypes.d.ts": "50b4caac76c4c042a5e7d02c90372a3273497e5f70429ae281c9c5b1e53001e2",
-      "src/toriiClient.js": "b4e31b6c6c77b0a57709cae46901f6cf8176e8c562527275979d7b799ac69aaa",
+      "src/toriiClient.js": "48d88b06b5fbd1fb8797d34e6eac0f51fab381757f3e302abe81f91f792afce8",
       "src/toriiClientEncoding.js": "a2d2c0287895847dff7dda11ba653ee71ee4b7ee2680368a7db33dcb2de68722",
       "src/toriiClientPrimitives.js": "9c8330ec1891c4a8798a8a409fe73be2c0f3855cf3489df704d76838def3129d",
       "src/toriiCompatibility.js": "c2edbf927615db8ae1320676e6dfe7a341fca48a913b3578525f6597ab909b08",
       "src/toriiErrors.js": "2b17cf213870e918e0dcb1de69e6e73d35b689e813789c168426ab65da0752ae",
       "src/toriiEventStream.js": "bff2d780545da43cc065354b308ab84a3953dbde4f32764ebc92adcc9143c495",
       "src/toriiGovernanceNormalizers.js": "3422b3548d65b77cb7dacd1a2413129151f17b3f46bd2c9391fc057ea3429be3",
-      "src/toriiOptional.js": "92e4f52a4ba229ffa472e38a2ca715d192ab5f82514b880c6c1b09a4e8d32353",
+      "src/toriiOptional.js": "59544034740e58aea5c98f1480c3482586e4ec28593e0cb08712b09bfced0dd0",
       "src/toriiTestHooks.js": "fa3253d8fd66e44501c4ed5bcfb82f8d5a45a2a0cff935f88758526630cb7a41",
       "src/transaction.js": "46fcad1bdc61660094bcd6baf9ca161cbf7f8afd691cc67ce7f37c4b8f6a6e92",
       "src/transactionCodec.js": "a327a875671159c28674b1e51bb61329eb85e87596df1670611e33220a575eb8",
@@ -288,7 +288,7 @@
       "torii.d.ts": "7850436958ea8b7ef16e6119878ee2b151d9ca88b011c82adbc9115ec5dd8c72",
       "transaction-codec.d.ts": "698fa79e5f4a72b079afe7882d76c14ad25de886fd4f3233e29114637f4d0760"
     },
-    "repeatPackSha256": "8c6b474a8783c3382489740f324325a7fca32ae9659c9ddbfd813ef9259fa5be",
+    "repeatPackSha256": "30f03657061ee78ef70883a8021d9c93e8fc32ae51c4538c48d32eac6204d7a2",
     "nodeVersion": "24.19.0",
     "npmVersion": "11.20.0",
     "canonicalWorkingRepository": "/Users/takemiyamakoto/dev/iroha",
@@ -1295,8 +1295,8 @@
     },
     {
       "path": "dist/toriiClient.js",
-      "sha256": "b4e31b6c6c77b0a57709cae46901f6cf8176e8c562527275979d7b799ac69aaa",
-      "sizeBytes": 989693
+      "sha256": "48d88b06b5fbd1fb8797d34e6eac0f51fab381757f3e302abe81f91f792afce8",
+      "sizeBytes": 990507
     },
     {
       "path": "dist/toriiClientEncoding.js",
@@ -1330,8 +1330,8 @@
     },
     {
       "path": "dist/toriiOptional.js",
-      "sha256": "92e4f52a4ba229ffa472e38a2ca715d192ab5f82514b880c6c1b09a4e8d32353",
-      "sizeBytes": 2636
+      "sha256": "59544034740e58aea5c98f1480c3482586e4ec28593e0cb08712b09bfced0dd0",
+      "sizeBytes": 2672
     },
     {
       "path": "dist/toriiTestHooks.js",

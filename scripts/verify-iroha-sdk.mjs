@@ -5,12 +5,12 @@ import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const IROHA_SDK_SPECIFIER = 'file:vendor/iroha-iroha-js-0.0.3-8c6b474a8783.tgz';
-export const IROHA_SDK_ARCHIVE_SHA256 = '8c6b474a8783c3382489740f324325a7fca32ae9659c9ddbfd813ef9259fa5be';
-export const IROHA_SDK_INVENTORY_SHA256 = '96731cb118962d4dff82a97e5deda0a692864f6413439a851b63df5bb4e84f3a';
-const archiveBytesLength = 1007557;
+export const IROHA_SDK_SPECIFIER = 'file:vendor/iroha-iroha-js-0.0.3-30f03657061e.tgz';
+export const IROHA_SDK_ARCHIVE_SHA256 = '30f03657061ee78ef70883a8021d9c93e8fc32ae51c4538c48d32eac6204d7a2';
+export const IROHA_SDK_INVENTORY_SHA256 = '948d6b4176f9ff1da289be9d84210dd993ab79eac035578076f7edee828e0f50';
+const archiveBytesLength = 1007760;
 const inventoryBytesLength = 68830;
-const inventoryFilename = 'iroha-iroha-js-0.0.3-8c6b474a8783.files.json';
+const inventoryFilename = 'iroha-iroha-js-0.0.3-30f03657061e.files.json';
 export const IROHA_SDK_SOURCE_REVISION = '499e093b156d54d038fd68e5d3a421d10e2072a3';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
@@ -46,7 +46,7 @@ async function verifiedArchiveInputs(repositoryRoot) {
   if (inventory.source?.revision !== IROHA_SDK_SOURCE_REVISION
     || inventory.source?.packageGitTree !== 'e9a35192efb57d2e5c793582140e8fd949fcab35'
     || inventory.source?.packageSourceClean !== false
-    || inventory.source?.sourceInventorySha256 !== '5bf37e05f67a5dfcd9a5e3aa300d38c963fed46622e28d298e94ad96d662bc91'
+    || inventory.source?.sourceInventorySha256 !== '92c1175bbe9d941635d1c5c4083909725ce285210ec23d7d6e4fa4e1e9961301'
     || inventory.source?.repeatPackSha256 !== IROHA_SDK_ARCHIVE_SHA256) {
     throw new Error('SDK inventory source identity differs from the pinned package');
   }
