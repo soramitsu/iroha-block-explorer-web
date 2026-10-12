@@ -46,7 +46,7 @@ describe('current Iroha Kotodama compiler package boundary', () => {
     );
 
     expect(explorerPackage.dependencies['@iroha/iroha-js'])
-      .toBe('file:vendor/iroha-iroha-js-0.0.3-46654decf09c.tgz');
+      .toBe('file:vendor/iroha-iroha-js-0.0.3-8c6b474a8783.tgz');
     expect(installedPackage.name).toBe('@iroha/iroha-js');
     expect(installedPackage.dependencies['@scure/bip39']).toBe('^2.2.0');
     expect(installedDeclaration).toContain('compileKotodamaProgram');

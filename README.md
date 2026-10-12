@@ -68,12 +68,12 @@ Build artifacts will be located at `dist` dir.
 
 The SDK dependency is the current browser consumer archive built in the canonical
 `../iroha/javascript/iroha_js` checkout at HEAD `499e093b156d54d038fd68e5d3a421d10e2072a3`,
-including the pending native account-inspection and multisig transport modules.
-Its SHA-256 is `46654decf09ca855e573209fcc040e2380b81d262dc7f0a576d4d750edf57178`.
+including the pending native account-inspection, multisig transport and occurrence modules.
+Its SHA-256 is `8c6b474a8783c3382489740f324325a7fca32ae9659c9ddbfd813ef9259fa5be`.
 Two canonical `npm pack` runs under Node 24.19.0 produced identical archives;
-`prepack` ran the upstream engine check and atomic `build:dist` owner. The 241-file
+`prepack` ran the upstream engine check and atomic `build:dist` owner. The 243-file
 inventory records exact package bytes, actual source hashes and build tools in
-`vendor/iroha-iroha-js-0.0.3-46654decf09c.files.json`; it does not claim a clean source tree.
+`vendor/iroha-iroha-js-0.0.3-8c6b474a8783.files.json`; it does not claim a clean source tree.
 
 Install, `pnpm check:sdk`, and normal build verify the archive and every installed
 package file. The checker is read-only: missing distribution files fail
@@ -84,7 +84,7 @@ Retired Wasm artifacts are absent and the bundle gate rejects emitted Wasm. All
 startup assets remain subject to the 540,000-byte gzip entry and total budgets.
 The lazy `iroha-compiler` chunk has an 18,000-byte gzip cap: this SDK adds embedded
 call-schema/Norito validation and expands compiler response validation. The measured
-current chunk is 17,971 bytes. The lazy KotodamaStudio route is 115,969 gzip
+current chunk is 17,970 bytes. The lazy KotodamaStudio route is 115,966 gzip
 bytes with the current SDK’s locked-package and diagnostic contracts; its cap is
 118,000 bytes. The 540,000-byte startup cap and all other chunk/route caps remain
 unchanged. The app consumes only `compileKotodamaProgram` plus erased type imports;

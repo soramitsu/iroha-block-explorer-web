@@ -5,12 +5,12 @@ import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const IROHA_SDK_SPECIFIER = 'file:vendor/iroha-iroha-js-0.0.3-46654decf09c.tgz';
-export const IROHA_SDK_ARCHIVE_SHA256 = '46654decf09ca855e573209fcc040e2380b81d262dc7f0a576d4d750edf57178';
-export const IROHA_SDK_INVENTORY_SHA256 = '01a11499e212eb1428cebb5f7ea69378463ca820d710dc18487b7702796295ee';
-const archiveBytesLength = 1007999;
-const inventoryBytesLength = 63628;
-const inventoryFilename = 'iroha-iroha-js-0.0.3-46654decf09c.files.json';
+export const IROHA_SDK_SPECIFIER = 'file:vendor/iroha-iroha-js-0.0.3-8c6b474a8783.tgz';
+export const IROHA_SDK_ARCHIVE_SHA256 = '8c6b474a8783c3382489740f324325a7fca32ae9659c9ddbfd813ef9259fa5be';
+export const IROHA_SDK_INVENTORY_SHA256 = '96731cb118962d4dff82a97e5deda0a692864f6413439a851b63df5bb4e84f3a';
+const archiveBytesLength = 1007557;
+const inventoryBytesLength = 68830;
+const inventoryFilename = 'iroha-iroha-js-0.0.3-8c6b474a8783.files.json';
 export const IROHA_SDK_SOURCE_REVISION = '499e093b156d54d038fd68e5d3a421d10e2072a3';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
@@ -40,13 +40,13 @@ async function verifiedArchiveInputs(repositoryRoot) {
   const inventoryBytes = await regularBytes(path.join(repository, 'vendor', inventoryFilename), inventoryBytesLength);
   if (hash(inventoryBytes) !== IROHA_SDK_INVENTORY_SHA256) throw new Error('SDK inventory differs from the pinned consumer artifact');
   const inventory = JSON.parse(inventoryBytes);
-  if (inventory.schema !== 'iroha.sdk-package-inventory.v2' || inventory.archiveSha256 !== IROHA_SDK_ARCHIVE_SHA256 || inventory.files.length !== 241) {
-    throw new Error('SDK inventory does not describe the admitted 241-file package');
+  if (inventory.schema !== 'iroha.sdk-package-inventory.v2' || inventory.archiveSha256 !== IROHA_SDK_ARCHIVE_SHA256 || inventory.files.length !== 243) {
+    throw new Error('SDK inventory does not describe the admitted 243-file package');
   }
   if (inventory.source?.revision !== IROHA_SDK_SOURCE_REVISION
     || inventory.source?.packageGitTree !== 'e9a35192efb57d2e5c793582140e8fd949fcab35'
     || inventory.source?.packageSourceClean !== false
-    || inventory.source?.sourceInventorySha256 !== '26c082be865e4b588208e9a73362f044e90b7f49d0e9c8f62676f6a97917e666'
+    || inventory.source?.sourceInventorySha256 !== '5bf37e05f67a5dfcd9a5e3aa300d38c963fed46622e28d298e94ad96d662bc91'
     || inventory.source?.repeatPackSha256 !== IROHA_SDK_ARCHIVE_SHA256) {
     throw new Error('SDK inventory source identity differs from the pinned package');
   }
