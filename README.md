@@ -67,13 +67,13 @@ sh scripts/bootstrap-exact-toolchain.sh pnpm playwright:install
 Build artifacts will be located at `dist` dir.
 
 The SDK dependency is the current browser consumer archive built in the canonical
-`../iroha/javascript/iroha_js` checkout at HEAD `499e093b156d54d038fd68e5d3a421d10e2072a3`,
-including the pending native account-inspection, multisig transport and occurrence modules.
-Its SHA-256 is `30f03657061ee78ef70883a8021d9c93e8fc32ae51c4538c48d32eac6204d7a2`.
+`../iroha/javascript/iroha_js` checkout at HEAD `b7c167b282a78b1c832f8c27049e819cf2d16d64`,
+including the pending contract-call draft-intent API correction.
+Its SHA-256 is `24041ddb8c7d46f2fffc5dee587c2ebf47d830a2bb265fa64b99930c681d28f6`.
 Two canonical `npm pack` runs under Node 24.19.0 produced identical archives;
 `prepack` ran the upstream engine check and atomic `build:dist` owner. The 243-file
 inventory records exact package bytes, actual source hashes and build tools in
-`vendor/iroha-iroha-js-0.0.3-30f03657061e.files.json`; it does not claim a clean source tree.
+`vendor/iroha-iroha-js-0.0.3-24041ddb8c7d.files.json`; it does not claim a clean source tree.
 
 Install, `pnpm check:sdk`, and normal build verify the archive and every installed
 package file. The checker is read-only: missing distribution files fail

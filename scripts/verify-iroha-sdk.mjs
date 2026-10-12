@@ -5,13 +5,13 @@ import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const IROHA_SDK_SPECIFIER = 'file:vendor/iroha-iroha-js-0.0.3-30f03657061e.tgz';
-export const IROHA_SDK_ARCHIVE_SHA256 = '30f03657061ee78ef70883a8021d9c93e8fc32ae51c4538c48d32eac6204d7a2';
-export const IROHA_SDK_INVENTORY_SHA256 = '948d6b4176f9ff1da289be9d84210dd993ab79eac035578076f7edee828e0f50';
-const archiveBytesLength = 1007760;
+export const IROHA_SDK_SPECIFIER = 'file:vendor/iroha-iroha-js-0.0.3-24041ddb8c7d.tgz';
+export const IROHA_SDK_ARCHIVE_SHA256 = '24041ddb8c7d46f2fffc5dee587c2ebf47d830a2bb265fa64b99930c681d28f6';
+export const IROHA_SDK_INVENTORY_SHA256 = 'b9a02d7f5103f3e46d695bab2487fac51a3e1ee0d71b76455d560e1ed53e5c7e';
+const archiveBytesLength = 1007880;
 const inventoryBytesLength = 68830;
-const inventoryFilename = 'iroha-iroha-js-0.0.3-30f03657061e.files.json';
-export const IROHA_SDK_SOURCE_REVISION = '499e093b156d54d038fd68e5d3a421d10e2072a3';
+const inventoryFilename = 'iroha-iroha-js-0.0.3-24041ddb8c7d.files.json';
+export const IROHA_SDK_SOURCE_REVISION = 'b7c167b282a78b1c832f8c27049e819cf2d16d64';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 async function regularBytes(filename, expectedSize) {
@@ -44,9 +44,9 @@ async function verifiedArchiveInputs(repositoryRoot) {
     throw new Error('SDK inventory does not describe the admitted 243-file package');
   }
   if (inventory.source?.revision !== IROHA_SDK_SOURCE_REVISION
-    || inventory.source?.packageGitTree !== 'e9a35192efb57d2e5c793582140e8fd949fcab35'
+    || inventory.source?.packageGitTree !== 'ba473c4aa3ed7439b43e62db1f3ec22f4b7dab1c'
     || inventory.source?.packageSourceClean !== false
-    || inventory.source?.sourceInventorySha256 !== '92c1175bbe9d941635d1c5c4083909725ce285210ec23d7d6e4fa4e1e9961301'
+    || inventory.source?.sourceInventorySha256 !== '079a46d8e14d4b212a0b5543354edf28669612427813bc080b3bd437965fabc7'
     || inventory.source?.repeatPackSha256 !== IROHA_SDK_ARCHIVE_SHA256) {
     throw new Error('SDK inventory source identity differs from the pinned package');
   }
