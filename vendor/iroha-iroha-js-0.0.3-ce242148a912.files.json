@@ -1,29 +1,29 @@
 {
   "schema": "iroha.sdk-package-inventory.v2",
-  "archiveSha256": "24041ddb8c7d46f2fffc5dee587c2ebf47d830a2bb265fa64b99930c681d28f6",
+  "archiveSha256": "ce242148a912b4a7913338ac67fb4a6184b2e9de4772b6153e0503a6e6d47961",
   "source": {
-    "revision": "b7c167b282a78b1c832f8c27049e819cf2d16d64",
-    "packageGitTree": "ba473c4aa3ed7439b43e62db1f3ec22f4b7dab1c",
+    "revision": "5866f914e37daedb1c7f2f2beb2e4394f95ffb36",
+    "packageGitTree": "a3cff1933e2971634648cad30fcf536e8057088d",
     "packagePath": "javascript/iroha_js",
-    "packageSourceClean": false,
-    "sourceInventorySha256": "079a46d8e14d4b212a0b5543354edf28669612427813bc080b3bd437965fabc7",
+    "packageSourceClean": true,
+    "sourceInventorySha256": "41794dbb7a4f0bd2673a08837e23571639600a0987eb9aa70a20828b712169de",
     "sourceInventory": {
       ".eslintrc.json": "2b9aa376e41e95d5206b1b949d628da2fb0f8a50fcb9155ea82cdb39fa7ab907",
       "LICENSE": "7c0558c365d644b7588d481e22f26421cd3ba23492d2c0ce0fd382466aad2c13",
-      "README.md": "ffe61974aedeadceebd681d117c168f203101bd46529ce4440bc719e46487fdd",
+      "README.md": "03d74cb22e4ae7edb36474107e0552fa3a079ee29ffa0398a8d246dd0243195b",
       "address.d.ts": "1102edc44652c740f40fab8630b08c2a326f0658ec4dc831e6cd6de4132e98bd",
       "atomic-private-settlement.d.ts": "31e5100884dc1f9108b9aa4ae8028ad3f3c2b0433573adf0d981d50fbdd0ec56",
       "blake2b.d.ts": "2e680fbb6ec2324d626a600cb99dc8451ac759576729161c016a8055d4eeec3b",
       "bootle-lantern-issuance.d.ts": "19fc1d207902143298a2c8cfc3c60a70cbfc45bb1e6b507beae8d8057ceda282",
       "browser.d.ts": "23fcfb97ba89782ad4b2d5347c969eb872d33cc143f30c03f1fbaa71b5182ccd",
-      "canonical-request.d.ts": "b0c2c9a28966845296f50bd9bbd2759ac0d22924566d99f9759a3db89d017d3c",
+      "canonical-request.d.ts": "0b52cad604d301611877138b554b3cc45dd1d5642922de64cf44f89b6e07409d",
       "classed-race.d.ts": "fc42b9554b47f9cc214e8f933cf7257a9ed4628fdac2dd97861e0f399ae6d63c",
       "connect.browser.d.ts": "aacbc6b497875ea1cf989754350e60bdacef751dfea8ff109fc11290eced8e38",
       "contract-payload.d.ts": "278de2cfa044a177e70e503cc60b9833658462ba2106b4942535ad841e13a4bc",
       "crypto.d.ts": "7b093b8f2f730f73bae74c1d146ff01fdbaeb47906efd6fe41eaec28e2949343",
       "game-resources.d.ts": "fb1dc92382d3f2be1d258d35c7c277a091b3e0468d91f88c02949de914c45c86",
       "game.d.ts": "36a76f786f3aac0d1dc69ee61b7db0baa9e7322aadeb8433af419999171818a0",
-      "index.d.ts": "48c74e1e438273ce9b073fd79359025c366dcc9a6c6a1824c739e255d4c5c1b4",
+      "index.d.ts": "46a6c436f2c8e0c51a548a3714b0a2a9904be5870a849877e9f21ae7c4b687f8",
       "instruction-builders.d.ts": "b998712f1ca27125c79e81c75f2907bea1235046fefa57abf76ac22bc2db9a12",
       "ivm-artifact.d.ts": "3d013df2461b49fb2661c620365351c1b5bcb574363a812ecbcf17a43771df1b",
       "kotodama-compiler.d.ts": "ca00ab9471923168f859b40c82601021080bd280ce1cacca7432b2995f9917ac",
@@ -34,25 +34,27 @@
       "normalizers.d.ts": "54b87f59a1b006471580cf2eda0588495b2b0df23994978147ecf9930b6e2480",
       "operator-request.d.ts": "1727570791216359a76f9b875e41966f3c4d38e69cfee5e720c4d805c10c556c",
       "package-lock.json": "fab1fa4abc744c7950327ca62e32a0bd807e16b60edb5cef4fac91945cbe00a4",
-      "package.json": "468607aa05533e5e60ad65ae07846c2db36d82509b93c6fb7f7ba5d6475b849d",
+      "package.json": "9d4691a3abf1e52f7ffce5559d00351be4c6cb042bf6d6330171bacbd8e17536",
       "petal.d.ts": "33639677af2d83a8b97129581e57aeac016702dee5feaff783180fb70357d612",
       "privacy-capabilities.d.ts": "1de948ed5b02489c296e87ca34855358995e28e17fde3005a8b0a2bc4ebc2815",
       "race.d.ts": "5c1b9e25230351ec6ea8dae1359f8c485e2be670454ac897efcd5724d22100bd",
-      "recipes/README.md": "1c97e54b43d9f99178c21cd1908fa079a419142065eb0e575d3222bce2b14f8f",
+      "recipes/README.md": "6d921a5bead6424e8b4da643660f1507e9b36598e649928f9ac70435387024e2",
       "recipes/assets_iterators.mjs": "a5b05e6cf2b4c0fdbffd3ce5ec039697a015a3d0934fdb1fbe0f62cf0f5e0364",
       "recipes/batching.mjs": "029bedb8617356bf105466917db2c181263a9d5de9c6e5225c41bbc01ef77705",
       "recipes/confidential_change_redemption.mjs": "62b66c4e276a62446f4df25d0d34fcdb5933c0e74e39b2143d28179b41795b97",
       "recipes/confidential_redemption.mjs": "a9c8a815a39ded548a2666495dcbd7596405de39830b52896651e042b56f6176",
       "recipes/governance.mjs": "58b37edcae60f8a7636abff85e0f7fbf42c2e666aba232f9d9792922d732b105",
       "recipes/iso_alias.mjs": "38ead597257a01b167191704107f208284577d03343785e06025f6e3b623dd8d",
-      "recipes/iso_bridge.mjs": "404a754598848c3c94c6f73607d0a88ecfa32264d64640cfde20e394820c4b3d",
-      "recipes/iso_bridge_builder.mjs": "03e90b84683af6cd510101db2890f31a064e53864fb2839e09ae48dc80da869e",
+      "recipes/iso_bridge.mjs": "e90a623368a4eb84af8f41b2c1a137028b493936648c0625ff8cee893afdcede",
+      "recipes/iso_bridge_builder.mjs": "9c768ae8580cabb429d451f76fdba5a0518d8189765b9061e95205d361ce160f",
+      "recipes/iso_bridge_context.mjs": "c9b0a80907eb2bd9b93f6bb95ba4f2ce1b315b64a944b3ed864c1fcf67288d7b",
       "recipes/nexus_app_transfer.mjs": "4da5d1d94185bb480e0edb4b6a2db842db6a0d2fa4aeba0f143871f76959f117",
       "recipes/nft_account_iteration.mjs": "de1cd959271954a4ab057f9a01d24f0c354be1019421cc4661f8f3f26781c744",
       "recipes/soradns.mjs": "9a64cd86d1b4cdc0b56ace26d5659dbad2655d4f9f474871beb587537f274307",
       "recipes/streaming.mjs": "ca4989aa563c67d78551e8f888285a651dda9eac9f24aecbf00b530fc870cfd4",
       "recipes/walletlessFollowGame.mjs": "99c53168ffb23b2246b9c114e2668391252ad8c45055eca76908803f87529abb",
       "repo-agreement.d.ts": "750e184d84d2e62e99b78985fd4f1373b9f38e4f29a935f6d0e4bfb662543c24",
+      "scripts/__pycache__/build-wasm.cpython-314.pyc": "ca5d721477882fb5c680d73c7126baff2be3128dc92789bcaccec43ed23475c6",
       "scripts/build-dist.mjs": "e57da7145ee2e69fe88d2167689fb86cbcd97d6edc80d9e35b0a3758671814b5",
       "scripts/build-native.mjs": "cb515a832c389a18817b9cdd225212daeb0ac3a2181cb09594802ecd87a0df1f",
       "scripts/bundle-size-check.mjs": "2ecd4fc6d7f96a79315082be290ceb1f995d360e5020fc7f6c6f2b234b612e64",
@@ -149,7 +151,7 @@
       "src/instructionBuilderPrimitives.js": "7ad1904699eecddca758a1894132245b46091a53221c15e4d99531d471de793d",
       "src/instructionBuilders.js": "b2f107dc4694083e52a37a79417eb354d52a6d9c1f2c6d8173a7c49d83b83863",
       "src/iso20022Transport.js": "92c31e2c036b5d5fea7b2645829aa5cd6575325a71c34ce86bdf3211571b9a94",
-      "src/isoBridge.js": "0795d09cb85a10f0ac57fb7ff8c8a5df7b330d010ae81ba05860bb83de5fb777",
+      "src/isoBridge.js": "7b46e9bf9336ca6dc24fdde0f29bcaf66dfc0a3ce6cf808c667ea0f889fc3757",
       "src/ivmArtifact.js": "5477f9138e83e5238ebdab04cf3ad5e14e82e3218c618ff413c38376f568b669",
       "src/ivmFault.js": "ddb831412e5970d98f941e3f4a9465bd30899681ab750be70c5e7e8fa1004c87",
       "src/kaigiScalarV1.js": "745bcde206d4154697820aa5d0a2a5af54e753035da85dc3706e61eb0d2ed70c",
@@ -201,6 +203,7 @@
       "src/operatorRequest.browser.js": "2f2d2fcd33421cabd8ef468698d03880a3f33cb1718064e8bc01ba1d912cfc11",
       "src/operatorRequest.js": "97e49403cfe81db7b640f85b3c734de0fc8c0eabf76b668fba69a4d5a53b8d1c",
       "src/parliamentApiV1.js": "60531749c3837209dcced8bc5642510c6d10c4c2c876d4bfc437d8c5cb2402f4",
+      "src/petal.js": "ed45ea6f1b32ec4d99518a66b9039caef8f0d8c680382c04ab3f653cd556c1a5",
       "src/petal/browser.js": "05f2f3123eee20771a3da0cba98f87ef601826252d1f58fb6e58961d52e3ad6f",
       "src/petal/crc.js": "376301b76cf1c851be7320f7a1cdacebe6a7f38353844ce9b66ad305a00ea810",
       "src/petal/decode.js": "aa0bb5df4affff103ca829b89e588f5862e0c87c974905df6eb5e0467ad6fa87",
@@ -217,8 +220,7 @@
       "src/petal/session.js": "bf8101eab103353578ab22539e772ea6099c932cb6346a229e9da21e598122e0",
       "src/petal/stream.js": "ea674181316007ca715d5b68c36be409316fcd84043e8393d7d741e8ce34cb21",
       "src/petal/support.js": "592387ea9f136089bc398fcdfe04a6d441343e735bec2bbb3b3fcf54851496de",
-      "src/petal.js": "ed45ea6f1b32ec4d99518a66b9039caef8f0d8c680382c04ab3f653cd556c1a5",
-      "src/privacyCapabilities.js": "e2504ead0f0a354c18adad6a943cebb88b42f12c373787cdbe55f77547b17ccd",
+      "src/privacyCapabilities.js": "b287a0ce10b25cc86517cc5581fa143674e4922bcae21855c245f166c8eeb664",
       "src/privacyCapabilityAdmission.js": "216c5e3767dd240f760f8001cd626f315ea78dd8b9c7e51ae91171a013ea5654",
       "src/privacyCapabilityTransport.js": "a1bcc2f17efcbc1dc67f1a55e93bbecd6f0127f3dffe79c24c47063f5b880485",
       "src/privacyExact12Network.js": "e755514b3f02bb347a214afcb4b3877dccc2fde609904b1d4976e268b1ba351e",
@@ -229,7 +231,7 @@
       "src/public/norito.js": "4b0ba088266551366df93cee6c1a2a531db7aa1172ab38c9adc57d13af5c1289",
       "src/public/normalizers.js": "e8fd49432e1987b2d446f3d7d3aa2f3f6afd417a85ae78dd04463c2d424a2a22",
       "src/public/sorafs.js": "c3480ec9e61271405023a5c8cafabd77bccdfd212f6141f3daa8431c23faefa6",
-      "src/public/transactionCodec.js": "be77c654f2fbb4ffcac7963940b1117c1640984a826145cc9b670e0cd40553d0",
+      "src/public/transactionCodec.js": "fff3be48d76db3b13c2f45159198559297698cdfd2bccca026250962054fbe9b",
       "src/query/collections.js": "8576812385d07fced9bd989a5555a1e4e105bd980f16bac5b1cc404160edda63",
       "src/query/grammar.js": "4df67dc0ddf27a8e3e2a56319aec89691b7ce840576df3f6861c326dd1eabd93",
       "src/query/index.js": "a2fe7c156c7b3e33ee855c70b5ebffab0563c3a1d8a34ff822a2b2d80e7efd7e",
@@ -239,6 +241,9 @@
       "src/raceOutcomes.js": "c3eeae37f7d573b1fc994a9fbff2d724af01e26ed89aaa48585c6a092c19ee6f",
       "src/retailDailyLimitInstructions.js": "9eb3f0dded51b23c1cdf08daf61b17e71ab463031d9dcc5934e1213ac339b08f",
       "src/retailFeeAssessment.js": "a1deb1639db2450887e1e883e6572de2d4014010161f05861a35943b37599d5e",
+      "src/signedAttachmentContext.js": "7dfebab1b06c2c8e193ce3fbd8aabc4190cdca228966563d7137e26d180427fe",
+      "src/signedAttachmentProofs.js": "884446e813a6b717c7829aef706f7a9ad5793fb5e41a82e6a61373b5e7e8ea43",
+      "src/signedAttachments.js": "ae6e86322659a47f0f7252b9948eca01074aec316185a06a7c7324fcb9bc1d7b",
       "src/smartContractDeployment.js": "96e1f07bd0cf0a326f39d2560005361f1e933621ac37e1109d78e985cf18ef97",
       "src/smartContractDeploymentSubmit.js": "5aef7153926b7e83f93c43402d74f80f445d411e65ba853e2d03926d08a1034f",
       "src/soracles.js": "d08ed5a5b7896407c1d70dd0ab7b37b2f1de01d22710b39fa90866163336eeb3",
@@ -259,13 +264,13 @@
       "src/strictLosslessJson.js": "5f03019e2358f09e7e29abc762412578c6eb9eaa0cf589f5d90fe3be8286cd67",
       "src/subscriptionResponses.js": "ddd2c91825567eefb3628a4a33dcf2c9ae6c85db846007742fd84b9703757947",
       "src/subscriptionTypes.d.ts": "df3845f902aee1e314f0213c8b5def09d159cbeeea58428328dd108a4bff7031",
-      "src/sumeragiTyped.js": "f4950c43cd1d315ffe94f7fcc8f7b859539df7acc532f01e59f4125705c28e9d",
+      "src/sumeragiTyped.js": "a0f90408d9eef14a7bdfe2699737cedcb11957b4aedf2ab91e955f2ef0558afe",
       "src/sumeragiTypedLimits.js": "7fc84d119d0b099540fe1afa3dc170536a23b3104c01f4ec50b0162d44503272",
       "src/tairaTestnetProfile.js": "871dd579fa2a55ac9cc0f47f7e5ba588e623fb5c171d4a1ae184a6cf6b092438",
       "src/toriiBoundedResponse.js": "f846f5b387968adaa46764af8beb58b4bdcf79373f1a8f6f160df18acdd9b528",
       "src/toriiBrowserClient.js": "309290b637bd0805bfeccfc5dfb14a096cb97209a9150f2660760ca4e704e119",
       "src/toriiBrowserExplorerTypes.d.ts": "50b4caac76c4c042a5e7d02c90372a3273497e5f70429ae281c9c5b1e53001e2",
-      "src/toriiClient.js": "2b842c2a3ed909373648ecffe20aa70bb64fd853b87ea36f140d742fd92833d2",
+      "src/toriiClient.js": "e1aa0ea620900a1c2e097114e5da1c927e52e2f7d1cc0029f6f5cba4e8bb7ea8",
       "src/toriiClientEncoding.js": "a2d2c0287895847dff7dda11ba653ee71ee4b7ee2680368a7db33dcb2de68722",
       "src/toriiClientPrimitives.js": "9c8330ec1891c4a8798a8a409fe73be2c0f3855cf3489df704d76838def3129d",
       "src/toriiCompatibility.js": "c2edbf927615db8ae1320676e6dfe7a341fca48a913b3578525f6597ab909b08",
@@ -286,14 +291,14 @@
       "sumeragi-typed.d.ts": "888b590be171baf9859130b4ef044024a3f08b33d37e7e567dff05614af8d056",
       "torii-browser.d.ts": "6c2bc67ed7fe8041b35c7801570d4a815a0b47d1f44731350b335ef8fd7aca40",
       "torii.d.ts": "7850436958ea8b7ef16e6119878ee2b151d9ca88b011c82adbc9115ec5dd8c72",
-      "transaction-codec.d.ts": "698fa79e5f4a72b079afe7882d76c14ad25de886fd4f3233e29114637f4d0760"
+      "transaction-codec.d.ts": "6f03c31ea15ce25ba1657e136b47416bd6729b32f0e25adc51d73b35b28f5ef9"
     },
-    "repeatPackSha256": "24041ddb8c7d46f2fffc5dee587c2ebf47d830a2bb265fa64b99930c681d28f6",
+    "repeatPackSha256": "ce242148a912b4a7913338ac67fb4a6184b2e9de4772b6153e0503a6e6d47961",
     "nodeVersion": "24.19.0",
-    "npmVersion": "11.20.0",
+    "npmVersion": "11.17.0",
     "canonicalWorkingRepository": "/Users/takemiyamakoto/dev/iroha",
     "sourceKind": "canonical-working-source",
-    "buildCommand": "npm pack --json --pack-destination <output> (prepack: check:node-engine && build:dist)",
+    "buildCommand": "Reuse current BPNG/MiBank browser archive; compare every packaged byte against canonical source; repeat npm pack --ignore-scripts against the matching canonical dist",
     "buildScriptSha256": "e57da7145ee2e69fe88d2167689fb86cbcd97d6edc80d9e35b0a3758671814b5",
     "nativeArtifactQualified": false
   },
@@ -305,8 +310,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "ffe61974aedeadceebd681d117c168f203101bd46529ce4440bc719e46487fdd",
-      "sizeBytes": 235586
+      "sha256": "03d74cb22e4ae7edb36474107e0552fa3a079ee29ffa0398a8d246dd0243195b",
+      "sizeBytes": 237305
     },
     {
       "path": "address.d.ts",
@@ -335,8 +340,8 @@
     },
     {
       "path": "canonical-request.d.ts",
-      "sha256": "b0c2c9a28966845296f50bd9bbd2759ac0d22924566d99f9759a3db89d017d3c",
-      "sizeBytes": 4496
+      "sha256": "0b52cad604d301611877138b554b3cc45dd1d5642922de64cf44f89b6e07409d",
+      "sizeBytes": 4592
     },
     {
       "path": "classed-race.d.ts",
@@ -715,8 +720,8 @@
     },
     {
       "path": "dist/isoBridge.js",
-      "sha256": "0795d09cb85a10f0ac57fb7ff8c8a5df7b330d010ae81ba05860bb83de5fb777",
-      "sizeBytes": 43634
+      "sha256": "7b46e9bf9336ca6dc24fdde0f29bcaf66dfc0a3ce6cf808c667ea0f889fc3757",
+      "sizeBytes": 48000
     },
     {
       "path": "dist/ivmArtifact.js",
@@ -1060,8 +1065,8 @@
     },
     {
       "path": "dist/privacyCapabilities.js",
-      "sha256": "e2504ead0f0a354c18adad6a943cebb88b42f12c373787cdbe55f77547b17ccd",
-      "sizeBytes": 45040
+      "sha256": "b287a0ce10b25cc86517cc5581fa143674e4922bcae21855c245f166c8eeb664",
+      "sizeBytes": 45090
     },
     {
       "path": "dist/privacyCapabilityAdmission.js",
@@ -1115,8 +1120,8 @@
     },
     {
       "path": "dist/public/transactionCodec.js",
-      "sha256": "be77c654f2fbb4ffcac7963940b1117c1640984a826145cc9b670e0cd40553d0",
-      "sizeBytes": 629
+      "sha256": "fff3be48d76db3b13c2f45159198559297698cdfd2bccca026250962054fbe9b",
+      "sizeBytes": 1151
     },
     {
       "path": "dist/query/collections.js",
@@ -1162,6 +1167,21 @@
       "path": "dist/retailFeeAssessment.js",
       "sha256": "a1deb1639db2450887e1e883e6572de2d4014010161f05861a35943b37599d5e",
       "sizeBytes": 3606
+    },
+    {
+      "path": "dist/signedAttachmentContext.js",
+      "sha256": "7dfebab1b06c2c8e193ce3fbd8aabc4190cdca228966563d7137e26d180427fe",
+      "sizeBytes": 5182
+    },
+    {
+      "path": "dist/signedAttachmentProofs.js",
+      "sha256": "884446e813a6b717c7829aef706f7a9ad5793fb5e41a82e6a61373b5e7e8ea43",
+      "sizeBytes": 13113
+    },
+    {
+      "path": "dist/signedAttachments.js",
+      "sha256": "ae6e86322659a47f0f7252b9948eca01074aec316185a06a7c7324fcb9bc1d7b",
+      "sizeBytes": 18439
     },
     {
       "path": "dist/smartContractDeployment.js",
@@ -1265,8 +1285,8 @@
     },
     {
       "path": "dist/sumeragiTyped.js",
-      "sha256": "f4950c43cd1d315ffe94f7fcc8f7b859539df7acc532f01e59f4125705c28e9d",
-      "sizeBytes": 13677
+      "sha256": "a0f90408d9eef14a7bdfe2699737cedcb11957b4aedf2ab91e955f2ef0558afe",
+      "sizeBytes": 13720
     },
     {
       "path": "dist/sumeragiTypedLimits.js",
@@ -1295,8 +1315,8 @@
     },
     {
       "path": "dist/toriiClient.js",
-      "sha256": "2b842c2a3ed909373648ecffe20aa70bb64fd853b87ea36f140d742fd92833d2",
-      "sizeBytes": 990717
+      "sha256": "e1aa0ea620900a1c2e097114e5da1c927e52e2f7d1cc0029f6f5cba4e8bb7ea8",
+      "sizeBytes": 1001028
     },
     {
       "path": "dist/toriiClientEncoding.js",
@@ -1395,8 +1415,8 @@
     },
     {
       "path": "index.d.ts",
-      "sha256": "48c74e1e438273ce9b073fd79359025c366dcc9a6c6a1824c739e255d4c5c1b4",
-      "sizeBytes": 429472
+      "sha256": "46a6c436f2c8e0c51a548a3714b0a2a9904be5870a849877e9f21ae7c4b687f8",
+      "sizeBytes": 432553
     },
     {
       "path": "instruction-builders.d.ts",
@@ -1445,8 +1465,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "468607aa05533e5e60ad65ae07846c2db36d82509b93c6fb7f7ba5d6475b849d",
-      "sizeBytes": 10111
+      "sha256": "9d4691a3abf1e52f7ffce5559d00351be4c6cb042bf6d6330171bacbd8e17536",
+      "sizeBytes": 10149
     },
     {
       "path": "petal.d.ts",
@@ -1465,13 +1485,18 @@
     },
     {
       "path": "recipes/README.md",
-      "sha256": "1c97e54b43d9f99178c21cd1908fa079a419142065eb0e575d3222bce2b14f8f",
-      "sizeBytes": 11355
+      "sha256": "6d921a5bead6424e8b4da643660f1507e9b36598e649928f9ac70435387024e2",
+      "sizeBytes": 12829
     },
     {
       "path": "recipes/iso_bridge_builder.mjs",
-      "sha256": "03e90b84683af6cd510101db2890f31a064e53864fb2839e09ae48dc80da869e",
-      "sizeBytes": 6325
+      "sha256": "9c768ae8580cabb429d451f76fdba5a0518d8189765b9061e95205d361ce160f",
+      "sizeBytes": 6862
+    },
+    {
+      "path": "recipes/iso_bridge_context.mjs",
+      "sha256": "c9b0a80907eb2bd9b93f6bb95ba4f2ce1b315b64a944b3ed864c1fcf67288d7b",
+      "sizeBytes": 1639
     },
     {
       "path": "recipes/nexus_app_transfer.mjs",
@@ -1510,8 +1535,8 @@
     },
     {
       "path": "transaction-codec.d.ts",
-      "sha256": "698fa79e5f4a72b079afe7882d76c14ad25de886fd4f3233e29114637f4d0760",
-      "sizeBytes": 8458
+      "sha256": "6f03c31ea15ce25ba1657e136b47416bd6729b32f0e25adc51d73b35b28f5ef9",
+      "sizeBytes": 13264
     }
   ]
 }

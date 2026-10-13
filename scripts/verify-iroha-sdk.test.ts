@@ -8,8 +8,8 @@ import { IROHA_SDK_SPECIFIER, IROHA_SDK_SOURCE_REVISION, verifyIrohaSdk, verifyI
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const roots: string[] = [];
-const archiveName = 'iroha-iroha-js-0.0.3-24041ddb8c7d.tgz';
-const inventoryName = 'iroha-iroha-js-0.0.3-24041ddb8c7d.files.json';
+const archiveName = 'iroha-iroha-js-0.0.3-ce242148a912.tgz';
+const inventoryName = 'iroha-iroha-js-0.0.3-ce242148a912.files.json';
 
 async function fixture({ installed = true } = {}) {
   const root = await realpath(await mkdtemp(path.join(tmpdir(), 'explorer-sdk-integrity-')));
@@ -31,13 +31,13 @@ afterEach(async () => {
 });
 
 describe('admitted SDK package integrity', () => {
-  it('checks all 243 installed files without changing the real package', async () => {
+  it('checks all 247 installed files without changing the real package', async () => {
     const browserClient = path.join(repository, 'node_modules/@iroha/iroha-js/dist/toriiBrowserClient.js');
     const before = await lstat(browserClient);
     expect(await verifyIrohaSdk(repository)).toEqual({
-      files: 243,
-      archiveSha256: '24041ddb8c7d46f2fffc5dee587c2ebf47d830a2bb265fa64b99930c681d28f6',
-      inventorySha256: 'b9a02d7f5103f3e46d695bab2487fac51a3e1ee0d71b76455d560e1ed53e5c7e',
+      files: 247,
+      archiveSha256: 'ce242148a912b4a7913338ac67fb4a6184b2e9de4772b6153e0503a6e6d47961',
+      inventorySha256: 'a901294ed92cb7831d4574937ee20831544850a234ac6ee5a6b8a0e27cf35077',
       status: 'package-integrity-verified',
     });
     const after = await lstat(browserClient);
@@ -48,9 +48,9 @@ describe('admitted SDK package integrity', () => {
     const inventory = JSON.parse(await readFile(path.join(repository, 'vendor', inventoryName), 'utf8'));
     expect(inventory.source).toMatchObject({
       revision: IROHA_SDK_SOURCE_REVISION,
-      packageGitTree: 'ba473c4aa3ed7439b43e62db1f3ec22f4b7dab1c',
-      packageSourceClean: false,
-      sourceInventorySha256: '079a46d8e14d4b212a0b5543354edf28669612427813bc080b3bd437965fabc7',
+      packageGitTree: 'a3cff1933e2971634648cad30fcf536e8057088d',
+      packageSourceClean: true,
+      sourceInventorySha256: '41794dbb7a4f0bd2673a08837e23571639600a0987eb9aa70a20828b712169de',
       repeatPackSha256: inventory.archiveSha256,
       nodeVersion: '24.19.0',
     });
@@ -66,7 +66,7 @@ describe('admitted SDK package integrity', () => {
 
   it('authenticates archive inputs before installation without claiming installed-package integrity', async () => {
     const { root } = await fixture({ installed: false });
-    expect(await verifyIrohaSdkArchive(root)).toMatchObject({ files: 243, status: 'archive-integrity-verified' });
+    expect(await verifyIrohaSdkArchive(root)).toMatchObject({ files: 247, status: 'archive-integrity-verified' });
     await expect(lstat(path.join(root, 'node_modules'))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(verifyIrohaSdk(root)).rejects.toMatchObject({ code: 'ENOENT' });
   });
