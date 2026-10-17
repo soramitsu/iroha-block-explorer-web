@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const runtimeConfigState = vi.hoisted(() => ({ value: {} as { networkId?: string } }));
+const identityMocks = vi.hoisted(() => ({ create: vi.fn(), inspect: vi.fn() }));
+
+vi.mock('@iroha/iroha-js/torii-browser', () => ({
+  ToriiBrowserClient: class {
+    constructor(...args: unknown[]) { identityMocks.create(...args); }
+    inspectAccountIdentity(...args: unknown[]) { return identityMocks.inspect(...args); }
+  },
+}));
 
 vi.mock('@/shared/runtime-config', () => ({
   getRuntimeConfig: () => runtimeConfigState.value,
@@ -10,6 +18,7 @@ import {
   buildConnectTokenProtocol,
   buildConnectWebSocketUrl,
   createConnectSessionPreview,
+  createConnectAppSession,
   getConnectConfiguration,
   parseConnectNetworkId,
   registerConnectSession,
@@ -78,6 +87,8 @@ function candidateSdkFixture() {
 describe('connect helpers', () => {
   beforeEach(() => {
     runtimeConfigState.value = {};
+    identityMocks.create.mockClear();
+    identityMocks.inspect.mockReset();
   });
 
   it('uses the installed SDK for canonical NetworkId preview identity', () => {
@@ -141,6 +152,30 @@ describe('connect helpers', () => {
       fixture.preview,
       { node: 'taira.example' }
     );
+  });
+
+  it('binds wallet approval inspection to an unsigned SDK client at the exact session origin and network', async () => {
+    const fixture = candidateSdkFixture();
+    const nativeIdentity = Object.freeze({ accountId: 'approved-account' });
+    identityMocks.inspect.mockResolvedValue(nativeIdentity);
+    createConnectAppSession({ baseUrl: 'https://taira.example', preview: fixture.preview, session: fixture.session }, fixture.sdk);
+    expect(identityMocks.create).toHaveBeenCalledWith('https://taira.example', { networkId: expect.anything() });
+    expect(identityMocks.create.mock.calls[0][1].networkId.toString()).toBe(NETWORK_ID_LITERAL);
+    const create = fixture.sdk.createConnectAppSession as ReturnType<typeof vi.fn>;
+    const options = create.mock.calls[0][0];
+    const controller = new AbortController();
+    await expect(options.inspectAccountIdentity('approved-account', { signal: controller.signal })).resolves.toBe(nativeIdentity);
+    expect(identityMocks.inspect).toHaveBeenCalledWith('approved-account', { signal: controller.signal });
+    expect(options).toMatchObject({ baseUrl: 'https://taira.example', preview: fixture.preview, session: fixture.session });
+  });
+
+  it('propagates native identity inspection rejection without synthesizing an identity', async () => {
+    const fixture = candidateSdkFixture();
+    identityMocks.inspect.mockRejectedValue(new Error('Account identity is invalid'));
+    createConnectAppSession({ baseUrl: 'https://taira.example', preview: fixture.preview, session: fixture.session }, fixture.sdk);
+    const create = fixture.sdk.createConnectAppSession as ReturnType<typeof vi.fn>;
+    const options = create.mock.calls[0][0];
+    await expect(options.inspectAccountIdentity('bad-account', { signal: new AbortController().signal })).rejects.toThrow('identity is invalid');
   });
 
   it('builds browser websocket URLs and token subprotocols that match upstream Connect expectations', () => {

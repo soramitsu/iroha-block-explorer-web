@@ -114,7 +114,7 @@ import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import { getRuntimeConfig } from '@/shared/runtime-config';
-import { historyCacheKey } from '@/shared/lib/history-cache';
+import { createPublicHistoryCacheKey } from '@/shared/lib/history-cache';
 import { useIntervalFn, useThrottleFn } from '@vueuse/core';
 import { Transaction as TransactionSchema } from '@/shared/api/schemas';
 import type { Transaction as TransactionDto, TransactionStatus as TransactionStatusType } from '@/shared/api/schemas';
@@ -135,10 +135,10 @@ async function fetchTransactions(params: typeof listState) {
   return await http.fetchLatestTransactions({ ...params, status: params.status ?? undefined });
 }
 
-const cacheKey = historyCacheKey('latest-transactions', getRuntimeConfig().networkId, http.getToriiBaseUrl());
+const cacheKey = createPublicHistoryCacheKey('latest-transactions', getRuntimeConfig().networkId, http.getToriiBaseUrl());
 
 function readTransactionsCache(status: TransactionStatusType | null): TransactionDto[] {
-  const key = cacheKey;
+  const key = cacheKey();
   if (typeof window === 'undefined' || !key) return [];
   try {
     return parseLatestTransactionsCache(window.localStorage.getItem(key), {
@@ -151,7 +151,7 @@ function readTransactionsCache(status: TransactionStatusType | null): Transactio
 }
 
 function writeTransactionsCache(items: readonly TransactionDto[]) {
-  const key = cacheKey;
+  const key = cacheKey();
   if (typeof window === 'undefined' || !key) return;
   try {
     window.localStorage.setItem(key, buildLatestTransactionsCachePayload(items));

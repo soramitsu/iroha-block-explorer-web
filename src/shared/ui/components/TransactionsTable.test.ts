@@ -8,6 +8,7 @@ import type * as SharedApiModule from '@/shared/api';
 import type * as VueUse from '@vueuse/core';
 import { defineComponent, reactive, ref } from 'vue';
 import { historyCacheKey } from '@/shared/lib/history-cache';
+import { activateExplorerReadSession, disconnectExplorerReadSession } from '@/shared/lib/explorer-read-auth';
 
 const cacheScope = vi.hoisted(() => ({
   networkId: `hash:${'AB'.repeat(32)}#B99E`,
@@ -159,6 +160,7 @@ describe('TransactionsTable', () => {
   } as const;
 
   beforeEach(() => {
+    disconnectExplorerReadSession();
     installLocalStorageMock();
     localStorageState.clear();
     fetchTransactionsMock.mockReset();
@@ -181,6 +183,7 @@ describe('TransactionsTable', () => {
   });
 
   afterEach(() => {
+    disconnectExplorerReadSession();
     while (mountedWrappers.length > 0) {
       mountedWrappers.pop()?.unmount();
     }
@@ -303,6 +306,30 @@ describe('TransactionsTable', () => {
     await flushPromises();
 
     expect(fetchTransactionsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not read public history while authenticated or persist a late private response after logout', async () => {
+    window.localStorage.setItem(boundCacheKey(), JSON.stringify({
+      version: 1, updated_at_ms: Date.now(), items: [{ ...baseTransaction, hash: '0xpublic-cache' }],
+    }));
+    activateExplorerReadSession({ baseUrl: cacheScope.toriiUrl, networkId: cacheScope.networkId,
+      auth: { authAccountId: 'reader@bank', sign: async () => new Uint8Array(64) }, close: vi.fn() });
+    const pending = deferred<any>();
+    fetchTransactionsMock.mockReturnValueOnce(pending.promise);
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('0xpublic-cache');
+    disconnectExplorerReadSession();
+    pending.resolve({ status: SUCCESSFUL_FETCHING, data: { nextCursor: null,
+      items: [{ ...baseTransaction, hash: '0xprivate-row' }] } });
+    await flushPromises();
+    expect(window.localStorage.getItem(boundCacheKey())).toContain('0xpublic-cache');
+    expect(window.localStorage.getItem(boundCacheKey())).not.toContain('0xprivate-row');
+    wrapper.unmount();
+    fetchTransactionsMock.mockReturnValueOnce(new Promise(() => {}));
+    const anonymous = factory();
+    await flushPromises();
+    expect(anonymous.text()).not.toContain('0xprivate-row');
   });
 
   it.each([false, true])('labels pending cache stale and replaces it on current response (empty: %s)', async (empty) => {

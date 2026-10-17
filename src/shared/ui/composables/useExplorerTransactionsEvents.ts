@@ -1,8 +1,9 @@
-import { computed, effectScope, getCurrentScope, onScopeDispose, ref } from 'vue';
+import { computed, effectScope, getCurrentScope, onScopeDispose, ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import type { EffectScope } from 'vue';
 import { useEventSource } from '@vueuse/core';
 import { buildExplorerUrl } from '@/shared/api';
+import { explorerReadIsPublic, explorerReadAuthRevision } from '@/shared/lib/explorer-read-auth';
 
 interface ExplorerTransactionsEventSource {
   data: Ref<string | null>
@@ -19,7 +20,7 @@ function createEventSource(): ExplorerTransactionsEventSource {
     typeof window !== 'undefined' &&
     typeof EventSource !== 'undefined';
 
-  if (!isSupported) {
+  if (!isSupported || !explorerReadIsPublic.value) {
     return {
       data: ref<string | null>(null),
       status: ref<'CONNECTING' | 'OPEN' | 'CLOSED'>('CLOSED'),
@@ -29,6 +30,9 @@ function createEventSource(): ExplorerTransactionsEventSource {
 
   const streamUrl = computed(() => buildExplorerUrl('/transactions/stream'));
   const { data, status, close } = useEventSource(streamUrl, [], { autoReconnect: true });
+  // Native EventSource cannot sign canonical account headers. Authenticated
+  // views refresh through their signed SDK snapshots instead.
+  watch(explorerReadAuthRevision, () => { close(); data.value = null; }, { flush: 'sync' });
   return { data, status, close };
 }
 

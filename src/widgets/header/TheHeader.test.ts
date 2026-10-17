@@ -34,6 +34,7 @@ describe('TheHeader', () => {
           ScopedExplorerControl: ScopedExplorerControlStub,
           ThemeSwitcher: ThemeSwitcherStub,
           LangDropdown: LangDropdownStub,
+          ExplorerReadAccess: { template: '<button data-test="read-access" />' },
         },
       },
     });
@@ -49,6 +50,7 @@ describe('TheHeader', () => {
     expect(wrapper.find('[data-test="scoped-explorer-control"]').exists()).toBe(false);
     expect(wrapper.find('[data-test="theme-switcher"]').exists()).toBe(true);
     expect(wrapper.find('[data-test="lang-dropdown"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="read-access"]').exists()).toBe(true);
   });
 
   it('replaces global node settings with scoped explorer control when scope is active', () => {

@@ -1,6 +1,7 @@
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { useEventSource } from '@vueuse/core';
 import { buildExplorerUrl } from '@/shared/api';
+import { explorerReadIsPublic } from '@/shared/lib/explorer-read-auth';
 
 interface UseBlockStreamOptions {
   reconnectDelayMs?: number
@@ -18,7 +19,7 @@ export function useBlockStream(
   const fromHeight = ref<number | null>(null);
 
   const streamUrl = computed(() => {
-    if (!isSupported) return undefined;
+    if (!isSupported || !explorerReadIsPublic.value) return undefined;
     if (fromHeight.value === null) return undefined;
     return buildExplorerUrl('/blocks/stream');
   });
@@ -29,23 +30,25 @@ export function useBlockStream(
     autoReconnect: { retries: -1, delay: reconnectDelay },
   });
 
-  const isStreaming = computed(() => status.value === 'OPEN');
+  const isStreaming = computed(() => explorerReadIsPublic.value && status.value === 'OPEN');
 
   watch(
     () => streamUrl.value,
     (url) => {
       if (!url) {
         close();
+        data.value = null;
         return;
       }
       open();
-    }
+    },
+    { flush: 'sync' }
   );
 
   watch(
     () => data.value,
     (payload) => {
-      if (!payload) return;
+      if (!payload || !explorerReadIsPublic.value) return;
       const min = fromHeight.value;
       if (min) {
         try {

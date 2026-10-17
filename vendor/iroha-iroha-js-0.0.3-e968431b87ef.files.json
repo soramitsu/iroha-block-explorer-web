@@ -1,0 +1,1953 @@
+{
+  "schema": "iroha.sdk-package-inventory.v2",
+  "archiveSha256": "e968431b87ef519bb4ca5482ba4f59863436f248799b5eb839ea7cf041a52aa5",
+  "source": {
+    "revision": "02403c8449c3287d2516408d8d33984c969514d5",
+    "packageGitTree": "1a42e40c9b2c6e1e2d7a95d907696b14b1512538",
+    "packagePath": "javascript/iroha_js",
+    "packageSourceClean": true,
+    "sourceInventorySha256": "753130cdd6cfc8a85e0bba400f5a760bdb993d72fe82e05926d7f517bc91819e",
+    "sourceInventory": {
+      ".eslintrc.json": "2b9aa376e41e95d5206b1b949d628da2fb0f8a50fcb9155ea82cdb39fa7ab907",
+      ".gitattributes": "185e678eee74acb01a906e9872b189a69fb1503fc411b76110ff48e2de6613f6",
+      "CHANGELOG.md": "5ebf886bf4bd5fa1ccf3d51dfefe25f9d63822b0e570e7a3a4fc4527c0bc4912",
+      "LICENSE": "7c0558c365d644b7588d481e22f26421cd3ba23492d2c0ce0fd382466aad2c13",
+      "README.md": "4cfd8945602570eef90e3d1671e38f76a381fd62afec2f587782bc3797b88663",
+      "address.d.ts": "1102edc44652c740f40fab8630b08c2a326f0658ec4dc831e6cd6de4132e98bd",
+      "atomic-private-settlement.d.ts": "31e5100884dc1f9108b9aa4ae8028ad3f3c2b0433573adf0d981d50fbdd0ec56",
+      "blake2b.d.ts": "2e680fbb6ec2324d626a600cb99dc8451ac759576729161c016a8055d4eeec3b",
+      "bootle-lantern-issuance.d.ts": "19fc1d207902143298a2c8cfc3c60a70cbfc45bb1e6b507beae8d8057ceda282",
+      "browser.d.ts": "8bc693190366fe39876bed97c9c1588aac4c1abe59720d576e7bdd56c00212e4",
+      "canonical-request.d.ts": "6def46cd7d16298f527c132c5f28e18748784f8146a4b865a1422e69a5647e91",
+      "classed-race.d.ts": "fc42b9554b47f9cc214e8f933cf7257a9ed4628fdac2dd97861e0f399ae6d63c",
+      "connect.browser.d.ts": "0fdb854e1fbbfc5d1252c239065a4f68bab815bd756ef8dd3a6a08cdd2952d1a",
+      "contract-payload.d.ts": "278de2cfa044a177e70e503cc60b9833658462ba2106b4942535ad841e13a4bc",
+      "crypto.d.ts": "7b093b8f2f730f73bae74c1d146ff01fdbaeb47906efd6fe41eaec28e2949343",
+      "fixtures/typescript/cancelAssetLockV1.types.ts": "969bbc82c676d3c29f9dd199a694e5424e01ba51f2a9598dcdfcf4724df3f89d",
+      "fixtures/typescript/transactionCodec.types.ts": "cae917fd211119f98d79ad2be3c3d7e7068e7d648493a62b7b4cd7fd4c209375",
+      "game-resources.d.ts": "fb1dc92382d3f2be1d258d35c7c277a091b3e0468d91f88c02949de914c45c86",
+      "game.d.ts": "36a76f786f3aac0d1dc69ee61b7db0baa9e7322aadeb8433af419999171818a0",
+      "index.d.ts": "d7a56ba614f6531ad5f459b669ce59dddbceaf42a9ab8d75cbb5dd8ea0d50539",
+      "instruction-builders.d.ts": "2ca6b7ce7d16364d0de784044c6154550deb609f71cd568589e1793c17e77401",
+      "ivm-artifact.d.ts": "3d013df2461b49fb2661c620365351c1b5bcb574363a812ecbcf17a43771df1b",
+      "kotodama-compiler.d.ts": "ca00ab9471923168f859b40c82601021080bd280ce1cacca7432b2995f9917ac",
+      "nexus-app.d.ts": "2c0babd0603832c82cdc4989bbc8e600dc134407f4c69cb9fac76795f9505e4e",
+      "nft.d.ts": "87f139404dde922960c74612c3a6c258fd6e54e302e4ada34ca0e0d1a83a09bc",
+      "norito.d.ts": "51009156bc5eff2e913146cb9d6dfb8a1ab9589bcaf6e461053949705b5aca1c",
+      "normalizers.d.ts": "54b87f59a1b006471580cf2eda0588495b2b0df23994978147ecf9930b6e2480",
+      "operator-request.d.ts": "1727570791216359a76f9b875e41966f3c4d38e69cfee5e720c4d805c10c556c",
+      "output/native-http-auth-20261013/iroha-iroha-js-0.0.3.tgz": "be603e36aee97cda3b976f781dc999a9d9a597e38fc15624dece0334f0af044f",
+      "package-lock.json": "fab1fa4abc744c7950327ca62e32a0bd807e16b60edb5cef4fac91945cbe00a4",
+      "package.json": "9d4691a3abf1e52f7ffce5559d00351be4c6cb042bf6d6330171bacbd8e17536",
+      "petal.d.ts": "33639677af2d83a8b97129581e57aeac016702dee5feaff783180fb70357d612",
+      "privacy-capabilities.d.ts": "1de948ed5b02489c296e87ca34855358995e28e17fde3005a8b0a2bc4ebc2815",
+      "race.d.ts": "5c1b9e25230351ec6ea8dae1359f8c485e2be670454ac897efcd5724d22100bd",
+      "recipes/README.md": "6d921a5bead6424e8b4da643660f1507e9b36598e649928f9ac70435387024e2",
+      "recipes/assets_iterators.mjs": "a5b05e6cf2b4c0fdbffd3ce5ec039697a015a3d0934fdb1fbe0f62cf0f5e0364",
+      "recipes/batching.mjs": "029bedb8617356bf105466917db2c181263a9d5de9c6e5225c41bbc01ef77705",
+      "recipes/confidential_change_redemption.mjs": "62b66c4e276a62446f4df25d0d34fcdb5933c0e74e39b2143d28179b41795b97",
+      "recipes/confidential_redemption.mjs": "a9c8a815a39ded548a2666495dcbd7596405de39830b52896651e042b56f6176",
+      "recipes/governance.mjs": "58b37edcae60f8a7636abff85e0f7fbf42c2e666aba232f9d9792922d732b105",
+      "recipes/iso_alias.mjs": "38ead597257a01b167191704107f208284577d03343785e06025f6e3b623dd8d",
+      "recipes/iso_bridge.mjs": "e90a623368a4eb84af8f41b2c1a137028b493936648c0625ff8cee893afdcede",
+      "recipes/iso_bridge_builder.mjs": "9c768ae8580cabb429d451f76fdba5a0518d8189765b9061e95205d361ce160f",
+      "recipes/iso_bridge_context.mjs": "c9b0a80907eb2bd9b93f6bb95ba4f2ce1b315b64a944b3ed864c1fcf67288d7b",
+      "recipes/nexus_app_transfer.mjs": "4da5d1d94185bb480e0edb4b6a2db842db6a0d2fa4aeba0f143871f76959f117",
+      "recipes/nft_account_iteration.mjs": "de1cd959271954a4ab057f9a01d24f0c354be1019421cc4661f8f3f26781c744",
+      "recipes/soradns.mjs": "9a64cd86d1b4cdc0b56ace26d5659dbad2655d4f9f474871beb587537f274307",
+      "recipes/streaming.mjs": "ca4989aa563c67d78551e8f888285a651dda9eac9f24aecbf00b530fc870cfd4",
+      "recipes/walletlessFollowGame.mjs": "99c53168ffb23b2246b9c114e2668391252ad8c45055eca76908803f87529abb",
+      "repo-agreement.d.ts": "750e184d84d2e62e99b78985fd4f1373b9f38e4f29a935f6d0e4bfb662543c24",
+      "scripts/build-dist.mjs": "e57da7145ee2e69fe88d2167689fb86cbcd97d6edc80d9e35b0a3758671814b5",
+      "scripts/build-native.mjs": "cb515a832c389a18817b9cdd225212daeb0ac3a2181cb09594802ecd87a0df1f",
+      "scripts/bundle-size-check.mjs": "2ecd4fc6d7f96a79315082be290ceb1f995d360e5020fc7f6c6f2b234b612e64",
+      "scripts/check-changelog.mjs": "e6da4e2cb12660d2d9969bb6c2b8977dcffbd17553857e6df2b27b9c7dc9cdc4",
+      "scripts/check-node-engine.mjs": "54fc313b8b4da1c4953a2c68bce5a357d8b52be39b35f3f2fab8ca6a2bf80550",
+      "scripts/copy-native.mjs": "9c5bd2a2cd0c79a522f1863616e010fba8568deab5981082ca108fa50585ca07",
+      "scripts/mock_harness_smoke.sh": "999dda03e71037f834e2a732979788b771365826fb4b4d63111d1f8277b93c70",
+      "scripts/native-build-profile.mjs": "995e55a5b8c7898f8cb2d8e1a477faa29dd14027213e3a61516401a12941e7df",
+      "scripts/native-build-provenance.mjs": "91aafcfb4e591fcdbc2d3f5b2047b7e032f96dc3d0448dd08da5c5cccd702be0",
+      "scripts/node-engine-contract.mjs": "ffe14c863ca7c189dfea331fb1c832cd15092ce6369955f3af50021ab4446d8c",
+      "scripts/package-install-smoke.mjs": "d304af6945fe55d77699de1b7656129098fa798c10199cf26b8e6c309d1a8068",
+      "scripts/probe-local-native-unit.mjs": "23b32bcf82ceb8063acb48078b1a6ea6071a2acbededfc8376c13ef1c7712780",
+      "scripts/read-native-build-source-state.mjs": "6fd533fbb5fce6d2a23709369e915e6efb4df41f1f9294d53d7ce4c951814d81",
+      "scripts/record-release-provenance.mjs": "4687ec96aa50307ced06189b32372b0851b4cfc529a2987b08da42eb19f518fd",
+      "scripts/refresh-axt-fixtures.mjs": "dcdb926d6a0a47a02619653a193e726ab5c82331e4bf1fd558c22a2cd4a9d0c3",
+      "scripts/release-matrix.mjs": "4fee8a96464b4c34e7c8655fb63838749318ab0d2ea275548045c7e763d0448c",
+      "scripts/release_matrix.targets.example.json": "dcf573ef72b2dc2ec7558d804dfd145a614a4b73629e231a705901337e68829e",
+      "scripts/report-bundle-size.mjs": "1c40a62ee3ae667ea72119415001a3891591ae7cb832282af341bdb5223a268c",
+      "scripts/run-test-profile.mjs": "92b89c3a2109ef5f786fa3355a9a9b5ed23659f58e6831fd4f0b751eced12f39",
+      "scripts/run-tests.mjs": "a7b22594035fc658d06ebb4c31826ba77e6793b09359f56bcce8c0b1f77d3e90",
+      "scripts/run_integration.mjs": "37a096ead67525d77cd82467270fe0f35ffdbbcbc092fa8d271b2a28f03025a0",
+      "scripts/update-release-docs.mjs": "bb27666026aae35d339538497b8bbbeb0891c8ce18b639b9d5fdf863d45f515f",
+      "scripts/verify-release-tarball.mjs": "71e0f716e04c99c96d51f148c8800d1a68ecd5d36f5cf3ad9aaf378c0db04f54",
+      "smart-contract-deployment.d.ts": "a59a0820e06d41777d13920e78f7df3e79e695d4e7b20b3f7a8b5014f844c125",
+      "sorafs.d.ts": "2c78eb0ba233a207b72685853b8634241e0317919e26b3f4483d7b3c846d9e8a",
+      "src/accountCapabilities.js": "25a7de56cb22a62a1aa1c0dee7bdea1b27344977e3225473b0229b6ee9278d46",
+      "src/accountFaucet.js": "beff390b72a6ad7f0600c7612005d611c6c9cd15c10240e6d34d2bf04c10ae30",
+      "src/address.js": "df3a9bc7a321d841bee01348a7d173c4083d17870242b8f0f5d20715192a273f",
+      "src/addressErrors.js": "7d9af71bc293178169a8aca5df55b92e8b423adef8420f5ef6a4b35f0662e361",
+      "src/addressPrimitives.js": "64fcc3b2d4c1d965c4b3f2056e01b9dbaaadd8c3d55f7e729100a0219977fa60",
+      "src/applicationPostAuth.js": "47a307d9e6ee3fc75e50e61a46ef30df2ae32f4622bb09dff5e29353e8a1585d",
+      "src/assetDefinitionRegistration.js": "ca731d0b866c49a45b8935167feb67221557a0581d0321d2c078e1b91da1cfb2",
+      "src/atomicPrivateSettlement.js": "40a30e4862b3d15e8088d7fbd100d404d30689ba106e262246a8dd91854220ad",
+      "src/authenticatedBlockProofs.browser.js": "50625427e38474019f715a1e5833120a6c3291d15b89abc2ff4e46cd5269153f",
+      "src/authenticatedBlockProofs.js": "e2f8cd692982a6b0fd6f76aaab4ed0c1ad39aa724f3046b739419080c10c8301",
+      "src/axt.js": "055b566a8efeaacbf1d4346416fa745aecf7b5eafec156ec6e9a82675aa411fe",
+      "src/blake2b.js": "8b2c438216bde1f2dd77f2b928cfbb30530da0296a80502bb771d0be37fb2b36",
+      "src/blockProofTypes.d.ts": "84bbb692a91df68de857cb90ecd8b5b2f48707924a33c31decdcf135d838f143",
+      "src/blockProofVerification.js": "891ac145c305b29eae7d6827e94c9a004ee4f307779b48f3012b115690ad316f",
+      "src/bls12381G1.js": "81e147cefc987b15896042af06e1c5fd0ebd2114a5fa1c6b775bf77cb3206de4",
+      "src/bond.js": "568d46c71c765c8eb7499a09c129c48cba97cefee8561b8b20925ab7259b1006",
+      "src/bondRecords.js": "bf40a095401a134f428ce443b1491b654963ab68527777cb0ac67cefd79bac72",
+      "src/bootleLanternIssuance.js": "374a50a9c23a89629cdfd94bbbc9c5710daef51d680789bd54599d61a3d8260e",
+      "src/boundedByteSnapshot.js": "d328fce478afdbeaa34f6ff69c40eb1106ad08c424c05e019a08f82a1ca301f1",
+      "src/browser.js": "a14efbb03240fc50c6dc385f4368d92c6e876ddee71be1df19fab3e45452c03c",
+      "src/canonicalAccount.js": "ec71e6542e50d7a1a9b72fab8c1734240fa685b25f925d7b303bedbece6e9e1b",
+      "src/canonicalLimits.js": "f61da5b852269ae783d02b9c03cf2c7c2d4006f28b040b5de92976eef05cf79f",
+      "src/canonicalMessage.js": "b52e93d099b4b974d2a8d3366be16d000d653b6309d77ed421ea0fca77891e12",
+      "src/canonicalRequest.js": "bded83eb88fc3dae702e39fdfb015d6e06dca86e7a9d5f75787f70d28dcce8ec",
+      "src/canonicalTransport.js": "4bde380631452124afeb525bf3279cbf284cc1c8ee6740f0faac35915617575d",
+      "src/canonicalWitness.js": "a2aa1c15b2cd94040e358778617ee377698f84459f6a4b5a0a4e9eea9cf8e425",
+      "src/classedRace.js": "bf2ff6b0006e9b19d64a4efb8b1210fac9f7bd26ca072ab3f4022c87add6cf00",
+      "src/commonLiterals.js": "19b7000996cd9a4738cd912e3321c1fe670acaaff945298316fa1cbef4626f08",
+      "src/compute.js": "f540b08fd596a9470b437dc3ebd26c7fef329598bd946e6267d2cfc3e7774e48",
+      "src/confidentialProofBuilders.js": "dde665d048edcac1cc43fccfe4a46ef8b4cde5371f055d15b24574b9698c2d91",
+      "src/config.js": "135cf023f2609c8f9bb1f0fb1d3389cd9d9603112fb8ec816f5df417506282b5",
+      "src/connect.browser.js": "58b4f1d99a9c58eeded2ea66fa31cfae5feb458c5964f8a35eaaeafa4264ddc7",
+      "src/connectError.js": "aac4fead15c6f4dcba272c5f51a3a63cf2e7153af3ed5bfe60ffe128ae73fc11",
+      "src/connectJournalRecord.js": "fbb968c61d7af1aa42053005af20664db3f3520a24c5da15977dc343e0fc081b",
+      "src/connectPreviewFlow.js": "ccfa28bce01dfe7d275d4accfab27d9999dfeeb979ec2be694e1f681605a21da",
+      "src/connectQueueDiagnostics.js": "6716f4ea32df92281a1724136cd5c2eeaa39550ec1182f43f1f4d2f189e25218",
+      "src/connectQueueJournal.js": "89576348f092286c8f1f6b022056627098485d5d7b6f2871ec0409b9ef12cc77",
+      "src/connectRetryPolicy.js": "60c579012c161d7b03f471277ae3fa8913f4f28b8297705e3822c319231943b4",
+      "src/connectSession.js": "f947cb79dbedcfd94dedb83dafb4ea9f631f83da5640f269d4b4264b9b71e3b1",
+      "src/contractAddress.js": "b0a587905895b4c0e2089d93c857b63e0f5220730309e39ee598710bad8fad18",
+      "src/contractDeclarations.js": "b8b32892b82cbbd97f41c8ac687365fbec0681abc2cf60e94537a7f909614497",
+      "src/contractEmissions.js": "eb07609bec1f354975ecab60240e51e69c22a07b228342d78dcc1a4d5ce331c6",
+      "src/contractErrorTypes.js": "55c72f2b34f2fa034bfcdb0337e8478f1bc2ad5b2ef965ddfd3f783ebf963f45",
+      "src/contractManifestNormalizer.js": "aeb75e5f5d20c13e6c94033bf9c5304b527bfaa74ad66b9abc41248f08cea326",
+      "src/contractManifestRules.js": "b3cfe344ba816a8e2405ee5dc105950087afde2b80b91ed6ea5c53baa32330b1",
+      "src/contractPayload.js": "67c32ea7d30ded9daa2a104dbf1f5a9a65d3a0c5f02ffeee338c4cf357d137d3",
+      "src/contractStateProof.js": "10de591b10e3a04e6f89449ffc32df3a6f225d5191e697877e24491e693c6412",
+      "src/crc64.js": "d3a6a15f404de7c3199fb768ffcfc12e9c99e8c98e913c653ca1ce00b8e62ceb",
+      "src/crc64Xz.js": "15b54f90a983d49901e28ab111547cf99cb0937b1011502c380fd09df7885f92",
+      "src/crypto.browser.js": "da7e6b895c5c0a47a1cd35b890732a689445635957c5d49add1dd0689f2230a6",
+      "src/crypto.js": "75e2f6f7cfd49948898959bb8b688f22cabc7bc5c9a782a5e7ec3259a9050c49",
+      "src/cryptoAlgorithms.js": "017771a6768d5245659a99d598f7cd572cc9833d497a76046c03f02d32601b17",
+      "src/cryptoHash.browser.js": "5f4cd5c326d9f3cd5458db0a3e621156a0cfc2bd2ee53fa24710141939876e02",
+      "src/cryptoHash.js": "767354af740d9262491395a955c5bf778ac93e09ade2b50292f408d01a4668ca",
+      "src/cryptoInternal.browser.js": "0adbf05f8f84558064a4cf3c1408189fb0dcde1c46bf3d7dcfb0c48ce76f0780",
+      "src/curveRegistry.js": "05e19df5ae69c145ce6d70d778ec194bd9fb89b6d7648167274d85a4e5c78225",
+      "src/dataAvailability.js": "91342c0eaef62b9b2f224a2dae521b1648ae05061ad715fd4dcbec160c6422dd",
+      "src/domainId.js": "08ea4fd19c3984c46023c9aa970a5affd351cc3db219c4f4f651bdea447140fc",
+      "src/domainLease.js": "e20aa8686c2630b85b66177be9d7c63ec4f58af7d89f354567f5a669b4ff690c",
+      "src/ed25519Strict.js": "b582b41280680e6f1229c100ffd43c98d6eb8abd6f402c394e6a52e27c02696b",
+      "src/electionTallyV1.js": "85ed484efb90ac9033b2557fbefd3290d3ec5e5ecb8c170f0c63a50ebe4711da",
+      "src/entrypointSchema.js": "1e4240a8cd3832dce569259fe4a3faa86646afc58ab7eec65f9eef70d7f8a2ff",
+      "src/explorerTransactionProof.js": "7f8f1b7e7aaadd07c494e846c1a9508cadc8725932e20a06192df7365c602464",
+      "src/explorerTransactionProofTypes.d.ts": "158f04ca61638e20a28fe2661d8708018509728cb2b4a8fb2d26144f46203cc1",
+      "src/game.js": "a9ca39453d55263970f7a9678cac0e247ba7fc4128abaa9e188caba0f0dbdffb",
+      "src/gameResources.js": "8fc65b4d45b31fe16040bc3ed7248706b3cc5d98fdadf7968ee148446036ca82",
+      "src/governancePlainV1.js": "e5d48a04bc2f0402a2d803576f8e6a6a4cc6a3d060a3575c938885f330a8dd74",
+      "src/governanceProposalV1.js": "cb900b28b8f3d0566838c65a3f978a6fea451b494174d3fe8518abfb5287820c",
+      "src/governanceSelector.js": "03749db15e0d14d3cd6430bb38a2c30ff54eb98ccfe42c7d13d93153d622adcc",
+      "src/hashLiteralCrc.js": "57fab8a85e00f79324e3062c923ab35812609e24fe223cb84e31f4da6acd345c",
+      "src/identifierOwnerPrf.js": "22ed53d07d40f55685551309442f2a0442c468687a7f3d68e74c40973b81493e",
+      "src/identifiers.js": "1e17f9c1936ba174830a20a34d05121e4e93f0d158c9e257d9e8ab29701acb8b",
+      "src/idnaBidi.js": "adcd89502fcebb043f34b3ad939668723ca08b138df8341a2df2c7305d51a29b",
+      "src/index.js": "f1db588f461d8dfa1284fb00c049f626013b82baa36cf091724b946002375b11",
+      "src/instructionBuilderPrimitives.js": "5a0e3205db440f34a1d21db2174a3f823d50298c9b209b8465aa6afce38d5231",
+      "src/instructionBuilders.js": "cc6e2679508d861fb1a0f95498d6886641e9fa7b062c35634969f97b90e9e899",
+      "src/iso20022Transport.js": "92c31e2c036b5d5fea7b2645829aa5cd6575325a71c34ce86bdf3211571b9a94",
+      "src/isoBridge.js": "7b46e9bf9336ca6dc24fdde0f29bcaf66dfc0a3ce6cf808c667ea0f889fc3757",
+      "src/ivmArtifact.js": "5477f9138e83e5238ebdab04cf3ad5e14e82e3218c618ff413c38376f568b669",
+      "src/ivmFault.js": "ddb831412e5970d98f941e3f4a9465bd30899681ab750be70c5e7e8fa1004c87",
+      "src/kaigiScalarV1.js": "745bcde206d4154697820aa5d0a2a5af54e753035da85dc3706e61eb0d2ed70c",
+      "src/kotodamaCompiler/browser.js": "3eafb122873dfa9dffc1dcec570a4a2a904990a258bc7397e407c1c130a28581",
+      "src/kotodamaCompiler/client.js": "d31c218b0293d2064c0a8c1d91613ceb4450c3c81af5330c591689150d7e0d55",
+      "src/kotodamaCompiler/embeddedCallSchema.js": "e2498a589d958ee005bc8b04c0c537f1d5adc79b0a9a5f3ccb30f7ccac974158",
+      "src/kotodamaCompiler/embeddedNorito.js": "adad53ea58757a945419c26785826a6efd2d7a17a14be4c9211e0b57b0bd3af1",
+      "src/kotodamaCompiler/embeddedStateSchema.js": "8673f019a6a5486b75acaa54a7c3d2dbe233b6bdb12fd91ec5c56ef1e7ef3b17",
+      "src/kotodamaCompiler/index.js": "86254019946c91151c40ffbdb80700a0f88b4421c0c75c2530cf3dc8b18d0c93",
+      "src/kotodamaCompiler/nativeBridge.js": "b6890eacbf5404684cbd572b1fb1db4c90e5eb65d7332d0eca725c666be7f5c9",
+      "src/kotodamaCompiler/normalize.js": "ab9fda2f217b4e3997ec8c4e9e65754f3ecc31c5115f22dd79173d0e2458293a",
+      "src/kotodamaIdentifiers.js": "24792d4a79183b7c0acf5cc69791d76a007607ae45bf52c7f6079653ffea5c4b",
+      "src/kotodamaProducts.js": "2edf02b0f3114243ffa7304da0b474f84de9af55207c7afc26384d7301cdbe4e",
+      "src/multisig.js": "bddea0d4d418ebd10a127dde5697460132b428e645d8887356afc3a5714c53ea",
+      "src/multisigContractCall.js": "c913cb7b23d18e60ebf6225457559bb9d196932c26fbecdd8504c4f9830bcfd8",
+      "src/multisigIdentifiers.js": "7e4f6184adcaaea75ddc6b116d9504c870ffcf8771e9c79deba292f767056f43",
+      "src/multisigOccurrence.js": "b31c20b99bb9951f0af160e706fbf4513a82cf0464815ee8b9073b00079b21ee",
+      "src/native.browser.js": "58fe3af703a09fbe7a3722ba77134edd2aaaca42e14c02c2db58039c3a71948a",
+      "src/native.js": "fb3c5ff0b4b25cb73c7e9585c1ea8964f16f7f4a79b384ba83f3193d66c4ed14",
+      "src/nativeAccountInspection.js": "b2fbe47b8dc039289246a8cbd415c6b0fe2cb18fc4255a1d11272e3a4c72fc6c",
+      "src/nativeArtifactHash.js": "856be3ef7522c99d0b06b6eb06b29543d823327a64c005d9849c9dcf3d4bd708",
+      "src/nativeMultisigTransport.js": "88633f5e2d08a9f6af63b16e481cd5c36fd1484ae59eea0149f18c56cda2458d",
+      "src/nativeRuntime.js": "9ddb317665d69ea47b7204d77719b99fbea214ac91c1aac8fab8a7990a23337b",
+      "src/networkId.d.ts": "9f882cf9dbd610b5af07469ff383ac3724b4a6981988da71b0d3b8065df22ae2",
+      "src/networkId.js": "77acf4f4e480ce87c77bd1b56d11d755a121f661009bb5c8b5b4abf54dcfed96",
+      "src/networkIdentityDiscovery.js": "fec1f8a5301a354314447a11b2684e738fb4c7b6fb9224ca8b9fc1f0d1bb7223",
+      "src/networkPrefix.js": "c939efd1b81ae3b6dcd253378051d36c69ffc8adcde1a372e67a9db81d9b3ab5",
+      "src/nexusApp.js": "b3da160a5456e574f3cb26959f97520c065b3f71f543d0b810f3172c5f400f22",
+      "src/nft.js": "722299adbc5c86791c5246e366935da1627b6faadb517b224d3e9e809073aa5b",
+      "src/nodeBufferTypes.d.ts": "1642126b59e8430a48fdb1785ae096ac122af74bc2cddd5f3804ed69be95f360",
+      "src/norito.js": "7c3d6dd925560cf2a55cac26dfbda660ca6033df03894b91424670a206e864a9",
+      "src/noritoClassedRaceSchemas.js": "87ac3867cbfb19ceb65b57ea345538351f3e89a8ede67112d641cc0621885153",
+      "src/noritoContractCodecs.js": "75e3fa75588065fbd34adf000a8a4b8af871c58dad0eab18e98d2a7a6e5e2d9b",
+      "src/noritoContractMetadata.js": "7ba190dddea1fc6e50a22b6ff4b455df43581718e39f7859dced3bbf9ba15e02",
+      "src/noritoGameCodecs.js": "997a00f82561179f3c919db9f2a3674fa12f8f9cf8eba7667e9e3b1a012847cc",
+      "src/noritoGameEngine.js": "c95abbaf6885dff88d932b161099698e1520a5d45f9def520f2145d6353e19e6",
+      "src/noritoGameInstructionCodecs.js": "ad6d4e2dd52c4122281bfffcf13c7d1338260e4b0f6a011d75daebfa45fd6991",
+      "src/noritoGameRegistry.js": "3f4744b2dee4b45fbe9df7ac34060bacc2642a4a57c1ef60be29b565e3f3bfc4",
+      "src/noritoGameResourceCodecs.js": "69e3db2cf87c35410cd13199cf9e23dd268bfaf2c3c573001bbb08ff2e7d8cf5",
+      "src/noritoGameResourceEngine.js": "1df8db222bde113b9c82eb6e455615e392f0f4e2deb37dd4c289cca8b7f043f5",
+      "src/noritoGovernanceBoundary.js": "11079e58ea3dde632682018489d08eb160802e5e96f80c1c3f971b4cffe27ffa",
+      "src/noritoNftMarketCodecs.js": "573170d052532546a17b68c7e8ab59212b82cdfc903315074bcd31131501472c",
+      "src/noritoRecordDecoder.js": "b923b9f8e2f0b6838d45bc2f52f0bb78b7303e4460d810f2125dff3af8dd0cd6",
+      "src/noritoReplicationOrderValidator.js": "908c81f41a4f80ca1174d7a08aca0dfc7b6831f54bbcea689111761ef9ebc40b",
+      "src/noritoRpcClient.js": "e5487d58213c4fe9a3a7fcedd182680887ba9dd19a41e460c5a526f113120b16",
+      "src/noritoStakingCodecs.js": "ed76287a591842c42ef9fccec3f45168596274c77f1264a8a67eb12469455e10",
+      "src/noritoValueCodecs.js": "bde26ebf3e5df2533071732370e860436922bd4db97d5fcd982110714819b69b",
+      "src/normalizers.js": "8518e906a5cef225f8adaa39c4a267bfb2769de8ca3b2f62c870be2fb97ab70c",
+      "src/numericV1.js": "7150b955b1f806506cf6685753eabf9d3eb32664472c1b5c234c77d10f8f3639",
+      "src/operatorRequest.browser.js": "2f2d2fcd33421cabd8ef468698d03880a3f33cb1718064e8bc01ba1d912cfc11",
+      "src/operatorRequest.js": "97e49403cfe81db7b640f85b3c734de0fc8c0eabf76b668fba69a4d5a53b8d1c",
+      "src/parliamentApiV1.js": "60531749c3837209dcced8bc5642510c6d10c4c2c876d4bfc437d8c5cb2402f4",
+      "src/petal.js": "ed45ea6f1b32ec4d99518a66b9039caef8f0d8c680382c04ab3f653cd556c1a5",
+      "src/petal/browser.js": "05f2f3123eee20771a3da0cba98f87ef601826252d1f58fb6e58961d52e3ad6f",
+      "src/petal/crc.js": "376301b76cf1c851be7320f7a1cdacebe6a7f38353844ce9b66ad305a00ea810",
+      "src/petal/decode.js": "aa0bb5df4affff103ca829b89e588f5862e0c87c974905df6eb5e0467ad6fa87",
+      "src/petal/fountain.js": "aa3b5128902eaecfb5e7d386a90397bfe6352578285e2269514b48bf6de89cdb",
+      "src/petal/geometry.js": "b9dc9bc6f0c2944fccc56f703271c4f0ac51946e25fda32810a1cc7108baa5bf",
+      "src/petal/glyphs.js": "25cd27279e84f7558a4b778f4ffcca56520e0ed5fd6ed214bffbed42e7ab6db0",
+      "src/petal/image.js": "2d17ec323b855f3a8639bb62b38435b60784fd6a724029410c3fab32103d49fd",
+      "src/petal/lanes.js": "5eb00f0b32964c1be5884cd1172c4fc2b7c5be05442c1339751da1a78fb8c7f2",
+      "src/petal/layout.js": "d36b17f3044408a81b5a4c19fa975a8345243ef7b2cc47399c000e885675e08e",
+      "src/petal/locate.js": "140f38636c3e122debd2c8a1a43e8109cd8624049ecd2fbd5957920d1b7a26ab",
+      "src/petal/prng.js": "711b548e08029f59bf48f1bcbf45568f3ff7db9d5d67f586ba7dba45e19e4167",
+      "src/petal/render.js": "9c8b25b5e05f957fe2f4a2d6a7be1bca32b7b33520eaafdb7dba47b5d13f00e1",
+      "src/petal/rs.js": "0d121f2e9dfc77db4fc5461e4922100aeb4e43942a34f45a5191ef66c53b1abd",
+      "src/petal/session.js": "bf8101eab103353578ab22539e772ea6099c932cb6346a229e9da21e598122e0",
+      "src/petal/stream.js": "ea674181316007ca715d5b68c36be409316fcd84043e8393d7d741e8ce34cb21",
+      "src/petal/support.js": "592387ea9f136089bc398fcdfe04a6d441343e735bec2bbb3b3fcf54851496de",
+      "src/privacyCapabilities.js": "b287a0ce10b25cc86517cc5581fa143674e4922bcae21855c245f166c8eeb664",
+      "src/privacyCapabilityAdmission.js": "216c5e3767dd240f760f8001cd626f315ea78dd8b9c7e51ae91171a013ea5654",
+      "src/privacyCapabilityTransport.js": "a1bcc2f17efcbc1dc67f1a55e93bbecd6f0127f3dffe79c24c47063f5b880485",
+      "src/privacyExact12Network.js": "e755514b3f02bb347a214afcb4b3877dccc2fde609904b1d4976e268b1ba351e",
+      "src/proofAttachment.js": "7791e4a25bbac81ed6db057fa4e3d27c76cb57132dc74bc8b16e4702c938a8f8",
+      "src/public/address.js": "be199ee84ad40af112d2e2f6f6452bb9228a6456cada31358b0973c8c0dc4e03",
+      "src/public/crypto.browser.js": "95a1eb7b7a6c8a4a03b316b696ae57456e0b07d4bad22d73b84269972b130f60",
+      "src/public/crypto.js": "6794f446fad444f8f2d7af1351969693b5f308a2e570d880eecf6e65a1c8d8cf",
+      "src/public/norito.js": "4b0ba088266551366df93cee6c1a2a531db7aa1172ab38c9adc57d13af5c1289",
+      "src/public/normalizers.js": "e8fd49432e1987b2d446f3d7d3aa2f3f6afd417a85ae78dd04463c2d424a2a22",
+      "src/public/sorafs.js": "c3480ec9e61271405023a5c8cafabd77bccdfd212f6141f3daa8431c23faefa6",
+      "src/public/transactionCodec.js": "fff3be48d76db3b13c2f45159198559297698cdfd2bccca026250962054fbe9b",
+      "src/query/collections.js": "8576812385d07fced9bd989a5555a1e4e105bd980f16bac5b1cc404160edda63",
+      "src/query/grammar.js": "4df67dc0ddf27a8e3e2a56319aec89691b7ce840576df3f6861c326dd1eabd93",
+      "src/query/index.js": "a2fe7c156c7b3e33ee855c70b5ebffab0563c3a1d8a34ff822a2b2d80e7efd7e",
+      "src/query/listQuery.js": "eb7c6574e754c817405c6e7e7d36715e7b03b344f4ad17a7ebb773f031ac9d7b",
+      "src/query/page.js": "93cca2f3a5025d78239b8ae531b3011a18615d17a11315ee3ef69b87251feba5",
+      "src/race.js": "477dc29252cd26bf8a09465d22cfd5b4d7af74830e2514de6c0978227b5f18c8",
+      "src/raceOutcomes.js": "c3eeae37f7d573b1fc994a9fbff2d724af01e26ed89aaa48585c6a092c19ee6f",
+      "src/retailDailyLimitInstructions.js": "9eb3f0dded51b23c1cdf08daf61b17e71ab463031d9dcc5934e1213ac339b08f",
+      "src/retailFeeAssessment.js": "a1deb1639db2450887e1e883e6572de2d4014010161f05861a35943b37599d5e",
+      "src/settlementId.js": "0a1e016a96968427d7223ca8362bcb3b709e968ea423736b7fa216e10ce60416",
+      "src/settlementIdentifiers.js": "4bb5d04164afe2a74f3bc02cbcf711cc7061e637795fe8f854db9bbee21de2da",
+      "src/settlementIntents.js": "a4aa1847d1c6f68bd259e15f6590e74603975d65cd81db658419ca9b6e040c08",
+      "src/signedAttachmentContext.js": "7dfebab1b06c2c8e193ce3fbd8aabc4190cdca228966563d7137e26d180427fe",
+      "src/signedAttachmentProofs.js": "884446e813a6b717c7829aef706f7a9ad5793fb5e41a82e6a61373b5e7e8ea43",
+      "src/signedAttachments.js": "ae6e86322659a47f0f7252b9948eca01074aec316185a06a7c7324fcb9bc1d7b",
+      "src/smartContractDeployment.js": "96e1f07bd0cf0a326f39d2560005361f1e933621ac37e1109d78e985cf18ef97",
+      "src/smartContractDeploymentSubmit.js": "5aef7153926b7e83f93c43402d74f80f445d411e65ba853e2d03926d08a1034f",
+      "src/soracles.js": "d08ed5a5b7896407c1d70dd0ab7b37b2f1de01d22710b39fa90866163336eeb3",
+      "src/soracloud.js": "8769998a285175b4d60755591114a36ce5de413f5c6240df09fb90df0d6199e8",
+      "src/soradns.js": "fa9b752b8ce51d1a832332475f0bec49151a6392f43792f741b83e978e106e07",
+      "src/sorafs.js": "5529fac438cc29a3685b050d258dfde38fd9d72a75b385ad59ccd577788078af",
+      "src/sorafsAliasResponses.js": "dd03ac8d9e9921eea95164280a1b1d1272b59a0b1216d0a0083828a4320c40c4",
+      "src/sorafsOrderbookAmbiguousError.js": "4c7070093b4636bf82a245b9c4321ecec7093b3b3f9d04a1e4da601a21ce28ef",
+      "src/sorafsOrderbookPreflight.js": "92e4eaea34f3baf52b77c4accf03abb4047155857916c6032a1341e161a9857d",
+      "src/sorafsOrderbookSubmission.d.ts": "1320366c6cbc68a07421c2c71adbc7164a6a37a2f979ca62972beed9d12edf51",
+      "src/sorafsOrderbookSubmission.js": "932feb17fef50e9cfc78f1ec1b502a39a9a81013d9f8df1b3d6dc56cce35dd20",
+      "src/sorafsOrderbookSubmissionBytes.js": "cf6ad006d41c8285950573456b4b03c99ecfbe8a6c30bd31f70f0b1a6e1f735e",
+      "src/sorafsPinDetail.js": "f4c45a0d668fd08b975a4092205b105ea2daf267d4dbed8d2d5401b8c6f6aae6",
+      "src/sorafsPorWeek.js": "41b9bfd427dea58159b0969475609fb1ca5a2dc67518ade9f1697ea2247dc581",
+      "src/sorafsReplicationProfiles.js": "b1799c6cb32a08f56a08c822da8f937bf68748fa24a2959f8a075d521c0bb7bc",
+      "src/sorafsReplicationResponses.js": "5c6d2c0862507ddfef89356ac4dbca4cc61cb1c348b916389bb564ecf5ab235b",
+      "src/soranetPuzzleClient.js": "14c5779d592e7351cc43c5124c391121233bdca44d8c223d16323009e929374c",
+      "src/strictLosslessJson.js": "5f03019e2358f09e7e29abc762412578c6eb9eaa0cf589f5d90fe3be8286cd67",
+      "src/subscriptionResponses.js": "ddd2c91825567eefb3628a4a33dcf2c9ae6c85db846007742fd84b9703757947",
+      "src/subscriptionTypes.d.ts": "df3845f902aee1e314f0213c8b5def09d159cbeeea58428328dd108a4bff7031",
+      "src/sumeragiTyped.js": "a0f90408d9eef14a7bdfe2699737cedcb11957b4aedf2ab91e955f2ef0558afe",
+      "src/sumeragiTypedLimits.js": "7fc84d119d0b099540fe1afa3dc170536a23b3104c01f4ec50b0162d44503272",
+      "src/tairaTestnetProfile.js": "871dd579fa2a55ac9cc0f47f7e5ba588e623fb5c171d4a1ae184a6cf6b092438",
+      "src/toriiBoundedResponse.js": "f846f5b387968adaa46764af8beb58b4bdcf79373f1a8f6f160df18acdd9b528",
+      "src/toriiBrowserClient.js": "2c6d22da1d72d4d90037b7c25b6cec838ba275580646472857da69403e15e255",
+      "src/toriiBrowserExplorerTypes.d.ts": "50b4caac76c4c042a5e7d02c90372a3273497e5f70429ae281c9c5b1e53001e2",
+      "src/toriiClient.js": "9fdc0aee34ee6dd86b56bb6ab2ea2afca97ee39487d16ae34b094ddcbd9be655",
+      "src/toriiClientEncoding.js": "a2d2c0287895847dff7dda11ba653ee71ee4b7ee2680368a7db33dcb2de68722",
+      "src/toriiClientPrimitives.js": "9c8330ec1891c4a8798a8a409fe73be2c0f3855cf3489df704d76838def3129d",
+      "src/toriiCompatibility.js": "c2edbf927615db8ae1320676e6dfe7a341fca48a913b3578525f6597ab909b08",
+      "src/toriiErrors.js": "579325474c93677ce4779933fbf1b7ca0d02a8bd8753fafe07f5238fa1ab2403",
+      "src/toriiEventStream.js": "bff2d780545da43cc065354b308ab84a3953dbde4f32764ebc92adcc9143c495",
+      "src/toriiGovernanceNormalizers.js": "3422b3548d65b77cb7dacd1a2413129151f17b3f46bd2c9391fc057ea3429be3",
+      "src/toriiOptional.js": "59544034740e58aea5c98f1480c3482586e4ec28593e0cb08712b09bfced0dd0",
+      "src/toriiTestHooks.js": "fa3253d8fd66e44501c4ed5bcfb82f8d5a45a2a0cff935f88758526630cb7a41",
+      "src/transaction.js": "c0a953a0f85e7ec1a9943196c6115cb1114baf43855b9712aa4cd7af6d7be16d",
+      "src/transactionCodec.js": "a327a875671159c28674b1e51bb61329eb85e87596df1670611e33220a575eb8",
+      "src/transactionRejectionObserver.js": "ba0a3af55c903be52fd4073018d9efbcb08e07e89b8bfdf061a6371eaf7a8f78",
+      "src/transactionReview.js": "b122cbf4dfaf690cf7ed3c8272f163aa47bcfa530903775cc9e50288bc739bcb",
+      "src/validationError.js": "ed96ad939858e8b1bada58036d036a6b737bc5ef603f7492acf823c01b5a2266",
+      "src/validationFeeConsensus.js": "587697c56538223af8d9cc0dbdef7ef5d192cf2365828820bc671ee3bb561427",
+      "src/validationFeeProposal.js": "9ecd65a3a9cab4565966b2a997885ae125034d9ccbcd90ba8b01cd0a88d2879a",
+      "src/validationFeeTrust.js": "2f8fcc05ef02d448f4f8292638a28e2ffad8f8be9799f482ab403548b565b482",
+      "src/validationThrow.js": "57f0efd5a6b4b3e8b3ebb49b4f09cff0d6e21c2a52cb78d7c1d02d577b199abe",
+      "src/verifyingKeyClient.js": "c0f4159dce5e22561230ab5c095fc77908f8c41d2dd1c8215c02cdc54d8a6609",
+      "src/vpnSchema.js": "913cb8b150124acaffb488a2d3b19cff4c7f766e08e89cbb1f902a4fd01c1aac",
+      "sumeragi-typed.d.ts": "888b590be171baf9859130b4ef044024a3f08b33d37e7e567dff05614af8d056",
+      "test/accountCapabilities.test.js": "b984238f98495c7c89ffe056947304a4b5613f349633513fe58314384ab04361",
+      "test/accountFaucet.test.js": "42cbdad66b7ba7732fcf40b6e866766c01d908949b02ccdf63cb5801ff659fbf",
+      "test/address.test.js": "52d0a8b0ffb5ffee362fda38d79e75433cbd1ad10f0c47e975043ed09087a542",
+      "test/addressBrowserAvailability.test.js": "714674a1713d1012605cdb8357877e39cce03fea26f8ffa8c21f64fd77b8a0ce",
+      "test/addressNativeAdmission.test.js": "834f0991c463699f8f2ca25be161bc48782e632bb1c67c628f6b1b4f1f002e6f",
+      "test/addressOwnerDelegation.test.js": "228429b949806980513ed934f31819829ac308107906bd4e05b5ea2c0adf243d",
+      "test/address_inspect.test.js": "d1e520415d9f9575156e9f8a1db202d59fa3a5db4b26dbdd1f3e57c3764259ff",
+      "test/address_public_key_validation.test.js": "e01003138f1f9510235110c7b3c9418611da65491ea40b84ad2ec0625191f92b",
+      "test/appealFinanceInstructionBuilders.test.js": "8f321e34d16848e0ea22321519372b841ab432f0ecf548bfc289eda595d514b3",
+      "test/atomicPrivateSettlement.test.js": "a4ae065c395e994dab91865fbd88bd9ce6bd6e492e153d2b4b9a310bea6f0e4e",
+      "test/authenticatedBlockProofs.test.js": "2583f7bf15700c0125b6efe258d9378937b0760e7ba9d62b0a8abc5c03ec0e77",
+      "test/axt.test.js": "4474286fd4704db72087e29badcd291a1dca18a977f7ca29e73602df5350c29d",
+      "test/axt_descriptor_builder.test.js": "604d2a8ee074826024bfc2700985c8135157b7891e53233e6b27b7a3c52e4a82",
+      "test/base64Validation.test.js": "29f9c592561902b404b0682d05bec19c96d3304f5708f3d984f4303e66431b43",
+      "test/bls12381G1.test.js": "2073348eeb7fb96e7ff28349d2a71e48ae36cba281c2d0f241d65b760cbfdee7",
+      "test/bond.test.js": "d8393e2833ed21600883fc0ebdbc1cd20c41b0c17e8e79712a17b701b9cad743",
+      "test/bootleLanternIssuance.test.js": "5f7759ee965f98e78bedde3c5db839d1a054119801626ea5566b2342a9df6721",
+      "test/buildDistConcurrency.test.js": "95cdcc27921950e86ae84bf9d4ffe1edd991dcefef1f81d92ec3d7090c259deb",
+      "test/bundleSizeCheck.test.js": "e9c991276ed09172919540eafd8630d166abc5b90a9c3a3b1944e7406f910ed2",
+      "test/cancelAssetLockV1.test.js": "816dbd1582c562849d16027c15f31f35ebbd0eb01599107881d2f8080899cdd1",
+      "test/cancelAssetLockV1.types.test.js": "664f3d465d92d1c2da7d99d0e9ba7ab0925422fe2b4fdf7c71280888f4748b39",
+      "test/canonicalAccountTransport.browser.test.js": "7fe893f75e0f94e683834574c1291732188c30e09c26104d6b312f73b9126290",
+      "test/canonicalAuthOneShot.test.js": "c4ef867f7ccfd073ad0e114e7baef84630378eee58642df65ce6763510e35254",
+      "test/canonicalInstructionOwner.test.js": "4624672b17c2bfca73539810b179da88364a0d354831a118683285490859178e",
+      "test/canonicalMessage.test.js": "db01a47e4785d7a52251a5449092ac9b1217e7d884b830854089fee2019b82e2",
+      "test/canonicalRequest.browser.package.test.js": "4486284e103c33293e03cab9fbf2d534526b6e25d99e0701e4fba02092cb3b94",
+      "test/canonicalRequest.test.js": "7ffe078881c23f123a0d93cb2d060ac3f3b0071ba23265e516c0d7d0ff5cd130",
+      "test/canonicalWitness.test.js": "0959abb5ef7dfb7538223f64a7277a1347799115650970f9629ad5761400d258",
+      "test/classedRace.browser.package.test.js": "2bc42a7640f1c1e6a780c2d17456d9179938bcc35c7643a94599e6760af735da",
+      "test/classedRaceCodec.test.js": "e30016c40ac319d9b7f7613760beb910d3b6b27a4a3c02e87e7848ccf43168cf",
+      "test/computeExamples.test.js": "be2f31e94e76a3bfdf94518b26e3e6498cc315700a283264b074ae14921f3577",
+      "test/confidentialChange.test.js": "8eb2d5bd34034b7dfc2603228829b807de6a8a8085265f1fe76b627fa71e5c66",
+      "test/confidentialMemoEnvelopeV1.test.js": "db09a443fd0d68e47d174cc96e4fa1316710f78b9537b5a4efa8bad509fd4e41",
+      "test/confidentialProofBuilders.native.test.js": "c00ce10e26f305c02d3b0f75cae815296155ddd43cb0c21ca3b188da82a70c0d",
+      "test/confidentialProofCardinality.test.js": "bc636ed3b1d0321135251f1603c9667898a75ca12a214db1d33897b928c9fc36",
+      "test/confidentialProver.test.js": "4bc6c2a981c5f682e0406c0577a6a044ca6bf2ad8f893b3508e6648221144c70",
+      "test/confidentialRoot.test.js": "204bdc429d7508f70f14de7bbaee5e8fea0b09a735fcac75412f9f93216aa3d2",
+      "test/confidentialWallet.native.test.js": "d31638a426c03d6cc9de285a05cc948dcad602e132e2bce6cddec1172ede79f4",
+      "test/connect.browser.test.js": "9a41a5f216cdf579d6dfe4f96fe65d504a3542d86e596d0958736e7ce736c6a5",
+      "test/connectError.test.js": "ad3cc7d88861a57437734723f1c34cb655502f519f7b4a535d306700f2a046d7",
+      "test/connectJournalRecord.test.js": "122dc5f8229f7de68967d5da5643064664cba0b548e5809986db7fef4c6d9bda",
+      "test/connectPreviewFlow.test.js": "0109679a5d59b27a9bea088d69c9fa007c797012dc3b838402a7902fc3864fdc",
+      "test/connectQueueDiagnostics.test.js": "fa8ba5234d7fcb808a903b26cc2ebf7bc4179177a0ae857fd2641430c7498dcb",
+      "test/connectQueueJournal.test.js": "4b6451a4bdf91096edc7c6ab8678f307cf26afeaa36eeb8b0cd8bde4f978dbef",
+      "test/connectRetryPolicy.test.js": "17f1a77286f4296cb66bbe9513adf60f27975899332ef18db29c0a2689441e76",
+      "test/connectSession.test.js": "3a394e69f8f195bf3b45ba4a52ab78dc6fc7203894111182ef62d1f2958812a7",
+      "test/connectWebSocket.test.js": "5340245dbfd1bca1f33bde7c672005ef46ede8b1f2f18c7b177056f07459cadf",
+      "test/contractArtifactReadTestHelpers.js": "c11d9f013080c7e81db1c621e799ebeddaa8117b3f894167d8e03c6a741b422e",
+      "test/contractArtifactScope.test.js": "a5e5ce4dbaf925965467f835e650f63664f3d45a7217766937a0d39c0c7bf566",
+      "test/contractArtifactTestHelpers.js": "3ed69ebb7315c91f257ce69e36529fff3600f28a76883fdbe695710e0ce7f938",
+      "test/contractDeploymentStateClient.test.js": "526e4dde8337de4f8e2ab278d635e9fbf5cb88b44860acee45fa2b74cd347605",
+      "test/contractEnumEvents.test.js": "f0ea3479480638c6a3c34b310c1d5d4d3bcfe5d219160850bcd89eda3a6f156f",
+      "test/contractErrorTypes.test.js": "425f7d39007497cd8133dc39c15c272e15adbfef182e5fbf2d62086c320c2424",
+      "test/contractManifest.types.test.js": "a879312b86c2ff4e1ba4a62194593ce5df198cc16317a5e868ac7631e22e746c",
+      "test/contractManifestNormalizer.test.js": "53bdb5457ac65156b3cca47c07d1ff213e252f6aa0b7b2eb2713c538c6f7d3db",
+      "test/contractManifestSignaturePayload.test.js": "bc447a1cb458d93c51cca2f1f4315c9e5880ea38b964c3e8303859837ccf8e32",
+      "test/contractManifestValidation.test.js": "9ab31e61ab4e32316b1e795d0b9cda0ffaf1f6068b8b063cfe7da12e7e0f9ed4",
+      "test/contractMetadata.test.js": "55fa0164fb1869c341c1ca3770e04d7fcc0645c45c59a638d59c80f9b972a610",
+      "test/contractPayload.package.test.js": "0d699aca0506c5581c81f8f4186576c36b16415a48b81360392921900d66310a",
+      "test/contractPayload.test.js": "6f737c7c451ac22991183128c9a95c6635bca0109fc1c972f7bb76c669806ee4",
+      "test/contractStateProof.test.js": "5542eef3a5adc17cc5307ebb1bea231d9c52f10a012ddb296e0bd8c35519e11d",
+      "test/contractStructIdentity.test.js": "e248c16e765b9d1ffe5db64851b634616711d873e8856087a20b0b90e0b2d521",
+      "test/controlPlaneSnapshot.test.js": "5ddb0fa3e73d8943c30e1a43d91ffe1391c982c645efaf681ff1b62460a0f2a4",
+      "test/copyNative.test.js": "bb06eb5198d80fbb074910bf9e8727f34c22b4661af81da268b72363056a7566",
+      "test/crc64Xz.test.js": "68e3dee1aaea69d9eaa4c2a19ddce3a5d1ec49be4aa15119177d7039b1fc7803",
+      "test/crypto.browser.test.js": "98298cee80c170e0f5c6e01d94f67af9e4f2d9408d92743595ade18a66c1c5f8",
+      "test/crypto.sm2.fixture.test.js": "24ed64bd4329c6846a76ee874b36c002b90417aea0d33038b6667bd20fd9cf37",
+      "test/crypto.test.js": "5115f8407de655785d427827a14018bc153f4c82e105fd46910d196e20f3e1af",
+      "test/cryptoHash.browser.test.js": "92edfc15e9b9068af3441e13401d64a1705ad5caacbd1ec89fd2047aac0c41f6",
+      "test/cryptoInternal.browser.test.js": "47a0d9c4cd405e59748aed38e1f1498d620fe1d3d01573c0d52e75bc3c39a406",
+      "test/currentRustContractArtifact.test.js": "60741667085b136c9612abc1f7802724704425256b8c8c08a7c380c39df4e155",
+      "test/dataAvailability.proof.test.js": "1091154d39960dc9f6ece940bef3d7fb05576ab32641a2ef3d406b483aca82b6",
+      "test/dataAvailability.test.js": "cfd76fe1ffe211a1d766aa26b0df748a65503e4a9e635d9be5d5a35cfdca9037",
+      "test/domainIdNormalization.test.js": "4a0d7fa0bd10d0ba4a7daf78b8e8477b829e64898493218da9100bc56549c575",
+      "test/domainLease.test.js": "ed5679949113a5772ea61280a3303ba5d61f6d1eddc8391f2d18fdbc52275d04",
+      "test/electionTallyV1.test.js": "c83d5f5c1374deeb590d2b1fc17afd8bf21ee3b775e5dd7c49d9d57394b5e918",
+      "test/embeddedCallSchema.test.js": "4bc452a13c615131268a0f3c383e5a32c040ab074ccc05c290d3b5565d7fd196",
+      "test/embeddedStateSchema.native.test.js": "2efa7335d624d73735d6b93c88b3a500f78242ceb04b3e156eb6925589c7eb93",
+      "test/embeddedStateSchema.test.js": "378493cb372b9cdd9990b6dd54cdf9f467b3c170a4123e62d657e6ba5f16aca2",
+      "test/entrypointAssetPrecision.test.js": "84e6dd434c2d76dfee4c927c3cb8e62f4371a9a8f7c718f415eea55d2e5a37b7",
+      "test/executableBatch.test.js": "a1bc1a76f5c699d90a163b00ae30cb34eecdb5a184c88597a45a43f899118d45",
+      "test/explorerNativeFrame.types.test.js": "49d4d11b1a37030e44149ace53a178194bd28f5d858f57854caf773cb73f8986",
+      "test/explorerTransactionProof.test.js": "b4ff95d50c0a993cc6995479ab9412f649980f3f6ead56ec678a6b6d8163797b",
+      "test/externalSigning.test.js": "1464520e66e16d089f0aeab11523ee146464064efc85e9098943a26ed60afcb9",
+      "test/finalizeElectionU128.test.js": "365167aecc0a87a41ac81dbeaa9420fcd8d0afb1a66a85b1a6b19a7f4e24bcba",
+      "test/fixtures/bond-v1-codec.json": "589e8090dacaf17e09fd1be3c3fc3423379a82ca86407a600d0aa529b203e7c8",
+      "test/fixtures/classed-race-v1-codec.json": "7733987e6764a0abf3023a9b32c049c36e9f94fa22a8d71b398d6d1c486e9e39",
+      "test/fixtures/classed-race-v1-codec.provenance.json": "bbe4a888a22b2af2ba97149a66db09fb5fd072424101b134b6c40cbf27d5661c",
+      "test/fixtures/contract_manifest_v1.json": "6fa569e52e4f6f48028537b600dc2bfd5a92f8b6c1e261d7c4e5ffd579bb27ef",
+      "test/fixtures/current_rust_contract_artifact.json": "474f9b3994b7d9926e8631a091032cc63b4cb82c1d15bee1cbf11ad75bd02677",
+      "test/fixtures/current_rust_contract_artifact.ko": "16c2e07a5f7777cd526ba1c6ca64e20346a3f920608cff0710910edfce8441a3",
+      "test/fixtures/game-resource-v1-codec.json": "b5f52602ddfdb4c65c7a3b3011c7b4e4b76277fd444a6538f529c8be167f4519",
+      "test/fixtures/game-v1-codec.json": "95847201f8c69d55849da80a1103320cb74138e05625c7a11a89f64bbd0131b7",
+      "test/fixtures/installedConfidentialWallet.mjs": "c17a2b000ee010a3693a5c078ee414cc8e2ce36dbbc633ea1527b503740b7a7a",
+      "test/fixtures/isoNativePayment.js": "9af2798e854c944023005087e1b6aa723677fb156a3b0a3b6a9ed9963f4bf656",
+      "test/fixtures/kaigi_authorization_scalar_wire_v1.json": "2a9aae66932f1d7644679151a896b3567ffec2d830be052cdeec98d8b7c7ce16",
+      "test/fixtures/malformedAccountKeys.js": "22361cee00a1e2c58f59bc864fad734a64ea879df37198f31784647fa5868ef4",
+      "test/fixtures/nft-market-v1-codec.json": "ab28bd8c0452c51ab881452815ef30e468e424c3af45282fd81bfd5d846aa4c9",
+      "test/fixtures/race-outcomes-stock-v3.provenance.json": "a54acc276e430f131df7f25e889766c8c0cff3ed9d6807f95ba6de9d1dcdfb50",
+      "test/fixtures/race-outcomes-v1.json": "bead33690b0e69d46b5d84c45d990657a15556dc60aa6b36221b401c9c3cf53c",
+      "test/fixtures/race-v1-codec.json": "939a387b144722ae9786f9e80906637cbaf857ec39a868fe4858a9b3028ef239",
+      "test/fixtures/retail_fee_codec_v1.json": "78dc8d5cf6b1432edf86ef324d5f4a1045b41ee4bd8f19037671817de27c93d1",
+      "test/fixtures/retail_fee_native_certificate_v1.json": "149f7e3f35f21b311c998fdce0784860effb23ca38ddec7791ad7edb7ee9df61",
+      "test/fixtures/retail_fee_native_conversion_v1.json": "6d5eed9cd01d7703e561463e4b1d1f8b2aa016f12ad5196b805e1f5af8749473",
+      "test/fixtures/retail_fee_native_policy_v1.json": "863cf30a7833cdc576fa01111c7cfe23dba43a6df5a0b481e987d1dea563ff5a",
+      "test/fixtures/sorafs_native_suite_contract_v1.json": "70403b063eae91b9e3fbe2889d3ca525fab6bae74c1bd0ab685a0749c3bc5ee9",
+      "test/fixtures/torii_responses.json": "21b708b4a5d1d5d73d380d2c868f3e32790e2053efa2543122f1d45fd921300f",
+      "test/fixtures/typescript/accountControllerInfo.types.ts": "c2c8bae8065da0b49da19e627896315dc15142f6a2e970f6037ac0daddddef17",
+      "test/fixtures/typescript/confidentialProofCardinality.types.ts": "ae7fa48d270e42a1f8ab20d1574e89d202ec470ea214e96f611313b51cbf5dec",
+      "test/fixtures/typescript/contractManifestAliases.types.ts": "fc72f7becaa901812cdf84a735fda5b02855ac5d6048607ff75585be2c043534",
+      "test/fixtures/typescript/explorerNativeFrame.types.ts": "4ca29574dd9015a5ed0915e97fcb45e8ee61ec2d65298cca1747a5bdcaa3389f",
+      "test/fixtures/typescript/governancePlainV1.types.ts": "ad6ea4edd8ad61186f9692fa6dad1fe18cf7da2db16df0715928788ba0b2ff50",
+      "test/fixtures/typescript/isoNativePayment.types.ts": "d69d96dbdc2e2725176bfcb40899906849a805b490be0b8c1107d30a9976b5db",
+      "test/fixtures/typescript/kaigiAuthorization.types.ts": "e1b0500a84feec75cd1848c3e12e838450d85a24a21aafc351a6906d9f756d1d",
+      "test/fixtures/typescript/multisigContractCall.types.ts": "3010a020b0d25984d356fc93e8234c458a878ba221ef9660a589fbaeddfee001",
+      "test/fixtures/typescript/parliamentInitialSortition.types.ts": "b6a3bc8cf43e7e77540237133722285ce94fe5262b9f989bdcd45721ac701673",
+      "test/fixtures/typescript/retailFeeV1.types.ts": "021afe01742e32e53a3a74359c76f76814424d6d56a4c1bb11612251deaa0804",
+      "test/fixtures/typescript/sorafsAlias.types.ts": "ff39502a84b0874ad8d186c78b6403d2e09d405b7616346b4f76093fe8e196e2",
+      "test/fixtures/typescript/sorafsPinDetail.types.ts": "1bcfa1e2c2a7d4241e15292ea34ec0023b8b661fb73fbce26b26be9b3441b77d",
+      "test/fixtures/typescript/sorafsRegistry.types.ts": "1def3d79403b0199880f7097243046e863789952975186a1fb5bed91028b8920",
+      "test/fixtures/typescript/transactionStatus.types.ts": "c82bdd54ec198ed98b95cc7ac428c6ba0fbd06fcd7a29e1be16145b4af1d4748",
+      "test/fixtures/typescript/uaidV1.types.ts": "315648bb55abd3f1f63ca5bb6aad3b97fabaeac408c6c54669e39eb88d922a3f",
+      "test/fixtures/typescript/validatorStaking.types.ts": "02f7e7deb912de10191341de3eca8bcf1f015dffaaddfd9f1f938335528b181c",
+      "test/fixtures/typescript/vpnTrust.types.ts": "2b43832fc3e4e95d13e5a956e34dc65f0e5e1be42b89a05b017f23fd6c4db75a",
+      "test/fixtures/validation_errors.json": "ca60e5cf384e7931f653c7356ca6902fce3d0b11e5bfb3dd22d53878577b4a44",
+      "test/gameCodec.test.js": "17e26a29581258a313d8c27018ba49020f49203a718a3d3f7d787d88a2d3d634",
+      "test/gameEquipment.test.js": "1de14639a38b53c964a83318943f8b0082b768c7d82c4e6d57b74cae60572cee",
+      "test/gameInstructionCatalog.test.js": "a1f1d07d119c31bc3e2d423428c5e18cae3ba1ccec5cd7ea3e9b7fc417254892",
+      "test/gameResourceCodec.test.js": "3d9f4161d2fa92c4eb5fb2a5d29332f360cc5ef512c472d4f05ab84279bd3498",
+      "test/gameResources.test.js": "4132ed1b0f6cad9b450ca76c79c38ec517a2449f90f2d8d42d5d5fb394242ce3",
+      "test/governancePlainV1.test.js": "1575f25c9d65450cf4adc9a32797a400b1c277494cdafdd462ce56c7913f2660",
+      "test/governancePlainV1.types.test.js": "0bbe3dd50d7b792052e1b3d478e6b2c55f1b702a4c02c2862ff9403fc47c5204",
+      "test/governanceSelectorNorito.test.js": "e1d5feab7b8811610968c717d2c44add61b919d31337bfef7a50353f7d6b4175",
+      "test/hardcodedAccountLiterals.test.js": "175d33ff746cd18c270efede46b1d3373193a13f7d5b6b5a4d1199abe5dfefcc",
+      "test/hashLiteralCrc.test.js": "99b6e7ea35e6e983acd7e845516d4e26a9a5e1dc3dd89a4377134942979aeb83",
+      "test/helpers/confidentialWalletNativeCases.js": "b0b4ea930a5189374a6ebe0e1a6b0bbe7f4d593b71b1c731b53a8dfa71825fc5",
+      "test/helpers/diagnosticIdentifierBfv.js": "94f2bbaca3687d62230156b9cbf5b68f81d5ad3c4e357eb93c9df0b17d969549",
+      "test/helpers/instructionCodec.js": "6c96b23cadfea0602bf4bad6b9a1a3d1024935b38c2df5a20f2da22d7149411e",
+      "test/helpers/native.js": "bf74830cc2aefd74cd29dad67ed86d019780e48eaa388ef215edf0322152f381",
+      "test/helpers/nativeRequirements.js": "4b6f0ef35f5ba3591ad0b6294b64917777f878c9542bf9acc37265c10a694e60",
+      "test/helpers/sorafsAliasProjection.js": "61304f3c157a9567402d96bba0cd2823aaf805642acf2d563cd70e7a5648b14a",
+      "test/helpers/sorafsNativeSuiteContract.js": "3b4b9328bae133c066d996c5caefb97fdb3aa71ca4fc36795e4c12be73357240",
+      "test/helpers/sorafsPinDetail.js": "8b760e4af59560d21128c6bbd94984b5fa038cb27a1d513e930d39cc77721ec0",
+      "test/helpers/sorafsReplicationProjection.js": "54caac8a1342df7f403a60ebf3c7f6923d85b15949753b36c5135583bbfcca7b",
+      "test/identifierOwnerPrf.test.js": "baf1183ee885f9c6bef1ad4ab563c299b2767c37fa4b649df85d37f996ead4ce",
+      "test/identifiers.test.js": "ced3455c4e34f989f618fe07cac73a7ae20a836f0889d916239f93433a0e2d66",
+      "test/instructionBuilders.test.js": "35e951c03426e6090beb3f1f3bd25e8c50a01e63d6d4277c13ac90d7bcc79a1c",
+      "test/instructionBuildersHardCut.test.js": "ae08e236863bab2fd8a94eda91a18d22d32d471b0a462f3d936d8150daed78e3",
+      "test/instructionCodecNativeBoundary.test.js": "7596c26c56df78e7cd220d28cc74501b411c0dff995362b6375ec9ea881bc8e4",
+      "test/instructionNetworkContext.test.js": "9e40abb24818764cf94b0eada81df19deb7f0b24abf9cc78055cc799122b2318",
+      "test/integrationTorii.test.js": "92e9a73c16415dae779841e0a6fe931b10e8d2c8d2661a90cd779180b7eda5a0",
+      "test/integrationToriiAssertions.js": "d90d1386cb993af2054e0e6ab06df29a0dde4fc46dd0caf09219b55c0f23c99b",
+      "test/integrationToriiEnv.js": "0d743f45af703f408bd297c3403cd37d60e7ada527a05ebff7053934cac01cda",
+      "test/integrationToriiEnv.test.js": "b75b9e23068cc2db52e3a13aa8dca306400375a92419e7bef420c40bf18f326b",
+      "test/integrationToriiQueryAuth.js": "e8cca2cdda46d8a4d871c46089feaacc2067a7a630cfb8b6dd2d5ba74b8309e5",
+      "test/isoBridge.test.js": "710870605d23e03ce66969c93d0c341a6689ccaafe4165e03d910315375a2a7f",
+      "test/isoBridge.types.test.js": "820b71108566188f30bb1e73af6cf045d25fe257a5d9166b87566f98afafb30e",
+      "test/isoBridgeRecipe.test.js": "37305505c3b83092214742b8e05229ebe8988dd87de968dd4668b95cfc04fdbe",
+      "test/ivmArtifact.package.test.js": "4e792e93391b2d9e28a8753d8e1728a836997a7f85f1fb6d5699bacaf0f20996",
+      "test/ivmArtifact.test.js": "1db64896ec8eae3e9c32b0ec95dc751333eb0869ea3d975c92f602c9e3b5965f",
+      "test/ivmFault.test.js": "125703d9385cbfa68c5a85088c36c166d94d8a946fd83a11f6b4276f11ddc6d9",
+      "test/kaigiAuthorization.native.test.js": "e23ca8b494e0ca446682f13549ac5d4edd233bac1ef0968f0ca643dccf017342",
+      "test/kaigiAuthorization.types.test.js": "88608841628359cc190054c640b7a72c9e2995275fb5f93886567cd48072b2e4",
+      "test/kotodamaArgumentRecordFixture.test.js": "e394097dcdc26f1bf04de1d09d04cc01654a5782ff224cc0f8a64ee0b76ce3a1",
+      "test/kotodamaCallTable.test.js": "cee3f1471ab692f35b7c19724ee7464c2754f5b8b883be761154bd116ea83f4a",
+      "test/kotodamaCompiler.native.test.js": "7cf7b11388245ef7da13d4baedc1c387032bc0ba4f11a74927d31c1492fb8f24",
+      "test/kotodamaCompiler.sources.test.js": "d5888e07d8af211a85d7ecc12e1fd8c19ad5bf26467ee0c73bff78a48cf49cef",
+      "test/kotodamaCompiler.test.js": "840a7ba92d47fa5a47442bc8b93ecd4c52cda2861e91ff5e9ac8a44f28abde38",
+      "test/kotodamaStateTypes.test.js": "32c228ac1f989073ebbdc3cacec089e8a7a1d592c26c696b73745377c31ed689",
+      "test/listQuery.test.js": "9630a4fb87ce7b60d91740a6669a4b99c2c6e15d1bf5292e67cacd2fb089280f",
+      "test/multisigContractCall.types.test.js": "5bab093aa55a60699992afd58ab23ab82ec146972390488beab87bd207a0817c",
+      "test/multisigExecuteTriggerHelpers.test.js": "bc7f2620f217e4b9e2ebbcae99806786a188030186e5a3fa6f885d35c29bfccc",
+      "test/multisigOccurrence.test.js": "4c96e0e7a57bc0ba80ab57b7854a3dab17783d8bfc354d659b07deb98de25cbb",
+      "test/multisigProposalInstruction.test.js": "4ffb6e7a8eee39a93bf05e219dcf359fe007b47cfa1ae1688033f1cea16f2932",
+      "test/multisigRegisterInstruction.test.js": "c652a9f30fe447d63cfaea3a67d5e2a9bc04146e2351ab8a7cf70b7e13337006",
+      "test/multisigRequiredFields.test.js": "a58dbe072bc6f73f30a5493274dcd830dc51afa12f1c805e5f2e0db8beecf694",
+      "test/multisigSpecBuilder.test.js": "c52a0bf05004044b31c74c345d841c5860ea6df6127279847cf923f50c3f6160",
+      "test/nativeAccountInspection.test.js": "daa0bfdc7dbeb75fd8cd61d74ee3521050188d813cf1aad17ebdc7467267c2f8",
+      "test/nativeBuildProfile.test.js": "e82f8a9ce633fa37cdfb9beff67fe41df1367cc68e5f82ffb1be75f3d8b5ef39",
+      "test/nativeBuildProvenance.test.js": "a4e7fae7fab5a2d62eca85ffa9decc90820403ae203f37f3b893c08467ec363c",
+      "test/nativeBuildSourceCapturePolicy.test.js": "3ee0cec2b2c507381dd73c8e3db317ed56b01fa1d0e1b10a662c4e99c9300d1b",
+      "test/nativeHelpers.test.js": "2e4234bb7a2eefdf69d2ce2d79f4e1edc1ddfaf118c84e9ef1564588cb93b74c",
+      "test/nativeLocalUnitVerification.test.js": "700e14a37766289d349150f65667c5271612a8b783f8ac382b0da9d90083b3a5",
+      "test/nativeMultisigTransport.test.js": "cf806ac2b2177d07d8e91f250ea46b14a230000041f9c673d632fd9060efdd51",
+      "test/nativeOnlyPackaging.test.js": "0a8c3390cc223c8358708f7715020a1464d800d91c5d27be40e95289a0c74a0d",
+      "test/nativeRuntime.test.js": "29ea18ece6a9755faa4e6b85427b692502021556a8c5096973c58851d533167c",
+      "test/nativeSumeragiLanes.test.js": "3fd14ba25d7695ce435a7aee8c89052484b97a8e1f20f553eb8d06c3b6f5e667",
+      "test/nativeSumeragiStatus.test.js": "a338d0d13eae22b7290a36c2813b44d540aa66027d54c2944df32965aeb686bf",
+      "test/nativeU64Projection.test.js": "4cd7818b64bef43d3853db32fbf8d0819f099b1074fffc391c209a021886af85",
+      "test/nativeVerification.test.js": "b00b3e7e66a6a929167895ef73bbd01780b4339688ef4c6e9e538fa237935515",
+      "test/networkId.test.js": "186c71a67bb58f1ca97269efc5f5f8406e5297db1fc7d70b50e0a07a789d01d3",
+      "test/networkIdentityDiscovery.test.js": "b9a3ad989ee8413ea149b084dc16da51ae7effdc4a5f9ef9985f19816550f91f",
+      "test/nexusApp.browser.test.js": "788f8debcfae9c0c9d166c4db24d6a6718ecb9dfb10f1652b7e81cd53abb1210",
+      "test/nexusAppClient.test.js": "5d90428defc25b98b2603207ce632046e64971e9eab1a9deb8263b4948f57b3f",
+      "test/nexusAppRecipe.test.js": "752c66624bf3b3faebd78ab8729b43d559f8e2e2b6d39bd4c5dcd63e105ee0ff",
+      "test/nft.browser.test.js": "26a94bcd7dcaf304740d4f7a7b3362ca51bbb3336b15dd3055983f83b625a084",
+      "test/nodeEngineContract.test.js": "f784a8a6887b38321da71b25736ffb9d33db066b660beecd584fcaf244b6fb5c",
+      "test/norito.test.js": "6c7bf99486f3632d64c772df446a5518bf274750423cf7b93300047273c350ce",
+      "test/noritoGovernanceBoundary.test.js": "f2efb1cb8e878b12d9e5e36a1e4db027e33753d4cb4d3ee6b0567170f27c4224",
+      "test/noritoJsonOwnKeys.test.js": "e6ed930c98e802ff8862a4426de495066fc31289c93ca6140d317a42e08a2f5f",
+      "test/noritoRecordDecoder.test.js": "69f46bb18e7cda6310364704feb4d63451a95ef65b82119c3c5cb38c7ffc9ea9",
+      "test/noritoRpcClient.test.js": "b554a049743d32265474dda3a326b72cefa8da2691200664c590f0d5c903cbd2",
+      "test/noritoRpcClientSecurity.test.js": "c90f655a2596f4b8e26e2ed4de1f9762d5c28a52ecc38647c9c9696df9eda972",
+      "test/normalizers.test.js": "9ae8f570e2f43af2ce62f04d08f477e6eb0e52d5dce327741344379746c51908",
+      "test/numericV1.test.js": "e3ce83c017e20f87816eaf1e1b435015dd9eefff0f70197c8959d0c471b1e60c",
+      "test/openVerifyEnvelope.test.js": "4e2a37d56a71031e7670a723ecf32bdb7c76ef1820cce44e213b9dc054cf0953",
+      "test/ordinaryDraftInspector.test.js": "6d6088057b169357f8f5255bc4b5172c7fb110f46b29f996a30b979916505d7b",
+      "test/packageSurface.test.js": "008ee8798e3bd85ef1aa8a667b59888a737fdd0e9a4dfcfbd05cc3ba3932032b",
+      "test/packageTypes.test.js": "f61f9d906b2436754fe4a1c9ea6785433fdc4fa0a974a2a2547050901973a494",
+      "test/package_dist.test.js": "645ec7d5e65e151fbdd3a6a2a72f93f5800f82c7e47d1eb8fc911c39c5aaa4fa",
+      "test/parliamentApiV1.test.js": "183695b075bbc043ef24cb9a4e615b7a368b1706b177061a5ee9f754bc86e5a5",
+      "test/petal.test.js": "9ce181442cc03b268a6c0b61b051c8c22aa2e35388f007fb20bf4b5ecabe0a8c",
+      "test/pipelinePreflight.test.js": "c95a594d88c0b4373b3be9ff97101961562ff108f675f0cdea3614caa9413a02",
+      "test/privacyCatalogParity.test.js": "444804083893c5d186d5a7e9f953c7e5bf104b0f6c56c8ff4335cfddd65a71c4",
+      "test/privacyExact12CapabilityManifest.test.js": "39b3450f612e4ec0202fbb794cabd53af1d6deba2f20c605d15aae422f311eb3",
+      "test/privacyExact12FixtureBundle.test.js": "77eb9d7a4d144efb59077071773873582f822a2e43b32050711594c10deb90ba",
+      "test/privacyExact12Network.test.js": "d869e587d768711727adcc96e7cab6d88bea346c91a9edf20625c0a7c0e7cdab",
+      "test/privacyFfiContractParity.test.js": "03a6ca683c0edc85d2eb5985deb1b288a674c9b84e3ae6a3b2205b38bce69259",
+      "test/privacyNative.integration.test.js": "cbb315f878b82ad2605a24fd3f3102333f7ba61d1aa827087ed3b148b69135be",
+      "test/privacyNative.test.js": "2c7d10f4e6337bca7a3253c08fbc42f9df5b26f6de38848db2fc32db566324c9",
+      "test/proofAttachmentParity.test.js": "0bed3986b4b62dc3639b2a76851b6838ce50bd662a38a8672172c6a43c37d2c9",
+      "test/raceAdapterCodec.test.js": "263e37929310f95c20ba17189731f069cc51b350b750ca82dae04ea66c1cac1a",
+      "test/raceOutcomes.test.js": "b6bc28a876d1ca4730a6f60871100de5cb6886a3cf41a7b8922dd144c8fe13ee",
+      "test/recipes.production.test.js": "b87d16678f94438d869bfd4239420d83783efa77744ebc0e02067d9f486f618f",
+      "test/releasePackageFlow.test.js": "1d7e4b8e4598a911d17a56d3c876713dac3d1c6df98452ea46f5af413004778d",
+      "test/releaseTestProfiles.test.js": "895f308ec7a8c43b957706a782ba55c2bd93ac66c863319fba7f15957761d8df",
+      "test/release_matrix.test.mjs": "d2fbfacc6bebc84723678b7d3f92a189b8c6d2e0c79945505b38f50199b6d7a5",
+      "test/repoAgreementLifecycle.test.js": "599aff851eac9e8d4025322561c033531d49743ea8e77735e182fabc1df84fae",
+      "test/reportBundleSize.test.js": "6e155ee352fbf60c7669d7205af8c7ef1f6a737912a4ad1be2ccc1af68799d9b",
+      "test/retailDailyLimitInstructions.test.js": "3c2804e0e07b16ccbe776e232b228bb904a34d18a220c8d6f7f991668a7c6476",
+      "test/retailFee.test.js": "73b81c8350cc9165d0f67120a1ca49faec91540a993f213fb113b7177f8d21b4",
+      "test/retailFeeNativeCertificate.test.js": "c4379b224da62d528f6262965c5962096247051c2eecb67457e49d8aadb23459",
+      "test/retailFeeV1.types.test.js": "85d442b6c9d57a04bc9d431e08fa502781cc780eed87a9526a278e622b9dbdf2",
+      "test/retryPolicy.test.js": "d1017f726c46eace84453441fc5fc845067329f232093eb061e288dc6421ecdb",
+      "test/runIntegrationScript.test.js": "289f2250cc375fb6ea5f2915601c9d9ab674182db5fc38c774558505123017d5",
+      "test/runTestsScript.test.js": "76c3cef907f8ce77d6ed73b9687590039b503934cfde1a928d976f4c24ddebd0",
+      "test/rwaBuilders.pure.test.js": "26e663f0baa870c7460547119ec86916439b4297cda70c55b0ce078bccdcabf2",
+      "test/scripts/check-changelog.test.js": "5928164b69236a7303db1428661799016ff88c4ec98aeb1217dcda809a8d89b0",
+      "test/scripts/record-release-provenance.test.js": "4a80eb42fef8c545eac3ee65a8a5935aa829a5c0785425f00088decf2bd0efc3",
+      "test/securityClients.test.js": "c1edfbb481dc8007c534455e4fa93af6645411dd861d39d2d4c2828c76672f6b",
+      "test/settlementLifecycle.test.js": "29f7689c7038b7afc888026fab0825a59cdb37a7d4bff85dd2cc7c8d342ec6a0",
+      "test/signedAttachmentContext.test.js": "cf71efda9b61a4e8ad82c688eaad2f9c0334182b6ffb91d188c9880e1aa46327",
+      "test/signedAttachmentProofs.test.js": "d8df517531fe8832ea811d4ef8d8c2859b920ab59fdd5e6210fc9e0d6fcd1239",
+      "test/signedAttachments.test.js": "1c0c6632a307cbf76b480726efb2f4ce9952c067ccc1d784fbd16d62b3abb9f4",
+      "test/smartContractDeployment.test.js": "d2aeb8a6829a1f3d6db023cd5ed0133ce897e8a3e1f2a5cd13b8b1ab8e7e896b",
+      "test/smartContractDeploymentFinality.test.js": "264cc3fadbce80c947b8ef1b0d2e77875720324d68cb1dc449d854e578d411ad",
+      "test/soracloud.test.js": "b160d3c70bb9d9bf529cb898c8d0d898852c13819e9d68e3ca39762b67eb1a96",
+      "test/soradns.test.js": "ddc8ad1409e6db7bcbda84cd3b77fdb687b784800fda982693ba6da6d116ea9c",
+      "test/soradnsHosts.test.js": "844d9f3e74d69f4c11d76c0ebf9e3e7cf06ac22b090f0fb810b57b4efe7143b1",
+      "test/sorafsAlias.types.test.js": "5f4926124041f1091853e143591336e05ecad6bcbd8af6603bccfaaab1895382",
+      "test/sorafsAliasProjection.test.js": "0102e31d3fb0e4c23f57136349e33a2397a2b298bb879c115e9c17cece69b010",
+      "test/sorafsAppealFinanceValidation.test.js": "5d95cf41d755ca8d88b4fed70054ae1b41584e6b5e4f53782b4f510272fc974d",
+      "test/sorafsChunker.fixture.test.js": "63f5881e3cdc1c7fe6565c210d5d9c86e0bb44c8c58f54bae353a5f5b5dc1705",
+      "test/sorafsChunker.oneGib.test.js": "be87532eaf16a6c76df22e3ee9341df5d4272ef2bd7b979dd779d643e89ec184",
+      "test/sorafsExactMonetary.test.js": "4898b4bb146ecdd99294b9d6003741dd0b6d95ecb5d62a77426eaf1038bd59ee",
+      "test/sorafsFixtureBundleValidation.test.js": "f6130a5bfec0ebd2cbc9e063b37b40577cf2b0bc18fbfd83864c9a8a08915130",
+      "test/sorafsGatewayFetch.wrapper.test.js": "c44e30e601bbdbb4620fe9399bdb719e37307c96573ce545a8cb1239bd90b0b7",
+      "test/sorafsGovernanceDagValidation.test.js": "d992c92d334dc8c20824f6d82f961fd797d3449ec101a5c39038a928eb677b58",
+      "test/sorafsHedgingBillingClient.test.js": "3b1612ac2f7a2b5976608f95801da44895ba8a35063871ab03e2e078537f964a",
+      "test/sorafsNativeCache.test.js": "31456c68ba5237eb68b6da657911a11cdba3455cada3acc4169464731957a4e1",
+      "test/sorafsNativeSuiteStructure.test.js": "5a1b79666af772fe22022359a75920934ddc9c3b78874872c9f509cad408e166",
+      "test/sorafsNativeSuites/cancelAssetLockV1.js": "7413c18b7fd1859c6476914c93f251465aa518781ff8191b2b9126e874cdcff6",
+      "test/sorafsNativeSuites/sorafsAppealFinanceValidation.js": "6b67f29283f33e083222104fb740c2cd14f4a409f48dd8f6d37031373edfa251",
+      "test/sorafsNativeSuites/sorafsFixtureBundleValidation.js": "9f2c3d7f74639b5b5b34525dc6ab608aada3abdd0859c78498c959772d0632e4",
+      "test/sorafsNativeSuites/sorafsOrchestrator.parity.js": "e738bd83e604e37ae349915ddb0e3aa4116382b51340a9990fb51d208675976b",
+      "test/sorafsNativeSuites/sorafsOrderbookSubmission.js": "87de59ab1ebbd52224667bfe8ae2e3c587529d86869a3e0c05dbb566e08f2079",
+      "test/sorafsNativeSuites/sorafsPdpValidation.js": "d0692009473bbe106b00caf27dd84b68ec818cabfeafed5a5463852367d5dbcd",
+      "test/sorafsOrchestrator.parity.test.js": "597a0ca540fa2e420a58750d31e206db67fcf4c73aa67aebef1c38407fe01b58",
+      "test/sorafsOrderbookLazyBoundary.test.js": "d6a595b91d2a2d8fa1752e00da69de5ae415d11790bceedd80fdadb746c9161b",
+      "test/sorafsOrderbookPreflight.test.js": "d14acecb99369647208f0ecac3a763db2920ba7b42a28e0a756cf755d94eb953",
+      "test/sorafsOrderbookSubmission.test.js": "67adf92f48d5fedb99c2ae8d1ccaa94373d9acc3773e7288798ddbe0486b5662",
+      "test/sorafsOrderbookSubmissionBytes.test.js": "d832f279eec1a184dd8b344f850ea0716ac6579059326fd31181f64669e0d7cd",
+      "test/sorafsOrderbookValidation.test.js": "f59f97700a08e5b4c2ed7e2fa723f2db3631565882c1ca6c2dbae0620c0c3e21",
+      "test/sorafsPdpValidation.test.js": "05c79861483bfd223012ea3745a574c743407147e8320303f515d11818d47442",
+      "test/sorafsPinDetail.test.js": "7a2bf3289ad1131cab12e6871ad08902196480dd452c44e9107e961263fe84d9",
+      "test/sorafsPinDetail.types.test.js": "ce05fbfda6b42f2b4ee4d8432e4aad35c81354be7a9058c48c93178ae98d633b",
+      "test/sorafsPinRegisterSdkGuard.test.js": "2ba06c1d4d8169c4277ca894d84122a4a109be06523483abb582634e06a68f82",
+      "test/sorafsPorWeek.test.js": "42f7fad38b0f8264a61f45ece024fc09f11759d2af900f9702214e5d79f3844c",
+      "test/sorafsRegistry.types.test.js": "011bebf536b34f8592089e00e0a61b008d1486dc40097bc3476c0afec57ce202",
+      "test/sorafsReplicationInstructionBuilders.test.js": "a12e32aaab82472b8f9de18d938d321a4f41e6395d752a21d96c89eea6c9f2b2",
+      "test/sorafsReplicationOrder.test.js": "e9ea9d830832dfa28adf1053f0d2247f77befe8e967492b8ea98306cddbeb3d9",
+      "test/sorafsReplicationProjection.test.js": "6b2abc8b15dc420163548ee6947a8b05c4ffce765a8d34e6c476d75b7568255c",
+      "test/soranetPuzzleClient.test.js": "a75c3d24b963935ba85585d0aa7ffb6a2bb0e11fbfcf29664edb090895093b78",
+      "test/stakingPreparation.test.js": "eed77b3b6a43932d50b464db1164140ed0f1a0cbb9f6c27fc80395e5cf4d7dce",
+      "test/strictLosslessJsonResources.test.js": "94ad6a750d158fe771c9decd5552ad18437317e4966cfa7413883d7a1f59707d",
+      "test/strictLosslessJsonWriter.test.js": "ab9b712e9ac24f69fbe201cb008b36d4954e2dba33b28a5620d4cd3e79f7e2f5",
+      "test/sumeragiEvidenceAudit.test.js": "ca5d24f5362acd0719b0daa3cbb0b3f839ed60cf31175f41ae4427112db6683b",
+      "test/tairaTestnetProfile.test.js": "45b0f3fb9d3c33bda1ef700bfb0ad9494b88bf32e7388f63b6b26b970fe64953",
+      "test/testProfileDistribution.test.js": "597dd5870b4663d70a05044d9193605f8bf6602cc4ce67b11e2a1c5a04ca9964",
+      "test/toriiApplicationPostAuth.test.js": "eecddf06b5d397ab93c230980d1104f2a75827ad33275a3a2d7181d6803cd74f",
+      "test/toriiBrowserClient.test.js": "780d95ead1d05010aa438ce5925ad43cba82a719f1584a00856f3d4730dce0d6",
+      "test/toriiCanonicalAuth.test.js": "538aa8a34387a173057b04b876fa01ed146fe94c9e1a9c856ab21e24b069899c",
+      "test/toriiClient.identifier.test.js": "3b6f2dd2b10a130352c2052065426c5e8df4bf54cb0385c9adf33ae9cc2c282a",
+      "test/toriiClient.isoAlias.test.js": "57cefdf650f059af31e27d8996304f81baa6224898f8c512a1cc6f3016eb2370",
+      "test/toriiClient.isoWait.test.js": "d92d5df5fa48d4ef67f0de739712acc40d2e9b9af034de89c94d7b4c453b5efe",
+      "test/toriiClient.ramLfe.test.js": "b9c7d74d271881015e0052b237435a7fe23baecf716b228627d6e4b67bb0d71e",
+      "test/toriiClient.test.js": "d2632826ebb23a87d123ffefe214bc538cdec9c795d8f1048dbf8dc52b02089b",
+      "test/toriiClientConnectSessionTests.js": "56f587060fb2b1f2f5ec700ff93217b26333fccc93bc4215162d87cd98e1dfc7",
+      "test/toriiClientElectionTally.test.js": "05491fe103c984d4e027fab9c5b9d0e1261c2bcb3346d608e8580cb76afed0a7",
+      "test/toriiClientGovernanceTests.js": "84fa17fe4c2303ae0279016da1ef44c2caf50946d560eacea5d817ece7f8c75d",
+      "test/toriiClientIsoOperatorAuth.test.js": "b49742320dccd8c6d0670ea2b54644b2ba286a6aaa1f3f28c1d0adb0c393928f",
+      "test/toriiClientMemoryBoundsTests.js": "3d8010354bf164d867e87d4ac39778b4ca48fbb1ea19f399d06b75ca8307fbf7",
+      "test/toriiClientOperatorReads.test.js": "d91dab4138dcdad686b3906f39862ada19f4682883234c05e88eda93c9235e67",
+      "test/toriiClientPrimitives.test.js": "5d3db35320c38dc07da7ba3e0612b6294124bc49f62f34209f3f473636967221",
+      "test/toriiClientTestHelpers.js": "a82491c3fcefe21e8f175edee1a236067a759d9805037fe0caca17ca03451a6d",
+      "test/toriiClientVpn.test.js": "634136786aa7da851f2c02a6e698503979287827c425f2455002dadd1f599205",
+      "test/toriiCollections.test.js": "03bbe15ba1d95a74f8e20da81ffc2a00ce037b68951948b7a52b9a5b0a87d706",
+      "test/toriiConnectAggregateAuth.test.js": "f8cf10c0b8e06d330a253e774d8a79f8ea263b4125283857cc9594d981e585b2",
+      "test/toriiExpensiveQueryAuth.test.js": "e11e8796cac91b8365c0180bbd6974377e25474a80f290d69134eb8586b75096",
+      "test/toriiKaigiOperatorAuth.test.js": "eef588401294cc483a94c01d8119d2a031451dd44d2fac541a853cfc117a0104",
+      "test/toriiSoracloudAuth.test.js": "11d168a2866cb91eadbff81e457495288aecf475c5cd3c8b7d7fbbe58aef4953",
+      "test/toriiSubscriptions.test.js": "7ec849e838aeab5f92277ee11e75afd5799e12e3c4e714aef4da5c5ac13ecb71",
+      "test/toriiTransportRegressions.test.js": "bfdc49f2f4040905000698dc98f7aeb6063f25a44a122aa15ebb1768b490620f",
+      "test/toriiVerifyingKey.test.js": "77f72fc6066ff078f523e7f01db5b755e04f10015bdb7bbe6db70f757da0313f",
+      "test/transaction.test.js": "48dc8c2a6c31c9b5d82329f0566e6db0c5de8841730ed960b244997a4c0a8b52",
+      "test/transactionBatchAdmission.test.js": "f5bcdc318fd4c2f514551a9cbc588c4ebe02a1675521413840fb0661417c7101",
+      "test/transactionBuilder.test.js": "4adb60650292c546d38bbe7cdc53dfcceecdae01f093f71a72c2b3bf10cf671a",
+      "test/transactionBuilderConfidentialValidation.test.js": "1302a159e53a83895c7d398d66fc44f6a5e50ac12c0c6fe4222755455cd81e17",
+      "test/transactionCodec.browser.test.js": "57e46bea97f296f9b897664ab114f8c6523add5a81ba711fe1484c7200005a56",
+      "test/transactionCodec.package.test.js": "dfa073784522a784ddfb73905cae8a3314793b75e6ef8779db41d752d2a0a916",
+      "test/transactionFixturesParity.test.js": "ee7dd205611777ef0ee12920a7e17bf5560f5001be38c6301829cbad9d00511f",
+      "test/transactionNetworkId.test.js": "e7e7aded43acbec6f1729eb4134c73f7c78a0d04601ddb0ea1ab5edd582659ec",
+      "test/transactionRejectionObserver.test.js": "8fe106fa2e97058fa7201d6fde13152e6e487d4a6a52e3fe15082effdd9fa47a",
+      "test/transactionReview.test.js": "34b508ab25ff1f956a355339ae471c6d61e00ce834965ce9d969547d44abd53c",
+      "test/transactionRuntime.test.js": "e5f16825c60b21d611a4821db68c8efe98978d0405ae4cf40ed88635247ce64f",
+      "test/transactionStatus.types.test.js": "b1bdda2a3ce7afb68cec47e1c4484481e6cb8d12ed8c09942259b58930b11d99",
+      "test/transferHashFrame.test.js": "5bec48a656a0bf8a91515855cd65fb90cb83aac4954df3330c0c258a6ce2a0a0",
+      "test/transportSecurity.test.js": "4bdf5167992bba04dcf1cd3a8d1f32036056cb8d50cf5c480265cd0581c473fa",
+      "test/triggerActionBuilders.test.js": "a88889dd25dd653e26f310f6db60fcf1c00f3f750cd927c4497980b32a20964d",
+      "test/uaidV1.types.test.js": "9f7227080b66dd36dc652fd47fab88dc08e31be67032f2f14102cf294fa1163a",
+      "test/validationError.test.js": "ad197403444a1fd08bb1790aa7613777fd040157549383415e59003f859de42b",
+      "test/validationFeeConsensus.test.js": "341a413b7c39a95ef0f8f9e8e4a53eb05e129e75d3815099d337804d51c17884",
+      "test/validationFeeNativeCheckpoint.test.js": "f02b0bdd74bac159085811589941a02a36bc892947eb0b6e2b5de54a1fbf0c3d",
+      "test/validationFeeProposal.test.js": "d040d66c1a49841aa31e7c828f96dafaa3a424d8f999a6af5773eff245ce326b",
+      "test/validationFeeTrustCapture.test.js": "595700871e327703592eb10b620478dbed19e552bf8e1bde710e31955f944b45",
+      "test/validationThrow.test.js": "d9ff1a4e32c4010113c7ca6064cee5cfec1999a8a3767d0c94dfaaae3b60c805",
+      "test/validatorStaking.test.js": "4496cc24067be9ee12b1444d4c12c936bc5d720c05c77998bdddc9741115ebbc",
+      "test/validatorStaking.types.test.js": "3fc3a6368f90f0c8a3c7bdc9654d6489a8b4d400e07c290bb031210bbea6ff36",
+      "test/verifierReplayBindingLabel.test.js": "95d28046e56fdb8b48f2f9f06f25d0e65e523a705eadba686efa8ec16baa4d60",
+      "test/verifyReleaseTarball.test.js": "e640cb226ac67f595a74403a1fc67c9b95333031c2c208625099e10309e60cfd",
+      "test/vpnTrust.types.test.js": "ce6bfe4fdb325741acc0898d332859e5d25878ddbfd9eac5c9877abbf9831ed1",
+      "test/zkAttachmentCanonicalAuth.test.js": "67f1ea5870f57a0da38b1b61731db975274cbda103fb5a605e080d8420875700",
+      "torii-browser.d.ts": "6c2bc67ed7fe8041b35c7801570d4a815a0b47d1f44731350b335ef8fd7aca40",
+      "torii.d.ts": "7850436958ea8b7ef16e6119878ee2b151d9ca88b011c82adbc9115ec5dd8c72",
+      "transaction-codec.d.ts": "6f03c31ea15ce25ba1657e136b47416bd6729b32f0e25adc51d73b35b28f5ef9"
+    },
+    "repeatPackSha256": "e968431b87ef519bb4ca5482ba4f59863436f248799b5eb839ea7cf041a52aa5",
+    "nodeVersion": "24.19.0"
+  },
+  "files": [
+    {
+      "path": "LICENSE",
+      "sizeBytes": 11343,
+      "sha256": "7c0558c365d644b7588d481e22f26421cd3ba23492d2c0ce0fd382466aad2c13"
+    },
+    {
+      "path": "README.md",
+      "sizeBytes": 259043,
+      "sha256": "4cfd8945602570eef90e3d1671e38f76a381fd62afec2f587782bc3797b88663"
+    },
+    {
+      "path": "address.d.ts",
+      "sizeBytes": 268,
+      "sha256": "1102edc44652c740f40fab8630b08c2a326f0658ec4dc831e6cd6de4132e98bd"
+    },
+    {
+      "path": "atomic-private-settlement.d.ts",
+      "sizeBytes": 7695,
+      "sha256": "31e5100884dc1f9108b9aa4ae8028ad3f3c2b0433573adf0d981d50fbdd0ec56"
+    },
+    {
+      "path": "blake2b.d.ts",
+      "sizeBytes": 138,
+      "sha256": "2e680fbb6ec2324d626a600cb99dc8451ac759576729161c016a8055d4eeec3b"
+    },
+    {
+      "path": "bootle-lantern-issuance.d.ts",
+      "sizeBytes": 1751,
+      "sha256": "19fc1d207902143298a2c8cfc3c60a70cbfc45bb1e6b507beae8d8057ceda282"
+    },
+    {
+      "path": "browser.d.ts",
+      "sizeBytes": 4212,
+      "sha256": "8bc693190366fe39876bed97c9c1588aac4c1abe59720d576e7bdd56c00212e4"
+    },
+    {
+      "path": "canonical-request.d.ts",
+      "sizeBytes": 4741,
+      "sha256": "6def46cd7d16298f527c132c5f28e18748784f8146a4b865a1422e69a5647e91"
+    },
+    {
+      "path": "classed-race.d.ts",
+      "sizeBytes": 2782,
+      "sha256": "fc42b9554b47f9cc214e8f933cf7257a9ed4628fdac2dd97861e0f399ae6d63c"
+    },
+    {
+      "path": "connect.browser.d.ts",
+      "sizeBytes": 7046,
+      "sha256": "0fdb854e1fbbfc5d1252c239065a4f68bab815bd756ef8dd3a6a08cdd2952d1a"
+    },
+    {
+      "path": "contract-payload.d.ts",
+      "sizeBytes": 3887,
+      "sha256": "278de2cfa044a177e70e503cc60b9833658462ba2106b4942535ad841e13a4bc"
+    },
+    {
+      "path": "crypto.d.ts",
+      "sizeBytes": 1305,
+      "sha256": "7b093b8f2f730f73bae74c1d146ff01fdbaeb47906efd6fe41eaec28e2949343"
+    },
+    {
+      "path": "dist/accountCapabilities.js",
+      "sizeBytes": 5693,
+      "sha256": "25a7de56cb22a62a1aa1c0dee7bdea1b27344977e3225473b0229b6ee9278d46"
+    },
+    {
+      "path": "dist/accountFaucet.js",
+      "sizeBytes": 14283,
+      "sha256": "beff390b72a6ad7f0600c7612005d611c6c9cd15c10240e6d34d2bf04c10ae30"
+    },
+    {
+      "path": "dist/address.js",
+      "sizeBytes": 45683,
+      "sha256": "df3a9bc7a321d841bee01348a7d173c4083d17870242b8f0f5d20715192a273f"
+    },
+    {
+      "path": "dist/addressErrors.js",
+      "sizeBytes": 1565,
+      "sha256": "7d9af71bc293178169a8aca5df55b92e8b423adef8420f5ef6a4b35f0662e361"
+    },
+    {
+      "path": "dist/addressPrimitives.js",
+      "sizeBytes": 2593,
+      "sha256": "64fcc3b2d4c1d965c4b3f2056e01b9dbaaadd8c3d55f7e729100a0219977fa60"
+    },
+    {
+      "path": "dist/applicationPostAuth.js",
+      "sizeBytes": 1970,
+      "sha256": "47a307d9e6ee3fc75e50e61a46ef30df2ae32f4622bb09dff5e29353e8a1585d"
+    },
+    {
+      "path": "dist/assetDefinitionRegistration.js",
+      "sizeBytes": 5002,
+      "sha256": "ca731d0b866c49a45b8935167feb67221557a0581d0321d2c078e1b91da1cfb2"
+    },
+    {
+      "path": "dist/atomicPrivateSettlement.js",
+      "sizeBytes": 45224,
+      "sha256": "40a30e4862b3d15e8088d7fbd100d404d30689ba106e262246a8dd91854220ad"
+    },
+    {
+      "path": "dist/authenticatedBlockProofs.browser.js",
+      "sizeBytes": 805,
+      "sha256": "50625427e38474019f715a1e5833120a6c3291d15b89abc2ff4e46cd5269153f"
+    },
+    {
+      "path": "dist/authenticatedBlockProofs.js",
+      "sizeBytes": 10077,
+      "sha256": "e2f8cd692982a6b0fd6f76aaab4ed0c1ad39aa724f3046b739419080c10c8301"
+    },
+    {
+      "path": "dist/axt.js",
+      "sizeBytes": 13715,
+      "sha256": "055b566a8efeaacbf1d4346416fa745aecf7b5eafec156ec6e9a82675aa411fe"
+    },
+    {
+      "path": "dist/blake2b.js",
+      "sizeBytes": 6555,
+      "sha256": "8b2c438216bde1f2dd77f2b928cfbb30530da0296a80502bb771d0be37fb2b36"
+    },
+    {
+      "path": "dist/blockProofTypes.d.ts",
+      "sizeBytes": 5527,
+      "sha256": "84bbb692a91df68de857cb90ecd8b5b2f48707924a33c31decdcf135d838f143"
+    },
+    {
+      "path": "dist/blockProofVerification.js",
+      "sizeBytes": 9437,
+      "sha256": "891ac145c305b29eae7d6827e94c9a004ee4f307779b48f3012b115690ad316f"
+    },
+    {
+      "path": "dist/bls12381G1.js",
+      "sizeBytes": 4868,
+      "sha256": "81e147cefc987b15896042af06e1c5fd0ebd2114a5fa1c6b775bf77cb3206de4"
+    },
+    {
+      "path": "dist/bond.js",
+      "sizeBytes": 35403,
+      "sha256": "568d46c71c765c8eb7499a09c129c48cba97cefee8561b8b20925ab7259b1006"
+    },
+    {
+      "path": "dist/bondRecords.js",
+      "sizeBytes": 9787,
+      "sha256": "bf40a095401a134f428ce443b1491b654963ab68527777cb0ac67cefd79bac72"
+    },
+    {
+      "path": "dist/bootleLanternIssuance.js",
+      "sizeBytes": 20112,
+      "sha256": "374a50a9c23a89629cdfd94bbbc9c5710daef51d680789bd54599d61a3d8260e"
+    },
+    {
+      "path": "dist/boundedByteSnapshot.js",
+      "sizeBytes": 1818,
+      "sha256": "d328fce478afdbeaa34f6ff69c40eb1106ad08c424c05e019a08f82a1ca301f1"
+    },
+    {
+      "path": "dist/browser.js",
+      "sizeBytes": 4809,
+      "sha256": "a14efbb03240fc50c6dc385f4368d92c6e876ddee71be1df19fab3e45452c03c"
+    },
+    {
+      "path": "dist/canonicalAccount.js",
+      "sizeBytes": 2146,
+      "sha256": "ec71e6542e50d7a1a9b72fab8c1734240fa685b25f925d7b303bedbece6e9e1b"
+    },
+    {
+      "path": "dist/canonicalLimits.js",
+      "sizeBytes": 411,
+      "sha256": "f61da5b852269ae783d02b9c03cf2c7c2d4006f28b040b5de92976eef05cf79f"
+    },
+    {
+      "path": "dist/canonicalMessage.js",
+      "sizeBytes": 4609,
+      "sha256": "b52e93d099b4b974d2a8d3366be16d000d653b6309d77ed421ea0fca77891e12"
+    },
+    {
+      "path": "dist/canonicalRequest.js",
+      "sizeBytes": 12830,
+      "sha256": "bded83eb88fc3dae702e39fdfb015d6e06dca86e7a9d5f75787f70d28dcce8ec"
+    },
+    {
+      "path": "dist/canonicalTransport.js",
+      "sizeBytes": 475,
+      "sha256": "4bde380631452124afeb525bf3279cbf284cc1c8ee6740f0faac35915617575d"
+    },
+    {
+      "path": "dist/canonicalWitness.js",
+      "sizeBytes": 1030,
+      "sha256": "a2aa1c15b2cd94040e358778617ee377698f84459f6a4b5a0a4e9eea9cf8e425"
+    },
+    {
+      "path": "dist/classedRace.js",
+      "sizeBytes": 2027,
+      "sha256": "bf2ff6b0006e9b19d64a4efb8b1210fac9f7bd26ca072ab3f4022c87add6cf00"
+    },
+    {
+      "path": "dist/commonLiterals.js",
+      "sizeBytes": 510,
+      "sha256": "19b7000996cd9a4738cd912e3321c1fe670acaaff945298316fa1cbef4626f08"
+    },
+    {
+      "path": "dist/compute.js",
+      "sizeBytes": 5210,
+      "sha256": "f540b08fd596a9470b437dc3ebd26c7fef329598bd946e6267d2cfc3e7774e48"
+    },
+    {
+      "path": "dist/confidentialProofBuilders.js",
+      "sizeBytes": 18090,
+      "sha256": "dde665d048edcac1cc43fccfe4a46ef8b4cde5371f055d15b24574b9698c2d91"
+    },
+    {
+      "path": "dist/config.js",
+      "sizeBytes": 23662,
+      "sha256": "135cf023f2609c8f9bb1f0fb1d3389cd9d9603112fb8ec816f5df417506282b5"
+    },
+    {
+      "path": "dist/connect.browser.js",
+      "sizeBytes": 62280,
+      "sha256": "58b4f1d99a9c58eeded2ea66fa31cfae5feb458c5964f8a35eaaeafa4264ddc7"
+    },
+    {
+      "path": "dist/connectError.js",
+      "sizeBytes": 10642,
+      "sha256": "aac4fead15c6f4dcba272c5f51a3a63cf2e7153af3ed5bfe60ffe128ae73fc11"
+    },
+    {
+      "path": "dist/connectJournalRecord.js",
+      "sizeBytes": 12533,
+      "sha256": "fbb968c61d7af1aa42053005af20664db3f3520a24c5da15977dc343e0fc081b"
+    },
+    {
+      "path": "dist/connectPreviewFlow.js",
+      "sizeBytes": 3086,
+      "sha256": "ccfa28bce01dfe7d275d4accfab27d9999dfeeb979ec2be694e1f681605a21da"
+    },
+    {
+      "path": "dist/connectQueueDiagnostics.js",
+      "sizeBytes": 10073,
+      "sha256": "6716f4ea32df92281a1724136cd5c2eeaa39550ec1182f43f1f4d2f189e25218"
+    },
+    {
+      "path": "dist/connectQueueJournal.js",
+      "sizeBytes": 15958,
+      "sha256": "89576348f092286c8f1f6b022056627098485d5d7b6f2871ec0409b9ef12cc77"
+    },
+    {
+      "path": "dist/connectRetryPolicy.js",
+      "sizeBytes": 3188,
+      "sha256": "60c579012c161d7b03f471277ae3fa8913f4f28b8297705e3822c319231943b4"
+    },
+    {
+      "path": "dist/connectSession.js",
+      "sizeBytes": 12360,
+      "sha256": "f947cb79dbedcfd94dedb83dafb4ea9f631f83da5640f269d4b4264b9b71e3b1"
+    },
+    {
+      "path": "dist/contractAddress.js",
+      "sizeBytes": 4298,
+      "sha256": "b0a587905895b4c0e2089d93c857b63e0f5220730309e39ee598710bad8fad18"
+    },
+    {
+      "path": "dist/contractDeclarations.js",
+      "sizeBytes": 2328,
+      "sha256": "b8b32892b82cbbd97f41c8ac687365fbec0681abc2cf60e94537a7f909614497"
+    },
+    {
+      "path": "dist/contractEmissions.js",
+      "sizeBytes": 5385,
+      "sha256": "eb07609bec1f354975ecab60240e51e69c22a07b228342d78dcc1a4d5ce331c6"
+    },
+    {
+      "path": "dist/contractErrorTypes.js",
+      "sizeBytes": 7910,
+      "sha256": "55c72f2b34f2fa034bfcdb0337e8478f1bc2ad5b2ef965ddfd3f783ebf963f45"
+    },
+    {
+      "path": "dist/contractManifestNormalizer.js",
+      "sizeBytes": 29816,
+      "sha256": "aeb75e5f5d20c13e6c94033bf9c5304b527bfaa74ad66b9abc41248f08cea326"
+    },
+    {
+      "path": "dist/contractManifestRules.js",
+      "sizeBytes": 8169,
+      "sha256": "b3cfe344ba816a8e2405ee5dc105950087afde2b80b91ed6ea5c53baa32330b1"
+    },
+    {
+      "path": "dist/contractPayload.js",
+      "sizeBytes": 20965,
+      "sha256": "67c32ea7d30ded9daa2a104dbf1f5a9a65d3a0c5f02ffeee338c4cf357d137d3"
+    },
+    {
+      "path": "dist/contractStateProof.js",
+      "sizeBytes": 7316,
+      "sha256": "10de591b10e3a04e6f89449ffc32df3a6f225d5191e697877e24491e693c6412"
+    },
+    {
+      "path": "dist/crc64.js",
+      "sizeBytes": 1489,
+      "sha256": "d3a6a15f404de7c3199fb768ffcfc12e9c99e8c98e913c653ca1ce00b8e62ceb"
+    },
+    {
+      "path": "dist/crc64Xz.js",
+      "sizeBytes": 817,
+      "sha256": "15b54f90a983d49901e28ab111547cf99cb0937b1011502c380fd09df7885f92"
+    },
+    {
+      "path": "dist/crypto.browser.js",
+      "sizeBytes": 11376,
+      "sha256": "da7e6b895c5c0a47a1cd35b890732a689445635957c5d49add1dd0689f2230a6"
+    },
+    {
+      "path": "dist/crypto.js",
+      "sizeBytes": 60272,
+      "sha256": "75e2f6f7cfd49948898959bb8b688f22cabc7bc5c9a782a5e7ec3259a9050c49"
+    },
+    {
+      "path": "dist/cryptoAlgorithms.js",
+      "sizeBytes": 816,
+      "sha256": "017771a6768d5245659a99d598f7cd572cc9833d497a76046c03f02d32601b17"
+    },
+    {
+      "path": "dist/cryptoHash.browser.js",
+      "sizeBytes": 3249,
+      "sha256": "5f4cd5c326d9f3cd5458db0a3e621156a0cfc2bd2ee53fa24710141939876e02"
+    },
+    {
+      "path": "dist/cryptoHash.js",
+      "sizeBytes": 55,
+      "sha256": "767354af740d9262491395a955c5bf778ac93e09ade2b50292f408d01a4668ca"
+    },
+    {
+      "path": "dist/cryptoInternal.browser.js",
+      "sizeBytes": 447,
+      "sha256": "0adbf05f8f84558064a4cf3c1408189fb0dcde1c46bf3d7dcfb0c48ce76f0780"
+    },
+    {
+      "path": "dist/curveRegistry.js",
+      "sizeBytes": 3066,
+      "sha256": "05e19df5ae69c145ce6d70d778ec194bd9fb89b6d7648167274d85a4e5c78225"
+    },
+    {
+      "path": "dist/dataAvailability.js",
+      "sizeBytes": 39135,
+      "sha256": "91342c0eaef62b9b2f224a2dae521b1648ae05061ad715fd4dcbec160c6422dd"
+    },
+    {
+      "path": "dist/domainId.js",
+      "sizeBytes": 6865,
+      "sha256": "08ea4fd19c3984c46023c9aa970a5affd351cc3db219c4f4f651bdea447140fc"
+    },
+    {
+      "path": "dist/domainLease.js",
+      "sizeBytes": 8206,
+      "sha256": "e20aa8686c2630b85b66177be9d7c63ec4f58af7d89f354567f5a669b4ff690c"
+    },
+    {
+      "path": "dist/ed25519Strict.js",
+      "sizeBytes": 3885,
+      "sha256": "b582b41280680e6f1229c100ffd43c98d6eb8abd6f402c394e6a52e27c02696b"
+    },
+    {
+      "path": "dist/electionTallyV1.js",
+      "sizeBytes": 3008,
+      "sha256": "85ed484efb90ac9033b2557fbefd3290d3ec5e5ecb8c170f0c63a50ebe4711da"
+    },
+    {
+      "path": "dist/entrypointSchema.js",
+      "sizeBytes": 13162,
+      "sha256": "1e4240a8cd3832dce569259fe4a3faa86646afc58ab7eec65f9eef70d7f8a2ff"
+    },
+    {
+      "path": "dist/explorerTransactionProof.js",
+      "sizeBytes": 6869,
+      "sha256": "7f8f1b7e7aaadd07c494e846c1a9508cadc8725932e20a06192df7365c602464"
+    },
+    {
+      "path": "dist/explorerTransactionProofTypes.d.ts",
+      "sizeBytes": 2363,
+      "sha256": "158f04ca61638e20a28fe2661d8708018509728cb2b4a8fb2d26144f46203cc1"
+    },
+    {
+      "path": "dist/game.js",
+      "sizeBytes": 3336,
+      "sha256": "a9ca39453d55263970f7a9678cac0e247ba7fc4128abaa9e188caba0f0dbdffb"
+    },
+    {
+      "path": "dist/gameResources.js",
+      "sizeBytes": 3653,
+      "sha256": "8fc65b4d45b31fe16040bc3ed7248706b3cc5d98fdadf7968ee148446036ca82"
+    },
+    {
+      "path": "dist/governancePlainV1.js",
+      "sizeBytes": 10644,
+      "sha256": "e5d48a04bc2f0402a2d803576f8e6a6a4cc6a3d060a3575c938885f330a8dd74"
+    },
+    {
+      "path": "dist/governanceProposalV1.js",
+      "sizeBytes": 42610,
+      "sha256": "cb900b28b8f3d0566838c65a3f978a6fea451b494174d3fe8518abfb5287820c"
+    },
+    {
+      "path": "dist/governanceSelector.js",
+      "sizeBytes": 965,
+      "sha256": "03749db15e0d14d3cd6430bb38a2c30ff54eb98ccfe42c7d13d93153d622adcc"
+    },
+    {
+      "path": "dist/hashLiteralCrc.js",
+      "sizeBytes": 482,
+      "sha256": "57fab8a85e00f79324e3062c923ab35812609e24fe223cb84e31f4da6acd345c"
+    },
+    {
+      "path": "dist/identifierOwnerPrf.js",
+      "sizeBytes": 17468,
+      "sha256": "22ed53d07d40f55685551309442f2a0442c468687a7f3d68e74c40973b81493e"
+    },
+    {
+      "path": "dist/identifiers.js",
+      "sizeBytes": 4027,
+      "sha256": "1e17f9c1936ba174830a20a34d05121e4e93f0d158c9e257d9e8ab29701acb8b"
+    },
+    {
+      "path": "dist/idnaBidi.js",
+      "sizeBytes": 5743,
+      "sha256": "adcd89502fcebb043f34b3ad939668723ca08b138df8341a2df2c7305d51a29b"
+    },
+    {
+      "path": "dist/index.js",
+      "sizeBytes": 23965,
+      "sha256": "f1db588f461d8dfa1284fb00c049f626013b82baa36cf091724b946002375b11"
+    },
+    {
+      "path": "dist/instructionBuilderPrimitives.js",
+      "sizeBytes": 6537,
+      "sha256": "5a0e3205db440f34a1d21db2174a3f823d50298c9b209b8465aa6afce38d5231"
+    },
+    {
+      "path": "dist/instructionBuilders.js",
+      "sizeBytes": 191597,
+      "sha256": "cc6e2679508d861fb1a0f95498d6886641e9fa7b062c35634969f97b90e9e899"
+    },
+    {
+      "path": "dist/iso20022Transport.js",
+      "sizeBytes": 4102,
+      "sha256": "92c31e2c036b5d5fea7b2645829aa5cd6575325a71c34ce86bdf3211571b9a94"
+    },
+    {
+      "path": "dist/isoBridge.js",
+      "sizeBytes": 48000,
+      "sha256": "7b46e9bf9336ca6dc24fdde0f29bcaf66dfc0a3ce6cf808c667ea0f889fc3757"
+    },
+    {
+      "path": "dist/ivmArtifact.js",
+      "sizeBytes": 5241,
+      "sha256": "5477f9138e83e5238ebdab04cf3ad5e14e82e3218c618ff413c38376f568b669"
+    },
+    {
+      "path": "dist/ivmFault.js",
+      "sizeBytes": 4234,
+      "sha256": "ddb831412e5970d98f941e3f4a9465bd30899681ab750be70c5e7e8fa1004c87"
+    },
+    {
+      "path": "dist/kaigiScalarV1.js",
+      "sizeBytes": 1095,
+      "sha256": "745bcde206d4154697820aa5d0a2a5af54e753035da85dc3706e61eb0d2ed70c"
+    },
+    {
+      "path": "dist/kotodamaCompiler/browser.js",
+      "sizeBytes": 796,
+      "sha256": "3eafb122873dfa9dffc1dcec570a4a2a904990a258bc7397e407c1c130a28581"
+    },
+    {
+      "path": "dist/kotodamaCompiler/client.js",
+      "sizeBytes": 32540,
+      "sha256": "d31c218b0293d2064c0a8c1d91613ceb4450c3c81af5330c591689150d7e0d55"
+    },
+    {
+      "path": "dist/kotodamaCompiler/embeddedCallSchema.js",
+      "sizeBytes": 12077,
+      "sha256": "e2498a589d958ee005bc8b04c0c537f1d5adc79b0a9a5f3ccb30f7ccac974158"
+    },
+    {
+      "path": "dist/kotodamaCompiler/embeddedNorito.js",
+      "sizeBytes": 3007,
+      "sha256": "adad53ea58757a945419c26785826a6efd2d7a17a14be4c9211e0b57b0bd3af1"
+    },
+    {
+      "path": "dist/kotodamaCompiler/embeddedStateSchema.js",
+      "sizeBytes": 5853,
+      "sha256": "8673f019a6a5486b75acaa54a7c3d2dbe233b6bdb12fd91ec5c56ef1e7ef3b17"
+    },
+    {
+      "path": "dist/kotodamaCompiler/index.js",
+      "sizeBytes": 1220,
+      "sha256": "86254019946c91151c40ffbdb80700a0f88b4421c0c75c2530cf3dc8b18d0c93"
+    },
+    {
+      "path": "dist/kotodamaCompiler/nativeBridge.js",
+      "sizeBytes": 744,
+      "sha256": "b6890eacbf5404684cbd572b1fb1db4c90e5eb65d7332d0eca725c666be7f5c9"
+    },
+    {
+      "path": "dist/kotodamaCompiler/normalize.js",
+      "sizeBytes": 63036,
+      "sha256": "ab9fda2f217b4e3997ec8c4e9e65754f3ecc31c5115f22dd79173d0e2458293a"
+    },
+    {
+      "path": "dist/kotodamaIdentifiers.js",
+      "sizeBytes": 14808,
+      "sha256": "24792d4a79183b7c0acf5cc69791d76a007607ae45bf52c7f6079653ffea5c4b"
+    },
+    {
+      "path": "dist/kotodamaProducts.js",
+      "sizeBytes": 1662,
+      "sha256": "2edf02b0f3114243ffa7304da0b474f84de9af55207c7afc26384d7301cdbe4e"
+    },
+    {
+      "path": "dist/multisig.js",
+      "sizeBytes": 5961,
+      "sha256": "bddea0d4d418ebd10a127dde5697460132b428e645d8887356afc3a5714c53ea"
+    },
+    {
+      "path": "dist/multisigContractCall.js",
+      "sizeBytes": 983,
+      "sha256": "c913cb7b23d18e60ebf6225457559bb9d196932c26fbecdd8504c4f9830bcfd8"
+    },
+    {
+      "path": "dist/multisigIdentifiers.js",
+      "sizeBytes": 439,
+      "sha256": "7e4f6184adcaaea75ddc6b116d9504c870ffcf8771e9c79deba292f767056f43"
+    },
+    {
+      "path": "dist/multisigOccurrence.js",
+      "sizeBytes": 1198,
+      "sha256": "b31c20b99bb9951f0af160e706fbf4513a82cf0464815ee8b9073b00079b21ee"
+    },
+    {
+      "path": "dist/native.browser.js",
+      "sizeBytes": 864,
+      "sha256": "58fe3af703a09fbe7a3722ba77134edd2aaaca42e14c02c2db58039c3a71948a"
+    },
+    {
+      "path": "dist/native.js",
+      "sizeBytes": 26540,
+      "sha256": "fb3c5ff0b4b25cb73c7e9585c1ea8964f16f7f4a79b384ba83f3193d66c4ed14"
+    },
+    {
+      "path": "dist/nativeAccountInspection.js",
+      "sizeBytes": 10271,
+      "sha256": "b2fbe47b8dc039289246a8cbd415c6b0fe2cb18fc4255a1d11272e3a4c72fc6c"
+    },
+    {
+      "path": "dist/nativeArtifactHash.js",
+      "sizeBytes": 10011,
+      "sha256": "856be3ef7522c99d0b06b6eb06b29543d823327a64c005d9849c9dcf3d4bd708"
+    },
+    {
+      "path": "dist/nativeMultisigTransport.js",
+      "sizeBytes": 20041,
+      "sha256": "88633f5e2d08a9f6af63b16e481cd5c36fd1484ae59eea0149f18c56cda2458d"
+    },
+    {
+      "path": "dist/nativeRuntime.js",
+      "sizeBytes": 4316,
+      "sha256": "9ddb317665d69ea47b7204d77719b99fbea214ac91c1aac8fab8a7990a23337b"
+    },
+    {
+      "path": "dist/networkId.d.ts",
+      "sizeBytes": 424,
+      "sha256": "9f882cf9dbd610b5af07469ff383ac3724b4a6981988da71b0d3b8065df22ae2"
+    },
+    {
+      "path": "dist/networkId.js",
+      "sizeBytes": 4001,
+      "sha256": "77acf4f4e480ce87c77bd1b56d11d755a121f661009bb5c8b5b4abf54dcfed96"
+    },
+    {
+      "path": "dist/networkIdentityDiscovery.js",
+      "sizeBytes": 2395,
+      "sha256": "fec1f8a5301a354314447a11b2684e738fb4c7b6fb9224ca8b9fc1f0d1bb7223"
+    },
+    {
+      "path": "dist/networkPrefix.js",
+      "sizeBytes": 316,
+      "sha256": "c939efd1b81ae3b6dcd253378051d36c69ffc8adcde1a372e67a9db81d9b3ab5"
+    },
+    {
+      "path": "dist/nexusApp.js",
+      "sizeBytes": 94601,
+      "sha256": "b3da160a5456e574f3cb26959f97520c065b3f71f543d0b810f3172c5f400f22"
+    },
+    {
+      "path": "dist/nft.js",
+      "sizeBytes": 9849,
+      "sha256": "722299adbc5c86791c5246e366935da1627b6faadb517b224d3e9e809073aa5b"
+    },
+    {
+      "path": "dist/nodeBufferTypes.d.ts",
+      "sizeBytes": 256,
+      "sha256": "1642126b59e8430a48fdb1785ae096ac122af74bc2cddd5f3804ed69be95f360"
+    },
+    {
+      "path": "dist/norito.js",
+      "sizeBytes": 140180,
+      "sha256": "7c3d6dd925560cf2a55cac26dfbda660ca6033df03894b91424670a206e864a9"
+    },
+    {
+      "path": "dist/noritoClassedRaceSchemas.js",
+      "sizeBytes": 7958,
+      "sha256": "87ac3867cbfb19ceb65b57ea345538351f3e89a8ede67112d641cc0621885153"
+    },
+    {
+      "path": "dist/noritoContractCodecs.js",
+      "sizeBytes": 51538,
+      "sha256": "75e3fa75588065fbd34adf000a8a4b8af871c58dad0eab18e98d2a7a6e5e2d9b"
+    },
+    {
+      "path": "dist/noritoContractMetadata.js",
+      "sizeBytes": 2730,
+      "sha256": "7ba190dddea1fc6e50a22b6ff4b455df43581718e39f7859dced3bbf9ba15e02"
+    },
+    {
+      "path": "dist/noritoGameCodecs.js",
+      "sizeBytes": 8963,
+      "sha256": "997a00f82561179f3c919db9f2a3674fa12f8f9cf8eba7667e9e3b1a012847cc"
+    },
+    {
+      "path": "dist/noritoGameEngine.js",
+      "sizeBytes": 15928,
+      "sha256": "c95abbaf6885dff88d932b161099698e1520a5d45f9def520f2145d6353e19e6"
+    },
+    {
+      "path": "dist/noritoGameInstructionCodecs.js",
+      "sizeBytes": 4558,
+      "sha256": "ad6d4e2dd52c4122281bfffcf13c7d1338260e4b0f6a011d75daebfa45fd6991"
+    },
+    {
+      "path": "dist/noritoGameRegistry.js",
+      "sizeBytes": 1331,
+      "sha256": "3f4744b2dee4b45fbe9df7ac34060bacc2642a4a57c1ef60be29b565e3f3bfc4"
+    },
+    {
+      "path": "dist/noritoGameResourceCodecs.js",
+      "sizeBytes": 510,
+      "sha256": "69e3db2cf87c35410cd13199cf9e23dd268bfaf2c3c573001bbb08ff2e7d8cf5"
+    },
+    {
+      "path": "dist/noritoGameResourceEngine.js",
+      "sizeBytes": 11374,
+      "sha256": "1df8db222bde113b9c82eb6e455615e392f0f4e2deb37dd4c289cca8b7f043f5"
+    },
+    {
+      "path": "dist/noritoGovernanceBoundary.js",
+      "sizeBytes": 15347,
+      "sha256": "11079e58ea3dde632682018489d08eb160802e5e96f80c1c3f971b4cffe27ffa"
+    },
+    {
+      "path": "dist/noritoNftMarketCodecs.js",
+      "sizeBytes": 7092,
+      "sha256": "573170d052532546a17b68c7e8ab59212b82cdfc903315074bcd31131501472c"
+    },
+    {
+      "path": "dist/noritoRecordDecoder.js",
+      "sizeBytes": 1545,
+      "sha256": "b923b9f8e2f0b6838d45bc2f52f0bb78b7303e4460d810f2125dff3af8dd0cd6"
+    },
+    {
+      "path": "dist/noritoReplicationOrderValidator.js",
+      "sizeBytes": 11099,
+      "sha256": "908c81f41a4f80ca1174d7a08aca0dfc7b6831f54bbcea689111761ef9ebc40b"
+    },
+    {
+      "path": "dist/noritoRpcClient.js",
+      "sizeBytes": 15780,
+      "sha256": "e5487d58213c4fe9a3a7fcedd182680887ba9dd19a41e460c5a526f113120b16"
+    },
+    {
+      "path": "dist/noritoStakingCodecs.js",
+      "sizeBytes": 15960,
+      "sha256": "ed76287a591842c42ef9fccec3f45168596274c77f1264a8a67eb12469455e10"
+    },
+    {
+      "path": "dist/noritoValueCodecs.js",
+      "sizeBytes": 38219,
+      "sha256": "bde26ebf3e5df2533071732370e860436922bd4db97d5fcd982110714819b69b"
+    },
+    {
+      "path": "dist/normalizers.js",
+      "sizeBytes": 21667,
+      "sha256": "8518e906a5cef225f8adaa39c4a267bfb2769de8ca3b2f62c870be2fb97ab70c"
+    },
+    {
+      "path": "dist/numericV1.js",
+      "sizeBytes": 18731,
+      "sha256": "7150b955b1f806506cf6685753eabf9d3eb32664472c1b5c234c77d10f8f3639"
+    },
+    {
+      "path": "dist/operatorRequest.browser.js",
+      "sizeBytes": 3570,
+      "sha256": "2f2d2fcd33421cabd8ef468698d03880a3f33cb1718064e8bc01ba1d912cfc11"
+    },
+    {
+      "path": "dist/operatorRequest.js",
+      "sizeBytes": 6743,
+      "sha256": "97e49403cfe81db7b640f85b3c734de0fc8c0eabf76b668fba69a4d5a53b8d1c"
+    },
+    {
+      "path": "dist/parliamentApiV1.js",
+      "sizeBytes": 74322,
+      "sha256": "60531749c3837209dcced8bc5642510c6d10c4c2c876d4bfc437d8c5cb2402f4"
+    },
+    {
+      "path": "dist/petal.js",
+      "sizeBytes": 6024,
+      "sha256": "ed45ea6f1b32ec4d99518a66b9039caef8f0d8c680382c04ab3f653cd556c1a5"
+    },
+    {
+      "path": "dist/petal/browser.js",
+      "sizeBytes": 19136,
+      "sha256": "05f2f3123eee20771a3da0cba98f87ef601826252d1f58fb6e58961d52e3ad6f"
+    },
+    {
+      "path": "dist/petal/crc.js",
+      "sizeBytes": 978,
+      "sha256": "376301b76cf1c851be7320f7a1cdacebe6a7f38353844ce9b66ad305a00ea810"
+    },
+    {
+      "path": "dist/petal/decode.js",
+      "sizeBytes": 44917,
+      "sha256": "aa0bb5df4affff103ca829b89e588f5862e0c87c974905df6eb5e0467ad6fa87"
+    },
+    {
+      "path": "dist/petal/fountain.js",
+      "sizeBytes": 7808,
+      "sha256": "aa3b5128902eaecfb5e7d386a90397bfe6352578285e2269514b48bf6de89cdb"
+    },
+    {
+      "path": "dist/petal/geometry.js",
+      "sizeBytes": 7923,
+      "sha256": "b9dc9bc6f0c2944fccc56f703271c4f0ac51946e25fda32810a1cc7108baa5bf"
+    },
+    {
+      "path": "dist/petal/glyphs.js",
+      "sizeBytes": 9800,
+      "sha256": "25cd27279e84f7558a4b778f4ffcca56520e0ed5fd6ed214bffbed42e7ab6db0"
+    },
+    {
+      "path": "dist/petal/image.js",
+      "sizeBytes": 5409,
+      "sha256": "2d17ec323b855f3a8639bb62b38435b60784fd6a724029410c3fab32103d49fd"
+    },
+    {
+      "path": "dist/petal/lanes.js",
+      "sizeBytes": 10185,
+      "sha256": "5eb00f0b32964c1be5884cd1172c4fc2b7c5be05442c1339751da1a78fb8c7f2"
+    },
+    {
+      "path": "dist/petal/layout.js",
+      "sizeBytes": 11639,
+      "sha256": "d36b17f3044408a81b5a4c19fa975a8345243ef7b2cc47399c000e885675e08e"
+    },
+    {
+      "path": "dist/petal/locate.js",
+      "sizeBytes": 26699,
+      "sha256": "140f38636c3e122debd2c8a1a43e8109cd8624049ecd2fbd5957920d1b7a26ab"
+    },
+    {
+      "path": "dist/petal/prng.js",
+      "sizeBytes": 1030,
+      "sha256": "711b548e08029f59bf48f1bcbf45568f3ff7db9d5d67f586ba7dba45e19e4167"
+    },
+    {
+      "path": "dist/petal/render.js",
+      "sizeBytes": 11554,
+      "sha256": "9c8b25b5e05f957fe2f4a2d6a7be1bca32b7b33520eaafdb7dba47b5d13f00e1"
+    },
+    {
+      "path": "dist/petal/rs.js",
+      "sizeBytes": 9133,
+      "sha256": "0d121f2e9dfc77db4fc5461e4922100aeb4e43942a34f45a5191ef66c53b1abd"
+    },
+    {
+      "path": "dist/petal/session.js",
+      "sizeBytes": 6860,
+      "sha256": "bf8101eab103353578ab22539e772ea6099c932cb6346a229e9da21e598122e0"
+    },
+    {
+      "path": "dist/petal/stream.js",
+      "sizeBytes": 13787,
+      "sha256": "ea674181316007ca715d5b68c36be409316fcd84043e8393d7d741e8ce34cb21"
+    },
+    {
+      "path": "dist/petal/support.js",
+      "sizeBytes": 3471,
+      "sha256": "592387ea9f136089bc398fcdfe04a6d441343e735bec2bbb3b3fcf54851496de"
+    },
+    {
+      "path": "dist/privacyCapabilities.js",
+      "sizeBytes": 45090,
+      "sha256": "b287a0ce10b25cc86517cc5581fa143674e4922bcae21855c245f166c8eeb664"
+    },
+    {
+      "path": "dist/privacyCapabilityAdmission.js",
+      "sizeBytes": 1176,
+      "sha256": "216c5e3767dd240f760f8001cd626f315ea78dd8b9c7e51ae91171a013ea5654"
+    },
+    {
+      "path": "dist/privacyCapabilityTransport.js",
+      "sizeBytes": 1312,
+      "sha256": "a1bcc2f17efcbc1dc67f1a55e93bbecd6f0127f3dffe79c24c47063f5b880485"
+    },
+    {
+      "path": "dist/privacyExact12Network.js",
+      "sizeBytes": 5043,
+      "sha256": "e755514b3f02bb347a214afcb4b3877dccc2fde609904b1d4976e268b1ba351e"
+    },
+    {
+      "path": "dist/proofAttachment.js",
+      "sizeBytes": 6101,
+      "sha256": "7791e4a25bbac81ed6db057fa4e3d27c76cb57132dc74bc8b16e4702c938a8f8"
+    },
+    {
+      "path": "dist/public/address.js",
+      "sizeBytes": 177,
+      "sha256": "be199ee84ad40af112d2e2f6f6452bb9228a6456cada31358b0973c8c0dc4e03"
+    },
+    {
+      "path": "dist/public/crypto.browser.js",
+      "sizeBytes": 1222,
+      "sha256": "95a1eb7b7a6c8a4a03b316b696ae57456e0b07d4bad22d73b84269972b130f60"
+    },
+    {
+      "path": "dist/public/crypto.js",
+      "sizeBytes": 1214,
+      "sha256": "6794f446fad444f8f2d7af1351969693b5f308a2e570d880eecf6e65a1c8d8cf"
+    },
+    {
+      "path": "dist/public/norito.js",
+      "sizeBytes": 1713,
+      "sha256": "4b0ba088266551366df93cee6c1a2a531db7aa1172ab38c9adc57d13af5c1289"
+    },
+    {
+      "path": "dist/public/normalizers.js",
+      "sizeBytes": 596,
+      "sha256": "e8fd49432e1987b2d446f3d7d3aa2f3f6afd417a85ae78dd04463c2d424a2a22"
+    },
+    {
+      "path": "dist/public/sorafs.js",
+      "sizeBytes": 898,
+      "sha256": "c3480ec9e61271405023a5c8cafabd77bccdfd212f6141f3daa8431c23faefa6"
+    },
+    {
+      "path": "dist/public/transactionCodec.js",
+      "sizeBytes": 1151,
+      "sha256": "fff3be48d76db3b13c2f45159198559297698cdfd2bccca026250962054fbe9b"
+    },
+    {
+      "path": "dist/query/collections.js",
+      "sizeBytes": 8322,
+      "sha256": "8576812385d07fced9bd989a5555a1e4e105bd980f16bac5b1cc404160edda63"
+    },
+    {
+      "path": "dist/query/grammar.js",
+      "sizeBytes": 51333,
+      "sha256": "4df67dc0ddf27a8e3e2a56319aec89691b7ce840576df3f6861c326dd1eabd93"
+    },
+    {
+      "path": "dist/query/index.js",
+      "sizeBytes": 1073,
+      "sha256": "a2fe7c156c7b3e33ee855c70b5ebffab0563c3a1d8a34ff822a2b2d80e7efd7e"
+    },
+    {
+      "path": "dist/query/listQuery.js",
+      "sizeBytes": 25754,
+      "sha256": "eb7c6574e754c817405c6e7e7d36715e7b03b344f4ad17a7ebb773f031ac9d7b"
+    },
+    {
+      "path": "dist/query/page.js",
+      "sizeBytes": 4559,
+      "sha256": "93cca2f3a5025d78239b8ae531b3011a18615d17a11315ee3ef69b87251feba5"
+    },
+    {
+      "path": "dist/race.js",
+      "sizeBytes": 3037,
+      "sha256": "477dc29252cd26bf8a09465d22cfd5b4d7af74830e2514de6c0978227b5f18c8"
+    },
+    {
+      "path": "dist/raceOutcomes.js",
+      "sizeBytes": 5353,
+      "sha256": "c3eeae37f7d573b1fc994a9fbff2d724af01e26ed89aaa48585c6a092c19ee6f"
+    },
+    {
+      "path": "dist/retailDailyLimitInstructions.js",
+      "sizeBytes": 11351,
+      "sha256": "9eb3f0dded51b23c1cdf08daf61b17e71ab463031d9dcc5934e1213ac339b08f"
+    },
+    {
+      "path": "dist/retailFeeAssessment.js",
+      "sizeBytes": 3606,
+      "sha256": "a1deb1639db2450887e1e883e6572de2d4014010161f05861a35943b37599d5e"
+    },
+    {
+      "path": "dist/settlementId.js",
+      "sizeBytes": 1480,
+      "sha256": "0a1e016a96968427d7223ca8362bcb3b709e968ea423736b7fa216e10ce60416"
+    },
+    {
+      "path": "dist/settlementIdentifiers.js",
+      "sizeBytes": 5643,
+      "sha256": "4bb5d04164afe2a74f3bc02cbcf711cc7061e637795fe8f854db9bbee21de2da"
+    },
+    {
+      "path": "dist/settlementIntents.js",
+      "sizeBytes": 11274,
+      "sha256": "a4aa1847d1c6f68bd259e15f6590e74603975d65cd81db658419ca9b6e040c08"
+    },
+    {
+      "path": "dist/signedAttachmentContext.js",
+      "sizeBytes": 5182,
+      "sha256": "7dfebab1b06c2c8e193ce3fbd8aabc4190cdca228966563d7137e26d180427fe"
+    },
+    {
+      "path": "dist/signedAttachmentProofs.js",
+      "sizeBytes": 13113,
+      "sha256": "884446e813a6b717c7829aef706f7a9ad5793fb5e41a82e6a61373b5e7e8ea43"
+    },
+    {
+      "path": "dist/signedAttachments.js",
+      "sizeBytes": 18439,
+      "sha256": "ae6e86322659a47f0f7252b9948eca01074aec316185a06a7c7324fcb9bc1d7b"
+    },
+    {
+      "path": "dist/smartContractDeployment.js",
+      "sizeBytes": 15046,
+      "sha256": "96e1f07bd0cf0a326f39d2560005361f1e933621ac37e1109d78e985cf18ef97"
+    },
+    {
+      "path": "dist/smartContractDeploymentSubmit.js",
+      "sizeBytes": 16005,
+      "sha256": "5aef7153926b7e83f93c43402d74f80f445d411e65ba853e2d03926d08a1034f"
+    },
+    {
+      "path": "dist/soracles.js",
+      "sizeBytes": 1717,
+      "sha256": "d08ed5a5b7896407c1d70dd0ab7b37b2f1de01d22710b39fa90866163336eeb3"
+    },
+    {
+      "path": "dist/soracloud.js",
+      "sizeBytes": 47410,
+      "sha256": "8769998a285175b4d60755591114a36ce5de413f5c6240df09fb90df0d6199e8"
+    },
+    {
+      "path": "dist/soradns.js",
+      "sizeBytes": 5399,
+      "sha256": "fa9b752b8ce51d1a832332475f0bec49151a6392f43792f741b83e978e106e07"
+    },
+    {
+      "path": "dist/sorafs.js",
+      "sizeBytes": 72800,
+      "sha256": "5529fac438cc29a3685b050d258dfde38fd9d72a75b385ad59ccd577788078af"
+    },
+    {
+      "path": "dist/sorafsAliasResponses.js",
+      "sizeBytes": 15989,
+      "sha256": "dd03ac8d9e9921eea95164280a1b1d1272b59a0b1216d0a0083828a4320c40c4"
+    },
+    {
+      "path": "dist/sorafsOrderbookAmbiguousError.js",
+      "sizeBytes": 692,
+      "sha256": "4c7070093b4636bf82a245b9c4321ecec7093b3b3f9d04a1e4da601a21ce28ef"
+    },
+    {
+      "path": "dist/sorafsOrderbookPreflight.js",
+      "sizeBytes": 7725,
+      "sha256": "92e4eaea34f3baf52b77c4accf03abb4047155857916c6032a1341e161a9857d"
+    },
+    {
+      "path": "dist/sorafsOrderbookSubmission.d.ts",
+      "sizeBytes": 950,
+      "sha256": "1320366c6cbc68a07421c2c71adbc7164a6a37a2f979ca62972beed9d12edf51"
+    },
+    {
+      "path": "dist/sorafsOrderbookSubmission.js",
+      "sizeBytes": 5852,
+      "sha256": "932feb17fef50e9cfc78f1ec1b502a39a9a81013d9f8df1b3d6dc56cce35dd20"
+    },
+    {
+      "path": "dist/sorafsOrderbookSubmissionBytes.js",
+      "sizeBytes": 554,
+      "sha256": "cf6ad006d41c8285950573456b4b03c99ecfbe8a6c30bd31f70f0b1a6e1f735e"
+    },
+    {
+      "path": "dist/sorafsPinDetail.js",
+      "sizeBytes": 11495,
+      "sha256": "f4c45a0d668fd08b975a4092205b105ea2daf267d4dbed8d2d5401b8c6f6aae6"
+    },
+    {
+      "path": "dist/sorafsPorWeek.js",
+      "sizeBytes": 1589,
+      "sha256": "41b9bfd427dea58159b0969475609fb1ca5a2dc67518ade9f1697ea2247dc581"
+    },
+    {
+      "path": "dist/sorafsReplicationProfiles.js",
+      "sizeBytes": 217,
+      "sha256": "b1799c6cb32a08f56a08c822da8f937bf68748fa24a2959f8a075d521c0bb7bc"
+    },
+    {
+      "path": "dist/sorafsReplicationResponses.js",
+      "sizeBytes": 15893,
+      "sha256": "5c6d2c0862507ddfef89356ac4dbca4cc61cb1c348b916389bb564ecf5ab235b"
+    },
+    {
+      "path": "dist/soranetPuzzleClient.js",
+      "sizeBytes": 16200,
+      "sha256": "14c5779d592e7351cc43c5124c391121233bdca44d8c223d16323009e929374c"
+    },
+    {
+      "path": "dist/strictLosslessJson.js",
+      "sizeBytes": 14319,
+      "sha256": "5f03019e2358f09e7e29abc762412578c6eb9eaa0cf589f5d90fe3be8286cd67"
+    },
+    {
+      "path": "dist/subscriptionResponses.js",
+      "sizeBytes": 5407,
+      "sha256": "ddd2c91825567eefb3628a4a33dcf2c9ae6c85db846007742fd84b9703757947"
+    },
+    {
+      "path": "dist/subscriptionTypes.d.ts",
+      "sizeBytes": 2839,
+      "sha256": "df3845f902aee1e314f0213c8b5def09d159cbeeea58428328dd108a4bff7031"
+    },
+    {
+      "path": "dist/sumeragiTyped.js",
+      "sizeBytes": 13720,
+      "sha256": "a0f90408d9eef14a7bdfe2699737cedcb11957b4aedf2ab91e955f2ef0558afe"
+    },
+    {
+      "path": "dist/sumeragiTypedLimits.js",
+      "sizeBytes": 274,
+      "sha256": "7fc84d119d0b099540fe1afa3dc170536a23b3104c01f4ec50b0162d44503272"
+    },
+    {
+      "path": "dist/tairaTestnetProfile.js",
+      "sizeBytes": 981,
+      "sha256": "871dd579fa2a55ac9cc0f47f7e5ba588e623fb5c171d4a1ae184a6cf6b092438"
+    },
+    {
+      "path": "dist/toriiBoundedResponse.js",
+      "sizeBytes": 3086,
+      "sha256": "f846f5b387968adaa46764af8beb58b4bdcf79373f1a8f6f160df18acdd9b528"
+    },
+    {
+      "path": "dist/toriiBrowserClient.js",
+      "sizeBytes": 112251,
+      "sha256": "2c6d22da1d72d4d90037b7c25b6cec838ba275580646472857da69403e15e255"
+    },
+    {
+      "path": "dist/toriiBrowserExplorerTypes.d.ts",
+      "sizeBytes": 2107,
+      "sha256": "50b4caac76c4c042a5e7d02c90372a3273497e5f70429ae281c9c5b1e53001e2"
+    },
+    {
+      "path": "dist/toriiClient.js",
+      "sizeBytes": 1014936,
+      "sha256": "9fdc0aee34ee6dd86b56bb6ab2ea2afca97ee39487d16ae34b094ddcbd9be655"
+    },
+    {
+      "path": "dist/toriiClientEncoding.js",
+      "sizeBytes": 2223,
+      "sha256": "a2d2c0287895847dff7dda11ba653ee71ee4b7ee2680368a7db33dcb2de68722"
+    },
+    {
+      "path": "dist/toriiClientPrimitives.js",
+      "sizeBytes": 1300,
+      "sha256": "9c8330ec1891c4a8798a8a409fe73be2c0f3855cf3489df704d76838def3129d"
+    },
+    {
+      "path": "dist/toriiCompatibility.js",
+      "sizeBytes": 12260,
+      "sha256": "c2edbf927615db8ae1320676e6dfe7a341fca48a913b3578525f6597ab909b08"
+    },
+    {
+      "path": "dist/toriiErrors.js",
+      "sizeBytes": 11147,
+      "sha256": "579325474c93677ce4779933fbf1b7ca0d02a8bd8753fafe07f5238fa1ab2403"
+    },
+    {
+      "path": "dist/toriiEventStream.js",
+      "sizeBytes": 2017,
+      "sha256": "bff2d780545da43cc065354b308ab84a3953dbde4f32764ebc92adcc9143c495"
+    },
+    {
+      "path": "dist/toriiGovernanceNormalizers.js",
+      "sizeBytes": 36017,
+      "sha256": "3422b3548d65b77cb7dacd1a2413129151f17b3f46bd2c9391fc057ea3429be3"
+    },
+    {
+      "path": "dist/toriiOptional.js",
+      "sizeBytes": 2672,
+      "sha256": "59544034740e58aea5c98f1480c3482586e4ec28593e0cb08712b09bfced0dd0"
+    },
+    {
+      "path": "dist/toriiTestHooks.js",
+      "sizeBytes": 388,
+      "sha256": "fa3253d8fd66e44501c4ed5bcfb82f8d5a45a2a0cff935f88758526630cb7a41"
+    },
+    {
+      "path": "dist/transaction.js",
+      "sizeBytes": 114318,
+      "sha256": "c0a953a0f85e7ec1a9943196c6115cb1114baf43855b9712aa4cd7af6d7be16d"
+    },
+    {
+      "path": "dist/transactionCodec.js",
+      "sizeBytes": 103946,
+      "sha256": "a327a875671159c28674b1e51bb61329eb85e87596df1670611e33220a575eb8"
+    },
+    {
+      "path": "dist/transactionRejectionObserver.js",
+      "sizeBytes": 3065,
+      "sha256": "ba0a3af55c903be52fd4073018d9efbcb08e07e89b8bfdf061a6371eaf7a8f78"
+    },
+    {
+      "path": "dist/transactionReview.js",
+      "sizeBytes": 20641,
+      "sha256": "b122cbf4dfaf690cf7ed3c8272f163aa47bcfa530903775cc9e50288bc739bcb"
+    },
+    {
+      "path": "dist/validationError.js",
+      "sizeBytes": 1267,
+      "sha256": "ed96ad939858e8b1bada58036d036a6b737bc5ef603f7492acf823c01b5a2266"
+    },
+    {
+      "path": "dist/validationFeeConsensus.js",
+      "sizeBytes": 18113,
+      "sha256": "587697c56538223af8d9cc0dbdef7ef5d192cf2365828820bc671ee3bb561427"
+    },
+    {
+      "path": "dist/validationFeeProposal.js",
+      "sizeBytes": 4733,
+      "sha256": "9ecd65a3a9cab4565966b2a997885ae125034d9ccbcd90ba8b01cd0a88d2879a"
+    },
+    {
+      "path": "dist/validationFeeTrust.js",
+      "sizeBytes": 3457,
+      "sha256": "2f8fcc05ef02d448f4f8292638a28e2ffad8f8be9799f482ab403548b565b482"
+    },
+    {
+      "path": "dist/validationThrow.js",
+      "sizeBytes": 406,
+      "sha256": "57f0efd5a6b4b3e8b3ebb49b4f09cff0d6e21c2a52cb78d7c1d02d577b199abe"
+    },
+    {
+      "path": "dist/verifyingKeyClient.js",
+      "sizeBytes": 25371,
+      "sha256": "c0f4159dce5e22561230ab5c095fc77908f8c41d2dd1c8215c02cdc54d8a6609"
+    },
+    {
+      "path": "dist/vpnSchema.js",
+      "sizeBytes": 11210,
+      "sha256": "913cb8b150124acaffb488a2d3b19cff4c7f766e08e89cbb1f902a4fd01c1aac"
+    },
+    {
+      "path": "game-resources.d.ts",
+      "sizeBytes": 3282,
+      "sha256": "fb1dc92382d3f2be1d258d35c7c277a091b3e0468d91f88c02949de914c45c86"
+    },
+    {
+      "path": "game.d.ts",
+      "sizeBytes": 6511,
+      "sha256": "36a76f786f3aac0d1dc69ee61b7db0baa9e7322aadeb8433af419999171818a0"
+    },
+    {
+      "path": "index.d.ts",
+      "sizeBytes": 465634,
+      "sha256": "d7a56ba614f6531ad5f459b669ce59dddbceaf42a9ab8d75cbb5dd8ea0d50539"
+    },
+    {
+      "path": "instruction-builders.d.ts",
+      "sizeBytes": 4200,
+      "sha256": "2ca6b7ce7d16364d0de784044c6154550deb609f71cd568589e1793c17e77401"
+    },
+    {
+      "path": "ivm-artifact.d.ts",
+      "sizeBytes": 822,
+      "sha256": "3d013df2461b49fb2661c620365351c1b5bcb574363a812ecbcf17a43771df1b"
+    },
+    {
+      "path": "kotodama-compiler.d.ts",
+      "sizeBytes": 11003,
+      "sha256": "ca00ab9471923168f859b40c82601021080bd280ce1cacca7432b2995f9917ac"
+    },
+    {
+      "path": "native/iroha_js_host.checksums.json",
+      "sizeBytes": 1262,
+      "sha256": "4eabbb3e3d00e9456996bdc2e8bfe45845a53ab4ec24ef4b7c336c20e438daa2"
+    },
+    {
+      "path": "nexus-app.d.ts",
+      "sizeBytes": 9776,
+      "sha256": "2c0babd0603832c82cdc4989bbc8e600dc134407f4c69cb9fac76795f9505e4e"
+    },
+    {
+      "path": "nft.d.ts",
+      "sizeBytes": 3334,
+      "sha256": "87f139404dde922960c74612c3a6c258fd6e54e302e4ada34ca0e0d1a83a09bc"
+    },
+    {
+      "path": "norito.d.ts",
+      "sizeBytes": 1804,
+      "sha256": "51009156bc5eff2e913146cb9d6dfb8a1ab9589bcaf6e461053949705b5aca1c"
+    },
+    {
+      "path": "normalizers.d.ts",
+      "sizeBytes": 687,
+      "sha256": "54b87f59a1b006471580cf2eda0588495b2b0df23994978147ecf9930b6e2480"
+    },
+    {
+      "path": "operator-request.d.ts",
+      "sizeBytes": 614,
+      "sha256": "1727570791216359a76f9b875e41966f3c4d38e69cfee5e720c4d805c10c556c"
+    },
+    {
+      "path": "package.json",
+      "sizeBytes": 10149,
+      "sha256": "9d4691a3abf1e52f7ffce5559d00351be4c6cb042bf6d6330171bacbd8e17536"
+    },
+    {
+      "path": "petal.d.ts",
+      "sizeBytes": 37279,
+      "sha256": "33639677af2d83a8b97129581e57aeac016702dee5feaff783180fb70357d612"
+    },
+    {
+      "path": "privacy-capabilities.d.ts",
+      "sizeBytes": 13021,
+      "sha256": "1de948ed5b02489c296e87ca34855358995e28e17fde3005a8b0a2bc4ebc2815"
+    },
+    {
+      "path": "race.d.ts",
+      "sizeBytes": 4028,
+      "sha256": "5c1b9e25230351ec6ea8dae1359f8c485e2be670454ac897efcd5724d22100bd"
+    },
+    {
+      "path": "recipes/README.md",
+      "sizeBytes": 12829,
+      "sha256": "6d921a5bead6424e8b4da643660f1507e9b36598e649928f9ac70435387024e2"
+    },
+    {
+      "path": "recipes/iso_bridge_builder.mjs",
+      "sizeBytes": 6862,
+      "sha256": "9c768ae8580cabb429d451f76fdba5a0518d8189765b9061e95205d361ce160f"
+    },
+    {
+      "path": "recipes/iso_bridge_context.mjs",
+      "sizeBytes": 1639,
+      "sha256": "c9b0a80907eb2bd9b93f6bb95ba4f2ce1b315b64a944b3ed864c1fcf67288d7b"
+    },
+    {
+      "path": "recipes/nexus_app_transfer.mjs",
+      "sizeBytes": 3253,
+      "sha256": "4da5d1d94185bb480e0edb4b6a2db842db6a0d2fa4aeba0f143871f76959f117"
+    },
+    {
+      "path": "repo-agreement.d.ts",
+      "sizeBytes": 424,
+      "sha256": "750e184d84d2e62e99b78985fd4f1373b9f38e4f29a935f6d0e4bfb662543c24"
+    },
+    {
+      "path": "smart-contract-deployment.d.ts",
+      "sizeBytes": 6638,
+      "sha256": "a59a0820e06d41777d13920e78f7df3e79e695d4e7b20b3f7a8b5014f844c125"
+    },
+    {
+      "path": "sorafs.d.ts",
+      "sizeBytes": 989,
+      "sha256": "2c78eb0ba233a207b72685853b8634241e0317919e26b3f4483d7b3c846d9e8a"
+    },
+    {
+      "path": "sumeragi-typed.d.ts",
+      "sizeBytes": 1002,
+      "sha256": "888b590be171baf9859130b4ef044024a3f08b33d37e7e567dff05614af8d056"
+    },
+    {
+      "path": "torii-browser.d.ts",
+      "sizeBytes": 712,
+      "sha256": "6c2bc67ed7fe8041b35c7801570d4a815a0b47d1f44731350b335ef8fd7aca40"
+    },
+    {
+      "path": "torii.d.ts",
+      "sizeBytes": 1486,
+      "sha256": "7850436958ea8b7ef16e6119878ee2b151d9ca88b011c82adbc9115ec5dd8c72"
+    },
+    {
+      "path": "transaction-codec.d.ts",
+      "sizeBytes": 13264,
+      "sha256": "6f03c31ea15ce25ba1657e136b47416bd6729b32f0e25adc51d73b35b28f5ef9"
+    }
+  ]
+}

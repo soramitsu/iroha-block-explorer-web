@@ -39,6 +39,7 @@ import { normalizeAssetDefinitionSelectorLiteral } from '@/shared/lib/asset-defi
 import { parseOptionalFilter } from '@/shared/lib/optional-filter';
 import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 import { advanceHistoryScanCursor, createHistoryScanCursor, type HistoryScanCursor } from '@/shared/lib/history-scan';
+import { createPublicHistoryCacheKey } from '@/shared/lib/history-cache';
 
 defineOptions({
   name: 'EconometricsPage',
@@ -351,15 +352,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
-function storageKey(assetDefinitionId: string) {
-  const node = encodeURIComponent(http.getToriiBaseUrl());
-  return `econometrics_snapshot_v2:${node}:${assetDefinitionId}`;
+const snapshotCacheKey = createPublicHistoryCacheKey('econometrics-holder-snapshot', getRuntimeConfig().networkId, http.getToriiBaseUrl());
+
+function storageKey(assetDefinitionId: string): string | null {
+  const key = snapshotCacheKey();
+  return key ? `${key}:${encodeURIComponent(assetDefinitionId)}` : null;
 }
 
 function loadSnapshot(assetDefinitionId: string): HolderSnapshot | null {
-  if (typeof window === 'undefined') return null;
+  const key = storageKey(assetDefinitionId);
+  if (typeof window === 'undefined' || !key) return null;
   try {
-    const raw = window.localStorage.getItem(storageKey(assetDefinitionId));
+    const raw = window.localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<HolderSnapshot>;
     if (!parsed || typeof parsed !== 'object') return null;
@@ -379,9 +383,10 @@ function loadSnapshot(assetDefinitionId: string): HolderSnapshot | null {
 }
 
 function saveSnapshot(assetDefinitionId: string, snapshot: HolderSnapshot) {
-  if (typeof window === 'undefined') return;
+  const key = storageKey(assetDefinitionId);
+  if (typeof window === 'undefined' || !key) return;
   try {
-    window.localStorage.setItem(storageKey(assetDefinitionId), JSON.stringify(snapshot));
+    window.localStorage.setItem(key, JSON.stringify(snapshot));
   } catch {
     // ignore
   }

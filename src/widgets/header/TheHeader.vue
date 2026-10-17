@@ -13,6 +13,7 @@
     </div>
 
     <div class="app-header__buttons">
+      <ExplorerReadAccess class="app-header__button" />
       <ScopedExplorerControl
         v-if="currentScope"
         class="app-header__button app-header__button_node"
@@ -34,6 +35,7 @@
 
 <script setup lang="ts">
 import HeaderLogo from './HeaderLogo.vue';
+import ExplorerReadAccess from '@/shared/ui/components/ExplorerReadAccess.vue';
 import { NavigationMenu } from '@/features/navigation';
 import { LangDropdown } from '@/features/switch-lang';
 import { ThemeSwitcher } from '@/features/switch-theme';

@@ -1,4 +1,5 @@
 import * as connectBrowserSdk from '@iroha/iroha-js/connect-browser';
+import { ToriiBrowserClient, type NativeAccountIdentity } from '@iroha/iroha-js/torii-browser';
 import { getRuntimeConfig } from '@/shared/runtime-config';
 
 export {
@@ -64,6 +65,7 @@ export interface ConnectApproval {
   readonly signingPublicKey: Uint8Array
   readonly walletPublicKey: Uint8Array
   readonly signature: Uint8Array
+  readonly nativeIdentity?: NativeAccountIdentity
 }
 
 export interface ConnectAppSession {
@@ -94,6 +96,7 @@ export interface ConnectAppSessionOptions {
 export interface ConnectCanonicalRequestAuth {
   readonly authAccountId: string
   readonly sign: (input: unknown) => Promise<Uint8Array>
+  readonly nativeIdentity?: NativeAccountIdentity
 }
 
 export interface ConnectSessionPreviewOptions {
@@ -116,7 +119,9 @@ interface CandidateConnectSdk {
     preview: ConnectSessionPreview,
     options?: { node?: string | null, fetchImpl?: typeof fetch }
   ) => Promise<ConnectSessionResponse>
-  createConnectAppSession: (options: ConnectAppSessionOptions) => ConnectAppSession
+  createConnectAppSession: (options: ConnectAppSessionOptions & {
+    inspectAccountIdentity: (accountId: string, options: { signal: AbortSignal }) => Promise<NativeAccountIdentity>
+  }) => ConnectAppSession
   createConnectCanonicalRequestAuth: (
     session: Pick<ConnectAppSession, 'waitForApproval' | 'signRaw'>
   ) => Promise<ConnectCanonicalRequestAuth>
@@ -256,7 +261,13 @@ export function createConnectAppSession(
   options: ConnectAppSessionOptions,
   sdkNamespace: ConnectSdkNamespace = connectBrowserSdk
 ): ConnectAppSession {
-  return candidateConnectSdk(sdkNamespace).createConnectAppSession(options);
+  const identityClient = new ToriiBrowserClient(options.baseUrl, {
+    networkId: connectBrowserSdk.NetworkId.parse(options.preview.networkId.toString()),
+  });
+  return candidateConnectSdk(sdkNamespace).createConnectAppSession({
+    ...options,
+    inspectAccountIdentity: (accountId, { signal }) => identityClient.inspectAccountIdentity(accountId, { signal }),
+  });
 }
 
 export async function createConnectCanonicalRequestAuth(

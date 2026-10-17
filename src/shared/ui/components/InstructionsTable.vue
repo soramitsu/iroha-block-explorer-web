@@ -26,6 +26,7 @@ import { objectOmit } from '@vueuse/shared';
 import BaseJson from '@/shared/ui/components/BaseJson.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
+import { explorerReadAccountId } from '@/shared/lib/explorer-read-auth';
 import type { HashType } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING, NOT_FOUND } from '@/shared/api/consts';
 import { useClipboard, useThrottleFn, useWindowScroll } from '@vueuse/core';
@@ -112,7 +113,10 @@ const scope = useParamScope(
       payload: searchParams.value,
     };
   },
-  ({ payload }) => setupAsyncData(() => http.fetchInstructions(payload))
+  ({ payload }) => setupAsyncData(() => http.fetchInstructions(payload), {
+    interval: 5000,
+    pollWhen: () => explorerReadAccountId.value !== null,
+  })
 );
 
 const isLoading = computed(() => scope.value?.expose.isLoading);

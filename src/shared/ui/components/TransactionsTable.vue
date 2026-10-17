@@ -14,7 +14,8 @@ import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import type { HashType } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import { getRuntimeConfig } from '@/shared/runtime-config';
-import { historyCacheKey } from '@/shared/lib/history-cache';
+import { createPublicHistoryCacheKey } from '@/shared/lib/history-cache';
+import { explorerReadAccountId } from '@/shared/lib/explorer-read-auth';
 import { useI18n } from 'vue-i18n';
 import { useThrottleFn, useWindowScroll, watchDebounced } from '@vueuse/core';
 import { Transaction as TransactionSchema } from '@/shared/api/schemas';
@@ -133,10 +134,10 @@ const authorityFilterError = ref<string | null>(null);
 const blockFilterError = ref<string | null>(null);
 const streamedTransactions = ref<TransactionDto[]>([]);
 
-const cacheKey = historyCacheKey('transactions', getRuntimeConfig().networkId, http.getToriiBaseUrl());
+const cacheKey = createPublicHistoryCacheKey('transactions', getRuntimeConfig().networkId, http.getToriiBaseUrl());
 
 function readTransactionsTableCache(): TransactionDto[] {
-  const key = cacheKey;
+  const key = cacheKey();
   if (typeof window === 'undefined' || !key) return [];
   try {
     return parseTransactionsTableCache(window.localStorage.getItem(key));
@@ -146,7 +147,7 @@ function readTransactionsTableCache(): TransactionDto[] {
 }
 
 function writeTransactionsTableCache(items: readonly TransactionDto[]) {
-  const key = cacheKey;
+  const key = cacheKey();
   if (typeof window === 'undefined' || !key) return;
   try {
     window.localStorage.setItem(
@@ -246,7 +247,10 @@ const scope = useParamScope(
       payload: searchParams.value,
     };
   },
-  ({ payload }) => setupAsyncData(() => http.fetchTransactions(payload))
+  ({ payload }) => setupAsyncData(() => http.fetchTransactions(payload), {
+    interval: 5000,
+    pollWhen: () => explorerReadAccountId.value !== null,
+  })
 );
 
 const isLoading = computed(() => scope.value?.expose.isLoading);

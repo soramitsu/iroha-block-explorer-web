@@ -116,12 +116,11 @@ import type { SuccessfulFetching } from '@/shared/api/consts';
 import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR, NOT_FOUND } from '@/shared/api/consts';
 import { getRuntimeConfig } from '@/shared/runtime-config';
 import { normalizeAccountIdLiteral, normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
-import { requireIrohaHash32 } from '@/shared/lib/iroha-hash';
+import { requireIrohaHash32, requireIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
+import { getExplorerReadAuth } from '@/shared/lib/explorer-read-auth';
 import { ToriiBrowserClient, ToriiHttpError, ToriiStreamGapError, field, type Filter, type ListQueryInput } from '@iroha/iroha-js/torii-browser';
 import { NetworkId } from '@iroha/iroha-js/connect-browser';
 import type {
-  ToriiBlockProofs,
-  ToriiBlockProofVerification,
   ToriiBrowserCanonicalRequestOptions,
   ToriiSseEvent,
 } from '@iroha/iroha-js/torii-browser';
@@ -635,7 +634,7 @@ export function buildToriiWsUrl(path: string): string {
 type GetResult<T> = { status: SuccessfulFetching; data: T } | { status: 'error'; response: Response };
 type ResultWithStatus<T> = { status: SuccessfulFetching; data: T } | ErrorResponse;
 export type PermissionAwareResult<T> = ResultWithStatus<T> | { status: 'permission-denied'; error: Error };
-export type ToriiCanonicalRequestAuth = Pick<ToriiBrowserCanonicalRequestOptions, 'authAccountId' | 'sign'>;
+export type ToriiCanonicalRequestAuth = Pick<ToriiBrowserCanonicalRequestOptions, 'authAccountId' | 'sign' | 'nativeIdentity'>;
 interface ConflictResult<T> {
   status: 'conflict';
   data: T;
@@ -917,10 +916,13 @@ async function toriiSdkStreamFetch(input: RequestInfo | URL, init?: RequestInit)
 
 function toriiSdkClient(fetchImpl = toriiSdkFetch): ToriiBrowserClient {
   const networkId = getRuntimeConfig().networkId;
-  return new ToriiBrowserClient(getToriiBaseUrl(), {
+  const baseUrl = getToriiBaseUrl();
+  const canonicalRequestAuth = getExplorerReadAuth(baseUrl, networkId);
+  return new ToriiBrowserClient(baseUrl, {
     fetchImpl,
     defaultHeaders: toriiRequiredHeaders(),
     ...(networkId ? { networkId: NetworkId.parse(networkId) } : {}),
+    ...(canonicalRequestAuth ? { canonicalRequestAuth } : {}),
   });
 }
 
@@ -1131,35 +1133,19 @@ export async function fetchBlock(heightOrHash: number | string): Promise<ResultW
   ), Block);
 }
 
-export interface TransactionBlockEvidence {
-  proof: ToriiBlockProofs;
-  /**
-   * Browser builds intentionally do not self-anchor a proof response. The
-   * authenticated native verifier is unavailable in the browser, so callers
-   * must treat Merkle/finality verification as
-   * unavailable rather than copying proof fields into a trusted anchor.
-   */
-  pathVerification: ToriiBlockProofVerification | null;
-}
+export type TransactionProof = Awaited<ReturnType<ToriiBrowserClient['getExplorerTransactionProof']>>;
 
-export async function fetchLedgerBlockProof(
-  blockHeight: number,
-  transactionHash: string
-): Promise<ResultWithStatus<TransactionBlockEvidence>> {
+export async function fetchTransactionProof(transactionHash: string): Promise<ResultWithStatus<TransactionProof>> {
   try {
-    const proof = await toriiSdkClient().getLedgerBlockProof(blockHeight, requireIrohaHash32(transactionHash));
+    const proof = await toriiSdkClient().getExplorerTransactionProof(requireIrohaHashLiteral32(transactionHash));
     return {
       status: SUCCESSFUL_FETCHING,
-      data: {
-        proof,
-        pathVerification: null,
-      },
+      data: proof,
     };
   } catch (error) {
     if (error instanceof ToriiHttpError) {
       if (error.status === 404) return { status: NOT_FOUND };
-      // This binary proof route can return a Norito error body. Keep HTTP and
-      // rejection metadata without rendering undecoded bytes as message text.
+      // Preserve transport metadata without rendering an undecoded error body.
       return {
         status: UNKNOWN_ERROR,
         error: new ToriiHttpError({
@@ -1168,10 +1154,10 @@ export async function fetchLedgerBlockProof(
           code: error.code,
           rejectCode: error.rejectCode,
           errorMessage: error.status === 401
-            ? 'Block evidence requires authenticated access.'
+            ? 'Transaction evidence requires authenticated access.'
             : error.status === 403
-              ? 'Torii denied access to block evidence.'
-              : 'Block evidence request failed.',
+              ? 'This account cannot read the transaction evidence.'
+              : 'Transaction evidence request failed.',
         }),
       };
     }

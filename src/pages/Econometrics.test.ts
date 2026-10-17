@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import BigNumber from 'bignumber.js';
 import Econometrics from './Econometrics.vue';
 import { i18n } from '@/shared/lib/localization';
 import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 import tairaHistory from '../../tests/fixtures/taira-history.json';
+import { activateExplorerReadSession, disconnectExplorerReadSession } from '@/shared/lib/explorer-read-auth';
 
 const HISTORY_CURSOR = tairaHistory.latestTransactions.next_cursor;
 
@@ -41,7 +42,7 @@ const apiMocks = vi.hoisted(() => ({
 vi.mock('@/shared/api', () => apiMocks);
 
 const runtimeConfigState = vi.hoisted(() => ({
-  value: { toriiEconometricsEndpointsEnabled: false },
+  value: { toriiEconometricsEndpointsEnabled: false } as { toriiEconometricsEndpointsEnabled: boolean, networkId?: string },
 }));
 
 vi.mock('@/shared/runtime-config', () => ({
@@ -129,7 +130,9 @@ function historyPage(nextCursor: string | null) {
 }
 
 describe('Econometrics', () => {
+  afterEach(() => { disconnectExplorerReadSession(); vi.restoreAllMocks(); });
   beforeEach(() => {
+    disconnectExplorerReadSession();
     routerMocks.replace.mockReset();
     routerMocks.push.mockReset();
     apiMocks.fetchAssetDefinition.mockReset();
@@ -173,6 +176,30 @@ describe('Econometrics', () => {
         items: [],
       },
     });
+  });
+
+  it.each(['public', 'private', 'private after logout'])('persists holder snapshots only for an unchanged public reader: %s', async (reader) => {
+    const networkId = `hash:${'AB'.repeat(32)}#B99E`;
+    runtimeConfigState.value.networkId = networkId;
+    if (reader !== 'public') activateExplorerReadSession({ baseUrl: 'http://localhost', networkId,
+      auth: { authAccountId: 'reader@bank', sign: async () => new Uint8Array(64) }, close: vi.fn() });
+    let resolveHolders!: (value: unknown) => void;
+    apiMocks.fetchAssets.mockReturnValue(new Promise((resolve) => { resolveHolders = resolve; }));
+    const write = vi.spyOn(Storage.prototype, 'setItem');
+    const wrapper = mountHistoryScan();
+    await vi.waitFor(() => expect(apiMocks.fetchAssets).toHaveBeenCalled());
+    if (reader === 'private after logout') disconnectExplorerReadSession();
+    resolveHolders({ status: SUCCESSFUL_FETCHING, data: {
+      items: [{ account_id: SAMPLE_ACCOUNT_ID, value: new BigNumber(1) }], nextCursor: null,
+    } });
+    await flushPromises();
+    await vi.waitFor(() => expect(wrapper.get(`[data-title="${i18n.global.t('econometrics.holders')}"]`).text()).toContain('1'));
+    if (reader === 'public') {
+      expect(write).toHaveBeenCalledWith(expect.stringContaining('econometrics-holder-snapshot'), expect.stringContaining(SAMPLE_ACCOUNT_ID));
+    } else {
+      expect(write).not.toHaveBeenCalled();
+    }
+    wrapper.unmount();
   });
 
   it('computes when an asset is clicked in the asset list (no Compute button required)', async () => {

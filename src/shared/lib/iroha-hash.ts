@@ -67,3 +67,9 @@ export function requireIrohaHash32(value: unknown): string {
   if (!normalized) throw new TypeError('Expected a valid 32-byte Iroha hash with its marker bit and, for literals, checksum');
   return normalized;
 }
+
+/** Project a validated hash selector to the exact checked literal required by proof APIs. */
+export function requireIrohaHashLiteral32(value: unknown): string {
+  const body = requireIrohaHash32(value).toUpperCase();
+  return `hash:${body}#${hashLiteralChecksum(body)}`;
+}

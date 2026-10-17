@@ -47,16 +47,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import NotificationsInstance from '@/shared/ui/components/NotificationsInstance.vue';
 import BasePageLayout from '@/shared/ui/components/BasePageLayout.vue';
 import { TheHeader } from '@/widgets/header';
 import { getToriiBaseUrl, setRouteScopedToriiBaseUrl } from '@/shared/api';
 import { parseExplorerScopeFromRoute } from '@/shared/lib/explorer-scope';
+import { disconnectExplorerReadSession, explorerReadAuthRevision } from '@/shared/lib/explorer-read-auth';
 
 const route = useRoute();
 const mainContent = ref<HTMLElement | null>(null);
+
+watch(() => getToriiBaseUrl(), disconnectExplorerReadSession, { flush: 'sync' });
+onBeforeUnmount(disconnectExplorerReadSession);
 
 watch(
   () => route.fullPath,
@@ -76,7 +80,7 @@ watch(
   }
 );
 
-const routerViewKey = computed(() => `torii:${getToriiBaseUrl()}`);
+const routerViewKey = computed(() => `torii:${getToriiBaseUrl()}:reader:${explorerReadAuthRevision.value}`);
 const isHomeRoute = computed(() => route.name === 'home');
 const isFullBleedRoute = computed(() => route.name === 'kotodama-studio');
 </script>

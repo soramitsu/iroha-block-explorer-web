@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { compileKotodamaProgram } from './kotodama-studio-compiler';
+import { IROHA_SDK_SPECIFIER } from '../../../scripts/verify-iroha-sdk.mjs';
 
 const INSTALLED_IROHA_JS_ROOT = path.resolve(
   process.cwd(),
@@ -46,7 +47,7 @@ describe('current Iroha Kotodama compiler package boundary', () => {
     );
 
     expect(explorerPackage.dependencies['@iroha/iroha-js'])
-      .toBe('file:vendor/iroha-iroha-js-0.0.3-24041ddb8c7d.tgz');
+      .toBe(IROHA_SDK_SPECIFIER);
     expect(installedPackage.name).toBe('@iroha/iroha-js');
     expect(installedPackage.dependencies['@scure/bip39']).toBe('^2.2.0');
     expect(installedDeclaration).toContain('compileKotodamaProgram');

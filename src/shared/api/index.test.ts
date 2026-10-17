@@ -64,6 +64,26 @@ async function importApiModule(env?: ApiEnv): Promise<ApiModule> {
   return await import('./index');
 }
 
+async function inspectFixtureIdentity(baseUrl: string, networkId: string) {
+  const { ToriiBrowserClient } = await import('@iroha/iroha-js/torii-browser');
+  const { NetworkId } = await import('@iroha/iroha-js/canonical-request');
+  // The canonical account/key pair is the upstream native address fixture.
+  const publicKey = '68f4b6017d0f876a55c80a82b8388a54aad264d367269e2de8be079c935b5f96';
+  const inspectFetch = vi.fn(async (_url: unknown, init?: RequestInit) => jsonResponse({
+    ...JSON.parse(String(init?.body)),
+    canonical_hex: `0x02000120${publicKey}`,
+    controller: { kind: 'single', algorithm: 'ed25519', public_key_hex: publicKey },
+  }));
+  const client = new ToriiBrowserClient(baseUrl, { networkId: NetworkId.parse(networkId), fetchImpl: inspectFetch });
+  const identity = await client.inspectAccountIdentity(SAMPLE_I105);
+  expect(new URL(String(inspectFetch.mock.calls[0][0])).pathname).toBe(`${new URL(baseUrl).pathname.replace(/\/+$/u, '')}/v1/accounts/inspect`);
+  const init = inspectFetch.mock.calls[0][1];
+  expect(init?.credentials).toBe('omit');
+  expect(init?.redirect).toBe('error');
+  expect(new Headers(init?.headers).has('X-Iroha-Account')).toBe(false);
+  return identity;
+}
+
 /** Inspect the actual canonical POST query sent by the SDK. */
 function queryValue(spy: { mock: { calls: unknown[][] } }, index: number, name: string): string | null {
   const options = spy.mock.calls[index]?.[1] as RequestInit;
@@ -1340,18 +1360,53 @@ describe('Account read-only surface API helpers', () => {
     }
   });
 
-  it('rejects I105 canonical auth without a native verifier before signing or fetching', async () => {
+  it('signs Connect-approved I105 identities using canonical ASCII transport headers', async () => {
     runtimeConfigState.value = { networkId: `hash:${'AB'.repeat(32)}#B99E` };
-    const fetchSpy = vi.fn();
+    const fetchSpy = vi.fn(async () => testResponse('missing', { status: 404 }));
     global.fetch = fetchSpy as any;
     const sign = vi.fn(async () => new Uint8Array(64).fill(7));
-    const auth = { authAccountId: SAMPLE_I105, sign };
-    const { fetchMultisigProposals, fetchMultisigSpec } = await importApiModule(toriiEnv);
+    const { fetchMultisigProposals, fetchMultisigSpec, getToriiBaseUrl } = await importApiModule(toriiEnv);
+    const auth = { authAccountId: SAMPLE_I105, sign,
+      nativeIdentity: await inspectFixtureIdentity(getToriiBaseUrl(), String(runtimeConfigState.value.networkId)) };
+    expect((await fetchMultisigSpec(SAMPLE_ACCOUNT_ALIAS, auth)).status).toBe(NOT_FOUND);
+    expect((await fetchMultisigProposals(SAMPLE_I105, { limit: 20 }, auth)).status).toBe(NOT_FOUND);
+    expect(sign).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const headers = new Headers((fetchSpy.mock.calls[0] as unknown as [unknown, RequestInit])[1].headers);
+    expect(headers.get('X-Iroha-Account')).toMatch(/^[\x20-\x7e]+$/u);
+    expect(headers.get('X-Iroha-Signature')).toBeTruthy();
+  });
 
-    await expect(fetchMultisigSpec(SAMPLE_ACCOUNT_ALIAS, auth)).rejects.toThrow(/canonical I105/u);
-    await expect(fetchMultisigProposals(SAMPLE_I105, { limit: 20 }, auth)).rejects.toThrow(/canonical I105/u);
-    expect(sign).not.toHaveBeenCalled();
-    expect(fetchSpy).not.toHaveBeenCalled();
+  it.each(['', '/ledger/gateway'])('signs private collections and proofs at base prefix %s and returns to anonymous reads after disconnect', async (prefix) => {
+    const networkId = `hash:${'AB'.repeat(32)}#B99E`;
+    runtimeConfigState.value = { networkId };
+    const fetchSpy = vi.fn(async (url: unknown, _init?: RequestInit) => String(url).endsWith('/proof')
+      ? testResponse('hidden', { status: 404 })
+      : jsonResponse({ items: [], next_cursor: null }));
+    global.fetch = fetchSpy as any;
+    const api = await importApiModule({ VITE_API_URL: `https://torii.example${prefix}/v1/explorer` });
+    const { activateExplorerReadSession, disconnectExplorerReadSession } = await import('@/shared/lib/explorer-read-auth');
+    const sign = vi.fn(async (_input: unknown) => new Uint8Array(64).fill(7));
+    const nativeIdentity = await inspectFixtureIdentity(api.getToriiBaseUrl(), networkId);
+    activateExplorerReadSession({ baseUrl: api.getToriiBaseUrl(), networkId,
+      auth: { authAccountId: SAMPLE_I105, sign, nativeIdentity }, close: vi.fn() });
+    try {
+      expect((await api.fetchTransactions({ limit: 1 })).status).toBe(SUCCESSFUL_FETCHING);
+      expect((await api.fetchTransactionProof(SAMPLE_LEDGER_HASH)).status).toBe(NOT_FOUND);
+      expect(sign).toHaveBeenCalledTimes(2);
+      expect(sign.mock.calls.map(([request]) => (request as { path: string }).path)).toEqual([
+        `${prefix}/v1/explorer/transactions/query`, `${prefix}/v1/explorer/transactions/${SAMPLE_LEDGER_HASH}/proof`,
+      ]);
+      for (const [, init] of fetchSpy.mock.calls) {
+        expect(new Headers(init?.headers).get('X-Iroha-Signature')).toBeTruthy();
+        expect(init?.credentials).toBe('omit');
+        expect(init?.redirect).toBe('error');
+      }
+      disconnectExplorerReadSession();
+      await api.fetchTransactions({ limit: 1 });
+      expect(sign).toHaveBeenCalledTimes(2);
+      expect(new Headers(fetchSpy.mock.calls[2]?.[1]?.headers).has('X-Iroha-Account')).toBe(false);
+    } finally { disconnectExplorerReadSession(); }
   });
 
   it('uses supported ASCII alias auth for signed multisig ID and alias selectors', async () => {
@@ -2752,13 +2807,13 @@ describe('Transaction API helpers', () => {
     )).toBe(true);
   });
 
-  it.each([401, 403, 503])('keeps block-evidence HTTP %i errors readable without displaying Norito bytes', async (status) => {
+  it.each([401, 403, 503])('keeps transaction-evidence HTTP %i errors readable without displaying Norito bytes', async (status) => {
     global.fetch = vi.fn(async () => testResponse('NRT0\0\u0001binary error body', {
       status,
       headers: { 'content-type': 'application/x-norito', 'x-iroha-reject-code': 'canonical_authentication_required' },
     })) as any;
-    const { fetchLedgerBlockProof } = await importApiModule(toriiEnv);
-    const result = await fetchLedgerBlockProof(12, 'cf'.repeat(31) + 'ef');
+    const { fetchTransactionProof } = await importApiModule(toriiEnv);
+    const result = await fetchTransactionProof('cf'.repeat(31) + 'ef');
     expect(result.status).toBe(UNKNOWN_ERROR);
     if (result.status !== UNKNOWN_ERROR) throw new Error('expected HTTP evidence error');
     expect(result.error).toMatchObject({ status, rejectCode: 'canonical_authentication_required' });
@@ -2768,48 +2823,33 @@ describe('Transaction API helpers', () => {
     if (status === 401) expect(result.error.message).toContain('requires authenticated access');
   });
 
-  it('does not self-anchor a canonical SDK block proof in the browser', async () => {
+  it('uses only the selective Explorer proof route without self-anchoring finality', async () => {
     const module = await importApiModule(toriiEnv);
     const { ToriiBrowserClient } = await import('@iroha/iroha-js/torii-browser');
     const decoded = {
-      block_height: '42',
-      block_hash: 'b'.repeat(64),
-      executed_block_wire_hash: 'c'.repeat(64),
-      entry_hash: 'not-a-valid-hash',
-      entry_commitment: { root: 'not-a-valid-root', leaf_count: '1' },
-      entry_proof: {
-        leaf: 'not-a-valid-hash',
-        proof: { leaf_index: 0, audit_path: [] },
-      },
-      result_commitment: { root: 'd'.repeat(64), leaf_count: '1' },
-      result_proof: {
-        leaf: 'e'.repeat(64),
-        proof: { leaf_index: 0, audit_path: [] },
-      },
-      fastpq_transcripts: {},
+      version: 1, network_id: 'exact-network', block_height: '42', block_header: { height: '42' },
+      transaction: { entrypoint_hash: SAMPLE_LEDGER_HASH, block_hash: 'b'.repeat(64), output_hash: 'c'.repeat(64) },
+      certificate: { consensus_header: 'aGVhZGVy', commit_qc: 'cWM=', result_preimage: 'cmVzdWx0' },
     };
-    const proofSpy = vi.spyOn(ToriiBrowserClient.prototype, 'getLedgerBlockProof').mockResolvedValue(decoded as any);
-
-    const result = await module.fetchLedgerBlockProof(42, SAMPLE_LEDGER_HASH);
-
-    expect(proofSpy).toHaveBeenCalledWith(42, SAMPLE_LEDGER_HASH);
-    expect(result.status).toBe(SUCCESSFUL_FETCHING);
-    if (result.status === SUCCESSFUL_FETCHING) {
-      expect(result.data.proof).toBe(decoded);
-      expect(result.data.pathVerification).toBeNull();
-    }
+    const proofSpy = vi.spyOn(ToriiBrowserClient.prototype, 'getExplorerTransactionProof').mockResolvedValue(decoded as any);
+    const oldProofSpy = vi.spyOn(ToriiBrowserClient.prototype, 'getLedgerBlockProof');
+    const result = await module.fetchTransactionProof(SAMPLE_LEDGER_HASH);
+    expect(proofSpy).toHaveBeenCalledWith(`hash:${SAMPLE_LEDGER_HASH.toUpperCase()}#B99E`);
+    expect(oldProofSpy).not.toHaveBeenCalled();
+    expect(result).toEqual({ status: SUCCESSFUL_FETCHING, data: decoded });
     proofSpy.mockRestore();
+    oldProofSpy.mockRestore();
   });
 
-  it('keeps a missing canonical block proof explicitly not-found', async () => {
+  it('keeps a missing or inaccessible selective proof explicitly not-found', async () => {
     global.fetch = vi
       .fn()
       .mockImplementation(() =>
         testResponse('missing', { status: 404, headers: { 'content-type': 'text/plain' } })
       ) as any;
-    const { fetchLedgerBlockProof } = await importApiModule(toriiEnv);
+    const { fetchTransactionProof } = await importApiModule(toriiEnv);
 
-    const result = await fetchLedgerBlockProof(42, SAMPLE_LEDGER_HASH);
+    const result = await fetchTransactionProof(SAMPLE_LEDGER_HASH);
 
     expect(result.status).toBe(NOT_FOUND);
   });
@@ -3115,7 +3155,7 @@ describe('Validated ledger hash API selectors', () => {
       () => api.fetchTransaction(hash), () => api.fetchBlock(hash),
       () => api.fetchInstructionDetail(hash, 0), () => api.fetchInstructionContractView(hash, 0),
       () => api.fetchInstructions({ transaction_hash: hash }), () => api.fetchLatestInstructions({ transaction_hash: hash }),
-      () => api.fetchPipelineTransactionStatus(hash), () => api.fetchLedgerBlockProof(9, hash),
+      () => api.fetchPipelineTransactionStatus(hash), () => api.fetchTransactionProof(hash),
     ]) await expect(request()).rejects.toThrow('valid 32-byte Iroha hash');
     expect(fetchSpy).not.toHaveBeenCalled();
   });

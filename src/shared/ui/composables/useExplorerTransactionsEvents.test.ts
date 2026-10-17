@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { effectScope, onScopeDispose, ref } from 'vue';
+import { activateExplorerReadSession, disconnectExplorerReadSession } from '@/shared/lib/explorer-read-auth';
 
 const hoisted = vi.hoisted(() => ({
   listeners: [] as Array<{
@@ -38,12 +39,33 @@ import {
 
 describe('useExplorerTransactionsEvents', () => {
   beforeEach(() => {
+    disconnectExplorerReadSession();
     __resetExplorerTransactionsEventsForTests();
     hoisted.listeners.splice(0, hoisted.listeners.length);
   });
 
   afterEach(() => {
+    disconnectExplorerReadSession();
     vi.unstubAllGlobals();
+  });
+
+  it('closes anonymous deltas on login and keeps authenticated readers on signed snapshots', () => {
+    vi.stubGlobal('EventSource', class {} as any);
+    const scope = effectScope();
+    const stream = scope.run(() => useExplorerTransactionsEvents())!;
+    expect(hoisted.listeners).toHaveLength(1);
+    stream.data.value = 'public event';
+    activateExplorerReadSession({ baseUrl: 'https://taira.sora.org', networkId: 'network-a',
+      auth: { authAccountId: 'reader@bank', sign: async () => new Uint8Array(64) }, close: vi.fn() });
+    expect(stream.status.value).toBe('CLOSED');
+    expect(stream.data.value).toBeNull();
+    expect(hoisted.listeners).toHaveLength(0);
+    scope.stop();
+    const privateScope = effectScope();
+    const privateStream = privateScope.run(() => useExplorerTransactionsEvents())!;
+    expect(privateStream.status.value).toBe('CLOSED');
+    expect(hoisted.listeners).toHaveLength(0);
+    privateScope.stop();
   });
 
   it('shares a single stream instance across consumers', () => {

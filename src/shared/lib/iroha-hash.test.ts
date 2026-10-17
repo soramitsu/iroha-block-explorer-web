@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isCanonicalIrohaHashLiteral32, normalizeIrohaHash32, requireIrohaHash32 } from './iroha-hash';
+import { isCanonicalIrohaHashLiteral32, normalizeIrohaHash32, requireIrohaHash32, requireIrohaHashLiteral32 } from './iroha-hash';
 
 describe('isCanonicalIrohaHashLiteral32', () => {
   const body = 'AB'.repeat(32);
@@ -48,5 +48,15 @@ describe('requireIrohaHash32', () => {
   });
   it.each([null, 'hash:' + 'AB'.repeat(32) + '#0000', '10'.repeat(32)])('rejects invalid selector %s', (value) => {
     expect(() => requireIrohaHash32(value)).toThrow(TypeError);
+  });
+});
+
+describe('requireIrohaHashLiteral32', () => {
+  const literal = 'hash:66BF60AB1C762607F02BBDFC834E2D832243EF413D0C24BBFF8EE3D00A2830DB#DB6C';
+  it.each([literal, literal.slice(5, 69).toLowerCase(), `0x${literal.slice(5, 69)}`])('projects the same validated hash to its checked proof selector: %s', (value) => {
+    expect(requireIrohaHashLiteral32(value)).toBe(literal);
+  });
+  it.each(['hash:' + 'AB'.repeat(32) + '#0000', '10'.repeat(32), null])('rejects invalid selectors instead of generating fresh checksums for them: %s', (value) => {
+    expect(() => requireIrohaHashLiteral32(value)).toThrow(TypeError);
   });
 });

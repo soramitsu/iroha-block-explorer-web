@@ -39,6 +39,7 @@ describe('HomePage', () => {
         },
         stubs: {
           ThemeSwitcher: true,
+          ExplorerReadAccess: { template: '<button data-test="read-access" />' },
           LangDropdown: true,
           MobileMenu: true,
           NavigationMenu: true,
@@ -54,6 +55,7 @@ describe('HomePage', () => {
 
   it('routes to sample destinations when search tags are clicked', async () => {
     const wrapper = mountPage();
+    expect(wrapper.find('[data-test="read-access"]').exists()).toBe(true);
     const tags = wrapper.findAll('.home-page__search-tag');
     expect(tags).toHaveLength(6);
 

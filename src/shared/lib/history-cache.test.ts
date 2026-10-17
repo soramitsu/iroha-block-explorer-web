@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { historyCacheKey } from './history-cache';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createPublicHistoryCacheKey, historyCacheKey } from './history-cache';
+
+import { activateExplorerReadSession, disconnectExplorerReadSession } from './explorer-read-auth';
+afterEach(disconnectExplorerReadSession);
 
 const networkId = `hash:${'AB'.repeat(32)}#B99E`;
 const otherNetwork = `hash:${'11'.repeat(32)}#4667`;
@@ -24,5 +27,21 @@ describe('ledger-bound history cache identity', () => {
     for (const endpoint of ['invalid', 'file:///tmp/history', 'https://user:password@taira.sora.org']) {
       expect(historyCacheKey('transactions', networkId, endpoint)).toBeNull();
     }
+  });
+});
+
+describe('anonymous history persistence', () => {
+  it('revokes old cache access on authentication and does not revive it on logout', () => {
+    const beforeLogin = createPublicHistoryCacheKey('transactions', networkId, 'https://taira.sora.org');
+    expect(beforeLogin()).not.toBeNull();
+    activateExplorerReadSession({ baseUrl: 'https://taira.sora.org', networkId,
+      auth: { authAccountId: 'reader@bank', sign: async () => new Uint8Array(64) }, close: vi.fn() });
+    const duringLogin = createPublicHistoryCacheKey('transactions', networkId, 'https://taira.sora.org');
+    expect(beforeLogin()).toBeNull();
+    expect(duringLogin()).toBeNull();
+    disconnectExplorerReadSession();
+    expect(beforeLogin()).toBeNull();
+    expect(duringLogin()).toBeNull();
+    expect(createPublicHistoryCacheKey('transactions', networkId, 'https://taira.sora.org')()).not.toBeNull();
   });
 });

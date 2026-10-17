@@ -1,6 +1,7 @@
 <template>
   <div class="home-page">
     <div class="home-page__buttons">
+      <ExplorerReadAccess />
       <ThemeSwitcher />
       <LangDropdown />
       <MobileMenu />
@@ -54,6 +55,7 @@
 
 <script setup lang="ts">
 import BackgroundLogo from '@/shared/ui/icons/background-logo.svg';
+import ExplorerReadAccess from '@/shared/ui/components/ExplorerReadAccess.vue';
 import LogoIcon from '@/shared/ui/icons/logo.svg';
 import { LatestBlocks } from '@/widgets/latest-blocks';
 import { LatestTransactions } from '@/widgets/latest-transactions';
