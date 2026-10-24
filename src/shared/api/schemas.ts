@@ -1745,6 +1745,102 @@ export const NexusPublicStatus = z
   .passthrough();
 export type NexusPublicStatus = z.infer<typeof NexusPublicStatus>;
 
+const StatusCount = z.number().int().nonnegative();
+
+/**
+ * The reporting peer's `/status` fields the dashboards read. Every value
+ * describes that one peer: `peers` excludes it, `commit_time_ms` is the
+ * latest block's creation-to-commit time there, `view_changes` counts the
+ * current round and `uptime` runs from genesis creation.
+ */
+export const NodeStatusSnapshot = z
+  .object({
+    build: z.object({ version: z.string() }).passthrough(),
+    observed_at_ms: StatusCount,
+    peers: StatusCount,
+    blocks: StatusCount,
+    blocks_non_empty: StatusCount,
+    commit_time_ms: StatusCount,
+    txs_approved: StatusCount,
+    txs_rejected: StatusCount,
+    txs_rejected_recent_5m: StatusCount,
+    uptime: z.object({ secs: StatusCount, nanos: U32 }).strict(),
+    view_changes: U32,
+    queue_size: StatusCount,
+    queue_queued: StatusCount,
+    queue_inflight: StatusCount,
+    time_since_last_block_ms: StatusCount,
+    sumeragi: z
+      .object({
+        tx_queue_depth: StatusCount,
+        tx_queue_capacity: StatusCount,
+        tx_queue_saturated: z.boolean(),
+        tx_queue_oldest_queued_age_ms: StatusCount,
+      })
+      .passthrough()
+      .optional(),
+    teu_lane_commit: z
+      .object({ lane_id: U32, capacity: StatusCount, committed: StatusCount, block_height: StatusCount })
+      .passthrough()
+      .array(),
+    teu_dataspace_backlog: NexusStatusDataspaceBacklog.array(),
+    dataspace_catalog: NexusDataspaceCatalogEntry.array().optional().default([]),
+  })
+  .passthrough();
+export type NodeStatusSnapshot = z.infer<typeof NodeStatusSnapshot>;
+
+/** Dashboard projection of the transactions feed. */
+export const TRANSACTION_SAMPLE_FIELDS = ['authority', 'block', 'created_at', 'executable', 'status'] as const;
+
+/**
+ * One projected transaction row. `executable` stays open text so a kind the
+ * Explorer has no label for is counted as such instead of failing the page.
+ * `created_at` is the transaction's own creation time, set by its signer.
+ */
+export const TransactionSampleRow = z
+  .object({
+    authority: AccountIdSchema,
+    block: z.number().int().positive(),
+    created_at: z.iso.datetime({ offset: true }),
+    executable: z.string().min(1),
+    status: TransactionStatus,
+  })
+  .strict()
+  .transform((row) => ({
+    authority: row.authority,
+    block: row.block,
+    createdAtMs: Date.parse(row.created_at),
+    executable: row.executable,
+    status: row.status,
+  }));
+export type TransactionSampleRow = z.infer<typeof TransactionSampleRow>;
+
+/** Dashboard projection of the blocks feed. */
+export const BLOCK_SAMPLE_FIELDS = ['height', 'created_at', 'transactions_total', 'transactions_rejected'] as const;
+
+/**
+ * One projected block row. An empty `created_at` marks a block whose body the
+ * node could not read: its zero counters are unknown, so the sample keeps
+ * `createdAtMs: null` and analytics exclude it from every total.
+ */
+export const BlockSampleRow = z
+  .object({
+    height: z.number().int().positive(),
+    created_at: z.union([z.literal(''), z.iso.datetime({ offset: true })]),
+    transactions_total: StatusCount,
+    transactions_rejected: StatusCount,
+  })
+  .strict()
+  .refine((row) => row.transactions_rejected <= row.transactions_total, {
+    message: 'transactions_rejected exceeds transactions_total',
+  })
+  .transform((row) => ({
+    height: row.height,
+    createdAtMs: row.created_at === '' ? null : Date.parse(row.created_at),
+    transactionsTotal: row.transactions_total,
+    transactionsRejected: row.transactions_rejected,
+  }));
+
 export const SorafsAttestation = z.object({
   block_height: z.number(),
   block_hash_hex: z.string().nullable(),

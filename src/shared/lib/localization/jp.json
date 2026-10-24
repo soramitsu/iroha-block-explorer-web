@@ -1476,5 +1476,245 @@
     "codeHash": "コードハッシュ",
     "abiHash": "ABI ハッシュ",
     "compilerFingerprint": "コンパイラフィンガープリント"
+  },
+  "navigation": {
+    "menu": "メニュー",
+    "groups": {
+      "explore": "探索",
+      "analytics": "分析",
+      "network": "ネットワーク",
+      "build": "開発",
+      "services": "サービス"
+    },
+    "hints": {
+      "explore": "台帳の記録を閲覧",
+      "analytics": "ダッシュボードと経済指標",
+      "network": "ピア、コンセンサス、ネットワークサービス",
+      "build": "コントラクトの作成・検査・トレース",
+      "services": "SORA Nexus 上のストレージとコンピュート"
+    }
+  },
+  "dashboards": {
+    "nav": "ダッシュボード",
+    "tabs": {
+      "label": "ダッシュボード",
+      "network": "ネットワークパルス",
+      "activity": "アクティビティ",
+      "ledger": "台帳"
+    },
+    "titles": {
+      "network": "ネットワークパルス",
+      "activity": "トランザクションのアクティビティ",
+      "ledger": "台帳の構成"
+    },
+    "subtitles": {
+      "network": "接続中の Torii ピアから読み取った、ブロック生成・コミットレイテンシ・容量のライブ情報。",
+      "activity": "ネットワークが混雑する時間帯と、処理しているトランザクションの種類。",
+      "ledger": "アカウント、ドメイン、アセットが台帳上でどのように分布しているか。"
+    },
+    "window": {
+      "label": "履歴の範囲",
+      "blocks": "{count} ブロック"
+    },
+    "live": {
+      "streaming": "ライブ",
+      "polling": "10 秒ごとに更新"
+    },
+    "coverage": {
+      "scanning": "履歴を読み込み中: {loaded} / {target} ブロック",
+      "complete": "最新 {loaded} ブロック",
+      "genesis": "ジェネシス以降の全 {loaded} ブロック",
+      "incomplete": "{target} ブロック中 {loaded} ブロックを読み込み済み (不完全)"
+    },
+    "errors": {
+      "history": "ブロック履歴を読み込めませんでした。",
+      "status": "ピアのステータスを取得できません。",
+      "retry": "再試行"
+    },
+    "chart": {
+      "showTable": "表",
+      "showChart": "グラフ",
+      "unknown": "ブロック本体を取得できません: 件数不明",
+      "partial": "一部のみ観測: 下限値",
+      "noData": "未スキャン",
+      "total": "合計",
+      "empty": "ブロックがまだ十分にありません。",
+      "height": "高さ",
+      "time": "時刻",
+      "blockTitle": "ブロック {height}",
+      "from": "開始",
+      "to": "終了"
+    },
+    "peerScope": "接続中の Torii ピアの報告による",
+    "state": {
+      "producing": "ブロック生成中",
+      "pending": "トランザクション待機中",
+      "idle": "アイドル: 保留なし",
+      "delayed": "このピアで遅延の疑い",
+      "stale": "ピアのステータスが古くなっています",
+      "unknown": "状態不明"
+    },
+    "instruments": {
+      "title": "計器パネル",
+      "height": "ブロック高",
+      "lastBlock": "最新ブロック: {age} 前",
+      "commit": "コミットレイテンシ",
+      "commitHint": "最新ブロックの作成から、このピアでのコミットまで",
+      "queue": "トランザクションキュー",
+      "queueHint": "処理中 {inflight}、最長待機時間 {age}",
+      "queueSaturated": "キューが飽和状態",
+      "rejections": "拒否されたトランザクション",
+      "rejectionsValue": "{rejected} / {total}",
+      "rejectionsHint": "直近 5 分間で {recent}",
+      "peers": "接続中のピア",
+      "peersHint": "報告元のピアを除く",
+      "viewChanges": "このラウンドのビュー変更",
+      "sinceGenesis": "ジェネシス以降",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "直近 1 時間",
+      "lastHourUnit": "トランザクション",
+      "lastHourRate": "毎分 {rate}",
+      "lastHourPartial": "{minutes} 分間のみ観測: 下限値",
+      "busiestMinute": "範囲内で最も混雑した 1 分間: {time} に {count}"
+    },
+    "charts": {
+      "distribution": {
+        "title": "ブロック間の時間",
+        "caption": "最新 {count} ブロックにおける、連続するブロック間の待ち時間。Iroha はトランザクションが届いたときにのみブロックをコミットするため、長い待ち時間はコンセンサスの遅さではなく閑散時間を意味します。",
+        "series": "ブロック",
+        "range": "待ち時間",
+        "median": "待ち時間の中央値 {value}"
+      },
+      "perBlock": {
+        "title": "ブロックごとのトランザクション",
+        "caption": "最新 {count} ブロックそれぞれの、コミット済みおよび拒否されたトランザクション。",
+        "committed": "コミット済み",
+        "rejected": "拒否",
+        "subset": "読み込んだ {count} ブロックのうち最新 {shown} ブロックを表示 (#{from}–#{to})。"
+      },
+      "throughput": {
+        "title": "スループットの推移",
+        "caption": "{bucket} あたりのトランザクション数。ブロック間はゼロで補完。中抜きのマーカーは一部のみ観測された区間を示します。",
+        "committed": "コミット済み",
+        "rejected": "拒否"
+      },
+      "lanes": {
+        "title": "レーン容量",
+        "caption": "各レーンの最新スロットエンベロープにおける、容量に対するコミット済み TEU。",
+        "lane": "レーン {id}",
+        "value": "{committed} / {capacity} TEU",
+        "empty": "このピアはレーンを報告していません。"
+      },
+      "blockFill": {
+        "title": "ブロックの充填度",
+        "caption": "閲覧可能なトランザクション数別のブロック数。ブロックにはプライベートなデータスペースのトランザクションが含まれる場合もあります。",
+        "series": "ブロック",
+        "bucket": "トランザクション"
+      }
+    },
+    "stats": {
+      "transactions": "トランザクション",
+      "rejectionRate": "拒否率",
+      "meanPerBlock": "ブロックあたり平均",
+      "busiest": "最も混雑したブロック",
+      "span": "期間",
+      "blocks": "ブロック読み込み済み",
+      "unreadable": "読み取れないブロック",
+      "unreadableHint": "件数不明のため合計から除外",
+      "medianPerBlock": "中央値 {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "時間帯別アクティビティ",
+        "caption": "暦日ごと・1 時間ごとのトランザクション数 (ローカル時間)。斜線の時間帯は読み込んだ履歴の範囲外です。",
+        "value": "トランザクション",
+        "blocks": "ブロック"
+      },
+      "byHour": {
+        "title": "時間帯プロファイル",
+        "caption": "読み込んだ期間における、ローカル時間の各時間帯のトランザクション数。",
+        "series": "トランザクション"
+      },
+      "sample": {
+        "caption": "表示可能な最新 {count} 件のトランザクション",
+        "size": "{count} 件のトランザクション"
+      },
+      "executables": {
+        "title": "実行形式の内訳",
+        "caption": "サンプルのトランザクションにおける実行形式別の割合。",
+        "Instructions": "命令",
+        "ContractCall": "コントラクト呼び出し",
+        "Ivm": "IVM バイトコード",
+        "IvmProved": "証明付き IVM",
+        "Batch": "バッチ",
+        "other": "その他"
+      },
+      "outcomes": {
+        "title": "結果",
+        "committed": "コミット済み",
+        "rejected": "拒否"
+      },
+      "authorities": {
+        "title": "最も活発な署名者",
+        "caption": "サンプル内で最も多くのトランザクションに署名したアカウント。",
+        "empty": "サンプルにトランザクションがありません。"
+      },
+      "authoritiesCount": "ユニーク署名者数",
+      "latency": {
+        "title": "取り込みレイテンシ",
+        "caption": "サンプルの各トランザクションの作成から、それを取り込んだブロックまでの時間。作成時刻は署名者自身の時計に基づきます。",
+        "series": "トランザクション",
+        "median": "取り込みレイテンシの中央値",
+        "p95": "95 パーセンタイル {value}",
+        "clockAhead": "{count} 件のトランザクションは作成時刻がブロックより後になっているため (署名者の時計が進んでいる)、除外しています。",
+        "unmatched": "サンプルのうち {count} 件のトランザクションはブロック範囲外です。",
+        "empty": "ブロック範囲内に入るサンプルのトランザクションはまだありません。"
+      }
+    },
+    "ledger": {
+      "accounts": "アカウント",
+      "domains": "ドメイン",
+      "assets": "アセットと NFT",
+      "nodes": "ノード",
+      "domainsByAccounts": {
+        "title": "アカウント数別のドメイン",
+        "caption": "各ドメインに登録されたアカウント数。上位 {count} 件を表示。"
+      },
+      "definitionsByHolders": {
+        "title": "保有者数別のアセット定義",
+        "caption": "各アセット定義を保有するアカウント数。上位 {count} 件を表示。"
+      },
+      "mintability": {
+        "title": "ミント可否",
+        "caption": "ミントポリシー別のアセット定義。",
+        "Infinitely": "ミント可能",
+        "Once": "1 回のみミント",
+        "Not": "供給量固定",
+        "Limited": "回数制限付き",
+        "other": "その他"
+      },
+      "homes": {
+        "title": "アセットの登録先",
+        "caption": "アセット定義が登録されている場所。",
+        "domain": "ドメイン",
+        "dataspace": "データスペース"
+      },
+      "holdings": {
+        "title": "アカウントあたりの保有数",
+        "caption": "保有アセット数別のアカウント数。",
+        "series": "アカウント",
+        "bucket": "保有アセット数"
+      },
+      "scan": "{loaded} 件の{kind}を読み込み済み",
+      "scanIncomplete": "最初の {loaded} 件の{kind}を読み込み済み (ほかにもあります)",
+      "kinds": {
+        "domains": "ドメイン",
+        "definitions": "アセット定義",
+        "accounts": "アカウント"
+      },
+      "countsLive": "テレメトリーストリームによるライブの合計",
+      "countsStale": "テレメトリーストリームの最終合計 (再接続中)",
+      "countsUnavailable": "テレメトリーストリームを利用できません"
+    }
   }
 }

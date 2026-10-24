@@ -1476,5 +1476,245 @@
     "codeHash": "ኮድ ሃሽ",
     "abiHash": "የABI ሃሽ",
     "compilerFingerprint": "የማጠናከሪያ አሻራ"
+  },
+  "navigation": {
+    "menu": "ምናሌ",
+    "groups": {
+      "explore": "ያስሱ",
+      "analytics": "ትንታኔ",
+      "network": "አውታረ መረብ",
+      "build": "ልማት",
+      "services": "አገልግሎቶች"
+    },
+    "hints": {
+      "explore": "የመዝገብ ግቤቶችን ያስሱ",
+      "analytics": "ዳሽቦርዶች እና ኢኮኖሚያዊ መለኪያዎች",
+      "network": "አቻዎች፣ ስምምነት እና የአውታረ መረብ አገልግሎቶች",
+      "build": "ውሎችን ይጻፉ፣ ይመርምሩ እና ይከታተሉ",
+      "services": "በ SORA Nexus ላይ ማከማቻ እና ስሌት"
+    }
+  },
+  "dashboards": {
+    "nav": "ዳሽቦርዶች",
+    "tabs": {
+      "label": "ዳሽቦርዶች",
+      "network": "የአውታረ መረብ ምት",
+      "activity": "እንቅስቃሴ",
+      "ledger": "መዝገብ"
+    },
+    "titles": {
+      "network": "የአውታረ መረብ ምት",
+      "activity": "የግብይት እንቅስቃሴ",
+      "ledger": "የመዝገቡ ስብጥር"
+    },
+    "subtitles": {
+      "network": "ከተገናኘው Torii አቻ የተነበበ የቀጥታ ብሎክ ምርት፣ የማረጋገጫ መዘግየት እና አቅም።",
+      "activity": "አውታረ መረቡ መቼ እንደሚጨናነቅ እና ምን ዓይነት ግብይቶችን እንደሚያስተናግድ።",
+      "ledger": "መለያዎች፣ ጎራዎች እና ንብረቶች በመዝገቡ ውስጥ እንዴት እንደተሰራጩ።"
+    },
+    "window": {
+      "label": "የታሪክ መስኮት",
+      "blocks": "{count} ብሎኮች"
+    },
+    "live": {
+      "streaming": "ቀጥታ",
+      "polling": "በየ 10 ሰከንድ ይታደሳል"
+    },
+    "coverage": {
+      "scanning": "ታሪክ በማንበብ ላይ፦ ከ{target} ብሎኮች {loaded}",
+      "complete": "የቅርብ ጊዜዎቹ {loaded} ብሎኮች",
+      "genesis": "ከጀነሲስ ብሎክ ጀምሮ ያሉት ሁሉም {loaded} ብሎኮች",
+      "incomplete": "ከ{target} ብሎኮች {loaded} ተነበዋል (ያልተሟላ)"
+    },
+    "errors": {
+      "history": "የብሎክ ታሪክን ማንበብ አልተቻለም።",
+      "status": "የአቻው ሁኔታ አይገኝም።",
+      "retry": "እንደገና ይሞክሩ"
+    },
+    "chart": {
+      "showTable": "ሰንጠረዥ",
+      "showChart": "ገበታ",
+      "unknown": "የብሎክ ይዘት አይገኝም፦ ቁጥሮቹ አይታወቁም",
+      "partial": "በከፊል የታየ፦ ዝቅተኛ ወሰን",
+      "noData": "አልተቃኘም",
+      "total": "ጠቅላላ",
+      "empty": "እስካሁን በቂ ብሎኮች የሉም።",
+      "height": "ቁመት",
+      "time": "ጊዜ",
+      "blockTitle": "ብሎክ {height}",
+      "from": "ከ",
+      "to": "እስከ"
+    },
+    "peerScope": "በተገናኘው Torii አቻ ሪፖርት መሠረት",
+    "state": {
+      "producing": "ብሎኮችን እያመረተ ነው",
+      "pending": "ግብይቶች በመጠባበቅ ላይ",
+      "idle": "ሥራ ፈት፦ ምንም በመጠባበቅ ላይ የለም",
+      "delayed": "በዚህ አቻ ላይ መዘግየት ይጠረጠራል",
+      "stale": "የአቻው ሁኔታ ጊዜው ያለፈበት ነው",
+      "unknown": "ሁኔታው አይታወቅም"
+    },
+    "instruments": {
+      "title": "የመሣሪያዎች ፓነል",
+      "height": "የብሎክ ቁመት",
+      "lastBlock": "የመጨረሻው ብሎክ ከ{age} በፊት",
+      "commit": "የማረጋገጫ መዘግየት",
+      "commitHint": "የቅርብ ጊዜው ብሎክ፣ ከመፈጠሩ እስከ በዚህ አቻ ላይ መረጋገጡ ድረስ",
+      "queue": "የግብይት ወረፋ",
+      "queueHint": "{inflight} በሂደት ላይ፤ በጣም የቆየው {age} እየጠበቀ ነው",
+      "queueSaturated": "ወረፋው ሞልቷል",
+      "rejections": "ውድቅ የተደረጉ ግብይቶች",
+      "rejectionsValue": "ከ{total} {rejected}",
+      "rejectionsHint": "ባለፉት 5 ደቂቃዎች {recent}",
+      "peers": "የተገናኙ አቻዎች",
+      "peersHint": "ሪፖርት የሚያደርገውን አቻ ሳይጨምር",
+      "viewChanges": "በዚህ ዙር ያሉ የእይታ ለውጦች",
+      "sinceGenesis": "ከጀነሲስ ጀምሮ",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "ያለፈው ሰዓት",
+      "lastHourUnit": "ግብይቶች",
+      "lastHourRate": "በደቂቃ {rate}",
+      "lastHourPartial": "{minutes} ደቂቃ ብቻ ታይቷል፤ ዝቅተኛ ወሰን",
+      "busiestMinute": "በመስኮቱ ውስጥ በጣም የተጨናነቀው ደቂቃ፦ {count} በ{time}"
+    },
+    "charts": {
+      "distribution": {
+        "title": "በብሎኮች መካከል ያለ ጊዜ",
+        "caption": "በቅርብ ጊዜዎቹ {count} ብሎኮች ውስጥ በተከታታይ ብሎኮች መካከል ያሉ የጥበቃ ጊዜያት። Iroha ብሎክን የሚያረጋግጠው ግብይቶች ሲደርሱ ብቻ ስለሆነ፣ ረጅም ጥበቃ ጸጥ ያለ ጊዜ እንጂ የዘገየ ስምምነት አይደለም።",
+        "series": "ብሎኮች",
+        "range": "ጥበቃ",
+        "median": "መካከለኛ ጥበቃ {value}"
+      },
+      "perBlock": {
+        "title": "ግብይቶች በብሎክ",
+        "caption": "በቅርብ ጊዜዎቹ {count} ብሎኮች እያንዳንዳቸው ውስጥ የተረጋገጡ እና ውድቅ የተደረጉ ግብይቶች።",
+        "committed": "የተረጋገጡ",
+        "rejected": "ውድቅ የተደረጉ",
+        "subset": "ከተነበቡት {count} ብሎኮች የቅርብ ጊዜዎቹ {shown} እየታዩ ነው (#{from}–#{to})።"
+      },
+      "throughput": {
+        "title": "የማስተናገጃ መጠን በጊዜ ሂደት",
+        "caption": "ግብይቶች በየ{bucket}፣ በብሎኮች መካከል በዜሮ የተሞሉ። ባዶ ምልክቶች በከፊል የታዩ ክፍተቶችን ያመለክታሉ።",
+        "committed": "የተረጋገጡ",
+        "rejected": "ውድቅ የተደረጉ"
+      },
+      "lanes": {
+        "title": "የመስመር አቅም",
+        "caption": "በእያንዳንዱ መስመር የቅርብ ጊዜ የስሎት ኤንቨሎፕ ውስጥ ከአቅም ጋር ሲነጻጸር የተረጋገጠ TEU።",
+        "lane": "መስመር {id}",
+        "value": "ከ{capacity} TEU {committed}",
+        "empty": "ይህ አቻ ምንም መስመር ሪፖርት አያደርግም።"
+      },
+      "blockFill": {
+        "title": "የብሎክ ሙሌት",
+        "caption": "ብሎኮች በውስጣቸው ሊያዩዋቸው በሚችሏቸው የግብይቶች ብዛት። አንድ ብሎክ ከግል የውሂብ ቦታዎች የመጡ ግብይቶችንም ሊይዝ ይችላል።",
+        "series": "ብሎኮች",
+        "bucket": "ግብይቶች"
+      }
+    },
+    "stats": {
+      "transactions": "ግብይቶች",
+      "rejectionRate": "የውድቅ መጠን",
+      "meanPerBlock": "አማካይ በብሎክ",
+      "busiest": "በጣም የተጨናነቀ ብሎክ",
+      "span": "የጊዜ ርዝመት",
+      "blocks": "ብሎኮች ተነበዋል",
+      "unreadable": "የማይነበቡ ብሎኮች",
+      "unreadableHint": "ቁጥሮቹ አይታወቁም፤ ከድምሮቹ ውጭ ናቸው",
+      "medianPerBlock": "መካከለኛ {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "እንቅስቃሴ በሰዓት",
+        "caption": "ለእያንዳንዱ የቀን መቁጠሪያ ቀን በሰዓት ያሉ ግብይቶች፣ በአካባቢዎ ሰዓት። የተሰመሩ ሰዓታት ከተነበበው ታሪክ ውጭ ናቸው።",
+        "value": "ግብይቶች",
+        "blocks": "ብሎኮች"
+      },
+      "byHour": {
+        "title": "የቀኑ ሰዓታት መገለጫ",
+        "caption": "በተነበቡት ቀናት ውስጥ በእያንዳንዱ የአካባቢ ሰዓት ያሉ ግብይቶች።",
+        "series": "ግብይቶች"
+      },
+      "sample": {
+        "caption": "የቅርብ ጊዜዎቹ {count} የሚታዩ ግብይቶች",
+        "size": "{count} ግብይቶች"
+      },
+      "executables": {
+        "title": "የሚተገበሩ ዓይነቶች ስርጭት",
+        "caption": "የናሙና ግብይቶች ድርሻ በሚተገበረው ዓይነት።",
+        "Instructions": "መመሪያዎች",
+        "ContractCall": "የውል ጥሪ",
+        "Ivm": "IVM ባይትኮድ",
+        "IvmProved": "የተረጋገጠ IVM",
+        "Batch": "ጥቅል",
+        "other": "ሌላ"
+      },
+      "outcomes": {
+        "title": "ውጤቶች",
+        "committed": "የተረጋገጡ",
+        "rejected": "ውድቅ የተደረጉ"
+      },
+      "authorities": {
+        "title": "በጣም ንቁ ፈራሚዎች",
+        "caption": "በናሙናው ውስጥ ከሁሉ በላይ ግብይቶችን የፈረሙ መለያዎች።",
+        "empty": "በናሙናው ውስጥ ምንም ግብይት የለም።"
+      },
+      "authoritiesCount": "የተለያዩ ፈራሚዎች",
+      "latency": {
+        "title": "የመካተት መዘግየት",
+        "caption": "ከእያንዳንዱ የናሙና ግብይት መፈጠር እስከ እሱን ያካተተው ብሎክ ድረስ ያለው ጊዜ። የመፈጠሪያ ጊዜው ከፈራሚው የራሱ ሰዓት የመጣ ነው።",
+        "series": "ግብይቶች",
+        "median": "መካከለኛ የመካተት መዘግየት",
+        "p95": "95ኛ ፐርሰንታይል {value}",
+        "clockAhead": "{count} ግብይቶች ከብሎካቸው በኋላ የሆነ የመፈጠሪያ ጊዜ ሪፖርት ያደርጋሉ (የፈራሚው ሰዓት ቀድሟል)፣ ስለዚህ ተትተዋል።",
+        "unmatched": "{count} የናሙና ግብይቶች ከብሎክ መስኮቱ ውጭ ናቸው።",
+        "empty": "እስካሁን በብሎክ መስኮቱ ውስጥ የሚገባ የናሙና ግብይት የለም።"
+      }
+    },
+    "ledger": {
+      "accounts": "መለያዎች",
+      "domains": "ጎራዎች",
+      "assets": "ንብረቶች እና NFTዎች",
+      "nodes": "አንጓዎች",
+      "domainsByAccounts": {
+        "title": "ጎራዎች በመለያዎች ብዛት",
+        "caption": "በእያንዳንዱ ጎራ የተመዘገቡ መለያዎች፤ ከፍተኛዎቹ {count} ይታያሉ።"
+      },
+      "definitionsByHolders": {
+        "title": "የንብረት ትርጉሞች በያዦች ብዛት",
+        "caption": "እያንዳንዱን የንብረት ትርጉም የያዙ መለያዎች፤ ከፍተኛዎቹ {count} ይታያሉ።"
+      },
+      "mintability": {
+        "title": "የማተም ችሎታ",
+        "caption": "የንብረት ትርጉሞች በማተም ፖሊሲ።",
+        "Infinitely": "ሊታተም የሚችል",
+        "Once": "አንድ ጊዜ ማተም",
+        "Not": "ቋሚ አቅርቦት",
+        "Limited": "የተገደበ ማተም",
+        "other": "ሌላ"
+      },
+      "homes": {
+        "title": "የንብረቶች መመዝገቢያ ቦታ",
+        "caption": "የንብረት ትርጉሞች የተመዘገቡበት ቦታ።",
+        "domain": "ጎራ",
+        "dataspace": "የውሂብ ቦታ"
+      },
+      "holdings": {
+        "title": "ይዞታዎች በመለያ",
+        "caption": "መለያዎች በያዙት የንብረቶች ብዛት።",
+        "series": "መለያዎች",
+        "bucket": "የተያዙ ንብረቶች"
+      },
+      "scan": "{loaded} {kind} ተነበዋል",
+      "scanIncomplete": "የመጀመሪያዎቹ {loaded} {kind} ተነበዋል፤ ተጨማሪ አሉ",
+      "kinds": {
+        "domains": "ጎራዎች",
+        "definitions": "የንብረት ትርጉሞች",
+        "accounts": "መለያዎች"
+      },
+      "countsLive": "ከቴሌሜትሪ ዥረቱ የቀጥታ ድምሮች",
+      "countsStale": "ከቴሌሜትሪ ዥረቱ የመጨረሻ ድምሮች፤ እንደገና በመገናኘት ላይ",
+      "countsUnavailable": "የቴሌሜትሪ ዥረቱ አይገኝም"
+    }
   }
 }

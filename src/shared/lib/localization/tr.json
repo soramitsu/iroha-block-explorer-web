@@ -1476,5 +1476,245 @@
     "codeHash": "Kod karması",
     "abiHash": "ABI karma",
     "compilerFingerprint": "Derleyici parmak izi"
+  },
+  "navigation": {
+    "menu": "Menü",
+    "groups": {
+      "explore": "Keşfet",
+      "analytics": "Analitik",
+      "network": "Ağ",
+      "build": "Geliştir",
+      "services": "Hizmetler"
+    },
+    "hints": {
+      "explore": "Defter kayıtlarına göz atın",
+      "analytics": "Gösterge panelleri ve ekonomik göstergeler",
+      "network": "Eşler, mutabakat ve ağ hizmetleri",
+      "build": "Sözleşmeleri yazın, inceleyin ve izleyin",
+      "services": "SORA Nexus üzerinde depolama ve hesaplama"
+    }
+  },
+  "dashboards": {
+    "nav": "Gösterge panelleri",
+    "tabs": {
+      "label": "Gösterge panelleri",
+      "network": "Ağ nabzı",
+      "activity": "Etkinlik",
+      "ledger": "Defter"
+    },
+    "titles": {
+      "network": "Ağ nabzı",
+      "activity": "İşlem etkinliği",
+      "ledger": "Defter bileşimi"
+    },
+    "subtitles": {
+      "network": "Bağlı Torii eşinden okunan canlı blok üretimi, kesinleştirme gecikmesi ve kapasite.",
+      "activity": "Ağın ne zaman yoğun olduğu ve hangi tür işlemleri taşıdığı.",
+      "ledger": "Hesapların, alanların ve varlıkların defter genelinde nasıl dağıldığı."
+    },
+    "window": {
+      "label": "Geçmiş penceresi",
+      "blocks": "{count} blok"
+    },
+    "live": {
+      "streaming": "Canlı",
+      "polling": "10 sn'de bir yenileniyor"
+    },
+    "coverage": {
+      "scanning": "Geçmiş okunuyor: {target} bloktan {loaded}",
+      "complete": "Son {loaded} blok",
+      "genesis": "Genesis bloğundan bu yana tüm {loaded} blok",
+      "incomplete": "{target} bloktan {loaded} tanesi okundu (eksik)"
+    },
+    "errors": {
+      "history": "Blok geçmişi okunamadı.",
+      "status": "Eş durumu kullanılamıyor.",
+      "retry": "Yeniden dene"
+    },
+    "chart": {
+      "showTable": "Tablo",
+      "showChart": "Grafik",
+      "unknown": "Blok içeriği kullanılamıyor: sayılar bilinmiyor",
+      "partial": "Kısmen gözlemlendi: alt sınır",
+      "noData": "Taranmadı",
+      "total": "Toplam",
+      "empty": "Henüz yeterli blok yok.",
+      "height": "Yükseklik",
+      "time": "Zaman",
+      "blockTitle": "Blok {height}",
+      "from": "Başlangıç",
+      "to": "Bitiş"
+    },
+    "peerScope": "Bağlı Torii eşinin bildirdiğine göre",
+    "state": {
+      "producing": "Blok üretiyor",
+      "pending": "Bekleyen işlemler var",
+      "idle": "Boşta: bekleyen yok",
+      "delayed": "Bu eşte gecikme şüphesi",
+      "stale": "Eş durumu eskimiş",
+      "unknown": "Durum bilinmiyor"
+    },
+    "instruments": {
+      "title": "Gösterge kümesi",
+      "height": "Blok yüksekliği",
+      "lastBlock": "Son blok {age} önce",
+      "commit": "Kesinleştirme gecikmesi",
+      "commitHint": "Son blok, oluşturulmasından bu eşte kesinleştirilmesine kadar",
+      "queue": "İşlem kuyruğu",
+      "queueHint": "{inflight} işlemde; en eskisi {age} bekliyor",
+      "queueSaturated": "Kuyruk dolu",
+      "rejections": "Reddedilen işlemler",
+      "rejectionsValue": "{rejected} / {total}",
+      "rejectionsHint": "Son 5 dakikada {recent}",
+      "peers": "Bağlı eşler",
+      "peersHint": "Raporlayan eş hariç",
+      "viewChanges": "Bu turdaki görünüm değişiklikleri",
+      "sinceGenesis": "Genesis'ten bu yana",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "Son saat",
+      "lastHourUnit": "işlem",
+      "lastHourRate": "Dakikada {rate}",
+      "lastHourPartial": "{minutes} dk gözlemlendi; alt sınır",
+      "busiestMinute": "Penceredeki en yoğun dakika: {count} ({time})"
+    },
+    "charts": {
+      "distribution": {
+        "title": "Bloklar arası süre",
+        "caption": "Son {count} blok boyunca ardışık bloklar arasındaki bekleme süreleri. Iroha bir bloğu yalnızca işlemler geldiğinde kesinleştirir; bu nedenle uzun bir bekleme yavaş mutabakat değil, sakin bir dönemdir.",
+        "series": "Bloklar",
+        "range": "Bekleme",
+        "median": "Medyan bekleme {value}"
+      },
+      "perBlock": {
+        "title": "Blok başına işlemler",
+        "caption": "Son {count} bloğun her birindeki kesinleştirilen ve reddedilen işlemler.",
+        "committed": "Kesinleştirilen",
+        "rejected": "Reddedilen",
+        "subset": "Okunan {count} bloğun son {shown} tanesi gösteriliyor (#{from}–#{to})."
+      },
+      "throughput": {
+        "title": "Zaman içinde iş hacmi",
+        "caption": "{bucket} başına işlemler, bloklar arası sıfırla doldurulur. İçi boş işaretçiler kısmen gözlemlenen dilimleri belirtir.",
+        "committed": "Kesinleştirilen",
+        "rejected": "Reddedilen"
+      },
+      "lanes": {
+        "title": "Şerit kapasitesi",
+        "caption": "Her şeridin en son slot zarfında kapasiteye karşı kesinleştirilen TEU.",
+        "lane": "Şerit {id}",
+        "value": "{committed} / {capacity} TEU",
+        "empty": "Bu eş hiç şerit bildirmiyor."
+      },
+      "blockFill": {
+        "title": "Blok doluluğu",
+        "caption": "İçlerinde görebildiğiniz işlem sayısına göre bloklar. Bir blok özel veri alanlarından işlemler de taşıyabilir.",
+        "series": "Bloklar",
+        "bucket": "İşlemler"
+      }
+    },
+    "stats": {
+      "transactions": "İşlem",
+      "rejectionRate": "Ret oranı",
+      "meanPerBlock": "Blok başına ortalama",
+      "busiest": "En yoğun blok",
+      "span": "Zaman aralığı",
+      "blocks": "Blok okundu",
+      "unreadable": "Okunamayan bloklar",
+      "unreadableHint": "Sayılar bilinmiyor; toplamlara dahil değil",
+      "medianPerBlock": "medyan {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "Saate göre etkinlik",
+        "caption": "Yerel saatinize göre her takvim günü için saat başına işlemler. Taralı saatler okunan geçmişin dışında kalır.",
+        "value": "İşlemler",
+        "blocks": "Bloklar"
+      },
+      "byHour": {
+        "title": "Günün saatlerine göre profil",
+        "caption": "Okunan günler boyunca her yerel saatteki işlemler.",
+        "series": "İşlemler"
+      },
+      "sample": {
+        "caption": "Görünür en yeni {count} işlem",
+        "size": "{count} işlem"
+      },
+      "executables": {
+        "title": "Yürütülebilir dağılımı",
+        "caption": "Örneklenen işlemlerin yürütülebilir türüne göre payı.",
+        "Instructions": "Talimatlar",
+        "ContractCall": "Sözleşme çağrısı",
+        "Ivm": "IVM bayt kodu",
+        "IvmProved": "Kanıtlı IVM",
+        "Batch": "Toplu işlem",
+        "other": "Diğer"
+      },
+      "outcomes": {
+        "title": "Sonuçlar",
+        "committed": "Kesinleştirilen",
+        "rejected": "Reddedilen"
+      },
+      "authorities": {
+        "title": "En etkin imzalayanlar",
+        "caption": "Örneklemdeki en çok işlemi imzalayan hesaplar.",
+        "empty": "Örneklemde işlem yok."
+      },
+      "authoritiesCount": "Farklı imzalayanlar",
+      "latency": {
+        "title": "Dahil edilme gecikmesi",
+        "caption": "Örneklenen her işlemin oluşturulmasından onu içeren bloğa kadar geçen süre. Oluşturma zamanı imzalayanın kendi saatinden gelir.",
+        "series": "İşlemler",
+        "median": "Medyan dahil edilme gecikmesi",
+        "p95": "95. yüzdelik {value}",
+        "clockAhead": "{count} işlem, bloğundan sonraki bir oluşturma zamanı bildiriyor (imzalayanın saati ileride) ve hariç tutuldu.",
+        "unmatched": "Örneklenen {count} işlem blok penceresinin dışında kalıyor.",
+        "empty": "Henüz blok penceresine giren örneklenmiş işlem yok."
+      }
+    },
+    "ledger": {
+      "accounts": "Hesaplar",
+      "domains": "Alanlar",
+      "assets": "Varlıklar ve NFT'ler",
+      "nodes": "Düğümler",
+      "domainsByAccounts": {
+        "title": "Hesap sayısına göre alanlar",
+        "caption": "Her alanda kayıtlı hesaplar; ilk {count} gösteriliyor."
+      },
+      "definitionsByHolders": {
+        "title": "Sahip sayısına göre varlık tanımları",
+        "caption": "Her varlık tanımını tutan hesaplar; ilk {count} gösteriliyor."
+      },
+      "mintability": {
+        "title": "Darp edilebilirlik",
+        "caption": "Darp politikasına göre varlık tanımları.",
+        "Infinitely": "Darp edilebilir",
+        "Once": "Bir kez darp",
+        "Not": "Sabit arz",
+        "Limited": "Sınırlı darp",
+        "other": "Diğer"
+      },
+      "homes": {
+        "title": "Varlıkların kayıt yeri",
+        "caption": "Varlık tanımlarının kayıtlı olduğu yer.",
+        "domain": "Alan",
+        "dataspace": "Veri alanı"
+      },
+      "holdings": {
+        "title": "Hesap başına varlıklar",
+        "caption": "Tuttukları varlık sayısına göre hesaplar.",
+        "series": "Hesaplar",
+        "bucket": "Tutulan varlık"
+      },
+      "scan": "{loaded} {kind} okundu",
+      "scanIncomplete": "İlk {loaded} {kind} okundu; daha fazlası var",
+      "kinds": {
+        "domains": "alan",
+        "definitions": "varlık tanımı",
+        "accounts": "hesap"
+      },
+      "countsLive": "Telemetri akışından canlı toplamlar",
+      "countsStale": "Telemetri akışından son toplamlar; yeniden bağlanıyor",
+      "countsUnavailable": "Telemetri akışı kullanılamıyor"
+    }
   }
 }

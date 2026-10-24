@@ -96,6 +96,11 @@ import {
   CountResponse,
   NexusDataspacesAccountSummary,
   NexusPublicStatus,
+  NodeStatusSnapshot,
+  BlockSampleRow,
+  BLOCK_SAMPLE_FIELDS,
+  TransactionSampleRow,
+  TRANSACTION_SAMPLE_FIELDS,
   ContractCodeView,
   ContractVerifiedSourceJobResponse,
   ContractActivityResponse,
@@ -118,6 +123,7 @@ import { getRuntimeConfig } from '@/shared/runtime-config';
 import { normalizeAccountIdLiteral, normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
 import { requireIrohaHash32, requireIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
 import { getExplorerReadAuth } from '@/shared/lib/explorer-read-auth';
+import type { BlockSample } from '@/shared/lib/chain-analytics';
 import { ToriiBrowserClient, ToriiHttpError, ToriiStreamGapError, field, type Filter, type ListQueryInput } from '@iroha/iroha-js/torii-browser';
 import { NetworkId } from '@iroha/iroha-js/connect-browser';
 import type {
@@ -1126,6 +1132,22 @@ export async function fetchBlocks(params?: CursorPaginationParams): Promise<Resu
   );
 }
 
+/** One newest-first page of projected block summaries; counts follow the caller's visibility. */
+export async function fetchBlockSamples(params: CursorPaginationParams): Promise<ResultWithStatus<CollectionPage<BlockSample>>> {
+  return await fetchCollectionPage(params, BlockSampleRow, (client) =>
+    client.explorerBlocks.list({ ...collectionQuery(params), select: [...BLOCK_SAMPLE_FIELDS] })
+  );
+}
+
+/** One newest-first page of projected visible transactions. */
+export async function fetchTransactionSamples(
+  params: CursorPaginationParams
+): Promise<ResultWithStatus<CollectionPage<TransactionSampleRow>>> {
+  return await fetchCollectionPage(params, TransactionSampleRow, (client) =>
+    client.explorerTransactions.list({ ...collectionQuery(params), select: [...TRANSACTION_SAMPLE_FIELDS] })
+  );
+}
+
 export async function fetchBlock(heightOrHash: number | string): Promise<ResultWithStatus<Block>> {
   return await parseToriiSdkResult((client) => client.getExplorerBlock(
     typeof heightOrHash === 'number' || /^[1-9][0-9]{0,19}$/u.test(heightOrHash)
@@ -1499,7 +1521,7 @@ export async function fetchNexusDataspacesAccountSummary(
   return await transformErrorResponse(res.response);
 }
 
-export async function fetchNexusPublicStatus(): Promise<ResultWithStatus<NexusPublicStatus>> {
+async function fetchToriiStatus<T>(schema: ZodType<T>): Promise<ResultWithStatus<T>> {
   const url = new URL(`${getToriiBaseUrl()}/status`, defaultOrigin || undefined);
   let res: Response;
   try {
@@ -1525,7 +1547,7 @@ export async function fetchNexusPublicStatus(): Promise<ResultWithStatus<NexusPu
         return typeof value === 'bigint' && Number.isSafeInteger(Number(value)) ? Number(value) : value;
       },
     });
-    return { status: SUCCESSFUL_FETCHING, data: NexusPublicStatus.parse(payload) };
+    return { status: SUCCESSFUL_FETCHING, data: schema.parse(payload) };
   }
 
   if (FAILOVER_STATUSES.has(res.status)) {
@@ -1533,6 +1555,15 @@ export async function fetchNexusPublicStatus(): Promise<ResultWithStatus<NexusPu
     maybeTriggerToriiFailoverOnFailure('http_failure');
   }
   return await transformErrorResponse(res);
+}
+
+export async function fetchNexusPublicStatus(): Promise<ResultWithStatus<NexusPublicStatus>> {
+  return await fetchToriiStatus(NexusPublicStatus);
+}
+
+/** The reporting peer's typed status snapshot for dashboard instruments. */
+export async function fetchNodeStatus(): Promise<ResultWithStatus<NodeStatusSnapshot>> {
+  return await fetchToriiStatus(NodeStatusSnapshot);
 }
 
 export async function fetchKaigiRelays(): Promise<ResultWithStatus<KaigiRelaySummaryList>> {

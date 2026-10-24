@@ -1,16 +1,16 @@
 {
   "schema": "iroha.sdk-package-inventory.v2",
-  "archiveSha256": "ce242148a912b4a7913338ac67fb4a6184b2e9de4772b6153e0503a6e6d47961",
+  "archiveSha256": "46e9b3c02429c50ee620d03d7b3b7f7360659d6b336bd79d20e421bcd9b4edee",
   "source": {
-    "revision": "5866f914e37daedb1c7f2f2beb2e4394f95ffb36",
-    "packageGitTree": "a3cff1933e2971634648cad30fcf536e8057088d",
+    "revision": "8a24e077b80192ae49dfab945db10cf5acfbb770",
+    "packageGitTree": "2babf69378a51feecc22898b51efb708e83836cf",
     "packagePath": "javascript/iroha_js",
     "packageSourceClean": true,
-    "sourceInventorySha256": "41794dbb7a4f0bd2673a08837e23571639600a0987eb9aa70a20828b712169de",
+    "sourceInventorySha256": "bd68ae08e56f25ad69ef8fe48012c56fd1f11f5e7c191cadadf6d3515c0a76b1",
     "sourceInventory": {
       ".eslintrc.json": "2b9aa376e41e95d5206b1b949d628da2fb0f8a50fcb9155ea82cdb39fa7ab907",
       "LICENSE": "7c0558c365d644b7588d481e22f26421cd3ba23492d2c0ce0fd382466aad2c13",
-      "README.md": "03d74cb22e4ae7edb36474107e0552fa3a079ee29ffa0398a8d246dd0243195b",
+      "README.md": "521e4df6a7ad2ad3de822cafe94133c40e15abb4436a8d3595e0c4b625e684c5",
       "address.d.ts": "1102edc44652c740f40fab8630b08c2a326f0658ec4dc831e6cd6de4132e98bd",
       "atomic-private-settlement.d.ts": "31e5100884dc1f9108b9aa4ae8028ad3f3c2b0433573adf0d981d50fbdd0ec56",
       "blake2b.d.ts": "2e680fbb6ec2324d626a600cb99dc8451ac759576729161c016a8055d4eeec3b",
@@ -23,8 +23,8 @@
       "crypto.d.ts": "7b093b8f2f730f73bae74c1d146ff01fdbaeb47906efd6fe41eaec28e2949343",
       "game-resources.d.ts": "fb1dc92382d3f2be1d258d35c7c277a091b3e0468d91f88c02949de914c45c86",
       "game.d.ts": "36a76f786f3aac0d1dc69ee61b7db0baa9e7322aadeb8433af419999171818a0",
-      "index.d.ts": "46a6c436f2c8e0c51a548a3714b0a2a9904be5870a849877e9f21ae7c4b687f8",
-      "instruction-builders.d.ts": "b998712f1ca27125c79e81c75f2907bea1235046fefa57abf76ac22bc2db9a12",
+      "index.d.ts": "15af5f0a0bc5551d14cc9eb04a35b89d435ddf71bd5501800610cfe570b253a8",
+      "instruction-builders.d.ts": "2ca6b7ce7d16364d0de784044c6154550deb609f71cd568589e1793c17e77401",
       "ivm-artifact.d.ts": "3d013df2461b49fb2661c620365351c1b5bcb574363a812ecbcf17a43771df1b",
       "kotodama-compiler.d.ts": "ca00ab9471923168f859b40c82601021080bd280ce1cacca7432b2995f9917ac",
       "native/iroha_js_host.checksums.json": "4eabbb3e3d00e9456996bdc2e8bfe45845a53ab4ec24ef4b7c336c20e438daa2",
@@ -54,7 +54,6 @@
       "recipes/streaming.mjs": "ca4989aa563c67d78551e8f888285a651dda9eac9f24aecbf00b530fc870cfd4",
       "recipes/walletlessFollowGame.mjs": "99c53168ffb23b2246b9c114e2668391252ad8c45055eca76908803f87529abb",
       "repo-agreement.d.ts": "750e184d84d2e62e99b78985fd4f1373b9f38e4f29a935f6d0e4bfb662543c24",
-      "scripts/__pycache__/build-wasm.cpython-314.pyc": "ca5d721477882fb5c680d73c7126baff2be3128dc92789bcaccec43ed23475c6",
       "scripts/build-dist.mjs": "e57da7145ee2e69fe88d2167689fb86cbcd97d6edc80d9e35b0a3758671814b5",
       "scripts/build-native.mjs": "cb515a832c389a18817b9cdd225212daeb0ac3a2181cb09594802ecd87a0df1f",
       "scripts/bundle-size-check.mjs": "2ecd4fc6d7f96a79315082be290ceb1f995d360e5020fc7f6c6f2b234b612e64",
@@ -81,6 +80,7 @@
       "smart-contract-deployment.d.ts": "a59a0820e06d41777d13920e78f7df3e79e695d4e7b20b3f7a8b5014f844c125",
       "sorafs.d.ts": "2c78eb0ba233a207b72685853b8634241e0317919e26b3f4483d7b3c846d9e8a",
       "src/accountCapabilities.js": "25a7de56cb22a62a1aa1c0dee7bdea1b27344977e3225473b0229b6ee9278d46",
+      "src/accountFaucet.js": "beff390b72a6ad7f0600c7612005d611c6c9cd15c10240e6d34d2bf04c10ae30",
       "src/address.js": "df3a9bc7a321d841bee01348a7d173c4083d17870242b8f0f5d20715192a273f",
       "src/addressErrors.js": "7d9af71bc293178169a8aca5df55b92e8b423adef8420f5ef6a4b35f0662e361",
       "src/addressPrimitives.js": "64fcc3b2d4c1d965c4b3f2056e01b9dbaaadd8c3d55f7e729100a0219977fa60",
@@ -94,6 +94,8 @@
       "src/blockProofTypes.d.ts": "84bbb692a91df68de857cb90ecd8b5b2f48707924a33c31decdcf135d838f143",
       "src/blockProofVerification.js": "891ac145c305b29eae7d6827e94c9a004ee4f307779b48f3012b115690ad316f",
       "src/bls12381G1.js": "81e147cefc987b15896042af06e1c5fd0ebd2114a5fa1c6b775bf77cb3206de4",
+      "src/bond.js": "568d46c71c765c8eb7499a09c129c48cba97cefee8561b8b20925ab7259b1006",
+      "src/bondRecords.js": "bf40a095401a134f428ce443b1491b654963ab68527777cb0ac67cefd79bac72",
       "src/bootleLanternIssuance.js": "374a50a9c23a89629cdfd94bbbc9c5710daef51d680789bd54599d61a3d8260e",
       "src/boundedByteSnapshot.js": "d328fce478afdbeaa34f6ff69c40eb1106ad08c424c05e019a08f82a1ca301f1",
       "src/browser.js": "d0e7b962a5251470e318aa5177d7ae72a5c3e1a4da7419850bfaf2cc014be857",
@@ -108,7 +110,7 @@
       "src/compute.js": "f540b08fd596a9470b437dc3ebd26c7fef329598bd946e6267d2cfc3e7774e48",
       "src/confidentialProofBuilders.js": "dde665d048edcac1cc43fccfe4a46ef8b4cde5371f055d15b24574b9698c2d91",
       "src/config.js": "135cf023f2609c8f9bb1f0fb1d3389cd9d9603112fb8ec816f5df417506282b5",
-      "src/connect.browser.js": "0b9794802b45a60d8b6effedde98f7b069a75a54a2a21213befe7e1f828015a0",
+      "src/connect.browser.js": "f8169f0eb5e63226ac6eb7df1a31df805caa7f8a1bfde817feea2f65b3f4f7c1",
       "src/connectError.js": "aac4fead15c6f4dcba272c5f51a3a63cf2e7153af3ed5bfe60ffe128ae73fc11",
       "src/connectJournalRecord.js": "fbb968c61d7af1aa42053005af20664db3f3520a24c5da15977dc343e0fc081b",
       "src/connectPreviewFlow.js": "ccfa28bce01dfe7d275d4accfab27d9999dfeeb979ec2be694e1f681605a21da",
@@ -134,7 +136,8 @@
       "src/cryptoInternal.browser.js": "0adbf05f8f84558064a4cf3c1408189fb0dcde1c46bf3d7dcfb0c48ce76f0780",
       "src/curveRegistry.js": "05e19df5ae69c145ce6d70d778ec194bd9fb89b6d7648167274d85a4e5c78225",
       "src/dataAvailability.js": "91342c0eaef62b9b2f224a2dae521b1648ae05061ad715fd4dcbec160c6422dd",
-      "src/domainId.js": "c15780c20d712de1f6dfbf950d13f8f59e12796060a49a81707d3a6f35d4b0ed",
+      "src/domainId.js": "08ea4fd19c3984c46023c9aa970a5affd351cc3db219c4f4f651bdea447140fc",
+      "src/domainLease.js": "e20aa8686c2630b85b66177be9d7c63ec4f58af7d89f354567f5a669b4ff690c",
       "src/ed25519Strict.js": "b582b41280680e6f1229c100ffd43c98d6eb8abd6f402c394e6a52e27c02696b",
       "src/electionTallyV1.js": "85ed484efb90ac9033b2557fbefd3290d3ec5e5ecb8c170f0c63a50ebe4711da",
       "src/entrypointSchema.js": "1e4240a8cd3832dce569259fe4a3faa86646afc58ab7eec65f9eef70d7f8a2ff",
@@ -147,9 +150,9 @@
       "src/identifierOwnerPrf.js": "22ed53d07d40f55685551309442f2a0442c468687a7f3d68e74c40973b81493e",
       "src/identifiers.js": "1e17f9c1936ba174830a20a34d05121e4e93f0d158c9e257d9e8ab29701acb8b",
       "src/idnaBidi.js": "adcd89502fcebb043f34b3ad939668723ca08b138df8341a2df2c7305d51a29b",
-      "src/index.js": "0aa024f0ec96833d70d929091355036d718a4b120f9ec2f9c76137d1487434cc",
-      "src/instructionBuilderPrimitives.js": "7ad1904699eecddca758a1894132245b46091a53221c15e4d99531d471de793d",
-      "src/instructionBuilders.js": "b2f107dc4694083e52a37a79417eb354d52a6d9c1f2c6d8173a7c49d83b83863",
+      "src/index.js": "476229da5cfc3a171122836c00f7c7b18e415c86b3c3803b97c48aef4868f2c6",
+      "src/instructionBuilderPrimitives.js": "5a0e3205db440f34a1d21db2174a3f823d50298c9b209b8465aa6afce38d5231",
+      "src/instructionBuilders.js": "cc6e2679508d861fb1a0f95498d6886641e9fa7b062c35634969f97b90e9e899",
       "src/iso20022Transport.js": "92c31e2c036b5d5fea7b2645829aa5cd6575325a71c34ce86bdf3211571b9a94",
       "src/isoBridge.js": "7b46e9bf9336ca6dc24fdde0f29bcaf66dfc0a3ce6cf808c667ea0f889fc3757",
       "src/ivmArtifact.js": "5477f9138e83e5238ebdab04cf3ad5e14e82e3218c618ff413c38376f568b669",
@@ -170,18 +173,19 @@
       "src/multisigIdentifiers.js": "7e4f6184adcaaea75ddc6b116d9504c870ffcf8771e9c79deba292f767056f43",
       "src/multisigOccurrence.js": "b31c20b99bb9951f0af160e706fbf4513a82cf0464815ee8b9073b00079b21ee",
       "src/native.browser.js": "58fe3af703a09fbe7a3722ba77134edd2aaaca42e14c02c2db58039c3a71948a",
-      "src/native.js": "caa596b2fc564030e9387bfbc9fcfc9a8f34b0c5091819032dfc01de56590ffc",
+      "src/native.js": "fb3c5ff0b4b25cb73c7e9585c1ea8964f16f7f4a79b384ba83f3193d66c4ed14",
       "src/nativeAccountInspection.js": "b63abeff9a4d033dde2f4c7ea88c173ce2a987f3b823de5989da267d188ee504",
       "src/nativeArtifactHash.js": "856be3ef7522c99d0b06b6eb06b29543d823327a64c005d9849c9dcf3d4bd708",
       "src/nativeMultisigTransport.js": "88633f5e2d08a9f6af63b16e481cd5c36fd1484ae59eea0149f18c56cda2458d",
       "src/nativeRuntime.js": "9ddb317665d69ea47b7204d77719b99fbea214ac91c1aac8fab8a7990a23337b",
       "src/networkId.d.ts": "9f882cf9dbd610b5af07469ff383ac3724b4a6981988da71b0d3b8065df22ae2",
       "src/networkId.js": "77acf4f4e480ce87c77bd1b56d11d755a121f661009bb5c8b5b4abf54dcfed96",
+      "src/networkIdentityDiscovery.js": "fec1f8a5301a354314447a11b2684e738fb4c7b6fb9224ca8b9fc1f0d1bb7223",
       "src/networkPrefix.js": "c939efd1b81ae3b6dcd253378051d36c69ffc8adcde1a372e67a9db81d9b3ab5",
       "src/nexusApp.js": "b3da160a5456e574f3cb26959f97520c065b3f71f543d0b810f3172c5f400f22",
       "src/nft.js": "722299adbc5c86791c5246e366935da1627b6faadb517b224d3e9e809073aa5b",
       "src/nodeBufferTypes.d.ts": "1642126b59e8430a48fdb1785ae096ac122af74bc2cddd5f3804ed69be95f360",
-      "src/norito.js": "f23f55f441f5c498e55419d7341324822dbd2f3ee902a731f405a921cdf9cf10",
+      "src/norito.js": "7c3d6dd925560cf2a55cac26dfbda660ca6033df03894b91424670a206e864a9",
       "src/noritoClassedRaceSchemas.js": "87ac3867cbfb19ceb65b57ea345538351f3e89a8ede67112d641cc0621885153",
       "src/noritoContractCodecs.js": "75e3fa75588065fbd34adf000a8a4b8af871c58dad0eab18e98d2a7a6e5e2d9b",
       "src/noritoContractMetadata.js": "7ba190dddea1fc6e50a22b6ff4b455df43581718e39f7859dced3bbf9ba15e02",
@@ -203,7 +207,6 @@
       "src/operatorRequest.browser.js": "2f2d2fcd33421cabd8ef468698d03880a3f33cb1718064e8bc01ba1d912cfc11",
       "src/operatorRequest.js": "97e49403cfe81db7b640f85b3c734de0fc8c0eabf76b668fba69a4d5a53b8d1c",
       "src/parliamentApiV1.js": "60531749c3837209dcced8bc5642510c6d10c4c2c876d4bfc437d8c5cb2402f4",
-      "src/petal.js": "ed45ea6f1b32ec4d99518a66b9039caef8f0d8c680382c04ab3f653cd556c1a5",
       "src/petal/browser.js": "05f2f3123eee20771a3da0cba98f87ef601826252d1f58fb6e58961d52e3ad6f",
       "src/petal/crc.js": "376301b76cf1c851be7320f7a1cdacebe6a7f38353844ce9b66ad305a00ea810",
       "src/petal/decode.js": "aa0bb5df4affff103ca829b89e588f5862e0c87c974905df6eb5e0467ad6fa87",
@@ -220,6 +223,7 @@
       "src/petal/session.js": "bf8101eab103353578ab22539e772ea6099c932cb6346a229e9da21e598122e0",
       "src/petal/stream.js": "ea674181316007ca715d5b68c36be409316fcd84043e8393d7d741e8ce34cb21",
       "src/petal/support.js": "592387ea9f136089bc398fcdfe04a6d441343e735bec2bbb3b3fcf54851496de",
+      "src/petal.js": "ed45ea6f1b32ec4d99518a66b9039caef8f0d8c680382c04ab3f653cd556c1a5",
       "src/privacyCapabilities.js": "b287a0ce10b25cc86517cc5581fa143674e4922bcae21855c245f166c8eeb664",
       "src/privacyCapabilityAdmission.js": "216c5e3767dd240f760f8001cd626f315ea78dd8b9c7e51ae91171a013ea5654",
       "src/privacyCapabilityTransport.js": "a1bcc2f17efcbc1dc67f1a55e93bbecd6f0127f3dffe79c24c47063f5b880485",
@@ -241,6 +245,9 @@
       "src/raceOutcomes.js": "c3eeae37f7d573b1fc994a9fbff2d724af01e26ed89aaa48585c6a092c19ee6f",
       "src/retailDailyLimitInstructions.js": "9eb3f0dded51b23c1cdf08daf61b17e71ab463031d9dcc5934e1213ac339b08f",
       "src/retailFeeAssessment.js": "a1deb1639db2450887e1e883e6572de2d4014010161f05861a35943b37599d5e",
+      "src/settlementId.js": "0a1e016a96968427d7223ca8362bcb3b709e968ea423736b7fa216e10ce60416",
+      "src/settlementIdentifiers.js": "4bb5d04164afe2a74f3bc02cbcf711cc7061e637795fe8f854db9bbee21de2da",
+      "src/settlementIntents.js": "a4aa1847d1c6f68bd259e15f6590e74603975d65cd81db658419ca9b6e040c08",
       "src/signedAttachmentContext.js": "7dfebab1b06c2c8e193ce3fbd8aabc4190cdca228966563d7137e26d180427fe",
       "src/signedAttachmentProofs.js": "884446e813a6b717c7829aef706f7a9ad5793fb5e41a82e6a61373b5e7e8ea43",
       "src/signedAttachments.js": "ae6e86322659a47f0f7252b9948eca01074aec316185a06a7c7324fcb9bc1d7b",
@@ -268,19 +275,21 @@
       "src/sumeragiTypedLimits.js": "7fc84d119d0b099540fe1afa3dc170536a23b3104c01f4ec50b0162d44503272",
       "src/tairaTestnetProfile.js": "871dd579fa2a55ac9cc0f47f7e5ba588e623fb5c171d4a1ae184a6cf6b092438",
       "src/toriiBoundedResponse.js": "f846f5b387968adaa46764af8beb58b4bdcf79373f1a8f6f160df18acdd9b528",
-      "src/toriiBrowserClient.js": "309290b637bd0805bfeccfc5dfb14a096cb97209a9150f2660760ca4e704e119",
+      "src/toriiBrowserClient.js": "16fe11bb99067a3cb2bf4f08c63647ddf0f609f7873af97d5e8922c0aefc0319",
       "src/toriiBrowserExplorerTypes.d.ts": "50b4caac76c4c042a5e7d02c90372a3273497e5f70429ae281c9c5b1e53001e2",
-      "src/toriiClient.js": "e1aa0ea620900a1c2e097114e5da1c927e52e2f7d1cc0029f6f5cba4e8bb7ea8",
+      "src/toriiClient.js": "49bf9c13c900244e5ded238f90d80a729b6bc54aabd052571f7d0154d0e39076",
       "src/toriiClientEncoding.js": "a2d2c0287895847dff7dda11ba653ee71ee4b7ee2680368a7db33dcb2de68722",
       "src/toriiClientPrimitives.js": "9c8330ec1891c4a8798a8a409fe73be2c0f3855cf3489df704d76838def3129d",
       "src/toriiCompatibility.js": "c2edbf927615db8ae1320676e6dfe7a341fca48a913b3578525f6597ab909b08",
-      "src/toriiErrors.js": "2b17cf213870e918e0dcb1de69e6e73d35b689e813789c168426ab65da0752ae",
+      "src/toriiErrors.js": "579325474c93677ce4779933fbf1b7ca0d02a8bd8753fafe07f5238fa1ab2403",
       "src/toriiEventStream.js": "bff2d780545da43cc065354b308ab84a3953dbde4f32764ebc92adcc9143c495",
       "src/toriiGovernanceNormalizers.js": "3422b3548d65b77cb7dacd1a2413129151f17b3f46bd2c9391fc057ea3429be3",
       "src/toriiOptional.js": "59544034740e58aea5c98f1480c3482586e4ec28593e0cb08712b09bfced0dd0",
       "src/toriiTestHooks.js": "fa3253d8fd66e44501c4ed5bcfb82f8d5a45a2a0cff935f88758526630cb7a41",
-      "src/transaction.js": "46fcad1bdc61660094bcd6baf9ca161cbf7f8afd691cc67ce7f37c4b8f6a6e92",
+      "src/transaction.js": "c0a953a0f85e7ec1a9943196c6115cb1114baf43855b9712aa4cd7af6d7be16d",
       "src/transactionCodec.js": "a327a875671159c28674b1e51bb61329eb85e87596df1670611e33220a575eb8",
+      "src/transactionRejectionObserver.js": "ba0a3af55c903be52fd4073018d9efbcb08e07e89b8bfdf061a6371eaf7a8f78",
+      "src/transactionReview.js": "b122cbf4dfaf690cf7ed3c8272f163aa47bcfa530903775cc9e50288bc739bcb",
       "src/validationError.js": "ed96ad939858e8b1bada58036d036a6b737bc5ef603f7492acf823c01b5a2266",
       "src/validationFeeConsensus.js": "587697c56538223af8d9cc0dbdef7ef5d192cf2365828820bc671ee3bb561427",
       "src/validationFeeProposal.js": "9ecd65a3a9cab4565966b2a997885ae125034d9ccbcd90ba8b01cd0a88d2879a",
@@ -293,12 +302,12 @@
       "torii.d.ts": "7850436958ea8b7ef16e6119878ee2b151d9ca88b011c82adbc9115ec5dd8c72",
       "transaction-codec.d.ts": "6f03c31ea15ce25ba1657e136b47416bd6729b32f0e25adc51d73b35b28f5ef9"
     },
-    "repeatPackSha256": "ce242148a912b4a7913338ac67fb4a6184b2e9de4772b6153e0503a6e6d47961",
+    "repeatPackSha256": "46e9b3c02429c50ee620d03d7b3b7f7360659d6b336bd79d20e421bcd9b4edee",
     "nodeVersion": "24.19.0",
     "npmVersion": "11.17.0",
     "canonicalWorkingRepository": "/Users/takemiyamakoto/dev/iroha",
     "sourceKind": "canonical-working-source",
-    "buildCommand": "Reuse current BPNG/MiBank browser archive; compare every packaged byte against canonical source; repeat npm pack --ignore-scripts against the matching canonical dist",
+    "buildCommand": "maintained revendor: node scripts/build-dist.mjs && npm pack --ignore-scripts; repeat npm pack --ignore-scripts",
     "buildScriptSha256": "e57da7145ee2e69fe88d2167689fb86cbcd97d6edc80d9e35b0a3758671814b5",
     "nativeArtifactQualified": false
   },
@@ -310,8 +319,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "03d74cb22e4ae7edb36474107e0552fa3a079ee29ffa0398a8d246dd0243195b",
-      "sizeBytes": 237305
+      "sha256": "521e4df6a7ad2ad3de822cafe94133c40e15abb4436a8d3595e0c4b625e684c5",
+      "sizeBytes": 257011
     },
     {
       "path": "address.d.ts",
@@ -367,6 +376,11 @@
       "path": "dist/accountCapabilities.js",
       "sha256": "25a7de56cb22a62a1aa1c0dee7bdea1b27344977e3225473b0229b6ee9278d46",
       "sizeBytes": 5693
+    },
+    {
+      "path": "dist/accountFaucet.js",
+      "sha256": "beff390b72a6ad7f0600c7612005d611c6c9cd15c10240e6d34d2bf04c10ae30",
+      "sizeBytes": 14283
     },
     {
       "path": "dist/address.js",
@@ -432,6 +446,16 @@
       "path": "dist/bls12381G1.js",
       "sha256": "81e147cefc987b15896042af06e1c5fd0ebd2114a5fa1c6b775bf77cb3206de4",
       "sizeBytes": 4868
+    },
+    {
+      "path": "dist/bond.js",
+      "sha256": "568d46c71c765c8eb7499a09c129c48cba97cefee8561b8b20925ab7259b1006",
+      "sizeBytes": 35403
+    },
+    {
+      "path": "dist/bondRecords.js",
+      "sha256": "bf40a095401a134f428ce443b1491b654963ab68527777cb0ac67cefd79bac72",
+      "sizeBytes": 9787
     },
     {
       "path": "dist/bootleLanternIssuance.js",
@@ -505,8 +529,8 @@
     },
     {
       "path": "dist/connect.browser.js",
-      "sha256": "0b9794802b45a60d8b6effedde98f7b069a75a54a2a21213befe7e1f828015a0",
-      "sizeBytes": 56857
+      "sha256": "f8169f0eb5e63226ac6eb7df1a31df805caa7f8a1bfde817feea2f65b3f4f7c1",
+      "sizeBytes": 60266
     },
     {
       "path": "dist/connectError.js",
@@ -635,8 +659,13 @@
     },
     {
       "path": "dist/domainId.js",
-      "sha256": "c15780c20d712de1f6dfbf950d13f8f59e12796060a49a81707d3a6f35d4b0ed",
-      "sizeBytes": 6045
+      "sha256": "08ea4fd19c3984c46023c9aa970a5affd351cc3db219c4f4f651bdea447140fc",
+      "sizeBytes": 6865
+    },
+    {
+      "path": "dist/domainLease.js",
+      "sha256": "e20aa8686c2630b85b66177be9d7c63ec4f58af7d89f354567f5a669b4ff690c",
+      "sizeBytes": 8206
     },
     {
       "path": "dist/ed25519Strict.js",
@@ -700,18 +729,18 @@
     },
     {
       "path": "dist/index.js",
-      "sha256": "0aa024f0ec96833d70d929091355036d718a4b120f9ec2f9c76137d1487434cc",
-      "sizeBytes": 22022
+      "sha256": "476229da5cfc3a171122836c00f7c7b18e415c86b3c3803b97c48aef4868f2c6",
+      "sizeBytes": 23918
     },
     {
       "path": "dist/instructionBuilderPrimitives.js",
-      "sha256": "7ad1904699eecddca758a1894132245b46091a53221c15e4d99531d471de793d",
-      "sizeBytes": 5820
+      "sha256": "5a0e3205db440f34a1d21db2174a3f823d50298c9b209b8465aa6afce38d5231",
+      "sizeBytes": 6537
     },
     {
       "path": "dist/instructionBuilders.js",
-      "sha256": "b2f107dc4694083e52a37a79417eb354d52a6d9c1f2c6d8173a7c49d83b83863",
-      "sizeBytes": 174486
+      "sha256": "cc6e2679508d861fb1a0f95498d6886641e9fa7b062c35634969f97b90e9e899",
+      "sizeBytes": 191597
     },
     {
       "path": "dist/iso20022Transport.js",
@@ -815,8 +844,8 @@
     },
     {
       "path": "dist/native.js",
-      "sha256": "caa596b2fc564030e9387bfbc9fcfc9a8f34b0c5091819032dfc01de56590ffc",
-      "sizeBytes": 26377
+      "sha256": "fb3c5ff0b4b25cb73c7e9585c1ea8964f16f7f4a79b384ba83f3193d66c4ed14",
+      "sizeBytes": 26540
     },
     {
       "path": "dist/nativeAccountInspection.js",
@@ -849,6 +878,11 @@
       "sizeBytes": 4001
     },
     {
+      "path": "dist/networkIdentityDiscovery.js",
+      "sha256": "fec1f8a5301a354314447a11b2684e738fb4c7b6fb9224ca8b9fc1f0d1bb7223",
+      "sizeBytes": 2395
+    },
+    {
       "path": "dist/networkPrefix.js",
       "sha256": "c939efd1b81ae3b6dcd253378051d36c69ffc8adcde1a372e67a9db81d9b3ab5",
       "sizeBytes": 316
@@ -870,8 +904,8 @@
     },
     {
       "path": "dist/norito.js",
-      "sha256": "f23f55f441f5c498e55419d7341324822dbd2f3ee902a731f405a921cdf9cf10",
-      "sizeBytes": 140249
+      "sha256": "7c3d6dd925560cf2a55cac26dfbda660ca6033df03894b91424670a206e864a9",
+      "sizeBytes": 140180
     },
     {
       "path": "dist/noritoClassedRaceSchemas.js",
@@ -1169,6 +1203,21 @@
       "sizeBytes": 3606
     },
     {
+      "path": "dist/settlementId.js",
+      "sha256": "0a1e016a96968427d7223ca8362bcb3b709e968ea423736b7fa216e10ce60416",
+      "sizeBytes": 1480
+    },
+    {
+      "path": "dist/settlementIdentifiers.js",
+      "sha256": "4bb5d04164afe2a74f3bc02cbcf711cc7061e637795fe8f854db9bbee21de2da",
+      "sizeBytes": 5643
+    },
+    {
+      "path": "dist/settlementIntents.js",
+      "sha256": "a4aa1847d1c6f68bd259e15f6590e74603975d65cd81db658419ca9b6e040c08",
+      "sizeBytes": 11274
+    },
+    {
       "path": "dist/signedAttachmentContext.js",
       "sha256": "7dfebab1b06c2c8e193ce3fbd8aabc4190cdca228966563d7137e26d180427fe",
       "sizeBytes": 5182
@@ -1305,8 +1354,8 @@
     },
     {
       "path": "dist/toriiBrowserClient.js",
-      "sha256": "309290b637bd0805bfeccfc5dfb14a096cb97209a9150f2660760ca4e704e119",
-      "sizeBytes": 104320
+      "sha256": "16fe11bb99067a3cb2bf4f08c63647ddf0f609f7873af97d5e8922c0aefc0319",
+      "sizeBytes": 108024
     },
     {
       "path": "dist/toriiBrowserExplorerTypes.d.ts",
@@ -1315,8 +1364,8 @@
     },
     {
       "path": "dist/toriiClient.js",
-      "sha256": "e1aa0ea620900a1c2e097114e5da1c927e52e2f7d1cc0029f6f5cba4e8bb7ea8",
-      "sizeBytes": 1001028
+      "sha256": "49bf9c13c900244e5ded238f90d80a729b6bc54aabd052571f7d0154d0e39076",
+      "sizeBytes": 1013223
     },
     {
       "path": "dist/toriiClientEncoding.js",
@@ -1335,8 +1384,8 @@
     },
     {
       "path": "dist/toriiErrors.js",
-      "sha256": "2b17cf213870e918e0dcb1de69e6e73d35b689e813789c168426ab65da0752ae",
-      "sizeBytes": 10351
+      "sha256": "579325474c93677ce4779933fbf1b7ca0d02a8bd8753fafe07f5238fa1ab2403",
+      "sizeBytes": 11147
     },
     {
       "path": "dist/toriiEventStream.js",
@@ -1360,13 +1409,23 @@
     },
     {
       "path": "dist/transaction.js",
-      "sha256": "46fcad1bdc61660094bcd6baf9ca161cbf7f8afd691cc67ce7f37c4b8f6a6e92",
-      "sizeBytes": 105129
+      "sha256": "c0a953a0f85e7ec1a9943196c6115cb1114baf43855b9712aa4cd7af6d7be16d",
+      "sizeBytes": 114318
     },
     {
       "path": "dist/transactionCodec.js",
       "sha256": "a327a875671159c28674b1e51bb61329eb85e87596df1670611e33220a575eb8",
       "sizeBytes": 103946
+    },
+    {
+      "path": "dist/transactionRejectionObserver.js",
+      "sha256": "ba0a3af55c903be52fd4073018d9efbcb08e07e89b8bfdf061a6371eaf7a8f78",
+      "sizeBytes": 3065
+    },
+    {
+      "path": "dist/transactionReview.js",
+      "sha256": "b122cbf4dfaf690cf7ed3c8272f163aa47bcfa530903775cc9e50288bc739bcb",
+      "sizeBytes": 20641
     },
     {
       "path": "dist/validationError.js",
@@ -1415,13 +1474,13 @@
     },
     {
       "path": "index.d.ts",
-      "sha256": "46a6c436f2c8e0c51a548a3714b0a2a9904be5870a849877e9f21ae7c4b687f8",
-      "sizeBytes": 432553
+      "sha256": "15af5f0a0bc5551d14cc9eb04a35b89d435ddf71bd5501800610cfe570b253a8",
+      "sizeBytes": 463570
     },
     {
       "path": "instruction-builders.d.ts",
-      "sha256": "b998712f1ca27125c79e81c75f2907bea1235046fefa57abf76ac22bc2db9a12",
-      "sizeBytes": 3543
+      "sha256": "2ca6b7ce7d16364d0de784044c6154550deb609f71cd568589e1793c17e77401",
+      "sizeBytes": 4200
     },
     {
       "path": "ivm-artifact.d.ts",

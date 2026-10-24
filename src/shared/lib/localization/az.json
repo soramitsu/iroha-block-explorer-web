@@ -1476,5 +1476,245 @@
     "codeHash": "Kod heşi",
     "abiHash": "ABI heşi",
     "compilerFingerprint": "Kompilyator barmaq izi"
+  },
+  "navigation": {
+    "menu": "Menyu",
+    "groups": {
+      "explore": "Kəşf et",
+      "analytics": "Analitika",
+      "network": "Şəbəkə",
+      "build": "İnkişaf",
+      "services": "Xidmətlər"
+    },
+    "hints": {
+      "explore": "Reyestr qeydlərinə baxın",
+      "analytics": "İdarə panelləri və iqtisadi göstəricilər",
+      "network": "Peer-lər, konsensus və şəbəkə xidmətləri",
+      "build": "Müqavilələri yazın, yoxlayın və izləyin",
+      "services": "SORA Nexus üzərində yaddaş və hesablama"
+    }
+  },
+  "dashboards": {
+    "nav": "İdarə panelləri",
+    "tabs": {
+      "label": "İdarə panelləri",
+      "network": "Şəbəkə nəbzi",
+      "activity": "Fəaliyyət",
+      "ledger": "Reyestr"
+    },
+    "titles": {
+      "network": "Şəbəkə nəbzi",
+      "activity": "Əməliyyat fəaliyyəti",
+      "ledger": "Reyestrin tərkibi"
+    },
+    "subtitles": {
+      "network": "Qoşulmuş Torii peer-indən oxunan canlı blok istehsalı, təsdiq gecikməsi və tutum.",
+      "activity": "Şəbəkənin nə vaxt yüklü olduğu və hansı növ əməliyyatları daşıdığı.",
+      "ledger": "Hesabların, domenlərin və aktivlərin reyestr üzrə necə paylandığı."
+    },
+    "window": {
+      "label": "Tarixçə pəncərəsi",
+      "blocks": "{count} blok"
+    },
+    "live": {
+      "streaming": "Canlı",
+      "polling": "Hər 10 saniyədən bir yenilənir"
+    },
+    "coverage": {
+      "scanning": "Tarixçə oxunur: {target} blokdan {loaded}",
+      "complete": "Son {loaded} blok",
+      "genesis": "Genezis blokundan bəri bütün {loaded} blok",
+      "incomplete": "{target} blokdan {loaded} oxundu (natamam)"
+    },
+    "errors": {
+      "history": "Blok tarixçəsi oxuna bilmədi.",
+      "status": "Peer statusu əlçatan deyil.",
+      "retry": "Yenidən cəhd edin"
+    },
+    "chart": {
+      "showTable": "Cədvəl",
+      "showChart": "Qrafik",
+      "unknown": "Blok məzmunu əlçatan deyil: saylar naməlumdur",
+      "partial": "Qismən müşahidə edilib: aşağı hədd",
+      "noData": "Skan edilməyib",
+      "total": "Cəmi",
+      "empty": "Hələ kifayət qədər blok yoxdur.",
+      "height": "Hündürlük",
+      "time": "Vaxt",
+      "blockTitle": "Blok {height}",
+      "from": "Başlanğıc",
+      "to": "Son"
+    },
+    "peerScope": "Qoşulmuş Torii peer-inin məlumatına görə",
+    "state": {
+      "producing": "Blok istehsal edir",
+      "pending": "Əməliyyatlar gözləyir",
+      "idle": "Boşdadır: gözləyən yoxdur",
+      "delayed": "Bu peer-də gecikmə şübhəsi",
+      "stale": "Peer statusu köhnəlib",
+      "unknown": "Vəziyyət naməlumdur"
+    },
+    "instruments": {
+      "title": "Cihazlar paneli",
+      "height": "Blok hündürlüyü",
+      "lastBlock": "Son blok {age} əvvəl",
+      "commit": "Təsdiq gecikməsi",
+      "commitHint": "Son blok, yaradılmadan bu peer-də təsdiqə qədər",
+      "queue": "Əməliyyat növbəsi",
+      "queueHint": "{inflight} emalda; ən köhnəsi {age} gözləyir",
+      "queueSaturated": "Növbə doludur",
+      "rejections": "Rədd edilmiş əməliyyatlar",
+      "rejectionsValue": "{rejected} / {total}",
+      "rejectionsHint": "Son 5 dəqiqədə {recent}",
+      "peers": "Qoşulmuş peer-lər",
+      "peersHint": "Hesabat verən peer istisna olmaqla",
+      "viewChanges": "Bu raunddakı baxış dəyişiklikləri",
+      "sinceGenesis": "Genezisdən bəri",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "Son saat",
+      "lastHourUnit": "əməliyyat",
+      "lastHourRate": "Dəqiqədə {rate}",
+      "lastHourPartial": "{minutes} dəq müşahidə edilib; aşağı hədd",
+      "busiestMinute": "Pəncərədə ən yüklü dəqiqə: {count} ({time})"
+    },
+    "charts": {
+      "distribution": {
+        "title": "Bloklar arasındakı vaxt",
+        "caption": "Son {count} blok üzrə ardıcıl bloklar arasındakı gözləmə müddətləri. Iroha bloku yalnız əməliyyatlar daxil olduqda təsdiqləyir, buna görə uzun gözləmə yavaş konsensus deyil, sakit dövrdür.",
+        "series": "Bloklar",
+        "range": "Gözləmə",
+        "median": "Median gözləmə {value}"
+      },
+      "perBlock": {
+        "title": "Blok başına əməliyyatlar",
+        "caption": "Son {count} blokun hər birində təsdiqlənmiş və rədd edilmiş əməliyyatlar.",
+        "committed": "Təsdiqlənmiş",
+        "rejected": "Rədd edilmiş",
+        "subset": "Oxunmuş {count} blokdan son {shown} göstərilir (#{from}–#{to})."
+      },
+      "throughput": {
+        "title": "Zamanla ötürmə qabiliyyəti",
+        "caption": "{bucket} başına əməliyyatlar, bloklar arasında sıfırla doldurulur. İçi boş markerlər qismən müşahidə edilmiş intervalları göstərir.",
+        "committed": "Təsdiqlənmiş",
+        "rejected": "Rədd edilmiş"
+      },
+      "lanes": {
+        "title": "Zolaq tutumu",
+        "caption": "Hər zolağın ən son slot zərfində tutuma nisbətən təsdiqlənmiş TEU.",
+        "lane": "Zolaq {id}",
+        "value": "{committed} / {capacity} TEU",
+        "empty": "Bu peer heç bir zolaq bildirmir."
+      },
+      "blockFill": {
+        "title": "Blokların doluluğu",
+        "caption": "İçində görə bildiyiniz əməliyyatların sayına görə bloklar. Blok həmçinin özəl məlumat məkanlarından əməliyyatlar daşıya bilər.",
+        "series": "Bloklar",
+        "bucket": "Əməliyyatlar"
+      }
+    },
+    "stats": {
+      "transactions": "Əməliyyat",
+      "rejectionRate": "Rədd dərəcəsi",
+      "meanPerBlock": "Blok başına orta",
+      "busiest": "Ən yüklü blok",
+      "span": "Zaman aralığı",
+      "blocks": "Blok oxundu",
+      "unreadable": "Oxunmayan bloklar",
+      "unreadableHint": "Saylar naməlumdur; cəmlərə daxil edilmir",
+      "medianPerBlock": "median {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "Saatlara görə fəaliyyət",
+        "caption": "Yerli vaxtınızla hər təqvim günü üçün saatda əməliyyatlar. Ştrixlənmiş saatlar oxunmuş tarixçədən kənardadır.",
+        "value": "Əməliyyatlar",
+        "blocks": "Bloklar"
+      },
+      "byHour": {
+        "title": "Günün saatlarına görə profil",
+        "caption": "Oxunmuş günlər ərzində hər yerli saatdakı əməliyyatlar.",
+        "series": "Əməliyyatlar"
+      },
+      "sample": {
+        "caption": "Ən yeni {count} görünən əməliyyat",
+        "size": "{count} əməliyyat"
+      },
+      "executables": {
+        "title": "İcra növlərinin bölgüsü",
+        "caption": "Nümunə əməliyyatlarının icra edilə bilən növə görə payı.",
+        "Instructions": "Təlimatlar",
+        "ContractCall": "Müqavilə çağırışı",
+        "Ivm": "IVM bayt kodu",
+        "IvmProved": "Sübutlu IVM",
+        "Batch": "Paket",
+        "other": "Digər"
+      },
+      "outcomes": {
+        "title": "Nəticələr",
+        "committed": "Təsdiqlənmiş",
+        "rejected": "Rədd edilmiş"
+      },
+      "authorities": {
+        "title": "Ən aktiv imzalayanlar",
+        "caption": "Nümunədə ən çox əməliyyat imzalayan hesablar.",
+        "empty": "Nümunədə əməliyyat yoxdur."
+      },
+      "authoritiesCount": "Fərqli imzalayanlar",
+      "latency": {
+        "title": "Daxil edilmə gecikməsi",
+        "caption": "Nümunədəki hər əməliyyatın yaradılmasından onu daxil edən bloka qədər keçən vaxt. Yaradılma vaxtı imzalayanın öz saatından götürülür.",
+        "series": "Əməliyyatlar",
+        "median": "Median daxil edilmə gecikməsi",
+        "p95": "95-ci persentil {value}",
+        "clockAhead": "{count} əməliyyat öz blokundan sonrakı yaradılma vaxtı bildirir (imzalayanın saatı irəlidədir) və nəzərə alınmır.",
+        "unmatched": "Nümunədəki {count} əməliyyat blok pəncərəsindən kənardadır.",
+        "empty": "Hələ blok pəncərəsinə düşən nümunə əməliyyatı yoxdur."
+      }
+    },
+    "ledger": {
+      "accounts": "Hesablar",
+      "domains": "Domenlər",
+      "assets": "Aktivlər və NFT-lər",
+      "nodes": "Qovşaqlar",
+      "domainsByAccounts": {
+        "title": "Hesablara görə domenlər",
+        "caption": "Hər domendə qeydiyyatdan keçmiş hesablar; ilk {count} göstərilir."
+      },
+      "definitionsByHolders": {
+        "title": "Sahiblərə görə aktiv tərifləri",
+        "caption": "Hər aktiv tərifinə sahib olan hesablar; ilk {count} göstərilir."
+      },
+      "mintability": {
+        "title": "Zərb edilə bilmə",
+        "caption": "Zərb siyasətinə görə aktiv tərifləri.",
+        "Infinitely": "Zərb edilə bilən",
+        "Once": "Bir dəfə zərb",
+        "Not": "Sabit təklif",
+        "Limited": "Məhdud zərb",
+        "other": "Digər"
+      },
+      "homes": {
+        "title": "Aktivlərin qeydiyyat yeri",
+        "caption": "Aktiv təriflərinin qeydiyyatdan keçdiyi yer.",
+        "domain": "Domen",
+        "dataspace": "Məlumat məkanı"
+      },
+      "holdings": {
+        "title": "Hesab başına aktivlər",
+        "caption": "Sahib olduqları aktivlərin sayına görə hesablar.",
+        "series": "Hesablar",
+        "bucket": "Sahib olunan aktivlər"
+      },
+      "scan": "{loaded} {kind} oxundu",
+      "scanIncomplete": "İlk {loaded} {kind} oxundu; daha çoxu var",
+      "kinds": {
+        "domains": "domen",
+        "definitions": "aktiv tərifi",
+        "accounts": "hesab"
+      },
+      "countsLive": "Telemetriya axınından canlı cəmlər",
+      "countsStale": "Telemetriya axınından son cəmlər; yenidən qoşulur",
+      "countsUnavailable": "Telemetriya axını əlçatan deyil"
+    }
   }
 }

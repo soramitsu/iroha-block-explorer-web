@@ -1476,5 +1476,245 @@
     "codeHash": "Hash kode",
     "abiHash": "Hash ABI",
     "compilerFingerprint": "Sidik jari compiler"
+  },
+  "navigation": {
+    "menu": "Menu",
+    "groups": {
+      "explore": "Jelajahi",
+      "analytics": "Analitik",
+      "network": "Jaringan",
+      "build": "Bangun",
+      "services": "Layanan"
+    },
+    "hints": {
+      "explore": "Telusuri catatan buku besar",
+      "analytics": "Dasbor dan ukuran ekonomi",
+      "network": "Peer, konsensus, dan layanan jaringan",
+      "build": "Tulis, periksa, dan lacak kontrak",
+      "services": "Penyimpanan dan komputasi di SORA Nexus"
+    }
+  },
+  "dashboards": {
+    "nav": "Dasbor",
+    "tabs": {
+      "label": "Dasbor",
+      "network": "Denyut jaringan",
+      "activity": "Aktivitas",
+      "ledger": "Buku besar"
+    },
+    "titles": {
+      "network": "Denyut jaringan",
+      "activity": "Aktivitas transaksi",
+      "ledger": "Komposisi buku besar"
+    },
+    "subtitles": {
+      "network": "Produksi blok, latensi komit, dan kapasitas secara langsung, dibaca dari peer Torii yang terhubung.",
+      "activity": "Kapan jaringan sibuk dan jenis transaksi apa saja yang dibawanya.",
+      "ledger": "Bagaimana akun, domain, dan aset tersebar di seluruh buku besar."
+    },
+    "window": {
+      "label": "Jendela riwayat",
+      "blocks": "{count} blok"
+    },
+    "live": {
+      "streaming": "Langsung",
+      "polling": "Diperbarui setiap 10 dtk"
+    },
+    "coverage": {
+      "scanning": "Membaca riwayat: {loaded} dari {target} blok",
+      "complete": "{loaded} blok terbaru",
+      "genesis": "Semua {loaded} blok sejak genesis",
+      "incomplete": "{loaded} dari {target} blok terbaca (tidak lengkap)"
+    },
+    "errors": {
+      "history": "Riwayat blok tidak dapat dibaca.",
+      "status": "Status peer tidak tersedia.",
+      "retry": "Coba lagi"
+    },
+    "chart": {
+      "showTable": "Tabel",
+      "showChart": "Grafik",
+      "unknown": "Isi blok tidak tersedia: jumlah tidak diketahui",
+      "partial": "Teramati sebagian: batas bawah",
+      "noData": "Belum dipindai",
+      "total": "Total",
+      "empty": "Belum cukup blok.",
+      "height": "Tinggi",
+      "time": "Waktu",
+      "blockTitle": "Blok {height}",
+      "from": "Dari",
+      "to": "Sampai"
+    },
+    "peerScope": "Sebagaimana dilaporkan oleh peer Torii yang terhubung",
+    "state": {
+      "producing": "Memproduksi blok",
+      "pending": "Transaksi menunggu",
+      "idle": "Diam: tidak ada yang tertunda",
+      "delayed": "Dugaan penundaan di peer ini",
+      "stale": "Status peer sudah usang",
+      "unknown": "Status tidak diketahui"
+    },
+    "instruments": {
+      "title": "Panel instrumen",
+      "height": "Tinggi blok",
+      "lastBlock": "Blok terakhir {age} lalu",
+      "commit": "Latensi komit",
+      "commitHint": "Blok terbaru, dari pembuatan hingga komit di peer ini",
+      "queue": "Antrian transaksi",
+      "queueHint": "{inflight} sedang diproses; yang terlama menunggu {age}",
+      "queueSaturated": "Antrian jenuh",
+      "rejections": "Transaksi ditolak",
+      "rejectionsValue": "{rejected} dari {total}",
+      "rejectionsHint": "{recent} dalam 5 menit terakhir",
+      "peers": "Peer terhubung",
+      "peersHint": "Tidak termasuk peer pelapor",
+      "viewChanges": "Pergantian pemimpin pada putaran ini",
+      "sinceGenesis": "Sejak genesis",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "Satu jam terakhir",
+      "lastHourUnit": "transaksi",
+      "lastHourRate": "{rate} per menit",
+      "lastHourPartial": "Baru {minutes} mnt teramati; batas bawah",
+      "busiestMinute": "Menit tersibuk dalam jendela: {count} pada {time}"
+    },
+    "charts": {
+      "distribution": {
+        "title": "Waktu antarblok",
+        "caption": "Waktu tunggu antara blok berurutan di {count} blok terbaru. Iroha hanya mengomit blok saat transaksi tiba, jadi waktu tunggu yang lama berarti masa sepi, bukan konsensus yang lambat.",
+        "series": "Blok",
+        "range": "Waktu tunggu",
+        "median": "Median waktu tunggu {value}"
+      },
+      "perBlock": {
+        "title": "Transaksi per blok",
+        "caption": "Transaksi yang dikomit dan ditolak di setiap {count} blok terbaru.",
+        "committed": "Dikomit",
+        "rejected": "Ditolak",
+        "subset": "Menampilkan {shown} blok terbaru dari {count} blok yang dibaca (#{from}–#{to})."
+      },
+      "throughput": {
+        "title": "Laju pemrosesan dari waktu ke waktu",
+        "caption": "Transaksi per {bucket}, diisi nol di antara blok. Penanda berongga menandai rentang yang teramati sebagian.",
+        "committed": "Dikomit",
+        "rejected": "Ditolak"
+      },
+      "lanes": {
+        "title": "Kapasitas jalur",
+        "caption": "TEU yang dikomit dibandingkan kapasitas dalam amplop slot terbaru setiap jalur.",
+        "lane": "Jalur {id}",
+        "value": "{committed} dari {capacity} TEU",
+        "empty": "Peer ini tidak melaporkan jalur apa pun."
+      },
+      "blockFill": {
+        "title": "Keterisian blok",
+        "caption": "Blok menurut jumlah transaksi yang dapat Anda lihat di dalamnya. Sebuah blok juga dapat memuat transaksi dari ruang data privat.",
+        "series": "Blok",
+        "bucket": "Transaksi"
+      }
+    },
+    "stats": {
+      "transactions": "Transaksi",
+      "rejectionRate": "Tingkat penolakan",
+      "meanPerBlock": "Rata-rata per blok",
+      "busiest": "Blok tersibuk",
+      "span": "Rentang waktu",
+      "blocks": "Blok terbaca",
+      "unreadable": "Blok tak terbaca",
+      "unreadableHint": "Jumlah tidak diketahui; tidak termasuk dalam total",
+      "medianPerBlock": "median {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "Aktivitas per jam",
+        "caption": "Transaksi per jam untuk setiap hari kalender, dalam waktu lokal Anda. Jam yang diarsir berada di luar riwayat yang dibaca.",
+        "value": "Transaksi",
+        "blocks": "Blok"
+      },
+      "byHour": {
+        "title": "Profil jam dalam sehari",
+        "caption": "Transaksi di setiap jam lokal sepanjang hari-hari yang dibaca.",
+        "series": "Transaksi"
+      },
+      "sample": {
+        "caption": "{count} transaksi terlihat yang terbaru",
+        "size": "{count} transaksi"
+      },
+      "executables": {
+        "title": "Komposisi executable",
+        "caption": "Porsi transaksi sampel menurut jenis executable.",
+        "Instructions": "Instruksi",
+        "ContractCall": "Panggilan kontrak",
+        "Ivm": "Bytecode IVM",
+        "IvmProved": "IVM terbukti",
+        "Batch": "Batch",
+        "other": "Lainnya"
+      },
+      "outcomes": {
+        "title": "Hasil",
+        "committed": "Dikomit",
+        "rejected": "Ditolak"
+      },
+      "authorities": {
+        "title": "Penandatangan paling aktif",
+        "caption": "Akun yang menandatangani transaksi sampel terbanyak.",
+        "empty": "Tidak ada transaksi dalam sampel."
+      },
+      "authoritiesCount": "Penandatangan unik",
+      "latency": {
+        "title": "Latensi inklusi",
+        "caption": "Waktu dari pembuatan setiap transaksi sampel hingga blok yang memuatnya. Waktu pembuatan berasal dari jam milik penandatangan sendiri.",
+        "series": "Transaksi",
+        "median": "Median latensi inklusi",
+        "p95": "Persentil ke-95 {value}",
+        "clockAhead": "{count} transaksi melaporkan waktu pembuatan setelah bloknya (jam penandatangan lebih cepat) dan tidak disertakan.",
+        "unmatched": "{count} transaksi sampel berada di luar jendela blok.",
+        "empty": "Belum ada transaksi sampel yang masuk ke dalam jendela blok."
+      }
+    },
+    "ledger": {
+      "accounts": "Akun",
+      "domains": "Domain",
+      "assets": "Aset dan NFT",
+      "nodes": "Node",
+      "domainsByAccounts": {
+        "title": "Domain menurut akun",
+        "caption": "Akun yang terdaftar di setiap domain; {count} teratas ditampilkan."
+      },
+      "definitionsByHolders": {
+        "title": "Definisi aset menurut pemegang",
+        "caption": "Akun yang memegang setiap definisi aset; {count} teratas ditampilkan."
+      },
+      "mintability": {
+        "title": "Kemampuan cetak",
+        "caption": "Definisi aset menurut kebijakan pencetakan.",
+        "Infinitely": "Dapat dicetak",
+        "Once": "Cetak sekali",
+        "Not": "Pasokan tetap",
+        "Limited": "Cetak terbatas",
+        "other": "Lainnya"
+      },
+      "homes": {
+        "title": "Lokasi aset",
+        "caption": "Tempat definisi aset didaftarkan.",
+        "domain": "Domain",
+        "dataspace": "Ruang data"
+      },
+      "holdings": {
+        "title": "Kepemilikan per akun",
+        "caption": "Akun menurut jumlah aset yang dimiliki.",
+        "series": "Akun",
+        "bucket": "Aset dimiliki"
+      },
+      "scan": "{loaded} {kind} dibaca",
+      "scanIncomplete": "{loaded} {kind} pertama dibaca; masih ada lagi",
+      "kinds": {
+        "domains": "domain",
+        "definitions": "definisi aset",
+        "accounts": "akun"
+      },
+      "countsLive": "Total langsung dari aliran telemetri",
+      "countsStale": "Total terakhir dari aliran telemetri; sedang menyambung ulang",
+      "countsUnavailable": "Aliran telemetri tidak tersedia"
+    }
   }
 }

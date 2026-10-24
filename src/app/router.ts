@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory, type RouteLocation } from 'vue-router';
 
 export const routes = [
   {
@@ -110,6 +110,25 @@ export const routes = [
     path: '/soracloud',
     name: 'soracloud',
     component: () => import('@/pages/SoracloudPage.vue'),
+  },
+  {
+    path: '/dashboards',
+    redirect: (to: RouteLocation) => ({ name: 'dashboard-network', query: to.query }),
+  },
+  {
+    path: '/dashboards/network',
+    name: 'dashboard-network',
+    component: () => import('@/pages/dashboards/NetworkDashboard.vue'),
+  },
+  {
+    path: '/dashboards/activity',
+    name: 'dashboard-activity',
+    component: () => import('@/pages/dashboards/ActivityDashboard.vue'),
+  },
+  {
+    path: '/dashboards/ledger',
+    name: 'dashboard-ledger',
+    component: () => import('@/pages/dashboards/LedgerDashboard.vue'),
   },
   {
     path: '/telemetry',

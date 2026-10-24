@@ -1476,5 +1476,245 @@
     "codeHash": "Hash du code",
     "abiHash": "Hachage ABI",
     "compilerFingerprint": "Empreinte digitale du compilateur"
+  },
+  "navigation": {
+    "menu": "Menu",
+    "groups": {
+      "explore": "Explorer",
+      "analytics": "Analyses",
+      "network": "Réseau",
+      "build": "Développer",
+      "services": "Services"
+    },
+    "hints": {
+      "explore": "Parcourir les enregistrements du registre",
+      "analytics": "Tableaux de bord et indicateurs économiques",
+      "network": "Pairs, consensus et services réseau",
+      "build": "Écrire, inspecter et tracer des contrats",
+      "services": "Stockage et calcul sur SORA Nexus"
+    }
+  },
+  "dashboards": {
+    "nav": "Tableaux de bord",
+    "tabs": {
+      "label": "Tableaux de bord",
+      "network": "Pouls du réseau",
+      "activity": "Activité",
+      "ledger": "Registre"
+    },
+    "titles": {
+      "network": "Pouls du réseau",
+      "activity": "Activité des transactions",
+      "ledger": "Composition du registre"
+    },
+    "subtitles": {
+      "network": "Production de blocs, latence de commit et capacité en direct, lues depuis le pair Torii connecté.",
+      "activity": "Quand le réseau est chargé et quels types de transactions il transporte.",
+      "ledger": "Comment les comptes, domaines et actifs se répartissent dans le registre."
+    },
+    "window": {
+      "label": "Fenêtre d'historique",
+      "blocks": "{count} blocs"
+    },
+    "live": {
+      "streaming": "En direct",
+      "polling": "Actualisation toutes les 10 s"
+    },
+    "coverage": {
+      "scanning": "Lecture de l'historique : {loaded} blocs sur {target}",
+      "complete": "{loaded} derniers blocs",
+      "genesis": "Les {loaded} blocs depuis la genèse",
+      "incomplete": "{loaded} blocs lus sur {target} (incomplet)"
+    },
+    "errors": {
+      "history": "Impossible de lire l'historique des blocs.",
+      "status": "L'état du pair est indisponible.",
+      "retry": "Réessayer"
+    },
+    "chart": {
+      "showTable": "Tableau",
+      "showChart": "Graphique",
+      "unknown": "Contenu du bloc indisponible : nombres inconnus",
+      "partial": "Partiellement observé : une borne inférieure",
+      "noData": "Non analysé",
+      "total": "Total",
+      "empty": "Pas encore assez de blocs.",
+      "height": "Hauteur",
+      "time": "Heure",
+      "blockTitle": "Bloc {height}",
+      "from": "Début",
+      "to": "Fin"
+    },
+    "peerScope": "Tel que rapporté par le pair Torii connecté",
+    "state": {
+      "producing": "Production de blocs",
+      "pending": "Transactions en attente",
+      "idle": "Inactif : rien en attente",
+      "delayed": "Retard suspecté sur ce pair",
+      "stale": "L'état du pair est périmé",
+      "unknown": "État inconnu"
+    },
+    "instruments": {
+      "title": "Tableau d'instruments",
+      "height": "Hauteur de bloc",
+      "lastBlock": "Dernier bloc il y a {age}",
+      "commit": "Latence de commit",
+      "commitHint": "Dernier bloc, de la création au commit sur ce pair",
+      "queue": "File d'attente des transactions",
+      "queueHint": "{inflight} en cours ; la plus ancienne attend depuis {age}",
+      "queueSaturated": "File d'attente saturée",
+      "rejections": "Transactions rejetées",
+      "rejectionsValue": "{rejected} sur {total}",
+      "rejectionsHint": "{recent} au cours des 5 dernières minutes",
+      "peers": "Pairs connectés",
+      "peersHint": "Hors pair rapporteur",
+      "viewChanges": "Changements de vue dans ce tour",
+      "sinceGenesis": "Depuis la genèse",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "Dernière heure",
+      "lastHourUnit": "transactions",
+      "lastHourRate": "{rate} par minute",
+      "lastHourPartial": "{minutes} min observées ; une borne inférieure",
+      "busiestMinute": "Minute la plus chargée de la fenêtre : {count} à {time}"
+    },
+    "charts": {
+      "distribution": {
+        "title": "Temps entre les blocs",
+        "caption": "Attentes entre blocs consécutifs sur les {count} derniers blocs. Iroha ne valide un bloc que lorsque des transactions arrivent : une longue attente est donc un temps calme, pas un consensus lent.",
+        "series": "Blocs",
+        "range": "Attente",
+        "median": "Attente médiane {value}"
+      },
+      "perBlock": {
+        "title": "Transactions par bloc",
+        "caption": "Transactions validées et rejetées dans chacun des {count} derniers blocs.",
+        "committed": "Validées",
+        "rejected": "Rejetées",
+        "subset": "Affichage des {shown} derniers blocs sur {count} lus (#{from}–#{to})."
+      },
+      "throughput": {
+        "title": "Débit dans le temps",
+        "caption": "Transactions par {bucket}, complétées par des zéros entre les blocs. Les marqueurs creux signalent les intervalles partiellement observés.",
+        "committed": "Validées",
+        "rejected": "Rejetées"
+      },
+      "lanes": {
+        "title": "Capacité des voies",
+        "caption": "TEU validées par rapport à la capacité dans la dernière enveloppe de slot de chaque voie.",
+        "lane": "Voie {id}",
+        "value": "{committed} sur {capacity} TEU",
+        "empty": "Ce pair ne signale aucune voie."
+      },
+      "blockFill": {
+        "title": "Remplissage des blocs",
+        "caption": "Blocs selon le nombre de transactions que vous pouvez y voir. Un bloc peut aussi contenir des transactions d'espaces de données privés.",
+        "series": "Blocs",
+        "bucket": "Transactions"
+      }
+    },
+    "stats": {
+      "transactions": "Transactions",
+      "rejectionRate": "Taux de rejet",
+      "meanPerBlock": "Moyenne par bloc",
+      "busiest": "Bloc le plus chargé",
+      "span": "Durée couverte",
+      "blocks": "Blocs lus",
+      "unreadable": "Blocs illisibles",
+      "unreadableHint": "Nombres inconnus ; exclus des totaux",
+      "medianPerBlock": "médiane {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "Activité par heure",
+        "caption": "Transactions par heure pour chaque jour civil, dans votre heure locale. Les heures hachurées sont en dehors de l'historique lu.",
+        "value": "Transactions",
+        "blocks": "Blocs"
+      },
+      "byHour": {
+        "title": "Profil horaire de la journée",
+        "caption": "Transactions pour chaque heure locale sur l'ensemble des jours lus.",
+        "series": "Transactions"
+      },
+      "sample": {
+        "caption": "Les {count} transactions visibles les plus récentes",
+        "size": "{count} transactions"
+      },
+      "executables": {
+        "title": "Répartition des exécutables",
+        "caption": "Part des transactions échantillonnées par type d'exécutable.",
+        "Instructions": "Instructions",
+        "ContractCall": "Appel de contrat",
+        "Ivm": "Bytecode IVM",
+        "IvmProved": "IVM prouvé",
+        "Batch": "Lot",
+        "other": "Autre"
+      },
+      "outcomes": {
+        "title": "Résultats",
+        "committed": "Validées",
+        "rejected": "Rejetées"
+      },
+      "authorities": {
+        "title": "Signataires les plus actifs",
+        "caption": "Comptes ayant signé le plus de transactions de l'échantillon.",
+        "empty": "Aucune transaction dans l'échantillon."
+      },
+      "authoritiesCount": "Signataires distincts",
+      "latency": {
+        "title": "Latence d'inclusion",
+        "caption": "Temps entre la création de chaque transaction échantillonnée et le bloc qui l'a incluse. L'heure de création provient de l'horloge du signataire lui-même.",
+        "series": "Transactions",
+        "median": "Latence d'inclusion médiane",
+        "p95": "95e centile {value}",
+        "clockAhead": "{count} transactions indiquent une heure de création postérieure à leur bloc (horloge du signataire en avance) et sont écartées.",
+        "unmatched": "{count} transactions échantillonnées se situent hors de la fenêtre de blocs.",
+        "empty": "Aucune transaction échantillonnée ne se situe encore dans la fenêtre de blocs."
+      }
+    },
+    "ledger": {
+      "accounts": "Comptes",
+      "domains": "Domaines",
+      "assets": "Actifs et NFT",
+      "nodes": "Nœuds",
+      "domainsByAccounts": {
+        "title": "Domaines par comptes",
+        "caption": "Comptes enregistrés dans chaque domaine ; les {count} premiers sont affichés."
+      },
+      "definitionsByHolders": {
+        "title": "Définitions d'actifs par détenteurs",
+        "caption": "Comptes détenant chaque définition d'actif ; les {count} premières sont affichées."
+      },
+      "mintability": {
+        "title": "Capacité de frappe",
+        "caption": "Définitions d'actifs par politique de frappe.",
+        "Infinitely": "Frappable",
+        "Once": "Frappe unique",
+        "Not": "Offre fixe",
+        "Limited": "Frappe limitée",
+        "other": "Autre"
+      },
+      "homes": {
+        "title": "Rattachement des actifs",
+        "caption": "Où les définitions d'actifs sont enregistrées.",
+        "domain": "Domaine",
+        "dataspace": "Espace de données"
+      },
+      "holdings": {
+        "title": "Avoirs par compte",
+        "caption": "Comptes selon le nombre d'actifs qu'ils détiennent.",
+        "series": "Comptes",
+        "bucket": "Actifs détenus"
+      },
+      "scan": "Lecture de {loaded} {kind} terminée",
+      "scanIncomplete": "Lecture limitée à {loaded} {kind} ; il en existe d'autres",
+      "kinds": {
+        "domains": "domaines",
+        "definitions": "définitions d'actifs",
+        "accounts": "comptes"
+      },
+      "countsLive": "Totaux en direct issus du flux de télémétrie",
+      "countsStale": "Derniers totaux du flux de télémétrie ; reconnexion en cours",
+      "countsUnavailable": "Le flux de télémétrie est indisponible"
+    }
   }
 }

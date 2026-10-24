@@ -1511,5 +1511,246 @@
     "nodeSaved": "Node updated",
     "nodeReset": "Node reset to default",
     "presets": "Presets"
+  },
+  "navigation": {
+    "menu": "Menu",
+    "groups": {
+      "explore": "Explore",
+      "analytics": "Analytics",
+      "network": "Network",
+      "build": "Build",
+      "services": "Services"
+    },
+    "hints": {
+      "explore": "Browse ledger records",
+      "analytics": "Dashboards and economic measures",
+      "network": "Peers, consensus and network services",
+      "build": "Write, inspect and trace contracts",
+      "services": "Storage and compute on SORA Nexus"
+    }
+  },
+  "dashboards": {
+    "nav": "Dashboards",
+    "tabs": {
+      "label": "Dashboards",
+      "network": "Network pulse",
+      "activity": "Activity",
+      "ledger": "Ledger"
+    },
+    "titles": {
+      "network": "Network pulse",
+      "activity": "Transaction activity",
+      "ledger": "Ledger composition"
+    },
+    "subtitles": {
+      "network": "Live block production, commit latency and capacity, read from the connected Torii peer.",
+      "activity": "When the network is busy and what kinds of transactions it carries.",
+      "ledger": "How accounts, domains and assets are distributed across the ledger."
+    },
+    "window": {
+      "label": "History window",
+      "blocks": "{count} blocks"
+    },
+    "live": {
+      "streaming": "Live",
+      "polling": "Refreshing every 10 s"
+    },
+    "coverage": {
+      "scanning": "Reading history: {loaded} of {target} blocks",
+      "complete": "Latest {loaded} blocks",
+      "genesis": "All {loaded} blocks since genesis",
+      "incomplete": "{loaded} of {target} blocks read (incomplete)"
+    },
+    "errors": {
+      "history": "Block history could not be read.",
+      "status": "The peer status is unavailable.",
+      "retry": "Retry"
+    },
+    "chart": {
+      "showTable": "Table",
+      "showChart": "Chart",
+      "unknown": "Block body unavailable: counts unknown",
+      "partial": "Partly observed: a lower bound",
+      "noData": "Not scanned",
+      "total": "Total",
+      "empty": "Not enough blocks yet.",
+      "height": "Height",
+      "time": "Time",
+      "blockTitle": "Block {height}",
+      "from": "From",
+      "to": "To"
+    },
+    "peerScope": "As reported by the connected Torii peer",
+    "state": {
+      "producing": "Producing blocks",
+      "pending": "Transactions waiting",
+      "idle": "Idle: nothing pending",
+      "delayed": "Suspected delay at this peer",
+      "stale": "Peer status is stale",
+      "unknown": "State unknown"
+    },
+    "instruments": {
+      "title": "Instrument cluster",
+      "height": "Block height",
+      "lastBlock": "Last block {age} ago",
+      "commit": "Commit latency",
+      "commitHint": "Latest block, creation to commit at this peer",
+      "queue": "Transaction queue",
+      "queueHint": "{inflight} in flight; oldest waiting {age}",
+      "queueSaturated": "Queue saturated",
+      "rejections": "Rejected transactions",
+      "rejectionsValue": "{rejected} of {total}",
+      "rejectionsHint": "{recent} in the last 5 minutes",
+      "peers": "Connected peers",
+      "peersHint": "Excluding the reporting peer",
+      "viewChanges": "View changes this round",
+      "sinceGenesis": "Since genesis",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "Last hour",
+      "lastHourUnit": "transactions",
+      "lastHourRate": "{rate} per minute",
+      "lastHourPartial": "{minutes} min observed; a lower bound",
+      "busiestMinute": "Busiest minute in the window: {count} at {time}"
+    },
+    "charts": {
+      "distribution": {
+        "title": "Time between blocks",
+        "caption": "Waits between consecutive blocks across the latest {count} blocks. Iroha commits a block only when transactions arrive, so a long wait is quiet time, not slow consensus.",
+        "series": "Blocks",
+        "range": "Wait",
+        "median": "Median wait {value}"
+      },
+      "perBlock": {
+        "title": "Transactions per block",
+        "caption": "Committed and rejected transactions in each of the latest {count} blocks.",
+        "committed": "Committed",
+        "rejected": "Rejected",
+        "subset": "Showing the latest {shown} of {count} blocks read (#{from}–#{to})."
+      },
+      "throughput": {
+        "title": "Throughput over time",
+        "caption": "Transactions per {bucket}, zero-filled between blocks. Hollow markers flag partly observed buckets.",
+        "committed": "Committed",
+        "rejected": "Rejected"
+      },
+      "lanes": {
+        "title": "Lane capacity",
+        "caption": "Committed TEU against capacity in each lane's latest slot envelope.",
+        "lane": "Lane {id}",
+        "value": "{committed} of {capacity} TEU",
+        "empty": "This peer reports no lanes."
+      },
+      "blockFill": {
+        "title": "Block fill",
+        "caption": "Blocks by the number of transactions you can see in them. A block may also carry transactions from private data spaces.",
+        "series": "Blocks",
+        "bucket": "Transactions"
+      }
+    },
+    "stats": {
+      "transactions": "Transactions",
+      "rejectionRate": "Rejection rate",
+      "meanPerBlock": "Mean per block",
+      "busiest": "Busiest block",
+      "span": "Time span",
+      "blocks": "Blocks read",
+      "unreadable": "Unreadable blocks",
+      "unreadableHint": "Counts unknown; totals exclude them",
+      "medianPerBlock": "median {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "Activity by hour",
+        "caption": "Transactions per hour for each calendar day, in your local time. Hatched hours lie outside the history read.",
+        "value": "Transactions",
+        "blocks": "Blocks"
+      },
+      "byHour": {
+        "title": "Hour-of-day profile",
+        "caption": "Transactions in each local hour across the days read.",
+        "series": "Transactions"
+      },
+      "sample": {
+        "caption": "Newest {count} visible transactions",
+        "size": "{count} transactions"
+      },
+      "executables": {
+        "title": "Executable mix",
+        "caption": "Share of sampled transactions by executable kind.",
+        "Instructions": "Instructions",
+        "ContractCall": "Contract call",
+        "Ivm": "IVM bytecode",
+        "IvmProved": "Proved IVM",
+        "Batch": "Batch",
+        "other": "Other"
+      },
+      "outcomes": {
+        "title": "Outcomes",
+        "committed": "Committed",
+        "rejected": "Rejected"
+      },
+      "authorities": {
+        "title": "Most active authorities",
+        "caption": "Accounts that signed the most sampled transactions.",
+        "empty": "No transactions in the sample."
+      },
+      "authoritiesCount": "Distinct authorities",
+      "latency": {
+        "title": "Inclusion latency",
+        "caption": "Time from each sampled transaction's creation to the block that included it. Creation time comes from the signer's own clock.",
+        "series": "Transactions",
+        "median": "Median inclusion latency",
+        "p95": "95th percentile {value}",
+        "clockAhead": "{count} transactions report a creation time after their block (signer clock ahead) and are left out.",
+        "unmatched": "{count} sampled transactions fall outside the block window.",
+        "empty": "No sampled transaction falls inside the block window yet."
+      }
+    },
+    "ledger": {
+      "accounts": "Accounts",
+      "domains": "Domains",
+      "assets": "Assets and NFTs",
+      "nodes": "Nodes",
+      "domainsByAccounts": {
+        "title": "Domains by accounts",
+        "caption": "Accounts registered in each domain; top {count} shown."
+      },
+      "definitionsByBalances": {
+        "title": "Asset definitions by balances",
+        "caption": "Balances recorded for each asset definition; one account can hold several. Top {count} shown."
+      },
+      "mintability": {
+        "title": "Mintability",
+        "caption": "Asset definitions by minting policy.",
+        "Infinitely": "Mintable",
+        "Once": "Mint once",
+        "Not": "Fixed supply",
+        "Limited": "Limited",
+        "other": "Other"
+      },
+      "homes": {
+        "title": "Asset homes",
+        "caption": "Where asset definitions are registered.",
+        "domain": "Domain",
+        "dataspace": "Data space",
+        "global": "Global"
+      },
+      "holdings": {
+        "title": "Holdings per account",
+        "caption": "Accounts by the number of assets they hold.",
+        "series": "Accounts",
+        "bucket": "Assets held"
+      },
+      "scan": "Read {loaded} {kind}",
+      "scanIncomplete": "Read the first {loaded} {kind}; more exist",
+      "kinds": {
+        "domains": "domains",
+        "definitions": "asset definitions",
+        "accounts": "accounts"
+      },
+      "countsLive": "Live totals from the telemetry stream",
+      "countsStale": "Last totals from the telemetry stream; it is reconnecting",
+      "countsUnavailable": "The telemetry stream is unavailable"
+    }
   }
 }

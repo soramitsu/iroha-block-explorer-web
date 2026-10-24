@@ -1,24 +1,24 @@
 {
   "schema": "iroha.sdk-package-inventory.v2",
-  "archiveSha256": "e968431b87ef519bb4ca5482ba4f59863436f248799b5eb839ea7cf041a52aa5",
+  "archiveSha256": "6e8204f072094362b58d6221e115d97b4a10852479d307e1416ff0ded4b11b05",
   "source": {
-    "revision": "02403c8449c3287d2516408d8d33984c969514d5",
-    "packageGitTree": "1a42e40c9b2c6e1e2d7a95d907696b14b1512538",
+    "revision": "95c96beae6eebec259291ad4e4e61366eaa57e99",
+    "packageGitTree": "a75a6df025a9a5107c11ecbf5e9027ba968a21e2",
     "packagePath": "javascript/iroha_js",
     "packageSourceClean": true,
-    "sourceInventorySha256": "753130cdd6cfc8a85e0bba400f5a760bdb993d72fe82e05926d7f517bc91819e",
+    "sourceInventorySha256": "4c167a563710482868a771530b84fa49270b4e99d4dbc7c320e1008f6bc61d87",
     "sourceInventory": {
       ".eslintrc.json": "2b9aa376e41e95d5206b1b949d628da2fb0f8a50fcb9155ea82cdb39fa7ab907",
       ".gitattributes": "185e678eee74acb01a906e9872b189a69fb1503fc411b76110ff48e2de6613f6",
-      "CHANGELOG.md": "5ebf886bf4bd5fa1ccf3d51dfefe25f9d63822b0e570e7a3a4fc4527c0bc4912",
+      "CHANGELOG.md": "98669bd763e3f6692a4d8d0d4d250f346364af7044632d2ff8f0241b4f23b229",
       "LICENSE": "7c0558c365d644b7588d481e22f26421cd3ba23492d2c0ce0fd382466aad2c13",
-      "README.md": "4cfd8945602570eef90e3d1671e38f76a381fd62afec2f587782bc3797b88663",
+      "README.md": "c24db7779aa861bf0ddb1b2625f074d87fd1d079deb3ab5f3ad8f96f36ca43c3",
       "address.d.ts": "1102edc44652c740f40fab8630b08c2a326f0658ec4dc831e6cd6de4132e98bd",
       "atomic-private-settlement.d.ts": "31e5100884dc1f9108b9aa4ae8028ad3f3c2b0433573adf0d981d50fbdd0ec56",
       "blake2b.d.ts": "2e680fbb6ec2324d626a600cb99dc8451ac759576729161c016a8055d4eeec3b",
       "bootle-lantern-issuance.d.ts": "19fc1d207902143298a2c8cfc3c60a70cbfc45bb1e6b507beae8d8057ceda282",
       "browser.d.ts": "8bc693190366fe39876bed97c9c1588aac4c1abe59720d576e7bdd56c00212e4",
-      "canonical-request.d.ts": "6def46cd7d16298f527c132c5f28e18748784f8146a4b865a1422e69a5647e91",
+      "canonical-request.d.ts": "0cad3f72f8f7c13224ece9a7750435dca718de8ea43bc5475d534dbb0ccd4604",
       "classed-race.d.ts": "fc42b9554b47f9cc214e8f933cf7257a9ed4628fdac2dd97861e0f399ae6d63c",
       "connect.browser.d.ts": "0fdb854e1fbbfc5d1252c239065a4f68bab815bd756ef8dd3a6a08cdd2952d1a",
       "contract-payload.d.ts": "278de2cfa044a177e70e503cc60b9833658462ba2106b4942535ad841e13a4bc",
@@ -27,7 +27,7 @@
       "fixtures/typescript/transactionCodec.types.ts": "cae917fd211119f98d79ad2be3c3d7e7068e7d648493a62b7b4cd7fd4c209375",
       "game-resources.d.ts": "fb1dc92382d3f2be1d258d35c7c277a091b3e0468d91f88c02949de914c45c86",
       "game.d.ts": "36a76f786f3aac0d1dc69ee61b7db0baa9e7322aadeb8433af419999171818a0",
-      "index.d.ts": "d7a56ba614f6531ad5f459b669ce59dddbceaf42a9ab8d75cbb5dd8ea0d50539",
+      "index.d.ts": "f0a3ee72cd149439b6efe48879999e4df5b0bd833fe634e7f075f023e5ba74b4",
       "instruction-builders.d.ts": "2ca6b7ce7d16364d0de784044c6154550deb609f71cd568589e1793c17e77401",
       "ivm-artifact.d.ts": "3d013df2461b49fb2661c620365351c1b5bcb574363a812ecbcf17a43771df1b",
       "kotodama-compiler.d.ts": "ca00ab9471923168f859b40c82601021080bd280ce1cacca7432b2995f9917ac",
@@ -39,7 +39,7 @@
       "output/native-http-auth-20261013/iroha-iroha-js-0.0.3.tgz": "be603e36aee97cda3b976f781dc999a9d9a597e38fc15624dece0334f0af044f",
       "package-lock.json": "fab1fa4abc744c7950327ca62e32a0bd807e16b60edb5cef4fac91945cbe00a4",
       "package.json": "9d4691a3abf1e52f7ffce5559d00351be4c6cb042bf6d6330171bacbd8e17536",
-      "petal.d.ts": "33639677af2d83a8b97129581e57aeac016702dee5feaff783180fb70357d612",
+      "petal.d.ts": "dc82e283b72280d23cd406abe5d719290769cb6b76d35a7c8fb035ca6b2ae5b3",
       "privacy-capabilities.d.ts": "1de948ed5b02489c296e87ca34855358995e28e17fde3005a8b0a2bc4ebc2815",
       "race.d.ts": "5c1b9e25230351ec6ea8dae1359f8c485e2be670454ac897efcd5724d22100bd",
       "recipes/README.md": "6d921a5bead6424e8b4da643660f1507e9b36598e649928f9ac70435387024e2",
@@ -63,13 +63,13 @@
       "scripts/bundle-size-check.mjs": "2ecd4fc6d7f96a79315082be290ceb1f995d360e5020fc7f6c6f2b234b612e64",
       "scripts/check-changelog.mjs": "e6da4e2cb12660d2d9969bb6c2b8977dcffbd17553857e6df2b27b9c7dc9cdc4",
       "scripts/check-node-engine.mjs": "54fc313b8b4da1c4953a2c68bce5a357d8b52be39b35f3f2fab8ca6a2bf80550",
-      "scripts/copy-native.mjs": "9c5bd2a2cd0c79a522f1863616e010fba8568deab5981082ca108fa50585ca07",
+      "scripts/copy-native.mjs": "6a31364cc583eaf81d77e5e189b559935ec3cf5b3d52f45d68c739e226e4c85f",
       "scripts/mock_harness_smoke.sh": "999dda03e71037f834e2a732979788b771365826fb4b4d63111d1f8277b93c70",
       "scripts/native-build-profile.mjs": "995e55a5b8c7898f8cb2d8e1a477faa29dd14027213e3a61516401a12941e7df",
       "scripts/native-build-provenance.mjs": "91aafcfb4e591fcdbc2d3f5b2047b7e032f96dc3d0448dd08da5c5cccd702be0",
       "scripts/node-engine-contract.mjs": "ffe14c863ca7c189dfea331fb1c832cd15092ce6369955f3af50021ab4446d8c",
       "scripts/package-install-smoke.mjs": "d304af6945fe55d77699de1b7656129098fa798c10199cf26b8e6c309d1a8068",
-      "scripts/probe-local-native-unit.mjs": "23b32bcf82ceb8063acb48078b1a6ea6071a2acbededfc8376c13ef1c7712780",
+      "scripts/probe-local-native-unit.mjs": "6dc6b3f3b1d5c71dbe0c97d96ff6096f6e12cc0ea77329772943e61f690aeb86",
       "scripts/read-native-build-source-state.mjs": "6fd533fbb5fce6d2a23709369e915e6efb4df41f1f9294d53d7ce4c951814d81",
       "scripts/record-release-provenance.mjs": "4687ec96aa50307ced06189b32372b0851b4cfc529a2987b08da42eb19f518fd",
       "scripts/refresh-axt-fixtures.mjs": "dcdb926d6a0a47a02619653a193e726ab5c82331e4bf1fd558c22a2cd4a9d0c3",
@@ -106,7 +106,8 @@
       "src/canonicalAccount.js": "ec71e6542e50d7a1a9b72fab8c1734240fa685b25f925d7b303bedbece6e9e1b",
       "src/canonicalLimits.js": "f61da5b852269ae783d02b9c03cf2c7c2d4006f28b040b5de92976eef05cf79f",
       "src/canonicalMessage.js": "b52e93d099b4b974d2a8d3366be16d000d653b6309d77ed421ea0fca77891e12",
-      "src/canonicalRequest.js": "bded83eb88fc3dae702e39fdfb015d6e06dca86e7a9d5f75787f70d28dcce8ec",
+      "src/canonicalReadRetry.js": "d1948db38baf8b14dfade08312d2324ce96a3966286fe4cc6da494ef837becce",
+      "src/canonicalRequest.js": "50f24dfe895013af98a272ca999025f097cee7510376b549dc736777ef0f2f81",
       "src/canonicalTransport.js": "4bde380631452124afeb525bf3279cbf284cc1c8ee6740f0faac35915617575d",
       "src/canonicalWitness.js": "a2aa1c15b2cd94040e358778617ee377698f84459f6a4b5a0a4e9eea9cf8e425",
       "src/classedRace.js": "bf2ff6b0006e9b19d64a4efb8b1210fac9f7bd26ca072ab3f4022c87add6cf00",
@@ -132,8 +133,8 @@
       "src/contractStateProof.js": "10de591b10e3a04e6f89449ffc32df3a6f225d5191e697877e24491e693c6412",
       "src/crc64.js": "d3a6a15f404de7c3199fb768ffcfc12e9c99e8c98e913c653ca1ce00b8e62ceb",
       "src/crc64Xz.js": "15b54f90a983d49901e28ab111547cf99cb0937b1011502c380fd09df7885f92",
-      "src/crypto.browser.js": "da7e6b895c5c0a47a1cd35b890732a689445635957c5d49add1dd0689f2230a6",
-      "src/crypto.js": "75e2f6f7cfd49948898959bb8b688f22cabc7bc5c9a782a5e7ec3259a9050c49",
+      "src/crypto.browser.js": "d93f9dbce32175cd95475b6ce9108d3175fd061b1c5b7a4f1e406edd4d2d6bab",
+      "src/crypto.js": "61e29b045545c048c9074ce4620dd1b55235d0735acdd358b1ff6dcb5462ec30",
       "src/cryptoAlgorithms.js": "017771a6768d5245659a99d598f7cd572cc9833d497a76046c03f02d32601b17",
       "src/cryptoHash.browser.js": "5f4cd5c326d9f3cd5458db0a3e621156a0cfc2bd2ee53fa24710141939876e02",
       "src/cryptoHash.js": "767354af740d9262491395a955c5bf778ac93e09ade2b50292f408d01a4668ca",
@@ -156,7 +157,7 @@
       "src/identifierOwnerPrf.js": "22ed53d07d40f55685551309442f2a0442c468687a7f3d68e74c40973b81493e",
       "src/identifiers.js": "1e17f9c1936ba174830a20a34d05121e4e93f0d158c9e257d9e8ab29701acb8b",
       "src/idnaBidi.js": "adcd89502fcebb043f34b3ad939668723ca08b138df8341a2df2c7305d51a29b",
-      "src/index.js": "f1db588f461d8dfa1284fb00c049f626013b82baa36cf091724b946002375b11",
+      "src/index.js": "dbaf07240c8079d983021bf2d580d873df9069aa524d55fc5b6013fd9f653c23",
       "src/instructionBuilderPrimitives.js": "5a0e3205db440f34a1d21db2174a3f823d50298c9b209b8465aa6afce38d5231",
       "src/instructionBuilders.js": "cc6e2679508d861fb1a0f95498d6886641e9fa7b062c35634969f97b90e9e899",
       "src/iso20022Transport.js": "92c31e2c036b5d5fea7b2645829aa5cd6575325a71c34ce86bdf3211571b9a94",
@@ -212,11 +213,11 @@
       "src/numericV1.js": "7150b955b1f806506cf6685753eabf9d3eb32664472c1b5c234c77d10f8f3639",
       "src/operatorRequest.browser.js": "2f2d2fcd33421cabd8ef468698d03880a3f33cb1718064e8bc01ba1d912cfc11",
       "src/operatorRequest.js": "97e49403cfe81db7b640f85b3c734de0fc8c0eabf76b668fba69a4d5a53b8d1c",
-      "src/parliamentApiV1.js": "60531749c3837209dcced8bc5642510c6d10c4c2c876d4bfc437d8c5cb2402f4",
+      "src/parliamentApiV1.js": "707d039945abde8a7795f8c5c1743f4b1aa8e86047dc866d6fe89f212a5e97ed",
       "src/petal.js": "ed45ea6f1b32ec4d99518a66b9039caef8f0d8c680382c04ab3f653cd556c1a5",
       "src/petal/browser.js": "05f2f3123eee20771a3da0cba98f87ef601826252d1f58fb6e58961d52e3ad6f",
       "src/petal/crc.js": "376301b76cf1c851be7320f7a1cdacebe6a7f38353844ce9b66ad305a00ea810",
-      "src/petal/decode.js": "aa0bb5df4affff103ca829b89e588f5862e0c87c974905df6eb5e0467ad6fa87",
+      "src/petal/decode.js": "58e6bb60295faf39770784cb03bd74e436539d51d441f5fca787bcebfa98ad8e",
       "src/petal/fountain.js": "aa3b5128902eaecfb5e7d386a90397bfe6352578285e2269514b48bf6de89cdb",
       "src/petal/geometry.js": "b9dc9bc6f0c2944fccc56f703271c4f0ac51946e25fda32810a1cc7108baa5bf",
       "src/petal/glyphs.js": "25cd27279e84f7558a4b778f4ffcca56520e0ed5fd6ed214bffbed42e7ab6db0",
@@ -227,10 +228,10 @@
       "src/petal/prng.js": "711b548e08029f59bf48f1bcbf45568f3ff7db9d5d67f586ba7dba45e19e4167",
       "src/petal/render.js": "9c8b25b5e05f957fe2f4a2d6a7be1bca32b7b33520eaafdb7dba47b5d13f00e1",
       "src/petal/rs.js": "0d121f2e9dfc77db4fc5461e4922100aeb4e43942a34f45a5191ef66c53b1abd",
-      "src/petal/session.js": "bf8101eab103353578ab22539e772ea6099c932cb6346a229e9da21e598122e0",
+      "src/petal/session.js": "76219658fc3e8be9a073aee1c0df5be2f61d7f9c01a48ca019576aa19b03d446",
       "src/petal/stream.js": "ea674181316007ca715d5b68c36be409316fcd84043e8393d7d741e8ce34cb21",
       "src/petal/support.js": "592387ea9f136089bc398fcdfe04a6d441343e735bec2bbb3b3fcf54851496de",
-      "src/privacyCapabilities.js": "b287a0ce10b25cc86517cc5581fa143674e4922bcae21855c245f166c8eeb664",
+      "src/privacyCapabilities.js": "dfdbaae72bd6a7def64ba5daa7fdeef5693385970b5e5209be64e534323c06bc",
       "src/privacyCapabilityAdmission.js": "216c5e3767dd240f760f8001cd626f315ea78dd8b9c7e51ae91171a013ea5654",
       "src/privacyCapabilityTransport.js": "a1bcc2f17efcbc1dc67f1a55e93bbecd6f0127f3dffe79c24c47063f5b880485",
       "src/privacyExact12Network.js": "e755514b3f02bb347a214afcb4b3877dccc2fde609904b1d4976e268b1ba351e",
@@ -283,21 +284,21 @@
       "src/toriiBoundedResponse.js": "f846f5b387968adaa46764af8beb58b4bdcf79373f1a8f6f160df18acdd9b528",
       "src/toriiBrowserClient.js": "2c6d22da1d72d4d90037b7c25b6cec838ba275580646472857da69403e15e255",
       "src/toriiBrowserExplorerTypes.d.ts": "50b4caac76c4c042a5e7d02c90372a3273497e5f70429ae281c9c5b1e53001e2",
-      "src/toriiClient.js": "9fdc0aee34ee6dd86b56bb6ab2ea2afca97ee39487d16ae34b094ddcbd9be655",
+      "src/toriiClient.js": "c194a43c69b663f66cf575cfde3cf9f8d1fd3f16367c176e4a03e002dfd94f26",
       "src/toriiClientEncoding.js": "a2d2c0287895847dff7dda11ba653ee71ee4b7ee2680368a7db33dcb2de68722",
       "src/toriiClientPrimitives.js": "9c8330ec1891c4a8798a8a409fe73be2c0f3855cf3489df704d76838def3129d",
       "src/toriiCompatibility.js": "c2edbf927615db8ae1320676e6dfe7a341fca48a913b3578525f6597ab909b08",
       "src/toriiErrors.js": "579325474c93677ce4779933fbf1b7ca0d02a8bd8753fafe07f5238fa1ab2403",
       "src/toriiEventStream.js": "bff2d780545da43cc065354b308ab84a3953dbde4f32764ebc92adcc9143c495",
       "src/toriiGovernanceNormalizers.js": "3422b3548d65b77cb7dacd1a2413129151f17b3f46bd2c9391fc057ea3429be3",
-      "src/toriiOptional.js": "59544034740e58aea5c98f1480c3482586e4ec28593e0cb08712b09bfced0dd0",
+      "src/toriiOptional.js": "57f34f6605d718a7272b50971549adba850d67e485816876de5a7b367704f5df",
       "src/toriiTestHooks.js": "fa3253d8fd66e44501c4ed5bcfb82f8d5a45a2a0cff935f88758526630cb7a41",
       "src/transaction.js": "c0a953a0f85e7ec1a9943196c6115cb1114baf43855b9712aa4cd7af6d7be16d",
       "src/transactionCodec.js": "a327a875671159c28674b1e51bb61329eb85e87596df1670611e33220a575eb8",
       "src/transactionRejectionObserver.js": "ba0a3af55c903be52fd4073018d9efbcb08e07e89b8bfdf061a6371eaf7a8f78",
       "src/transactionReview.js": "b122cbf4dfaf690cf7ed3c8272f163aa47bcfa530903775cc9e50288bc739bcb",
       "src/validationError.js": "ed96ad939858e8b1bada58036d036a6b737bc5ef603f7492acf823c01b5a2266",
-      "src/validationFeeConsensus.js": "587697c56538223af8d9cc0dbdef7ef5d192cf2365828820bc671ee3bb561427",
+      "src/validationFeeConsensus.js": "f68192520e1dac687da0a4de69e6af3183ef86b07093971d22e6272c099ce213",
       "src/validationFeeProposal.js": "9ecd65a3a9cab4565966b2a997885ae125034d9ccbcd90ba8b01cd0a88d2879a",
       "src/validationFeeTrust.js": "2f8fcc05ef02d448f4f8292638a28e2ffad8f8be9799f482ab403548b565b482",
       "src/validationThrow.js": "57f0efd5a6b4b3e8b3ebb49b4f09cff0d6e21c2a52cb78d7c1d02d577b199abe",
@@ -329,7 +330,8 @@
       "test/canonicalAuthOneShot.test.js": "c4ef867f7ccfd073ad0e114e7baef84630378eee58642df65ce6763510e35254",
       "test/canonicalInstructionOwner.test.js": "4624672b17c2bfca73539810b179da88364a0d354831a118683285490859178e",
       "test/canonicalMessage.test.js": "db01a47e4785d7a52251a5449092ac9b1217e7d884b830854089fee2019b82e2",
-      "test/canonicalRequest.browser.package.test.js": "4486284e103c33293e03cab9fbf2d534526b6e25d99e0701e4fba02092cb3b94",
+      "test/canonicalReadRetry.test.js": "aed2bc76bbf3ac5386536dbef560a6c573be79f3ab2f3a4005202ba307382810",
+      "test/canonicalRequest.browser.package.test.js": "d5b29e70dc1a988b8302e05268476011e816c91213b37c7dcc7004a758d4ffa0",
       "test/canonicalRequest.test.js": "7ffe078881c23f123a0d93cb2d060ac3f3b0071ba23265e516c0d7d0ff5cd130",
       "test/canonicalWitness.test.js": "0959abb5ef7dfb7538223f64a7277a1347799115650970f9629ad5761400d258",
       "test/classedRace.browser.package.test.js": "2bc42a7640f1c1e6a780c2d17456d9179938bcc35c7643a94599e6760af735da",
@@ -393,7 +395,7 @@
       "test/fixtures/classed-race-v1-codec.json": "7733987e6764a0abf3023a9b32c049c36e9f94fa22a8d71b398d6d1c486e9e39",
       "test/fixtures/classed-race-v1-codec.provenance.json": "bbe4a888a22b2af2ba97149a66db09fb5fd072424101b134b6c40cbf27d5661c",
       "test/fixtures/contract_manifest_v1.json": "6fa569e52e4f6f48028537b600dc2bfd5a92f8b6c1e261d7c4e5ffd579bb27ef",
-      "test/fixtures/current_rust_contract_artifact.json": "474f9b3994b7d9926e8631a091032cc63b4cb82c1d15bee1cbf11ad75bd02677",
+      "test/fixtures/current_rust_contract_artifact.json": "e901380f51faa9a2174f1561938b9ba6538e1f83b085e859979788b4890bfa8d",
       "test/fixtures/current_rust_contract_artifact.ko": "16c2e07a5f7777cd526ba1c6ca64e20346a3f920608cff0710910edfce8441a3",
       "test/fixtures/game-resource-v1-codec.json": "b5f52602ddfdb4c65c7a3b3011c7b4e4b76277fd444a6538f529c8be167f4519",
       "test/fixtures/game-v1-codec.json": "95847201f8c69d55849da80a1103320cb74138e05625c7a11a89f64bbd0131b7",
@@ -406,7 +408,7 @@
       "test/fixtures/race-outcomes-v1.json": "bead33690b0e69d46b5d84c45d990657a15556dc60aa6b36221b401c9c3cf53c",
       "test/fixtures/race-v1-codec.json": "939a387b144722ae9786f9e80906637cbaf857ec39a868fe4858a9b3028ef239",
       "test/fixtures/retail_fee_codec_v1.json": "78dc8d5cf6b1432edf86ef324d5f4a1045b41ee4bd8f19037671817de27c93d1",
-      "test/fixtures/retail_fee_native_certificate_v1.json": "149f7e3f35f21b311c998fdce0784860effb23ca38ddec7791ad7edb7ee9df61",
+      "test/fixtures/retail_fee_native_certificate_v1.json": "c79f7a1fa35cae7f107c7ce05eeedd1960a3fc59abf85e7a4dfdc1e573bac092",
       "test/fixtures/retail_fee_native_conversion_v1.json": "6d5eed9cd01d7703e561463e4b1d1f8b2aa016f12ad5196b805e1f5af8749473",
       "test/fixtures/retail_fee_native_policy_v1.json": "863cf30a7833cdc576fa01111c7cfe23dba43a6df5a0b481e987d1dea563ff5a",
       "test/fixtures/sorafs_native_suite_contract_v1.json": "70403b063eae91b9e3fbe2889d3ca525fab6bae74c1bd0ab685a0749c3bc5ee9",
@@ -453,7 +455,7 @@
       "test/instructionBuilders.test.js": "35e951c03426e6090beb3f1f3bd25e8c50a01e63d6d4277c13ac90d7bcc79a1c",
       "test/instructionBuildersHardCut.test.js": "ae08e236863bab2fd8a94eda91a18d22d32d471b0a462f3d936d8150daed78e3",
       "test/instructionCodecNativeBoundary.test.js": "7596c26c56df78e7cd220d28cc74501b411c0dff995362b6375ec9ea881bc8e4",
-      "test/instructionNetworkContext.test.js": "9e40abb24818764cf94b0eada81df19deb7f0b24abf9cc78055cc799122b2318",
+      "test/instructionNetworkContext.test.js": "d043a193503a9c595163a51acb2f5b09da2fcabf2a7ce07698e97c2bbe26a93a",
       "test/integrationTorii.test.js": "92e9a73c16415dae779841e0a6fe931b10e8d2c8d2661a90cd779180b7eda5a0",
       "test/integrationToriiAssertions.js": "d90d1386cb993af2054e0e6ab06df29a0dde4fc46dd0caf09219b55c0f23c99b",
       "test/integrationToriiEnv.js": "0d743f45af703f408bd297c3403cd37d60e7ada527a05ebff7053934cac01cda",
@@ -514,28 +516,29 @@
       "test/packageSurface.test.js": "008ee8798e3bd85ef1aa8a667b59888a737fdd0e9a4dfcfbd05cc3ba3932032b",
       "test/packageTypes.test.js": "f61f9d906b2436754fe4a1c9ea6785433fdc4fa0a974a2a2547050901973a494",
       "test/package_dist.test.js": "645ec7d5e65e151fbdd3a6a2a72f93f5800f82c7e47d1eb8fc911c39c5aaa4fa",
-      "test/parliamentApiV1.test.js": "183695b075bbc043ef24cb9a4e615b7a368b1706b177061a5ee9f754bc86e5a5",
+      "test/parliamentApiV1.test.js": "43641bc63b1cb3a4a25e2e9d4a0cd3c86b194d64ab8bd48d9da59b5b5de575d0",
       "test/petal.test.js": "9ce181442cc03b268a6c0b61b051c8c22aa2e35388f007fb20bf4b5ecabe0a8c",
-      "test/pipelinePreflight.test.js": "c95a594d88c0b4373b3be9ff97101961562ff108f675f0cdea3614caa9413a02",
+      "test/petalMerge.test.js": "ef028fb9a5d21742647b80f72737357e18b34049c9fac990024873c033f72087",
+      "test/pipelinePreflight.test.js": "0acaec1f7f5f2c95d701731671f70796dc8b3c813b4b05669186b32a5ca061d2",
       "test/privacyCatalogParity.test.js": "444804083893c5d186d5a7e9f953c7e5bf104b0f6c56c8ff4335cfddd65a71c4",
-      "test/privacyExact12CapabilityManifest.test.js": "39b3450f612e4ec0202fbb794cabd53af1d6deba2f20c605d15aae422f311eb3",
+      "test/privacyExact12CapabilityManifest.test.js": "9a378623eaf0fba2184b5a8f78c926abd5ae3e3f4db0d2f653a726b23c0b8e4e",
       "test/privacyExact12FixtureBundle.test.js": "77eb9d7a4d144efb59077071773873582f822a2e43b32050711594c10deb90ba",
       "test/privacyExact12Network.test.js": "d869e587d768711727adcc96e7cab6d88bea346c91a9edf20625c0a7c0e7cdab",
       "test/privacyFfiContractParity.test.js": "03a6ca683c0edc85d2eb5985deb1b288a674c9b84e3ae6a3b2205b38bce69259",
-      "test/privacyNative.integration.test.js": "cbb315f878b82ad2605a24fd3f3102333f7ba61d1aa827087ed3b148b69135be",
+      "test/privacyNative.integration.test.js": "25a03d494ff071a53724536dfe5bf0a00bd73a0d430df84f1cced24e914f0a28",
       "test/privacyNative.test.js": "2c7d10f4e6337bca7a3253c08fbc42f9df5b26f6de38848db2fc32db566324c9",
       "test/proofAttachmentParity.test.js": "0bed3986b4b62dc3639b2a76851b6838ce50bd662a38a8672172c6a43c37d2c9",
       "test/raceAdapterCodec.test.js": "263e37929310f95c20ba17189731f069cc51b350b750ca82dae04ea66c1cac1a",
       "test/raceOutcomes.test.js": "b6bc28a876d1ca4730a6f60871100de5cb6886a3cf41a7b8922dd144c8fe13ee",
       "test/recipes.production.test.js": "b87d16678f94438d869bfd4239420d83783efa77744ebc0e02067d9f486f618f",
       "test/releasePackageFlow.test.js": "1d7e4b8e4598a911d17a56d3c876713dac3d1c6df98452ea46f5af413004778d",
-      "test/releaseTestProfiles.test.js": "895f308ec7a8c43b957706a782ba55c2bd93ac66c863319fba7f15957761d8df",
+      "test/releaseTestProfiles.test.js": "9e0b2733b3aab4c11f180c6e183220a2bf38d78c5d23523dfc48db830061a125",
       "test/release_matrix.test.mjs": "d2fbfacc6bebc84723678b7d3f92a189b8c6d2e0c79945505b38f50199b6d7a5",
       "test/repoAgreementLifecycle.test.js": "599aff851eac9e8d4025322561c033531d49743ea8e77735e182fabc1df84fae",
       "test/reportBundleSize.test.js": "6e155ee352fbf60c7669d7205af8c7ef1f6a737912a4ad1be2ccc1af68799d9b",
       "test/retailDailyLimitInstructions.test.js": "3c2804e0e07b16ccbe776e232b228bb904a34d18a220c8d6f7f991668a7c6476",
       "test/retailFee.test.js": "73b81c8350cc9165d0f67120a1ca49faec91540a993f213fb113b7177f8d21b4",
-      "test/retailFeeNativeCertificate.test.js": "c4379b224da62d528f6262965c5962096247051c2eecb67457e49d8aadb23459",
+      "test/retailFeeNativeCertificate.test.js": "cbdac0f1476375432d9cdf14573c3dd69973b12c17404f5d16735eab29d58298",
       "test/retailFeeV1.types.test.js": "85d442b6c9d57a04bc9d431e08fa502781cc780eed87a9526a278e622b9dbdf2",
       "test/retryPolicy.test.js": "d1017f726c46eace84453441fc5fc845067329f232093eb061e288dc6421ecdb",
       "test/runIntegrationScript.test.js": "289f2250cc375fb6ea5f2915601c9d9ab674182db5fc38c774558505123017d5",
@@ -635,10 +638,10 @@
       "test/triggerActionBuilders.test.js": "a88889dd25dd653e26f310f6db60fcf1c00f3f750cd927c4497980b32a20964d",
       "test/uaidV1.types.test.js": "9f7227080b66dd36dc652fd47fab88dc08e31be67032f2f14102cf294fa1163a",
       "test/validationError.test.js": "ad197403444a1fd08bb1790aa7613777fd040157549383415e59003f859de42b",
-      "test/validationFeeConsensus.test.js": "341a413b7c39a95ef0f8f9e8e4a53eb05e129e75d3815099d337804d51c17884",
-      "test/validationFeeNativeCheckpoint.test.js": "f02b0bdd74bac159085811589941a02a36bc892947eb0b6e2b5de54a1fbf0c3d",
+      "test/validationFeeConsensus.test.js": "de7114c95b0b249955eecb8fcbabecda69d5e870fb19261426e62914b947688a",
+      "test/validationFeeNativeCheckpoint.test.js": "34ff21c257ccbdfc51f83f1937127827ff3a061e2c463938d450cbbe5e86fa31",
       "test/validationFeeProposal.test.js": "d040d66c1a49841aa31e7c828f96dafaa3a424d8f999a6af5773eff245ce326b",
-      "test/validationFeeTrustCapture.test.js": "595700871e327703592eb10b620478dbed19e552bf8e1bde710e31955f944b45",
+      "test/validationFeeTrustCapture.test.js": "1380ad17bc8381dafff366f1e91582192ba112efe64468785984e792e19f1a20",
       "test/validationThrow.test.js": "d9ff1a4e32c4010113c7ca6064cee5cfec1999a8a3767d0c94dfaaae3b60c805",
       "test/validatorStaking.test.js": "4496cc24067be9ee12b1444d4c12c936bc5d720c05c77998bdddc9741115ebbc",
       "test/validatorStaking.types.test.js": "3fc3a6368f90f0c8a3c7bdc9654d6489a8b4d400e07c290bb031210bbea6ff36",
@@ -650,8 +653,8 @@
       "torii.d.ts": "7850436958ea8b7ef16e6119878ee2b151d9ca88b011c82adbc9115ec5dd8c72",
       "transaction-codec.d.ts": "6f03c31ea15ce25ba1657e136b47416bd6729b32f0e25adc51d73b35b28f5ef9"
     },
-    "repeatPackSha256": "e968431b87ef519bb4ca5482ba4f59863436f248799b5eb839ea7cf041a52aa5",
-    "nodeVersion": "24.19.0"
+    "repeatPackSha256": "6e8204f072094362b58d6221e115d97b4a10852479d307e1416ff0ded4b11b05",
+    "nodeVersion": "26.12.0"
   },
   "files": [
     {
@@ -661,8 +664,8 @@
     },
     {
       "path": "README.md",
-      "sizeBytes": 259043,
-      "sha256": "4cfd8945602570eef90e3d1671e38f76a381fd62afec2f587782bc3797b88663"
+      "sizeBytes": 260287,
+      "sha256": "c24db7779aa861bf0ddb1b2625f074d87fd1d079deb3ab5f3ad8f96f36ca43c3"
     },
     {
       "path": "address.d.ts",
@@ -691,8 +694,8 @@
     },
     {
       "path": "canonical-request.d.ts",
-      "sizeBytes": 4741,
-      "sha256": "6def46cd7d16298f527c132c5f28e18748784f8146a4b865a1422e69a5647e91"
+      "sizeBytes": 5629,
+      "sha256": "0cad3f72f8f7c13224ece9a7750435dca718de8ea43bc5475d534dbb0ccd4604"
     },
     {
       "path": "classed-race.d.ts",
@@ -830,9 +833,14 @@
       "sha256": "b52e93d099b4b974d2a8d3366be16d000d653b6309d77ed421ea0fca77891e12"
     },
     {
+      "path": "dist/canonicalReadRetry.js",
+      "sizeBytes": 5598,
+      "sha256": "d1948db38baf8b14dfade08312d2324ce96a3966286fe4cc6da494ef837becce"
+    },
+    {
       "path": "dist/canonicalRequest.js",
-      "sizeBytes": 12830,
-      "sha256": "bded83eb88fc3dae702e39fdfb015d6e06dca86e7a9d5f75787f70d28dcce8ec"
+      "sizeBytes": 12896,
+      "sha256": "50f24dfe895013af98a272ca999025f097cee7510376b549dc736777ef0f2f81"
     },
     {
       "path": "dist/canonicalTransport.js",
@@ -962,12 +970,12 @@
     {
       "path": "dist/crypto.browser.js",
       "sizeBytes": 11376,
-      "sha256": "da7e6b895c5c0a47a1cd35b890732a689445635957c5d49add1dd0689f2230a6"
+      "sha256": "d93f9dbce32175cd95475b6ce9108d3175fd061b1c5b7a4f1e406edd4d2d6bab"
     },
     {
       "path": "dist/crypto.js",
       "sizeBytes": 60272,
-      "sha256": "75e2f6f7cfd49948898959bb8b688f22cabc7bc5c9a782a5e7ec3259a9050c49"
+      "sha256": "61e29b045545c048c9074ce4620dd1b55235d0735acdd358b1ff6dcb5462ec30"
     },
     {
       "path": "dist/cryptoAlgorithms.js",
@@ -1081,8 +1089,8 @@
     },
     {
       "path": "dist/index.js",
-      "sizeBytes": 23965,
-      "sha256": "f1db588f461d8dfa1284fb00c049f626013b82baa36cf091724b946002375b11"
+      "sizeBytes": 22483,
+      "sha256": "dbaf07240c8079d983021bf2d580d873df9069aa524d55fc5b6013fd9f653c23"
     },
     {
       "path": "dist/instructionBuilderPrimitives.js",
@@ -1361,8 +1369,8 @@
     },
     {
       "path": "dist/parliamentApiV1.js",
-      "sizeBytes": 74322,
-      "sha256": "60531749c3837209dcced8bc5642510c6d10c4c2c876d4bfc437d8c5cb2402f4"
+      "sizeBytes": 36215,
+      "sha256": "707d039945abde8a7795f8c5c1743f4b1aa8e86047dc866d6fe89f212a5e97ed"
     },
     {
       "path": "dist/petal.js",
@@ -1381,8 +1389,8 @@
     },
     {
       "path": "dist/petal/decode.js",
-      "sizeBytes": 44917,
-      "sha256": "aa0bb5df4affff103ca829b89e588f5862e0c87c974905df6eb5e0467ad6fa87"
+      "sizeBytes": 47312,
+      "sha256": "58e6bb60295faf39770784cb03bd74e436539d51d441f5fca787bcebfa98ad8e"
     },
     {
       "path": "dist/petal/fountain.js",
@@ -1436,8 +1444,8 @@
     },
     {
       "path": "dist/petal/session.js",
-      "sizeBytes": 6860,
-      "sha256": "bf8101eab103353578ab22539e772ea6099c932cb6346a229e9da21e598122e0"
+      "sizeBytes": 10124,
+      "sha256": "76219658fc3e8be9a073aee1c0df5be2f61d7f9c01a48ca019576aa19b03d446"
     },
     {
       "path": "dist/petal/stream.js",
@@ -1452,7 +1460,7 @@
     {
       "path": "dist/privacyCapabilities.js",
       "sizeBytes": 45090,
-      "sha256": "b287a0ce10b25cc86517cc5581fa143674e4922bcae21855c245f166c8eeb664"
+      "sha256": "dfdbaae72bd6a7def64ba5daa7fdeef5693385970b5e5209be64e534323c06bc"
     },
     {
       "path": "dist/privacyCapabilityAdmission.js",
@@ -1716,8 +1724,8 @@
     },
     {
       "path": "dist/toriiClient.js",
-      "sizeBytes": 1014936,
-      "sha256": "9fdc0aee34ee6dd86b56bb6ab2ea2afca97ee39487d16ae34b094ddcbd9be655"
+      "sizeBytes": 1008476,
+      "sha256": "c194a43c69b663f66cf575cfde3cf9f8d1fd3f16367c176e4a03e002dfd94f26"
     },
     {
       "path": "dist/toriiClientEncoding.js",
@@ -1751,8 +1759,8 @@
     },
     {
       "path": "dist/toriiOptional.js",
-      "sizeBytes": 2672,
-      "sha256": "59544034740e58aea5c98f1480c3482586e4ec28593e0cb08712b09bfced0dd0"
+      "sizeBytes": 2129,
+      "sha256": "57f34f6605d718a7272b50971549adba850d67e485816876de5a7b367704f5df"
     },
     {
       "path": "dist/toriiTestHooks.js",
@@ -1787,7 +1795,7 @@
     {
       "path": "dist/validationFeeConsensus.js",
       "sizeBytes": 18113,
-      "sha256": "587697c56538223af8d9cc0dbdef7ef5d192cf2365828820bc671ee3bb561427"
+      "sha256": "f68192520e1dac687da0a4de69e6af3183ef86b07093971d22e6272c099ce213"
     },
     {
       "path": "dist/validationFeeProposal.js",
@@ -1826,8 +1834,8 @@
     },
     {
       "path": "index.d.ts",
-      "sizeBytes": 465634,
-      "sha256": "d7a56ba614f6531ad5f459b669ce59dddbceaf42a9ab8d75cbb5dd8ea0d50539"
+      "sizeBytes": 457211,
+      "sha256": "f0a3ee72cd149439b6efe48879999e4df5b0bd833fe634e7f075f023e5ba74b4"
     },
     {
       "path": "instruction-builders.d.ts",
@@ -1881,8 +1889,8 @@
     },
     {
       "path": "petal.d.ts",
-      "sizeBytes": 37279,
-      "sha256": "33639677af2d83a8b97129581e57aeac016702dee5feaff783180fb70357d612"
+      "sizeBytes": 37634,
+      "sha256": "dc82e283b72280d23cd406abe5d719290769cb6b76d35a7c8fb035ca6b2ae5b3"
     },
     {
       "path": "privacy-capabilities.d.ts",

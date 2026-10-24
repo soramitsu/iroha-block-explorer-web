@@ -5,13 +5,13 @@ import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const IROHA_SDK_SPECIFIER = 'file:vendor/iroha-iroha-js-0.0.3-e968431b87ef.tgz';
-export const IROHA_SDK_ARCHIVE_SHA256 = 'e968431b87ef519bb4ca5482ba4f59863436f248799b5eb839ea7cf041a52aa5';
-export const IROHA_SDK_INVENTORY_SHA256 = '0f9cc7be940c6a8b2feb33945b4153abaf3fd279d6c733a1507f3c165208d4a2';
-const archiveBytesLength = 1088405;
-const inventoryBytesLength = 111749;
-const inventoryFilename = 'iroha-iroha-js-0.0.3-e968431b87ef.files.json';
-export const IROHA_SDK_SOURCE_REVISION = '02403c8449c3287d2516408d8d33984c969514d5';
+export const IROHA_SDK_SPECIFIER = 'file:vendor/iroha-iroha-js-0.0.3-6e8204f07209.tgz';
+export const IROHA_SDK_ARCHIVE_SHA256 = '6e8204f072094362b58d6221e115d97b4a10852479d307e1416ff0ded4b11b05';
+export const IROHA_SDK_INVENTORY_SHA256 = '24204e61884113ba971101b88aa1eb364be6d667b08120c8bf192e333cac93d3';
+const archiveBytesLength = 1080276;
+const inventoryBytesLength = 112228;
+const inventoryFilename = 'iroha-iroha-js-0.0.3-6e8204f07209.files.json';
+export const IROHA_SDK_SOURCE_REVISION = '95c96beae6eebec259291ad4e4e61366eaa57e99';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 async function regularBytes(filename, expectedSize) {
@@ -40,13 +40,13 @@ async function verifiedArchiveInputs(repositoryRoot) {
   const inventoryBytes = await regularBytes(path.join(repository, 'vendor', inventoryFilename), inventoryBytesLength);
   if (hash(inventoryBytes) !== IROHA_SDK_INVENTORY_SHA256) throw new Error('SDK inventory differs from the pinned consumer artifact');
   const inventory = JSON.parse(inventoryBytes);
-  if (inventory.schema !== 'iroha.sdk-package-inventory.v2' || inventory.archiveSha256 !== IROHA_SDK_ARCHIVE_SHA256 || inventory.files.length !== 259) {
-    throw new Error('SDK inventory does not describe the admitted 259-file package');
+  if (inventory.schema !== 'iroha.sdk-package-inventory.v2' || inventory.archiveSha256 !== IROHA_SDK_ARCHIVE_SHA256 || inventory.files.length !== 260) {
+    throw new Error('SDK inventory does not describe the admitted 260-file package');
   }
   if (inventory.source?.revision !== IROHA_SDK_SOURCE_REVISION
-    || inventory.source?.packageGitTree !== '1a42e40c9b2c6e1e2d7a95d907696b14b1512538'
+    || inventory.source?.packageGitTree !== 'a75a6df025a9a5107c11ecbf5e9027ba968a21e2'
     || inventory.source?.packageSourceClean !== true
-    || inventory.source?.sourceInventorySha256 !== '753130cdd6cfc8a85e0bba400f5a760bdb993d72fe82e05926d7f517bc91819e'
+    || inventory.source?.sourceInventorySha256 !== '4c167a563710482868a771530b84fa49270b4e99d4dbc7c320e1008f6bc61d87'
     || inventory.source?.repeatPackSha256 !== IROHA_SDK_ARCHIVE_SHA256) {
     throw new Error('SDK inventory source identity differs from the pinned package');
   }

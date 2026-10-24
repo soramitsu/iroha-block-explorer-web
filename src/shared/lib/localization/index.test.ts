@@ -700,4 +700,54 @@ describe('localization: historic poetic locales', () => {
       expect(labelTheme, `locale=${locale}`).not.toBe('settings.theme');
     }
   });
+
+  it('keeps navigation and dashboards key parity and placeholders across all shipped JSON locales', () => {
+    for (const namespace of ['navigation', 'dashboards'] as const) {
+      const source = (en as Record<string, unknown>)[namespace];
+      const expected = collectLeafPaths(source).sort();
+
+      for (const file of SHIPPED_LOCALE_FILES) {
+        const locale = file.replace(/\.json$/, '');
+        const parsed = JSON.parse(readFileSync(`${LOCALIZATION_DIR}/${file}`, 'utf8')) as Record<string, unknown>;
+        const translated = parsed[namespace] ?? {};
+
+        expect(collectLeafPaths(translated).sort(), `locale=${locale} namespace=${namespace}`).toEqual(expected);
+        for (const key of expected) {
+          expect(extractPlaceholders(getAtPath(translated, key) as string), `locale=${locale} key=${namespace}.${key}`).toEqual(
+            extractPlaceholders(getAtPath(source, key) as string)
+          );
+        }
+      }
+    }
+  });
+
+  it('does not leave the navigation or dashboards namespaces byte-identical to English in shipped JSON locales', () => {
+    for (const namespace of ['navigation', 'dashboards'] as const) {
+      const expected = JSON.stringify((en as Record<string, unknown>)[namespace]);
+
+      for (const file of SHIPPED_NON_EN_LOCALE_FILES) {
+        const locale = file.replace(/\.json$/, '');
+        const parsed = JSON.parse(readFileSync(`${LOCALIZATION_DIR}/${file}`, 'utf8')) as Record<string, unknown>;
+
+        expect(JSON.stringify(parsed[namespace] ?? {}), `locale=${locale} namespace=${namespace}`).not.toBe(expected);
+      }
+    }
+  });
+
+  it('resolves dashboard and navigation labels to strings instead of raw keys across locales', () => {
+    const keys = [
+      'navigation.groups.analytics',
+      'dashboards.titles.network',
+      'dashboards.charts.distribution.title',
+      'dashboards.window.blocks',
+    ] as const;
+
+    for (const locale of [...SHIPPED_LOCALES, 'akk', 'egy']) {
+      i18n.global.locale.value = locale as any;
+
+      for (const key of keys) {
+        expect(i18n.global.t(key, { count: 100 }), `locale=${locale} key=${key}`).not.toBe(key);
+      }
+    }
+  });
 });

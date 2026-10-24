@@ -9,7 +9,7 @@
     />
 
     <div class="app-header__nav">
-      <NavigationMenu />
+      <GroupedNavigation />
     </div>
 
     <div class="app-header__buttons">
@@ -36,7 +36,7 @@
 <script setup lang="ts">
 import HeaderLogo from './HeaderLogo.vue';
 import ExplorerReadAccess from '@/shared/ui/components/ExplorerReadAccess.vue';
-import { NavigationMenu } from '@/features/navigation';
+import { GroupedNavigation } from '@/features/navigation';
 import { LangDropdown } from '@/features/switch-lang';
 import { ThemeSwitcher } from '@/features/switch-theme';
 import { SearchField } from '@/features/search';

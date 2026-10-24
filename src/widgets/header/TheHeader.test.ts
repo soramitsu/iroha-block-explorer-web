@@ -7,7 +7,7 @@ import TheHeader from './TheHeader.vue';
 
 const HeaderLogoStub = { template: '<div data-test="header-logo" />' };
 const SearchFieldStub = { template: '<div data-test="search-field" />' };
-const NavigationMenuStub = { template: '<nav data-test="navigation-menu" />' };
+const GroupedNavigationStub = { template: '<nav data-test="grouped-navigation" />' };
 const NodeSettingsStub = { template: '<button data-test="node-settings" />' };
 const ScopedExplorerControlStub = { template: '<button data-test="scoped-explorer-control" />' };
 const ThemeSwitcherStub = { template: '<button data-test="theme-switcher" />' };
@@ -29,7 +29,7 @@ describe('TheHeader', () => {
         stubs: {
           HeaderLogo: HeaderLogoStub,
           SearchField: SearchFieldStub,
-          NavigationMenu: NavigationMenuStub,
+          GroupedNavigation: GroupedNavigationStub,
           NodeSettings: NodeSettingsStub,
           ScopedExplorerControl: ScopedExplorerControlStub,
           ThemeSwitcher: ThemeSwitcherStub,
@@ -44,7 +44,7 @@ describe('TheHeader', () => {
     scopeState.value = null;
     const wrapper = factory();
 
-    expect(wrapper.find('[data-test="navigation-menu"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="grouped-navigation"]').exists()).toBe(true);
     expect(wrapper.find('[data-test="search-field"]').exists()).toBe(true);
     expect(wrapper.find('[data-test="node-settings"]').exists()).toBe(true);
     expect(wrapper.find('[data-test="scoped-explorer-control"]').exists()).toBe(false);

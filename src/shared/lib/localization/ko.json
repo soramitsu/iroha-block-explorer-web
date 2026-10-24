@@ -1476,5 +1476,245 @@
     "codeHash": "코드 해시",
     "abiHash": "ABI 해시",
     "compilerFingerprint": "컴파일러 지문"
+  },
+  "navigation": {
+    "menu": "메뉴",
+    "groups": {
+      "explore": "탐색",
+      "analytics": "분석",
+      "network": "네트워크",
+      "build": "개발",
+      "services": "서비스"
+    },
+    "hints": {
+      "explore": "원장 기록 둘러보기",
+      "analytics": "대시보드 및 경제 지표",
+      "network": "피어, 합의 및 네트워크 서비스",
+      "build": "계약 작성, 검사 및 추적",
+      "services": "SORA Nexus의 스토리지와 컴퓨팅"
+    }
+  },
+  "dashboards": {
+    "nav": "대시보드",
+    "tabs": {
+      "label": "대시보드",
+      "network": "네트워크 펄스",
+      "activity": "활동",
+      "ledger": "원장"
+    },
+    "titles": {
+      "network": "네트워크 펄스",
+      "activity": "거래 활동",
+      "ledger": "원장 구성"
+    },
+    "subtitles": {
+      "network": "연결된 Torii 피어에서 읽어 온 실시간 블록 생성, 커밋 지연 시간 및 용량입니다.",
+      "activity": "네트워크가 언제 붐비는지, 어떤 종류의 거래를 처리하는지 보여 줍니다.",
+      "ledger": "계정, 도메인, 자산이 원장 전체에 어떻게 분포되어 있는지 보여 줍니다."
+    },
+    "window": {
+      "label": "기록 범위",
+      "blocks": "블록 {count}개"
+    },
+    "live": {
+      "streaming": "실시간",
+      "polling": "10초마다 새로 고침"
+    },
+    "coverage": {
+      "scanning": "기록 읽는 중: 블록 {target}개 중 {loaded}개",
+      "complete": "최근 블록 {loaded}개",
+      "genesis": "제네시스 이후 전체 블록 {loaded}개",
+      "incomplete": "블록 {target}개 중 {loaded}개 읽음 (불완전)"
+    },
+    "errors": {
+      "history": "블록 기록을 읽을 수 없습니다.",
+      "status": "피어 상태를 사용할 수 없습니다.",
+      "retry": "다시 시도"
+    },
+    "chart": {
+      "showTable": "표",
+      "showChart": "차트",
+      "unknown": "블록 본문을 사용할 수 없음: 개수 알 수 없음",
+      "partial": "일부만 관측됨: 하한값",
+      "noData": "스캔되지 않음",
+      "total": "합계",
+      "empty": "아직 블록이 충분하지 않습니다.",
+      "height": "높이",
+      "time": "시간",
+      "blockTitle": "블록 {height}",
+      "from": "시작",
+      "to": "종료"
+    },
+    "peerScope": "연결된 Torii 피어가 보고한 기준",
+    "state": {
+      "producing": "블록 생성 중",
+      "pending": "거래 대기 중",
+      "idle": "유휴: 대기 중인 항목 없음",
+      "delayed": "이 피어에서 지연 의심",
+      "stale": "피어 상태가 오래됨",
+      "unknown": "상태 알 수 없음"
+    },
+    "instruments": {
+      "title": "계기판",
+      "height": "블록 높이",
+      "lastBlock": "마지막 블록 {age} 전",
+      "commit": "커밋 지연 시간",
+      "commitHint": "최신 블록의 생성부터 이 피어에서의 커밋까지",
+      "queue": "거래 대기열",
+      "queueHint": "처리 중 {inflight}, 최장 대기 시간 {age}",
+      "queueSaturated": "대기열 포화",
+      "rejections": "거부된 거래",
+      "rejectionsValue": "{rejected} / {total}",
+      "rejectionsHint": "최근 5분 동안 {recent}",
+      "peers": "연결된 피어",
+      "peersHint": "보고하는 피어 제외",
+      "viewChanges": "이번 라운드의 뷰 변경",
+      "sinceGenesis": "제네시스 이후",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "최근 1시간",
+      "lastHourUnit": "거래",
+      "lastHourRate": "분당 {rate}",
+      "lastHourPartial": "{minutes}분만 관측됨, 하한값",
+      "busiestMinute": "범위 내 가장 바쁜 1분: {time}에 {count}"
+    },
+    "charts": {
+      "distribution": {
+        "title": "블록 간 시간",
+        "caption": "최근 블록 {count}개에서 연속된 블록 사이의 대기 시간입니다. Iroha는 거래가 도착할 때만 블록을 커밋하므로, 긴 대기는 느린 합의가 아니라 조용한 시간입니다.",
+        "series": "블록",
+        "range": "대기 시간",
+        "median": "대기 시간 중앙값 {value}"
+      },
+      "perBlock": {
+        "title": "블록당 거래",
+        "caption": "최근 블록 {count}개 각각의 커밋된 거래와 거부된 거래입니다.",
+        "committed": "커밋됨",
+        "rejected": "거부됨",
+        "subset": "읽은 블록 {count}개 중 최근 {shown}개 표시 (#{from}–#{to})."
+      },
+      "throughput": {
+        "title": "시간에 따른 처리량",
+        "caption": "{bucket}당 거래 수이며, 블록 사이는 0으로 채웁니다. 속이 빈 마커는 일부만 관측된 구간을 나타냅니다.",
+        "committed": "커밋됨",
+        "rejected": "거부됨"
+      },
+      "lanes": {
+        "title": "레인 용량",
+        "caption": "각 레인의 최신 슬롯 엔벨로프에서 용량 대비 커밋된 TEU입니다.",
+        "lane": "레인 {id}",
+        "value": "{committed} / {capacity} TEU",
+        "empty": "이 피어는 레인을 보고하지 않습니다."
+      },
+      "blockFill": {
+        "title": "블록 채움",
+        "caption": "볼 수 있는 거래 수에 따른 블록 분포입니다. 블록에는 비공개 데이터스페이스의 거래도 포함될 수 있습니다.",
+        "series": "블록",
+        "bucket": "거래"
+      }
+    },
+    "stats": {
+      "transactions": "거래",
+      "rejectionRate": "거부율",
+      "meanPerBlock": "블록당 평균",
+      "busiest": "가장 바쁜 블록",
+      "span": "기간",
+      "blocks": "블록 읽음",
+      "unreadable": "읽을 수 없는 블록",
+      "unreadableHint": "개수를 알 수 없어 합계에서 제외됨",
+      "medianPerBlock": "중앙값 {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "시간대별 활동",
+        "caption": "현지 시간 기준으로 날짜별 시간당 거래 수입니다. 빗금 친 시간은 읽은 기록 범위 밖입니다.",
+        "value": "거래",
+        "blocks": "블록"
+      },
+      "byHour": {
+        "title": "시간대 프로필",
+        "caption": "읽은 기간 동안 현지 시간 각 시간대의 거래 수입니다.",
+        "series": "거래"
+      },
+      "sample": {
+        "caption": "표시 가능한 최신 거래 {count}건",
+        "size": "거래 {count}건"
+      },
+      "executables": {
+        "title": "실행 형식 구성",
+        "caption": "샘플 거래의 실행 형식별 비율입니다.",
+        "Instructions": "명령",
+        "ContractCall": "계약 호출",
+        "Ivm": "IVM 바이트코드",
+        "IvmProved": "증명된 IVM",
+        "Batch": "배치",
+        "other": "기타"
+      },
+      "outcomes": {
+        "title": "결과",
+        "committed": "커밋됨",
+        "rejected": "거부됨"
+      },
+      "authorities": {
+        "title": "가장 활발한 서명자",
+        "caption": "샘플에서 가장 많은 거래에 서명한 계정입니다.",
+        "empty": "샘플에 거래가 없습니다."
+      },
+      "authoritiesCount": "고유 서명자 수",
+      "latency": {
+        "title": "포함 지연 시간",
+        "caption": "샘플 거래 각각의 생성 시점부터 이를 포함한 블록까지의 시간입니다. 생성 시간은 서명자 자신의 시계를 따릅니다.",
+        "series": "거래",
+        "median": "포함 지연 시간 중앙값",
+        "p95": "95번째 백분위수 {value}",
+        "clockAhead": "거래 {count}건은 생성 시간이 해당 블록보다 늦게 보고되어(서명자 시계가 빠름) 제외되었습니다.",
+        "unmatched": "샘플 거래 {count}건이 블록 범위 밖에 있습니다.",
+        "empty": "아직 블록 범위 안에 드는 샘플 거래가 없습니다."
+      }
+    },
+    "ledger": {
+      "accounts": "계정",
+      "domains": "도메인",
+      "assets": "자산 및 NFT",
+      "nodes": "노드",
+      "domainsByAccounts": {
+        "title": "계정 수별 도메인",
+        "caption": "각 도메인에 등록된 계정 수이며, 상위 {count}개를 표시합니다."
+      },
+      "definitionsByHolders": {
+        "title": "보유자 수별 자산 정의",
+        "caption": "각 자산 정의를 보유한 계정 수이며, 상위 {count}개를 표시합니다."
+      },
+      "mintability": {
+        "title": "발행 가능 여부",
+        "caption": "발행 정책별 자산 정의입니다.",
+        "Infinitely": "발행 가능",
+        "Once": "1회 발행",
+        "Not": "고정 공급",
+        "Limited": "제한 발행",
+        "other": "기타"
+      },
+      "homes": {
+        "title": "자산 등록 위치",
+        "caption": "자산 정의가 등록된 위치입니다.",
+        "domain": "도메인",
+        "dataspace": "데이터스페이스"
+      },
+      "holdings": {
+        "title": "계정당 보유 자산",
+        "caption": "보유한 자산 수에 따른 계정 분포입니다.",
+        "series": "계정",
+        "bucket": "보유 자산 수"
+      },
+      "scan": "{kind} {loaded}개 읽음",
+      "scanIncomplete": "처음 {kind} {loaded}개 읽음, 더 있음",
+      "kinds": {
+        "domains": "도메인",
+        "definitions": "자산 정의",
+        "accounts": "계정"
+      },
+      "countsLive": "원격 측정 스트림의 실시간 합계",
+      "countsStale": "원격 측정 스트림의 마지막 합계, 다시 연결하는 중",
+      "countsUnavailable": "원격 측정 스트림을 사용할 수 없습니다"
+    }
   }
 }
