@@ -1680,9 +1680,9 @@
         "title": "Domains nach Konten",
         "caption": "In jeder Domain registrierte Konten; die Top {count} werden angezeigt."
       },
-      "definitionsByHolders": {
-        "title": "Asset-Definitionen nach Inhabern",
-        "caption": "Konten, die jede Asset-Definition halten; die Top {count} werden angezeigt."
+      "definitionsByBalances": {
+        "title": "Asset-Definitionen nach Salden",
+        "caption": "Für jede Asset-Definition erfasste Salden; ein Konto kann mehrere halten. Die Top {count} werden angezeigt."
       },
       "mintability": {
         "title": "Prägbarkeit",
@@ -1697,7 +1697,8 @@
         "title": "Registrierungsorte der Vermögenswerte",
         "caption": "Wo Asset-Definitionen registriert sind.",
         "domain": "Domain",
-        "dataspace": "Datenraum"
+        "dataspace": "Datenraum",
+        "global": "Global"
       },
       "holdings": {
         "title": "Bestände pro Konto",

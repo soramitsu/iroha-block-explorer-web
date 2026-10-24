@@ -1680,9 +1680,9 @@
         "title": "アカウント数別のドメイン",
         "caption": "各ドメインに登録されたアカウント数。上位 {count} 件を表示。"
       },
-      "definitionsByHolders": {
-        "title": "保有者数別のアセット定義",
-        "caption": "各アセット定義を保有するアカウント数。上位 {count} 件を表示。"
+      "definitionsByBalances": {
+        "title": "残高数別のアセット定義",
+        "caption": "各アセット定義について記録された残高の数。1つのアカウントが複数の残高を持つ場合があります。上位 {count} 件を表示。"
       },
       "mintability": {
         "title": "ミント可否",
@@ -1697,7 +1697,8 @@
         "title": "アセットの登録先",
         "caption": "アセット定義が登録されている場所。",
         "domain": "ドメイン",
-        "dataspace": "データスペース"
+        "dataspace": "データスペース",
+        "global": "グローバル"
       },
       "holdings": {
         "title": "アカウントあたりの保有数",

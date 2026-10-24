@@ -1680,9 +1680,9 @@
         "title": "Dominios por cuentas",
         "caption": "Cuentas registradas en cada dominio; se muestran los {count} primeros."
       },
-      "definitionsByHolders": {
-        "title": "Definiciones de activos por titulares",
-        "caption": "Cuentas que poseen cada definición de activo; se muestran las {count} primeras."
+      "definitionsByBalances": {
+        "title": "Definiciones de activos por saldos",
+        "caption": "Saldos registrados para cada definición de activo; una cuenta puede tener varios. Se muestran las {count} primeras."
       },
       "mintability": {
         "title": "Capacidad de acuñación",
@@ -1697,7 +1697,8 @@
         "title": "Ubicación de los activos",
         "caption": "Dónde están registradas las definiciones de activos.",
         "domain": "Dominio",
-        "dataspace": "Espacio de datos"
+        "dataspace": "Espacio de datos",
+        "global": "Global"
       },
       "holdings": {
         "title": "Tenencias por cuenta",

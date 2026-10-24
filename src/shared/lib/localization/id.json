@@ -1680,9 +1680,9 @@
         "title": "Domain menurut akun",
         "caption": "Akun yang terdaftar di setiap domain; {count} teratas ditampilkan."
       },
-      "definitionsByHolders": {
-        "title": "Definisi aset menurut pemegang",
-        "caption": "Akun yang memegang setiap definisi aset; {count} teratas ditampilkan."
+      "definitionsByBalances": {
+        "title": "Definisi aset menurut saldo",
+        "caption": "Saldo yang tercatat untuk setiap definisi aset; satu akun dapat memiliki beberapa saldo. {count} teratas ditampilkan."
       },
       "mintability": {
         "title": "Kemampuan cetak",
@@ -1697,7 +1697,8 @@
         "title": "Lokasi aset",
         "caption": "Tempat definisi aset didaftarkan.",
         "domain": "Domain",
-        "dataspace": "Ruang data"
+        "dataspace": "Ruang data",
+        "global": "Global"
       },
       "holdings": {
         "title": "Kepemilikan per akun",

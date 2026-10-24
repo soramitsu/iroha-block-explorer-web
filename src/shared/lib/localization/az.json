@@ -1680,9 +1680,9 @@
         "title": "Hesablara görə domenlər",
         "caption": "Hər domendə qeydiyyatdan keçmiş hesablar; ilk {count} göstərilir."
       },
-      "definitionsByHolders": {
-        "title": "Sahiblərə görə aktiv tərifləri",
-        "caption": "Hər aktiv tərifinə sahib olan hesablar; ilk {count} göstərilir."
+      "definitionsByBalances": {
+        "title": "Balanslara görə aktiv tərifləri",
+        "caption": "Hər aktiv tərifi üçün qeydə alınmış balanslar; bir hesabın bir neçə balansı ola bilər. İlk {count} göstərilir."
       },
       "mintability": {
         "title": "Zərb edilə bilmə",
@@ -1697,7 +1697,8 @@
         "title": "Aktivlərin qeydiyyat yeri",
         "caption": "Aktiv təriflərinin qeydiyyatdan keçdiyi yer.",
         "domain": "Domen",
-        "dataspace": "Məlumat məkanı"
+        "dataspace": "Məlumat məkanı",
+        "global": "Qlobal"
       },
       "holdings": {
         "title": "Hesab başına aktivlər",

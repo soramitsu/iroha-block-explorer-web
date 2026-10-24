@@ -1680,9 +1680,9 @@
         "title": "依帳戶數排列的領域",
         "caption": "各領域中註冊的帳戶數；顯示前 {count} 名。"
       },
-      "definitionsByHolders": {
-        "title": "依持有者數排列的資產定義",
-        "caption": "持有各資產定義的帳戶數；顯示前 {count} 名。"
+      "definitionsByBalances": {
+        "title": "依餘額數排列的資產定義",
+        "caption": "各資產定義記錄的餘額數；一個帳戶可持有多筆。顯示前 {count} 名。"
       },
       "mintability": {
         "title": "鑄造性",
@@ -1697,7 +1697,8 @@
         "title": "資產註冊位置",
         "caption": "資產定義註冊的位置。",
         "domain": "領域",
-        "dataspace": "資料空間"
+        "dataspace": "資料空間",
+        "global": "全域"
       },
       "holdings": {
         "title": "每個帳戶的持有量",

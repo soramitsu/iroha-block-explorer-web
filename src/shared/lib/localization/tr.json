@@ -1680,9 +1680,9 @@
         "title": "Hesap sayısına göre alanlar",
         "caption": "Her alanda kayıtlı hesaplar; ilk {count} gösteriliyor."
       },
-      "definitionsByHolders": {
-        "title": "Sahip sayısına göre varlık tanımları",
-        "caption": "Her varlık tanımını tutan hesaplar; ilk {count} gösteriliyor."
+      "definitionsByBalances": {
+        "title": "Bakiye sayısına göre varlık tanımları",
+        "caption": "Her varlık tanımı için kaydedilen bakiyeler; bir hesap birden fazla bakiye tutabilir. İlk {count} gösteriliyor."
       },
       "mintability": {
         "title": "Darp edilebilirlik",
@@ -1697,7 +1697,8 @@
         "title": "Varlıkların kayıt yeri",
         "caption": "Varlık tanımlarının kayıtlı olduğu yer.",
         "domain": "Alan",
-        "dataspace": "Veri alanı"
+        "dataspace": "Veri alanı",
+        "global": "Küresel"
       },
       "holdings": {
         "title": "Hesap başına varlıklar",

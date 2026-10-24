@@ -1680,9 +1680,9 @@
         "title": "계정 수별 도메인",
         "caption": "각 도메인에 등록된 계정 수이며, 상위 {count}개를 표시합니다."
       },
-      "definitionsByHolders": {
-        "title": "보유자 수별 자산 정의",
-        "caption": "각 자산 정의를 보유한 계정 수이며, 상위 {count}개를 표시합니다."
+      "definitionsByBalances": {
+        "title": "잔액 수별 자산 정의",
+        "caption": "각 자산 정의에 기록된 잔액 수이며, 한 계정이 여러 잔액을 가질 수 있습니다. 상위 {count}개를 표시합니다."
       },
       "mintability": {
         "title": "발행 가능 여부",
@@ -1697,7 +1697,8 @@
         "title": "자산 등록 위치",
         "caption": "자산 정의가 등록된 위치입니다.",
         "domain": "도메인",
-        "dataspace": "데이터스페이스"
+        "dataspace": "데이터스페이스",
+        "global": "전역"
       },
       "holdings": {
         "title": "계정당 보유 자산",

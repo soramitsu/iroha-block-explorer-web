@@ -1680,9 +1680,9 @@
         "title": "Domaines par comptes",
         "caption": "Comptes enregistrés dans chaque domaine ; les {count} premiers sont affichés."
       },
-      "definitionsByHolders": {
-        "title": "Définitions d'actifs par détenteurs",
-        "caption": "Comptes détenant chaque définition d'actif ; les {count} premières sont affichées."
+      "definitionsByBalances": {
+        "title": "Définitions d'actifs par soldes",
+        "caption": "Soldes enregistrés pour chaque définition d'actif ; un compte peut en détenir plusieurs. Les {count} premières sont affichées."
       },
       "mintability": {
         "title": "Capacité de frappe",
@@ -1697,7 +1697,8 @@
         "title": "Rattachement des actifs",
         "caption": "Où les définitions d'actifs sont enregistrées.",
         "domain": "Domaine",
-        "dataspace": "Espace de données"
+        "dataspace": "Espace de données",
+        "global": "Global"
       },
       "holdings": {
         "title": "Avoirs par compte",

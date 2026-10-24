@@ -188,6 +188,7 @@ import {
   observedSpans,
   summarizeDistribution,
   summarizeWindow,
+  type SlotCoverage,
 } from '@/shared/lib/chain-analytics';
 import { formatCompactNumber, formatDuration, formatPercent, niceZeroBasedAxis } from '@/shared/lib/chart-scale';
 import { useNow, useThrottleFn } from '@vueuse/core';
@@ -304,7 +305,7 @@ const hourColumns = computed(() =>
   hourOfDayColumns(heatmap.value, (hour) => `${formatHour(hour)}:00`, t('dashboards.chart.partial'))
 );
 const hourCoverages = computed(() =>
-  hourColumns.value.map((column) => (column.values === null ? 'none' : column.partial ? 'partial' : 'full') as const)
+  hourColumns.value.map((column): SlotCoverage => (column.values === null ? 'none' : column.partial ? 'partial' : 'full'))
 );
 /** Keys for the hollow lower-bound mark and the hatch, shown only when a column uses them. */
 const hourLegend = computed(() => [
