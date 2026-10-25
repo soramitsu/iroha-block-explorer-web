@@ -6,7 +6,12 @@ import { advanceHistoryScanCursor, createHistoryScanCursor } from '@/shared/lib/
 
 type PageResult<T> = { status: typeof SUCCESSFUL_FETCHING; data: CollectionPage<T> } | ErrorResponse;
 
-const PAGE_LIMIT = 100;
+/**
+ * Rows per page. The feeds accept up to 100, but on Taira Torii refuses the
+ * continuation of a 100-row accounts page: decoding that query exceeds its
+ * 256 KiB decode limit (HTTP 400 `invalid_query`). 64 rows stay within it.
+ */
+export const BOUNDED_SCAN_PAGE_LIMIT = 64;
 /** Empty continuation pages followed per requested page. */
 const EMPTY_PAGE_ALLOWANCE = 4;
 
@@ -34,7 +39,7 @@ export function useBoundedScan<T>(
     const bound = Math.max(1, Math.floor(toValue(maxItems)));
     let cursor = createHistoryScanCursor();
     let collected: T[] = [];
-    let budget = Math.ceil(bound / PAGE_LIMIT) * (1 + EMPTY_PAGE_ALLOWANCE);
+    let budget = Math.ceil(bound / BOUNDED_SCAN_PAGE_LIMIT) * (1 + EMPTY_PAGE_ALLOWANCE);
     let exhausted = false;
     if (!background) {
       isLoading.value = true;
@@ -45,7 +50,10 @@ export function useBoundedScan<T>(
     try {
       while (budget > 0) {
         budget -= 1;
-        const result = await fetchPage({ limit: Math.min(PAGE_LIMIT, bound - collected.length), cursor: cursor.nextCursor });
+        const result = await fetchPage({
+          limit: Math.min(BOUNDED_SCAN_PAGE_LIMIT, bound - collected.length),
+          cursor: cursor.nextCursor,
+        });
         if (current !== generation) return;
         if (result.status !== SUCCESSFUL_FETCHING) {
           throw 'error' in result ? result.error : new Error(`Collection page request failed: ${result.status}`);

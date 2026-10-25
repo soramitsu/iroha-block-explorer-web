@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { effectScope, nextTick, ref } from 'vue';
 import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
-import { useBoundedScan } from './useBoundedScan';
+import { BOUNDED_SCAN_PAGE_LIMIT as PAGE, useBoundedScan } from './useBoundedScan';
 
 function feed(total: number) {
   return vi.fn(async ({ limit, cursor }: { limit?: number, cursor?: string | null }) => {
@@ -62,10 +62,10 @@ describe('useBoundedScan', () => {
 
   it('stops at the bound and says rows remain', async () => {
     const fetchPage = feed(1000);
-    const scan = scope.run(() => useBoundedScan(fetchPage, 250))!;
+    const scan = scope.run(() => useBoundedScan(fetchPage, 2 * PAGE + 50))!;
     await settle();
-    expect(fetchPage.mock.calls.map((call) => call[0].limit)).toEqual([100, 100, 50]);
-    expect(scan.items.value).toHaveLength(250);
+    expect(fetchPage.mock.calls.map((call) => call[0].limit)).toEqual([PAGE, PAGE, 50]);
+    expect(scan.items.value).toHaveLength(2 * PAGE + 50);
     expect(scan.complete.value).toBe(false);
     expect(scan.truncated.value).toBe(true);
   });
@@ -95,7 +95,7 @@ describe('useBoundedScan', () => {
 
   it('refreshes in the background and swaps rows in only when the new scan finishes', async () => {
     const source = heldFeed(1000);
-    const scan = scope.run(() => useBoundedScan(source.fetchPage, 150))!;
+    const scan = scope.run(() => useBoundedScan(source.fetchPage, PAGE + 50))!;
     await settle();
     const before = scan.items.value;
 
@@ -109,7 +109,7 @@ describe('useBoundedScan', () => {
     expect(scan.isLoading.value).toBe(false);
     source.release();
     await refreshed;
-    expect(scan.items.value).toHaveLength(150);
+    expect(scan.items.value).toHaveLength(PAGE + 50);
     expect(scan.items.value[0]).toBe('new-row-0');
     expect(scan.truncated.value).toBe(true);
   });
