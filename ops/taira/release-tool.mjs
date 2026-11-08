@@ -31,7 +31,6 @@ import {
 import { homedir, tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { NetworkId } from '@iroha/iroha-js';
 
 import { checkIrohaPinFiles } from '../../scripts/check-iroha-pin.mjs';
 import { formatBundleBudgetReport, runBundleBudgetCheck } from '../../scripts/check-bundle-budget.mjs';
@@ -529,11 +528,8 @@ export function validateTairaRuntimeConfig(config) {
   if (config.networkId === undefined) {
     throw new Error('networkId is required for the Taira release');
   }
-  try {
-    NetworkId.parse(config.networkId);
-  } catch (error) {
-    throw new Error('networkId must be an exact canonical checksummed genesis-derived NetworkId', { cause: error });
-  }
+  // This release accepts one reviewed canonical literal. Exact equality also rejects
+  // malformed identities without loading package code before provenance verification.
   if (config.networkId !== TAIRA_NETWORK_ID) {
     throw new Error(`networkId must match the reviewed Taira genesis identity ${TAIRA_NETWORK_ID}`);
   }

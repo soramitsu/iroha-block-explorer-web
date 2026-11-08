@@ -3,19 +3,50 @@
     :pressed="isDark"
     class="app-theme-switcher"
     :aria-label="$t('accessibility.themeSwitcher')"
+    :aria-pressed="isDark"
     bordered
     rounded
     @click="toggleTheme"
   >
-    <DarkModeIcon
+    <svg
+      v-if="isDark"
+      data-theme-icon="dark"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
       aria-hidden="true"
       focusable="false"
-    />
+    >
+      <path d="M19 15.8A8 8 0 0 1 8.2 5a8 8 0 1 0 10.8 10.8Z" />
+      <path d="m17 2 .8 2.2L20 5l-2.2.8L17 8l-.8-2.2L14 5l2.2-.8L17 2Z" />
+      <path d="M21 9v3m-1.5-1.5h3" />
+    </svg>
+    <svg
+      v-else
+      data-theme-icon="light"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="4"
+      />
+      <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
   </BaseButton>
 </template>
 
 <script setup lang="ts">
-import DarkModeIcon from '@/shared/ui/icons/dark-mode.svg';
 import { useDark } from '@vueuse/core';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 
@@ -48,9 +79,19 @@ body.theme-transition * {
 }
 
 .app-theme-switcher {
+  min-width: 44px;
+  min-height: 44px;
+
   svg {
-    width: size(2);
-    height: size(2);
+    display: block;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.theme-transition * {
+    transition-duration: 0ms !important;
   }
 }
 

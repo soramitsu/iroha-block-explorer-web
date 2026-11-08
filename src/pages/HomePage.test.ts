@@ -5,18 +5,21 @@ import { toExplorerScopeQuery } from '@/shared/lib/explorer-scope';
 import HomePage from './HomePage.vue';
 vi.mock('@/shared/api', () => ({ getToriiBaseUrl: () => 'https://torii.example', isToriiBaseUrlForced: () => false }));
 describe('HomePage', () => {
-  it('leads with the active node, real metrics and recent activity without sample destinations', () => {
+  it('restores the branded landing with hero search, visible navigation and real activity', () => {
     const wrapper = mount(HomePage, { global: {
       mocks: { $t: (key: string) => key },
-      stubs: { HomePageInfo: true, LatestBlocks: true, LatestTransactions: true },
+      stubs: { HomePageInfo: true, LatestBlocks: true, LatestTransactions: true, SearchField: true, NavigationMenu: true },
     } });
-    expect(wrapper.get('h1').text()).toBe('ux.overview');
+    expect(wrapper.findAll('h1 strong').map((line) => line.text())).toEqual(['homePage.title.firstLine', 'homePage.title.secondLine']);
+    expect(wrapper.find('.home-page__logo-icon').exists()).toBe(true);
+    expect(wrapper.find('.home-page__background-logo').exists()).toBe(true);
+    expect(wrapper.get('search-field-stub').attributes('size')).toBe('lg');
+    expect(wrapper.get('navigation-menu-stub').attributes('layout')).toBe('inline');
     expect(wrapper.text()).toContain('https://torii.example');
     expect(wrapper.find('home-page-info-stub').exists()).toBe(true);
     expect(wrapper.find('latest-blocks-stub').exists()).toBe(true);
     expect(wrapper.find('latest-transactions-stub').exists()).toBe(true);
     expect(wrapper.find('.home-page__search-tag').exists()).toBe(false);
-    expect(wrapper.find('nav').exists()).toBe(false);
     expect(wrapper.find('.home-page__scope').exists()).toBe(false);
   });
 
@@ -27,7 +30,7 @@ describe('HomePage', () => {
     const wrapper = mount(HomePage, { global: {
       plugins: [router],
       mocks: { $t: (key: string, params?: { lane: string; dataspace: string }) => key === 'scopedExplorer.dataspaceContext' ? `Dataspace ${params?.dataspace} on lane ${params?.lane}` : key },
-      stubs: { HomePageInfo: true, LatestBlocks: true, LatestTransactions: true },
+      stubs: { HomePageInfo: true, LatestBlocks: true, LatestTransactions: true, SearchField: true, NavigationMenu: true },
     } });
     expect(wrapper.get('.home-page__scope').text()).toBe('Dataspace 42 on lane 7');
     await router.push({ name: 'home', query: {} });

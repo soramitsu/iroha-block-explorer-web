@@ -1,6 +1,7 @@
 <template>
   <nav
     class="navigation-menu"
+    :class="{ 'navigation-menu--inline': layout === 'inline' }"
     :aria-label="$t('ux.navigation')"
   >
     <section
@@ -8,26 +9,10 @@
       :key="group.id"
       class="navigation-menu__group"
     >
-      <div
-        v-if="group.id === 'explore'"
-        class="navigation-menu__label"
-      >
+      <h2 class="navigation-menu__label">
         {{ $t(group.i18nKey) }}
-      </div>
-      <button
-        v-else
-        type="button"
-        class="navigation-menu__label navigation-menu__toggle"
-        :aria-expanded="expanded.includes(group.id)"
-        :aria-controls="`${id}-${group.id}`"
-        @click="toggle(group.id)"
-      >
-        {{ $t(group.i18nKey) }}<span aria-hidden="true">{{ expanded.includes(group.id) ? '−' : '+' }}</span>
-      </button>
-      <ul
-        v-show="group.id === 'explore' || expanded.includes(group.id)"
-        :id="`${id}-${group.id}`"
-      >
+      </h2>
+      <ul>
         <li
           v-for="item in group.items"
           :key="item.to"
@@ -46,24 +31,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, useId, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { navigationGroups } from '@/shared/config';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 
 const route = useRoute();
-const id = useId();
-const expanded = ref<string[]>([]);
-watch(() => route.name, (name) => {
-  const group = navigationGroups.find((entry) => entry.items.some((item) => item.names.includes(String(name))));
-  if (group && !expanded.value.includes(group.id)) expanded.value.push(group.id);
-}, { immediate: true });
-
-function toggle(group: string) {
-  expanded.value = expanded.value.includes(group)
-    ? expanded.value.filter((entry) => entry !== group)
-    : [...expanded.value, group];
-}
+withDefaults(defineProps<{ layout?: 'sidebar' | 'inline' }>(), { layout: 'sidebar' });
 </script>
 
 <style lang="scss">
@@ -79,7 +52,6 @@ function toggle(group: string) {
     font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
     color: theme-color('content-secondary'); text-transform: uppercase;
   }
-  &__toggle { border: 0; background: transparent; cursor: pointer; }
   .base-link {
     display: flex; align-items: center; min-height: 44px; padding: 10px 12px;
     border-radius: 8px; color: theme-color('content-secondary');
@@ -88,6 +60,13 @@ function toggle(group: string) {
   }
   .base-link.navigation-menu__active {
     color: theme-color('primary'); background: theme-color('primary-background'); font-weight: 600;
+  }
+  &--inline {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 8px; min-width: 0;
+    .navigation-menu__group, ul { display: contents; }
+    .navigation-menu__label { display: none; }
+    li { min-width: 0; max-width: 100%; }
+    .base-link { justify-content: center; text-align: center; overflow-wrap: anywhere; }
   }
 }
 </style>

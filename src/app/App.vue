@@ -9,11 +9,11 @@
       id="main-content"
       ref="mainContent"
       class="app__main"
-      :class="{ 'app__main--full-bleed': isFullBleedRoute }"
+      :class="{ 'app__main--full-bleed': isFullBleedRoute, 'app__main--home': isHomeRoute }"
       tabindex="-1"
     >
       <RouterView
-        v-if="isFullBleedRoute"
+        v-if="isFullBleedRoute || isHomeRoute"
         :key="routerViewKey"
       />
       <BasePageLayout v-else>
@@ -60,6 +60,7 @@ const routerViewKey = computed(() => {
   return JSON.stringify([getToriiBaseUrl(), scope?.dataspaceLaneId, scope?.dataspaceId]);
 });
 const isFullBleedRoute = computed(() => route.name === 'kotodama-studio');
+const isHomeRoute = computed(() => route.name === 'home');
 </script>
 
 <style lang="scss">
@@ -118,7 +119,7 @@ html[lang='ur'] body {
 
   &__main {
     min-width: 0;
-    @media (min-width: 1200px) { margin-inline-start: 240px; }
+    @media (min-width: 1200px) { &:not(.app__main--home) { margin-inline-start: 240px; } }
   }
 
   &__main:focus {

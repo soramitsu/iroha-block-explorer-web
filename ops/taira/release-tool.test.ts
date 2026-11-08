@@ -480,6 +480,41 @@ describe('release manifest', () => {
 });
 
 describe('operator safety gates', () => {
+  it('loads from source without installed packages and still rejects an unattested direct invocation', () => {
+    const root = realpathSync(mkdtempSync(path.join(realpathSync('/tmp'), 'taira-source-only-')));
+    temporaryDirectories.push(root);
+    chmodSync(root, 0o700);
+    const repositoryRoot = path.resolve(import.meta.dirname, '../..');
+    for (const file of [
+      'ops/taira/release-tool.mjs',
+      'scripts/check-iroha-pin.mjs',
+      'scripts/check-bundle-budget.mjs',
+      'scripts/run-exact-toolchain.mjs',
+      'scripts/check-node-version.mjs',
+    ]) {
+      const destination = path.join(root, file);
+      mkdirSync(path.dirname(destination), { recursive: true });
+      cpSync(path.join(repositoryRoot, file), destination);
+    }
+    const environment = { PATH: '/usr/bin:/bin:/usr/sbin:/sbin', TMPDIR: root };
+    const loaded = spawnSync(process.execPath, ['--input-type=module', '--eval', `
+      import assert from 'node:assert/strict';
+      import { TAIRA_NETWORK_ID, validateTairaRuntimeConfig } from './ops/taira/release-tool.mjs';
+      const config = { networkId: TAIRA_NETWORK_ID, toriiBaseUrl: 'https://taira.sora.org', toriiForceBaseUrl: true };
+      assert.equal(validateTairaRuntimeConfig(config), config);
+      process.stdout.write('source-only release tool loaded');
+    `], { cwd: root, env: environment, encoding: 'utf8', timeout: 10_000 });
+    expect(loaded.status, loaded.stderr).toBe(0);
+    expect(loaded.stdout).toBe('source-only release tool loaded');
+    expect(existsSync(path.join(root, 'node_modules'))).toBe(false);
+    const direct = spawnSync(process.execPath, ['ops/taira/release-tool.mjs', 'verify'], {
+      cwd: root, env: environment, encoding: 'utf8', timeout: 10_000,
+    });
+    expect(direct.status).not.toBe(0);
+    expect(direct.stderr).toContain('The Taira release CLI must be invoked through ops/taira/deploy-explorer.sh');
+    expect(direct.stderr).not.toContain('ERR_MODULE_NOT_FOUND');
+  });
+
   it('keeps build and publication inseparable inside the exact Taira profile', () => {
     const script = readFileSync(path.resolve('ops/taira/deploy-explorer.sh'), 'utf8');
     expect(script).not.toContain('preflight');
@@ -767,7 +802,7 @@ describe('operator safety gates', () => {
           networkId: 'taira',
         })
       )
-    ).toThrow('exact canonical checksummed genesis-derived NetworkId');
+    ).toThrow('must match the reviewed Taira genesis identity');
     expect(() =>
       validateTairaRuntimeConfig(
         tairaRuntimeConfig({
@@ -831,6 +866,29 @@ describe('operator safety gates', () => {
     await installTairaRuntimeConfig({ configPath: operatorConfig, distDir: testFixture.nextDist });
     expect(JSON.parse(readFileSync(path.join(testFixture.nextDist, 'config.json'), 'utf8'))).toEqual(
       JSON.parse(readFileSync(operatorConfig, 'utf8'))
+    );
+  });
+
+  it('accepts the exact reviewed NetworkId without normalizing the operator config', () => {
+    const config = tairaRuntimeConfig();
+    expect(validateTairaRuntimeConfig(config)).toBe(config);
+    expect(config.networkId).toBe(TAIRA_NETWORK_ID);
+  });
+
+  it.each([
+    ['another canonical network', 'hash:32C903E5B3497E34C2B844EBFE8A39C19E6CF8F95D44C1FFB8BA9DCB42F91149#A2F0'],
+    ['an alias', 'taira'],
+    ['lowercase presentation', TAIRA_NETWORK_ID.toLowerCase()],
+    ['incorrect checksum', TAIRA_NETWORK_ID.replace('#3E94', '#0000')],
+    ['surrounding whitespace', ` ${TAIRA_NETWORK_ID} `],
+    ['null', null],
+    ['a boolean', false],
+    ['a number', 1],
+    ['an array', [TAIRA_NETWORK_ID]],
+    ['an object', { networkId: TAIRA_NETWORK_ID }],
+  ])('rejects %s as the Taira network identity', (_label, networkId) => {
+    expect(() => validateTairaRuntimeConfig(tairaRuntimeConfig({ networkId }))).toThrow(
+      `networkId must match the reviewed Taira genesis identity ${TAIRA_NETWORK_ID}`
     );
   });
 

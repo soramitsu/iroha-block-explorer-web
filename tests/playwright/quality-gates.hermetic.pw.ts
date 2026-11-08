@@ -171,7 +171,7 @@ test.describe('hermetic Explorer quality gates', () => {
     await installHermeticApi(page, exactSearchResolver);
     await page.goto('/');
 
-    const search = page.locator('.app-header__search input[type="search"]');
+    const search = page.getByRole('searchbox', { name: 'Search blockchain' });
     await search.fill(`0x${HASH.toUpperCase()}`);
     await search.press('Enter');
 

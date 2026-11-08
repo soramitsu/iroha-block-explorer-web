@@ -110,6 +110,9 @@ The wrapper is the only supported release CLI entry point. Its absolute `/bin/sh
 canonicalizes `TAIRA_EXPLORER_ROOT`, and strips shell and Node preload variables. The shell-first
 bootstrap rehashes and freshly extracts the exact official Node archive, then enters the dedicated
 `taira-release` exact-toolchain profile; an operator cannot select the profile's executable or module.
+The release entry point loads from repository source without installed packages. Its Taira network
+identity check compares the operator value directly with the single reviewed canonical literal;
+it does not import SDK code before source provenance checks and the isolated dependency installation.
 That profile forwards only the documented common inputs plus the minimum command-specific Taira
 inputs, invokes the canonical release tool with the absolute verified Node executable, and supplies a
 mode-`0600`, one-use attestation bound to the extracted Node path and digest, release-tool path and
