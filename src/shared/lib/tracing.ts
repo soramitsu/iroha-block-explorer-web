@@ -1,229 +1,280 @@
 import { z } from 'zod/v4';
 import type { Instruction, TransactionStatus } from '@/shared/api/schemas';
-import { AccountIdSchema, AssetDefinitionIdSchema, AssetIdSchema, NftIdSchema } from '@/shared/api/schemas';
-import { normalizeAccountIdLiteral } from './account-literal';
-import { parseAssetIdLiteral } from './asset-definition-literal';
-import { normalizeDomainIdLiteral } from './rwa-id';
+import { isEncodedAssetLiteral, normalizeToriiAccountSelectorLiteral } from './account-literal';
+import { HistoryScanCursorSchema, type HistoryScanCursor } from './history-scan';
 
 export type TraceSeedType = 'account' | 'transaction';
 
 export interface TraceSeed {
-  type: TraceSeedType;
-  value: string;
+  type: TraceSeedType
+  value: string
 }
 
 export interface ManualLabel {
-  tag: string;
-  risky: boolean;
+  tag: string
+  risky: boolean
 }
 
 export interface RiskSignals {
-  score: number;
-  flags: string[];
+  score: number
+  flags: string[]
 }
 
 export interface TraceNode {
-  id: string;
-  depth: number;
-  inDegree: number;
-  outDegree: number;
-  eventCount: number;
-  firstSeenMs: number | null;
-  lastSeenMs: number | null;
-  minGapMs: number | null;
-  risk: RiskSignals;
-  manualLabel: ManualLabel | null;
+  id: string
+  depth: number
+  inDegree: number
+  outDegree: number
+  eventCount: number
+  firstSeenMs: number | null
+  lastSeenMs: number | null
+  minGapMs: number | null
+  risk: RiskSignals
+  manualLabel: ManualLabel | null
 }
 
 export interface TraceEdge {
-  id: string;
-  source: string;
-  target: string;
-  count: number;
-  variants: string[];
-  assetIds: string[];
-  latestSeenMs: number;
+  id: string
+  source: string
+  target: string
+  count: number
+  variants: string[]
+  assetIds: string[]
+  latestSeenMs: number
 }
 
 export interface TraceEvent {
-  id: string;
-  source: string;
-  target: string;
-  variant: string;
-  assetId: string | null;
-  authority: string;
-  transactionHash: string;
-  instructionIndex: number;
-  transactionStatus: TransactionStatus;
-  block: number;
-  createdAtMs: number;
+  id: string
+  source: string
+  target: string
+  variant: string
+  assetId: string | null
+  authority: string
+  transactionHash: string
+  instructionIndex: number
+  transactionStatus: TransactionStatus
+  block: number
+  createdAtMs: number
 }
 
-export interface TraceCursor {
-  accountId: string;
-  depth: number;
-  block: number;
-  cursor: string | null;
-  visitedCursors: string[];
-  exhausted: boolean;
+export interface TraceCursor extends HistoryScanCursor {
+  accountId: string
+  depth: number
+  exhausted: boolean
 }
 
 export interface TraceNodePosition {
-  x: number;
-  y: number;
+  x: number
+  y: number
 }
 
 export interface TraceBundle {
-  format: 'iroha-trace-bundle';
-  version: 2;
-  exported_at: string;
-  torii_base_url: string;
-  seed: TraceSeed;
+  format: 'iroha-trace-bundle'
+  version: 1
+  exported_at: string
+  torii_base_url: string
+  seed: TraceSeed
   filters: {
-    committed_only: boolean;
-    transfer_variants: 'all';
-  };
+    committed_only: boolean
+    transfer_variants: 'all'
+  }
   graph: {
-    nodes: TraceNode[];
-    edges: TraceEdge[];
-    events: TraceEvent[];
-  };
-  cursors: TraceCursor[];
-  labels: Record<string, ManualLabel>;
+    nodes: TraceNode[]
+    edges: TraceEdge[]
+    events: TraceEvent[]
+  }
+  cursors: TraceCursor[]
+  labels: Record<string, ManualLabel>
   csv: {
-    nodes: string;
-    edges: string;
-    events: string;
-  };
+    nodes: string
+    edges: string
+    events: string
+  }
 }
 
 export interface ParsedTransferEdge {
-  source: string;
-  target: string;
-  variant: string;
-  assetId: string | null;
+  source: string
+  target: string
+  variant: string
+  assetId: string | null
 }
 
 function asRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
-const CanonicalQuantityStringSchema = z
-  .string()
-  .max(155)
-  .regex(/^(?:0|[1-9]\d*)(?:\.\d{0,27}[1-9])?$/u);
-const DomainIdSchema = z.string().refine((value) => normalizeDomainIdLiteral(value) === value);
-const AccountOwnedTransferValueSchema = z
-  .object({
-    source: AccountIdSchema,
-    object: z.string().min(1),
-    destination: AccountIdSchema,
-  })
-  .strict();
-const AssetTransferValueSchema = z
-  .object({
-    source: AssetIdSchema,
-    object: CanonicalQuantityStringSchema,
-    destination: AccountIdSchema,
-  })
-  .strict();
-const AssetBatchModeSchema = z
-  .object({
-    mode: z.enum(['Atomic', 'Independent']),
-    value: z.null(),
-  })
-  .strict();
-const AssetBatchTransferValueSchema = z
-  .object({
-    mode: AssetBatchModeSchema,
-    entries: z.array(
-      z
-        .object({
-          leg_id: z.string(),
-          from: AccountIdSchema,
-          to: AccountIdSchema,
-          asset_definition: AssetDefinitionIdSchema,
-          amount: CanonicalQuantityStringSchema,
-        })
-        .strict()
-    ),
-  })
-  .strict();
-const TransferPayloadSchema = z.discriminatedUnion('variant', [
-  z
-    .object({
-      variant: z.literal('Domain'),
-      value: AccountOwnedTransferValueSchema.extend({ object: DomainIdSchema }).strict(),
-    })
-    .strict(),
-  z
-    .object({
-      variant: z.literal('AssetDefinition'),
-      value: AccountOwnedTransferValueSchema.extend({ object: AssetDefinitionIdSchema }).strict(),
-    })
-    .strict(),
-  z
-    .object({
-      variant: z.literal('Asset'),
-      value: AssetTransferValueSchema,
-    })
-    .strict(),
-  z
-    .object({
-      variant: z.literal('Nft'),
-      value: AccountOwnedTransferValueSchema.extend({ object: NftIdSchema }).strict(),
-    })
-    .strict(),
-  z
-    .object({
-      variant: z.literal('AssetBatch'),
-      value: AssetBatchTransferValueSchema,
-    })
-    .strict(),
-]);
-
-export function parseAccountFromAssetLiteral(raw: string): string | null {
-  return normalizeAccountIdLiteral(raw) ?? parseAssetIdLiteral(raw)?.accountId ?? null;
+function normalizeWhitespace(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
 }
 
-export function extractTransferEdgesFromPayload(payload: unknown): ParsedTransferEdge[] {
-  const parsed = TransferPayloadSchema.safeParse(payload);
-  if (!parsed.success) return [];
+export function parseAccountFromAssetLiteral(raw: string): string | null {
+  const trimmed = normalizeWhitespace(raw);
+  if (!trimmed) return null;
+  if (!trimmed.includes('#')) {
+    if (/^norito:/i.test(trimmed)) return null;
+    return normalizeToriiAccountSelectorLiteral(trimmed);
+  }
+  const parts = trimmed.split('#');
+  for (let idx = parts.length - 1; idx >= 0; idx -= 1) {
+    const part = parts[idx]?.trim();
+    if (!part) continue;
+    const normalized = normalizeToriiAccountSelectorLiteral(part);
+    if (normalized) return normalized;
+  }
+  return null;
+}
 
-  if (parsed.data.variant === 'Asset') {
-    const sourceAsset = parseAssetIdLiteral(parsed.data.value.source);
-    if (!sourceAsset) return [];
-    return [
-      {
-        source: sourceAsset.accountId,
-        target: parsed.data.value.destination,
-        variant: parsed.data.variant,
-        assetId: sourceAsset.literal,
-      },
-    ];
+function normalizeAccountObjectId(raw: Record<string, unknown>): string | null {
+  if (typeof raw.id !== 'string') return null;
+
+  const trimmed = normalizeWhitespace(raw.id);
+  if (!trimmed) return null;
+  if (!/^norito:/i.test(trimmed)) return normalizeToriiAccountSelectorLiteral(trimmed);
+
+  const markers = [raw.type, raw.kind, raw.object_type, raw.entity].filter((value): value is string => typeof value === 'string');
+  if (markers.some((marker) => marker.toLowerCase().includes('account'))) {
+    return normalizeToriiAccountSelectorLiteral(trimmed);
   }
 
-  if (parsed.data.variant === 'AssetBatch') {
-    return parsed.data.value.entries.map((entry) => ({
-      source: entry.from,
-      target: entry.to,
-      variant: parsed.data.variant,
-      assetId: entry.asset_definition,
-    }));
+  return null;
+}
+
+export function normalizeAccountLiteral(raw: unknown): string | null {
+  if (typeof raw === 'string') {
+    const trimmed = normalizeWhitespace(raw);
+    if (!trimmed) return null;
+    const normalized = normalizeToriiAccountSelectorLiteral(trimmed);
+    if (normalized) return normalized;
+    if (trimmed.includes('#')) {
+      const fromAssetLiteral = parseAccountFromAssetLiteral(trimmed);
+      if (fromAssetLiteral) return fromAssetLiteral;
+    }
+    return null;
+  }
+  if (!asRecord(raw)) return null;
+
+  if (typeof raw.account_id === 'string') return normalizeAccountLiteral(raw.account_id);
+  if (typeof raw.account === 'string') return normalizeAccountLiteral(raw.account);
+  if (typeof raw.owner === 'string') return normalizeAccountLiteral(raw.owner);
+  return normalizeAccountObjectId(raw);
+}
+
+function extractAssetIdHint(payload: Record<string, unknown>): string | null {
+  const direct = readTrimmedString(payload, ['asset_id', 'asset', 'asset_definition', 'definition_id']);
+  if (direct) return direct;
+
+  const objectValue = readTrimmedString(payload, ['object']);
+  if (objectValue && (objectValue.includes('#') || isEncodedAssetLiteral(objectValue))) {
+    return objectValue;
   }
 
-  return [
-    {
-      source: parsed.data.value.source,
-      target: parsed.data.value.destination,
-      variant: parsed.data.variant,
-      assetId: null,
-    },
-  ];
+  const sourceValue = readTrimmedString(payload, ['source', 'from']);
+  if (sourceValue && sourceValue.includes('#')) return sourceValue;
+
+  return readNestedRecordId(payload, ['asset', 'object']);
+}
+
+function readTrimmedString(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function readNestedRecordId(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (!asRecord(value) || typeof value.id !== 'string' || !value.id.trim()) continue;
+    return value.id.trim();
+  }
+  return null;
+}
+
+function readAccountPair(payload: Record<string, unknown>): { source: string | null, target: string | null } {
+  const source = normalizeAccountLiteral(payload.source ?? payload.from ?? payload.sender ?? payload.owner);
+  const target = normalizeAccountLiteral(
+    payload.destination ?? payload.to ?? payload.receiver ?? payload.account ?? payload.recipient
+  );
+  return { source, target };
+}
+
+function collectBatchEntries(
+  payload: Record<string, unknown>,
+  variant: string,
+  out: ParsedTransferEdge[]
+) {
+  if (!Array.isArray(payload.entries)) return;
+  for (const entry of payload.entries) {
+    if (!asRecord(entry)) continue;
+    const { source, target } = readAccountPair(entry);
+    if (!source || !target) continue;
+    out.push({
+      source,
+      target,
+      variant,
+      assetId: extractAssetIdHint(entry),
+    });
+  }
+}
+
+export function extractTransferEdgesFromPayload(
+  payload: unknown,
+  options?: { authority?: string, fallbackVariant?: string }
+): ParsedTransferEdge[] {
+  const edges: ParsedTransferEdge[] = [];
+  const dedupe = new Set<string>();
+
+  const visit = (value: unknown, variantHint: string) => {
+    if (!asRecord(value)) return;
+
+    const variant = typeof value.variant === 'string' && value.variant.trim()
+      ? value.variant.trim()
+      : variantHint;
+    const normalizedVariant = variant || options?.fallbackVariant || 'Transfer';
+
+    collectBatchEntries(value, normalizedVariant, edges);
+
+    const pair = readAccountPair(value);
+    const source = pair.source ?? normalizeAccountLiteral(options?.authority ?? null);
+    const target = pair.target;
+    if (source && target) {
+      edges.push({
+        source,
+        target,
+        variant: normalizedVariant,
+        assetId: extractAssetIdHint(value),
+      });
+    }
+
+    if (asRecord(value.value)) {
+      visit(value.value, normalizedVariant);
+    }
+    if (asRecord(value.payload)) {
+      visit(value.payload, normalizedVariant);
+    }
+    if (asRecord(value.object)) {
+      visit(value.object, normalizedVariant);
+    }
+  };
+
+  visit(payload, options?.fallbackVariant ?? 'Transfer');
+
+  const unique: ParsedTransferEdge[] = [];
+  for (const edge of edges) {
+    const key = `${edge.source}|${edge.target}|${edge.variant}|${edge.assetId ?? ''}`;
+    if (dedupe.has(key)) continue;
+    dedupe.add(key);
+    unique.push(edge);
+  }
+  return unique;
 }
 
 export function extractTransferEdgesFromInstruction(instruction: Instruction): ParsedTransferEdge[] {
-  return extractTransferEdgesFromPayload(instruction.box.json.payload);
+  return extractTransferEdgesFromPayload(instruction.box.json?.payload, {
+    authority: instruction.authority,
+    fallbackVariant: instruction.kind,
+  });
 }
 
 export function instructionToTraceEvents(instruction: Instruction): TraceEvent[] {
@@ -315,7 +366,7 @@ export function findShortestPath(source: string, target: string, edges: readonly
     adjacency.set(edge.source, list);
   }
   const visited = new Set<string>([source]);
-  const queue: Array<{ id: string; path: string[] }> = [{ id: source, path: [source] }];
+  const queue: Array<{ id: string, path: string[] }> = [{ id: source, path: [source] }];
   while (queue.length > 0) {
     const current = queue.shift();
     if (!current) break;
@@ -347,7 +398,7 @@ export function buildTraceCsv(
   nodes: readonly TraceNode[],
   edges: readonly TraceEdge[],
   events: readonly TraceEvent[]
-): { nodes: string; edges: string; events: string } {
+): { nodes: string, edges: string, events: string } {
   const nodesCsv = toCsv(
     ['id', 'depth', 'in_degree', 'out_degree', 'event_count', 'risk_score', 'risk_flags', 'manual_label'],
     nodes.map((node) => ({
@@ -418,7 +469,7 @@ const RiskSignalsSchema = z.object({
 });
 
 const TraceNodeSchema: z.ZodType<TraceNode> = z.object({
-  id: z.string().refine((value) => normalizeAccountIdLiteral(value) === value),
+  id: z.string(),
   depth: z.number(),
   inDegree: z.number(),
   outDegree: z.number(),
@@ -432,8 +483,8 @@ const TraceNodeSchema: z.ZodType<TraceNode> = z.object({
 
 const TraceEdgeSchema: z.ZodType<TraceEdge> = z.object({
   id: z.string(),
-  source: z.string().refine((value) => normalizeAccountIdLiteral(value) === value),
-  target: z.string().refine((value) => normalizeAccountIdLiteral(value) === value),
+  source: z.string(),
+  target: z.string(),
   count: z.number(),
   variants: z.string().array(),
   assetIds: z.string().array(),
@@ -442,38 +493,32 @@ const TraceEdgeSchema: z.ZodType<TraceEdge> = z.object({
 
 const TraceEventSchema: z.ZodType<TraceEvent> = z.object({
   id: z.string(),
-  source: z.string().refine((value) => normalizeAccountIdLiteral(value) === value),
-  target: z.string().refine((value) => normalizeAccountIdLiteral(value) === value),
+  source: z.string(),
+  target: z.string(),
   variant: z.string(),
   assetId: z.string().nullable(),
-  authority: z.string().refine((value) => normalizeAccountIdLiteral(value) === value),
-  transactionHash: z.string().regex(/^[0-9a-f]{64}$/u),
+  authority: z.string(),
+  transactionHash: z.string(),
   instructionIndex: z.number(),
   transactionStatus: z.enum(['Committed', 'Rejected']),
   block: z.number(),
   createdAtMs: z.number(),
 });
 
-const TraceCursorSchema: z.ZodType<TraceCursor> = z.object({
-  accountId: z.string().refine((value) => normalizeAccountIdLiteral(value) === value),
+const TraceCursorSchema: z.ZodType<TraceCursor> = HistoryScanCursorSchema.extend({
+  accountId: z.string(),
   depth: z.number(),
-  block: z.number(),
-  cursor: z.string().nullable(),
-  visitedCursors: z.string().array(),
   exhausted: z.boolean(),
 });
 
-const TraceSeedSchema: z.ZodType<TraceSeed> = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('account'),
-    value: z.string().refine((value) => normalizeAccountIdLiteral(value) === value),
-  }),
-  z.object({ type: z.literal('transaction'), value: z.string().regex(/^[0-9a-f]{64}$/u) }),
-]);
+const TraceSeedSchema: z.ZodType<TraceSeed> = z.object({
+  type: z.enum(['account', 'transaction']),
+  value: z.string(),
+});
 
 const TraceBundleSchema: z.ZodType<TraceBundle> = z.object({
   format: z.literal('iroha-trace-bundle'),
-  version: z.literal(2),
+  version: z.literal(1),
   exported_at: z.string(),
   torii_base_url: z.string(),
   seed: TraceSeedSchema,

@@ -3,6 +3,7 @@
     <BaseLink
       v-if="displayLink"
       :to="displayLink"
+      :title="displayHash"
       monospace
     >
       <span v-if="content.t === 'two-line'">{{ content.first }}<br>{{ content.second }}</span>

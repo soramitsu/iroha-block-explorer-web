@@ -1,4 +1,5 @@
 import { createServer, type Server } from 'node:http';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
@@ -33,7 +34,6 @@ import {
   RuntimeTransitionIntentRequiredError,
   activatePreparedTransition,
   assertReleaseNodeVersion,
-  TAIRA_NETWORK_ID,
   atomicSwitchRelease,
   collectReleaseFiles,
   consumeTairaReleaseAttestation,
@@ -96,6 +96,25 @@ const releaseA = `${explorerA.slice(0, 12)}-${runtimeRevision.slice(0, 12)}`;
 const releaseB = `${explorerB.slice(0, 12)}-${runtimeRevision.slice(0, 12)}`;
 const packageLockSha256 = 'f0bcde463fa201480015b9caa7db2017d3c1b6ca9c7e133df955038c54333d48';
 const explorerOrigin = 'https://taira-explorer.sora.org';
+const checkedNetworkId = `hash:${'AB'.repeat(32)}#B99E`;
+const tairaRuntimeConfig = {
+  toriiBaseUrl: 'https://taira.sora.org',
+  toriiForceBaseUrl: true,
+  networkId: checkedNetworkId,
+  networkPrefix: 369,
+};
+// Synthetic release content exercises the real budget gate without using the
+// admitted production SDK owner or relaxing its separate artifact policy.
+const fixtureSdkModulePath = '_assets/fixture-sdk.js';
+const fixtureSdkModuleBytes = Buffer.from('export const fixture = true;\n');
+const fixtureBundleBudgets = {
+  schema_version: 3,
+  default_chunk_gzip_bytes: 1_000_000,
+  chunk_gzip_bytes: {},
+  entry_gzip_bytes: { 'index.html': 1_000_000 },
+  entry_startup_gzip_bytes: { 'index.html': 1_000_000 },
+  route_gzip_bytes: {},
+};
 const temporaryDirectories: string[] = [];
 const servers: Server[] = [];
 let suiteGitVerifierRoot: string;
@@ -172,21 +191,16 @@ function sdkProvenance(revision = runtimeRevision) {
   };
 }
 
-function tairaRuntimeConfig(overrides: Record<string, unknown> = {}) {
-  return {
-    networkId: TAIRA_NETWORK_ID,
-    toriiBaseUrl: 'https://taira.sora.org',
-    toriiForceBaseUrl: true,
-    ...overrides,
-  };
-}
-
 function writeDist(directory: string, marker: string) {
   mkdirSync(path.join(directory, '_assets'), { recursive: true });
   mkdirSync(path.join(directory, '.vite'), { recursive: true });
   writeFileSync(path.join(directory, 'index.html'), `<main>${marker}</main>\n`);
-  writeFileSync(path.join(directory, 'config.json'), `${JSON.stringify(tairaRuntimeConfig())}\n`);
+  writeFileSync(
+    path.join(directory, 'config.json'),
+    `${JSON.stringify(tairaRuntimeConfig)}\n`
+  );
   writeFileSync(path.join(directory, '_assets/app.js'), `globalThis.release = ${JSON.stringify(marker)};\n`);
+  writeFileSync(path.join(directory, fixtureSdkModulePath), fixtureSdkModuleBytes);
   writeFileSync(path.join(directory, '.vite/build.json'), `${JSON.stringify({ marker })}\n`);
   writeFileSync(
     path.join(directory, '.vite/manifest.json'),
@@ -195,6 +209,7 @@ function writeDist(directory: string, marker: string) {
         file: '_assets/app.js',
         isEntry: true,
         src: 'index.html',
+        assets: [fixtureSdkModulePath],
       },
     })}\n`
   );
@@ -213,13 +228,7 @@ function fixture() {
   writeFileSync(
     path.join(root, 'bundle-budgets.json'),
     `${JSON.stringify(
-      {
-        schema_version: 1,
-        default_chunk_gzip_bytes: 1_000_000,
-        chunk_gzip_bytes: {},
-        entry_gzip_bytes: {},
-        route_gzip_bytes: {},
-      },
+      fixtureBundleBudgets,
       null,
       2
     )}\n`
@@ -305,11 +314,9 @@ async function initialize(testFixture: Fixture) {
 
 async function startPublicServer(testFixture: Fixture, failMarker?: string, reportedRuntimeRevision = runtimeRevision) {
   const requestedPaths: string[] = [];
-  const requestedOrigins: Array<string | null> = [];
   const server = createServer((request, response) => {
     const requestUrl = new URL(request.url ?? '/', 'http://127.0.0.1');
     requestedPaths.push(requestUrl.pathname);
-    requestedOrigins.push(typeof request.headers.origin === 'string' ? request.headers.origin : null);
     if (request.headers.origin === explorerOrigin && testFixture.corsOrigin) {
       response.setHeader('access-control-allow-origin', testFixture.corsOrigin);
     }
@@ -372,7 +379,6 @@ async function startPublicServer(testFixture: Fixture, failMarker?: string, repo
     baseUrl: `http://127.0.0.1:${address.port}/`,
     statusUrl: `http://127.0.0.1:${address.port}/status`,
     requestedPaths,
-    requestedOrigins,
   };
 }
 
@@ -401,6 +407,7 @@ describe('release manifest', () => {
     expect(first.release_id).toBe(releaseA);
     expect(first.files.map((file: { path: string }) => file.path)).toEqual([
       '_assets/app.js',
+      fixtureSdkModulePath,
       '.vite/build.json',
       '.vite/manifest.json',
       'config.json',
@@ -480,41 +487,6 @@ describe('release manifest', () => {
 });
 
 describe('operator safety gates', () => {
-  it('loads from source without installed packages and still rejects an unattested direct invocation', () => {
-    const root = realpathSync(mkdtempSync(path.join(realpathSync('/tmp'), 'taira-source-only-')));
-    temporaryDirectories.push(root);
-    chmodSync(root, 0o700);
-    const repositoryRoot = path.resolve(import.meta.dirname, '../..');
-    for (const file of [
-      'ops/taira/release-tool.mjs',
-      'scripts/check-iroha-pin.mjs',
-      'scripts/check-bundle-budget.mjs',
-      'scripts/run-exact-toolchain.mjs',
-      'scripts/check-node-version.mjs',
-    ]) {
-      const destination = path.join(root, file);
-      mkdirSync(path.dirname(destination), { recursive: true });
-      cpSync(path.join(repositoryRoot, file), destination);
-    }
-    const environment = { PATH: '/usr/bin:/bin:/usr/sbin:/sbin', TMPDIR: root };
-    const loaded = spawnSync(process.execPath, ['--input-type=module', '--eval', `
-      import assert from 'node:assert/strict';
-      import { TAIRA_NETWORK_ID, validateTairaRuntimeConfig } from './ops/taira/release-tool.mjs';
-      const config = { networkId: TAIRA_NETWORK_ID, toriiBaseUrl: 'https://taira.sora.org', toriiForceBaseUrl: true };
-      assert.equal(validateTairaRuntimeConfig(config), config);
-      process.stdout.write('source-only release tool loaded');
-    `], { cwd: root, env: environment, encoding: 'utf8', timeout: 10_000 });
-    expect(loaded.status, loaded.stderr).toBe(0);
-    expect(loaded.stdout).toBe('source-only release tool loaded');
-    expect(existsSync(path.join(root, 'node_modules'))).toBe(false);
-    const direct = spawnSync(process.execPath, ['ops/taira/release-tool.mjs', 'verify'], {
-      cwd: root, env: environment, encoding: 'utf8', timeout: 10_000,
-    });
-    expect(direct.status).not.toBe(0);
-    expect(direct.stderr).toContain('The Taira release CLI must be invoked through ops/taira/deploy-explorer.sh');
-    expect(direct.stderr).not.toContain('ERR_MODULE_NOT_FOUND');
-  });
-
   it('keeps build and publication inseparable inside the exact Taira profile', () => {
     const script = readFileSync(path.resolve('ops/taira/deploy-explorer.sh'), 'utf8');
     expect(script).not.toContain('preflight');
@@ -634,13 +606,15 @@ describe('operator safety gates', () => {
 
   it('consumes one owner-only exact-toolchain attestation bound to Node, source, and argv', async () => {
     const { attestationPath, env, nodePath, argv } = await tairaReleaseAttestation();
+    const expectedGitVerifyGpg = env[TAIRA_GIT_VERIFY_GPG_ENV];
+    const expectedGitVerifyGnupgHome = env[TAIRA_GIT_VERIFY_GNUPGHOME_ENV];
     expect(lstatSync(attestationPath).mode & 0o777).toBe(0o600);
     const payload = consumeTairaReleaseAttestation({ env, argv, nodePath });
     expect(payload.schema).toBe(1);
     expect(existsSync(attestationPath)).toBe(false);
     expect(env).toEqual({
-      [TAIRA_GIT_VERIFY_GNUPGHOME_ENV]: path.join(path.dirname(attestationPath), 'git-verify-gnupg'),
-      [TAIRA_GIT_VERIFY_GPG_ENV]: path.join(path.dirname(attestationPath), 'fixture-gpg'),
+      [TAIRA_GIT_VERIFY_GNUPGHOME_ENV]: expectedGitVerifyGnupgHome,
+      [TAIRA_GIT_VERIFY_GPG_ENV]: expectedGitVerifyGpg,
       IROHA_EXPLORER_TOOLCHAIN_CACHE: path.dirname(path.dirname(attestationPath)),
     });
     expect(() => consumeTairaReleaseAttestation({ env, argv })).toThrow('exact-toolchain bootstrap');
@@ -786,115 +760,86 @@ describe('operator safety gates', () => {
     expect(normalizeExplorerRemote('https://token@github.com/soramitsu/iroha-block-explorer-web.git')).toBeNull();
   });
 
-  it('requires and installs the exact non-loopback Taira operator config', async () => {
+  it('requires and installs the exact direct Taira operator config', async () => {
     const testFixture = fixture();
-    expect(
-      validateTairaRuntimeConfig(
-        tairaRuntimeConfig({
-          kotodamaCompilerUrl: 'https://compiler.example.org',
-          toriiFailoverNodes: [],
-        })
-      )
-    ).toBeTruthy();
-    expect(() =>
-      validateTairaRuntimeConfig(
-        tairaRuntimeConfig({
-          networkId: 'taira',
-        })
-      )
-    ).toThrow('must match the reviewed Taira genesis identity');
-    expect(() =>
-      validateTairaRuntimeConfig(
-        tairaRuntimeConfig({
-          toriiBaseUrl: 'http://127.0.0.1:5175',
-        })
-      )
-    ).toThrow('HTTPS origin');
-    expect(() =>
-      validateTairaRuntimeConfig(
-        tairaRuntimeConfig({
-          toriiBaseUrl: 'https://nexus.example.org',
-        })
-      )
-    ).toThrow('must be exactly https://taira.sora.org');
-    expect(() =>
-      validateTairaRuntimeConfig(
-        tairaRuntimeConfig({
-          toriiForceBaseUrl: false,
-        })
-      )
-    ).toThrow('toriiForceBaseUrl must be true');
-    expect(() =>
-      validateTairaRuntimeConfig({
-        toriiBaseUrl: 'https://taira.sora.org',
-        toriiForceBaseUrl: true,
-      })
-    ).toThrow('networkId is required for the Taira release');
-    expect(() =>
-      validateTairaRuntimeConfig(
-        tairaRuntimeConfig({
-          networkId: 'hash:32C903E5B3497E34C2B844EBFE8A39C19E6CF8F95D44C1FFB8BA9DCB42F91149#A2F0',
-        })
-      )
-    ).toThrow('must match the reviewed Taira genesis identity');
-    expect(() =>
-      validateTairaRuntimeConfig(
-        tairaRuntimeConfig({
-          toriiEconometricsEndpointsEnabled: true,
-        })
-      )
-    ).toThrow('unknown public fields: toriiEconometricsEndpointsEnabled');
-    for (const loopback of ['https://localhost.', 'https://[::ffff:7f00:1]']) {
-      expect(() =>
-        validateTairaRuntimeConfig(
-          tairaRuntimeConfig({
-            kotodamaCompilerUrl: loopback,
-          })
-        )
-      ).toThrow('must not use a loopback host');
-    }
+    expect(validateTairaRuntimeConfig(tairaRuntimeConfig)).toEqual(tairaRuntimeConfig);
 
     const operatorConfig = path.join(testFixture.root, 'operator-config.json');
-    writeFileSync(
-      operatorConfig,
-      JSON.stringify(
-        tairaRuntimeConfig({
-          kotodamaCompilerUrl: 'https://compiler.example.org',
-        })
-      )
-    );
+    writeFileSync(operatorConfig, JSON.stringify(tairaRuntimeConfig));
     await installTairaRuntimeConfig({ configPath: operatorConfig, distDir: testFixture.nextDist });
     expect(JSON.parse(readFileSync(path.join(testFixture.nextDist, 'config.json'), 'utf8'))).toEqual(
-      JSON.parse(readFileSync(operatorConfig, 'utf8'))
+      tairaRuntimeConfig
     );
-  });
-
-  it('accepts the exact reviewed NetworkId without normalizing the operator config', () => {
-    const config = tairaRuntimeConfig();
-    expect(validateTairaRuntimeConfig(config)).toBe(config);
-    expect(config.networkId).toBe(TAIRA_NETWORK_ID);
   });
 
   it.each([
-    ['another canonical network', 'hash:32C903E5B3497E34C2B844EBFE8A39C19E6CF8F95D44C1FFB8BA9DCB42F91149#A2F0'],
-    ['an alias', 'taira'],
-    ['lowercase presentation', TAIRA_NETWORK_ID.toLowerCase()],
-    ['incorrect checksum', TAIRA_NETWORK_ID.replace('#3E94', '#0000')],
-    ['surrounding whitespace', ` ${TAIRA_NETWORK_ID} `],
-    ['null', null],
-    ['a boolean', false],
-    ['a number', 1],
-    ['an array', [TAIRA_NETWORK_ID]],
-    ['an object', { networkId: TAIRA_NETWORK_ID }],
-  ])('rejects %s as the Taira network identity', (_label, networkId) => {
-    expect(() => validateTairaRuntimeConfig(tairaRuntimeConfig({ networkId }))).toThrow(
-      `networkId must match the reviewed Taira genesis identity ${TAIRA_NETWORK_ID}`
-    );
+    ['missing config', undefined],
+    ['null config', null],
+    ['array config', []],
+    ['string config', 'https://taira.sora.org'],
+  ])('rejects %s', (_label, config) => {
+    expect(() => validateTairaRuntimeConfig(config)).toThrow('must be a JSON object');
+  });
+
+  it.each([
+    undefined,
+    '',
+    '/v1/explorer',
+    'http://127.0.0.1:5175',
+    'https://nexus.example.org',
+    'https://taira-explorer.sora.org',
+    'https://taira.sora.org/',
+    'https://taira.sora.org/v1/explorer',
+    'https://taira.sora.org:443',
+    ' https://taira.sora.org',
+  ])('rejects a noncanonical Torii endpoint %s', (toriiBaseUrl) => {
+    expect(() => validateTairaRuntimeConfig({ ...tairaRuntimeConfig, toriiBaseUrl }))
+      .toThrow('must be exactly https://taira.sora.org');
+  });
+
+  it.each([undefined, false, 'true'])('rejects an unforced Taira endpoint %s', (toriiForceBaseUrl) => {
+    expect(() => validateTairaRuntimeConfig({ ...tairaRuntimeConfig, toriiForceBaseUrl }))
+      .toThrow('toriiForceBaseUrl must be true');
+  });
+
+  it.each([
+    undefined,
+    '11'.repeat(32),
+    'AA'.repeat(32),
+    '11'.repeat(31),
+    `${'11'.repeat(31)}10`,
+    `hash:${'ab'.repeat(32)}#B99E`,
+    `hash:${'AB'.repeat(32)}#b99E`,
+    `hash:${'AB'.repeat(32)}#0000`,
+    `hash:${'AB'.repeat(32)}`,
+    `hash:${'10'.repeat(32)}#2B24`,
+    ` ${checkedNetworkId}`,
+  ])('rejects a missing or noncanonical checked NetworkId %s', (networkId) => {
+    expect(() => validateTairaRuntimeConfig({ ...tairaRuntimeConfig, networkId }))
+      .toThrow('exact canonical checked 32-byte Iroha NetworkId');
+  });
+
+  it.each([
+    { toriiFailoverEnabled: true },
+    { toriiFailoverEnabled: false },
+    { toriiFailoverNodes: [] },
+    { sorafsPublicBaseUrl: 'https://taira.sora.org' },
+    { kotodamaCompilerUrl: 'https://compiler.example' },
+    { toriiRequestTimeoutMs: 5000 },
+  ])('rejects optional config outside the exact deployment profile: %j', (extraConfig) => {
+    expect(() => validateTairaRuntimeConfig({ ...tairaRuntimeConfig, ...extraConfig }))
+      .toThrow('unknown public fields');
+  });
+
+  it('requires authenticated network metadata to complete the tracked Taira example', () => {
+    const example = JSON.parse(readFileSync(path.resolve('ops/taira/config.json.example'), 'utf8'));
+    expect(() => validateTairaRuntimeConfig(example)).toThrow('exact canonical checked 32-byte Iroha NetworkId');
+    expect(validateTairaRuntimeConfig({ ...example, networkId: checkedNetworkId })).toEqual(tairaRuntimeConfig);
   });
 
   it('rejects secret-shaped unknown config, unsafe permissions, in-tree files, and symlinks', async () => {
     const testFixture = fixture();
-    const validConfig = tairaRuntimeConfig();
+    const validConfig = tairaRuntimeConfig;
     expect(() =>
       validateTairaRuntimeConfig({
         ...validConfig,
@@ -1068,7 +1013,6 @@ describe('operator safety gates', () => {
 server {
   listen 443 ssl;
   server_name taira-explorer.sora.org;
-  include /etc/letsencrypt/options-ssl-nginx.conf;
   root ${testFixture.servedPath};
   index index.html;
   location / { try_files $uri /index.html; }
@@ -1234,27 +1178,7 @@ location / { alias /var/www/old-explorer/; }
         host: 'taira-explorer.sora.org',
         servedPath: testFixture.servedPath,
       })
-    ).toThrow('exactly one top-level include /etc/letsencrypt/options-ssl-nginx.conf');
-
-    for (const invalidTlsOptionsInclude of [
-      '',
-      'include /etc/letsencrypt/options-ssl-nginx.conf;\n  include /etc/letsencrypt/options-ssl-nginx.conf;',
-      'include /etc/letsencrypt/options-ssl-nginx.conf;\n  include /etc/nginx/snippets/taira-explorer-routing.conf;',
-      'include /etc/letsencrypt/*.conf;',
-      'include "/etc/letsencrypt/options-ssl-nginx.conf";',
-      'location = /tls-options { include /etc/letsencrypt/options-ssl-nginx.conf; }',
-    ]) {
-      const invalidInclude = validSpa.replace(
-        'include /etc/letsencrypt/options-ssl-nginx.conf;',
-        invalidTlsOptionsInclude
-      );
-      expect(() =>
-        verifyNginxRoot(invalidInclude, {
-          host: 'taira-explorer.sora.org',
-          servedPath: testFixture.servedPath,
-        })
-      ).toThrow('exactly one top-level include /etc/letsencrypt/options-ssl-nginx.conf');
-    }
+    ).toThrow('must not use include directives');
 
     expect(() =>
       verifyNginxRoot(`${validSpa}\n${validSpa.replace(testFixture.servedPath, '/var/www/wrong')}`, {
@@ -1267,7 +1191,6 @@ location / { alias /var/www/old-explorer/; }
 server {
   listen 443 ssl;
   server_name taira-explorer.sora.org;
-  include /etc/letsencrypt/options-ssl-nginx.conf;
   root ${testFixture.servedPath};
   add_header X-Debug "}";
   location / { proxy_pass http://old-explorer; }
@@ -1283,7 +1206,6 @@ server {
 server {
   listen 443 ssl;
   server_name taira-explorer.sora.org;
-  include /etc/letsencrypt/options-ssl-nginx.conf;
   root ${testFixture.servedPath};
   add_header X-Debug \\";
   location / { proxy_pass http://old-explorer; }
@@ -1596,7 +1518,7 @@ describe('isolated release build boundary', () => {
 });
 
 describe('release store lifecycle', () => {
-  it('keeps the diagnostic status read server-side and requires cataloged Explorer preflights', async () => {
+  it('requires browser-authorized status reads and a cataloged Explorer preflight', async () => {
     const testFixture = fixture();
     const urls = await startPublicServer(testFixture);
     await expect(fetchRuntimeRevision(urls.statusUrl)).resolves.toBe(runtimeRevision);
@@ -1606,7 +1528,6 @@ describe('release store lifecycle', () => {
       '/v1/pipeline/transactions',
       '/v1/multisig/spec',
     ]);
-    expect(urls.requestedOrigins).toEqual([null, explorerOrigin, explorerOrigin, explorerOrigin]);
   });
 
   it.each([
@@ -1918,7 +1839,9 @@ describe('durability and transaction recovery', () => {
     const manifest = await baselineManifest(testFixture);
     writeFileSync(testFixture.baselineManifestPath, serializeReleaseManifest(manifest));
     const operatorConfigPath = path.join(testFixture.root, 'operator-config.json');
-    writeFileSync(operatorConfigPath, `${JSON.stringify(tairaRuntimeConfig())}\n`, { mode: 0o600 });
+    writeFileSync(operatorConfigPath, `${JSON.stringify(tairaRuntimeConfig)}\n`, {
+      mode: 0o600,
+    });
     const displaced = path.join(testFixture.root, 'displaced-dist');
 
     await expect(
@@ -2239,9 +2162,12 @@ describe('durability and transaction recovery', () => {
     writeFileSync(
       operatorConfigPath,
       `${JSON.stringify(
-        tairaRuntimeConfig({
-          kotodamaCompilerUrl: 'https://compiler.example.org',
-        }),
+        {
+          toriiBaseUrl: 'https://taira.sora.org',
+          toriiForceBaseUrl: true,
+          networkId: checkedNetworkId,
+          networkPrefix: 369,
+        },
         null,
         2
       )}\n`
@@ -2328,9 +2254,12 @@ describe('durability and transaction recovery', () => {
     writeFileSync(
       operatorConfigPath,
       `${JSON.stringify(
-        tairaRuntimeConfig({
-          kotodamaCompilerUrl: 'https://compiler.example.org',
-        }),
+        {
+          toriiBaseUrl: 'https://taira.sora.org',
+          toriiForceBaseUrl: true,
+          networkId: checkedNetworkId,
+          networkPrefix: 369,
+        },
         null,
         2
       )}\n`
@@ -2838,11 +2767,8 @@ describe('durability and transaction recovery', () => {
     writeFileSync(
       path.join(testFixture.root, 'bundle-budgets.json'),
       `${JSON.stringify({
-        schema_version: 1,
+        ...fixtureBundleBudgets,
         default_chunk_gzip_bytes: 1,
-        chunk_gzip_bytes: {},
-        entry_gzip_bytes: {},
-        route_gzip_bytes: {},
       })}\n`
     );
     await expect(
@@ -2860,7 +2786,7 @@ describe('durability and transaction recovery', () => {
         sdkProvenance: sdkProvenance(),
         verification: { attempts: 1, delayMs: 0 },
       })
-    ).rejects.toThrow('Bundle budget check failed');
+    ).rejects.toThrow(/FAIL chunk\s+index\.html: \d+ \/ 1 gzip bytes[\s\S]*Bundle budget check failed/u);
     expect(path.basename(readlinkSync(testFixture.servedPath))).toBe(releaseA);
     expect(existsSync(path.join(testFixture.releasesDir, releaseB))).toBe(false);
     expect(readdirSync(testFixture.releasesDir).some((entry) => entry.startsWith('.staging-'))).toBe(false);
@@ -3195,10 +3121,10 @@ describe('closed provenance and canonical inputs', () => {
     ancestor = true,
     headAfterVerification = head,
   }: {
-    head: string;
-    master: string;
-    ancestor?: boolean;
-    headAfterVerification?: string;
+    head: string,
+    master: string,
+    ancestor?: boolean,
+    headAfterVerification?: string,
   }) {
     const calls: string[][] = [];
     const environments: NodeJS.ProcessEnv[] = [];

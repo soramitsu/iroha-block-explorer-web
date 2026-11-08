@@ -85,7 +85,7 @@ describe('App routing smoke test', () => {
     expect(wrapper.get('.app__skip-link').attributes('href')).toBe('#main-content');
     expect(wrapper.get('#main-content').element.tagName).toBe('MAIN');
     expect(wrapper.get('#main-content').attributes('tabindex')).toBe('-1');
-  }, 20000);
+  });
 
   it('wraps non-home routes with the header and page layout', async () => {
     const { wrapper } = await mountAppAt('/blocks');
@@ -95,7 +95,7 @@ describe('App routing smoke test', () => {
     });
     expect(wrapper.find('[data-test="layout-stub"]').exists()).toBe(true);
     expect(wrapper.find('[data-test="blocks-list-stub"]').exists()).toBe(true);
-  }, 20000);
+  });
 
   it('mounts the Soracloud route inside the standard layout chrome', async () => {
     const { wrapper } = await mountAppAt('/soracloud');
@@ -105,7 +105,7 @@ describe('App routing smoke test', () => {
     });
     expect(wrapper.find('[data-test="layout-stub"]').exists()).toBe(true);
     expect(wrapper.find('[data-test="soracloud-page-stub"]').exists()).toBe(true);
-  }, 20000);
+  });
 
   it('focuses main content only when the route path changes', async () => {
     const { wrapper, router } = await mountAppAt('/blocks');
@@ -126,5 +126,5 @@ describe('App routing smoke test', () => {
     await flushPromises();
     expect(wrapper.find('[data-test="layout-stub"]').exists()).toBe(true);
     expect(wrapper.get('#main-content').classes()).not.toContain('app__main--home');
-  }, 20000);
+  });
 });

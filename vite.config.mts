@@ -1,6 +1,8 @@
 /// <reference types="vitest" />
-import { defineConfig, loadEnv, type Plugin } from 'vite';
+import { defineConfig, loadEnv, defaultClientConditions, defaultClientMainFields, type Plugin } from 'vite';
+import { configDefaults } from 'vitest/config';
 import { readdir, readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import os from 'os';
 import path from 'path';
 import vue from '@vitejs/plugin-vue';
@@ -18,6 +20,7 @@ console.warn = (...args: unknown[]) => {
 };
 const vitestLocalStorageFile = path.join(os.tmpdir(), 'iroha2-block-explorer-web-vitest-localstorage');
 const runtimeConfigFileName = 'config.json';
+const configDirectory = fileURLToPath(new URL('.', import.meta.url));
 
 interface BuildPublicAsset {
   fileName: string
@@ -120,6 +123,18 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: appBasePath,
+    // Vitest defaults to Node resolution even for jsdom. Browser tests must use
+    // the same package-owned browser mappings as the real application build.
+    ...(mode === 'test' ? {
+      environments: {
+        client: {
+          resolve: {
+            conditions: [...defaultClientConditions],
+            mainFields: [...defaultClientMainFields],
+          },
+        },
+      },
+    } : {}),
     server: {
       proxy: {
         '/v1': {
@@ -132,6 +147,13 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: 'jsdom',
+      // Shared development hosts may give each worker only 5–10% of a core.
+      // Allow SDK imports and page renders to finish within the test/hook budget.
+      testTimeout: 60_000,
+      hookTimeout: 60_000,
+      // Retained release candidates have their own explicit test configuration.
+      // They must not run as maintained source tests against this checkout.
+      exclude: [...configDefaults.exclude, 'output/**'],
       globalSetup: 'test-globals.ts',
       // Node v25 + forked pools can intermittently crash with EPIPE on worker IPC.
       // Threads avoid child-process IPC and keep default parallel `vitest run` stable.
@@ -182,20 +204,22 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
-      copyBuildPublicAssets(path.resolve(__dirname, 'public')),
+      copyBuildPublicAssets(path.resolve(configDirectory, 'public')),
       vue(),
       svg({
         svgoConfig: {
-          plugins: [{ name: 'removeViewBox', active: false }],
+          // Keep authored scaling bounds. SVGO 3 no longer supports the old
+          // active:false flag, which caused removeViewBox to run on every icon.
+          plugins: [],
         },
       }),
     ],
     resolve: {
       alias: {
-        '@/': `${path.resolve(__dirname, 'src')}/`,
-        '@noble/ciphers/chacha': path.resolve(__dirname, 'node_modules/@noble/ciphers/esm/chacha.js'),
+        '@/': `${path.resolve(configDirectory, 'src')}/`,
+        '@noble/ciphers/chacha': path.resolve(configDirectory, 'node_modules/@noble/ciphers/esm/chacha.js'),
         'node:buffer': 'buffer',
-        'node:url': path.resolve(__dirname, 'src/shared/lib/node-url-browser.ts'),
+        'node:url': path.resolve(configDirectory, 'src/shared/lib/node-url-browser.ts'),
       },
     },
   };

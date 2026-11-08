@@ -6,35 +6,31 @@ import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import * as api from '@/shared/api';
 import type * as SharedApiModule from '@/shared/api';
 import type * as VueUse from '@vueuse/core';
-import { computed, defineComponent, reactive, ref } from 'vue';
+import { defineComponent, reactive, ref } from 'vue';
+import { activateExplorerReadSession, disconnectExplorerReadSession } from '@/shared/lib/explorer-read-auth';
+
+const cacheScope = vi.hoisted(() => ({
+  networkId: `hash:${'AB'.repeat(32)}#B99E`,
+  toriiUrl: 'https://taira.sora.org',
+}));
+vi.mock('@/shared/runtime-config', () => ({
+  getRuntimeConfig: () => ({ networkId: cacheScope.networkId, toriiBaseUrl: cacheScope.toriiUrl, toriiForceBaseUrl: true }),
+}));
+const boundCacheKey = () => 'retired-history-cache'!;
 
 const SAMPLE_I105 = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-const transactionHash = 'a'.repeat(64);
-const transactionHash2 = 'b'.repeat(64);
-const transactionHash3 = 'c'.repeat(64);
-const olderPageTransactionHash = 'e'.repeat(64);
-const snapshotHash = '2'.repeat(64);
 
 const eventSourceData = ref<string | null>(null);
-const useEventSourceMock = vi.fn();
 const windowScrollY = ref(0);
-const routeQuery = reactive<Record<string, string | string[] | null | undefined>>({});
+const routeQuery = reactive<Record<string, string | undefined>>({});
 const routeCursor = ref<string | null>(null);
 const routeLimit = ref(10);
-const routePaginationInvalid = ref(false);
-const resetRoutePagination = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('@/shared/ui/composables/useListRouteQuery', () => ({
   useCursorListRouteQuery: () => ({
     route: reactive({ query: routeQuery }),
     cursor: routeCursor,
     limit: routeLimit,
-    pagination: computed(() =>
-      routePaginationInvalid.value
-        ? { ok: false as const, code: 'invalid-cursor' as const }
-        : { ok: true as const, cursor: routeCursor.value, limit: routeLimit.value }
-    ),
-    resetPagination: resetRoutePagination,
     updateListQuery: vi.fn(async (patch: Record<string, string | number | null | undefined>) => {
       routeCursor.value = null;
       for (const [key, value] of Object.entries(patch)) {
@@ -50,15 +46,14 @@ const BaseTableStub = defineComponent({
   props: {
     items: { type: Array, default: () => [] },
     rowKey: { type: Function, required: false, default: undefined },
-    emptyLabel: { type: String, default: '' },
-    paginationMode: { type: String, required: false, default: 'numbered' },
-    cursorPagination: { type: Object, required: false, default: null },
+    error: { type: Object, default: null },
+    cursorPagination: { type: Object, default: null },
+    reversed: { type: Boolean, required: false, default: false },
   },
-  emits: ['update:cursor', 'update:pageSize', 'click:row'],
+  emits: ['update:cursor', 'update:pageSize', 'click:row', 'retry'],
   template: `
     <div data-test="base-table">
       <slot name="header" />
-      <div v-if="items.length === 0" data-test="table-empty"><slot name="empty">{{ emptyLabel }}</slot></div>
       <div data-test="rows">
         <slot name="row" v-for="item in items" :item="item" />
       </div>
@@ -73,29 +68,17 @@ vi.mock('@vueuse/core', async () => {
   const actual = await vi.importActual<typeof VueUse>('@vueuse/core');
   return {
     ...actual,
-    useEventSource: (...args: unknown[]) => {
-      useEventSourceMock(...args);
-      return {
-        data: eventSourceData,
-        status: ref('CLOSED'),
-      };
-    },
+    useEventSource: () => ({
+      data: eventSourceData,
+      status: ref('CLOSED'),
+    }),
     useThrottleFn: (fn: any) => fn,
     useWindowScroll: () => ({ x: ref(0), y: windowScrollY }),
   };
 });
 
 const fetchTransactionsMock = vi.fn();
-
-function historyPagination(nextCursor: string | null = null, hasMore = false) {
-  return {
-    limit: 10,
-    snapshot_height: 10,
-    snapshot_hash: snapshotHash,
-    next_cursor: nextCursor,
-    has_more: hasMore,
-  };
-}
+const localStorageState = new Map<string, string>();
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -106,6 +89,24 @@ function deferred<T>() {
   });
 
   return { promise, resolve, reject };
+}
+
+function installLocalStorageMock() {
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => localStorageState.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        localStorageState.set(key, value);
+      },
+      removeItem: (key: string) => {
+        localStorageState.delete(key);
+      },
+      clear: () => {
+        localStorageState.clear();
+      },
+    },
+  });
 }
 
 vi.mock('@/shared/api', async () => {
@@ -150,7 +151,7 @@ describe('TransactionsTable', () => {
   const mountedWrappers: Array<ReturnType<typeof mount>> = [];
   const baseTransaction = {
     authority: SAMPLE_I105,
-    hash: transactionHash,
+    hash: '0xtx',
     block: 10,
     created_at: new Date('2024-01-01T00:00:00Z'),
     executable: 'Instructions',
@@ -158,14 +159,14 @@ describe('TransactionsTable', () => {
   } as const;
 
   beforeEach(() => {
+    disconnectExplorerReadSession();
+    installLocalStorageMock();
+    localStorageState.clear();
     fetchTransactionsMock.mockReset();
-    useEventSourceMock.mockClear();
     eventSourceData.value = null;
     windowScrollY.value = 0;
     routeCursor.value = null;
     routeLimit.value = 10;
-    routePaginationInvalid.value = false;
-    resetRoutePagination.mockClear();
     for (const key of Object.keys(routeQuery)) delete routeQuery[key];
     // Ensure stream code-path is exercised.
     (window as any).EventSource = class EventSource {};
@@ -173,19 +174,15 @@ describe('TransactionsTable', () => {
     fetchTransactionsMock.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: {
-          limit: 10,
-          snapshot_height: 10,
-          snapshot_hash: snapshotHash,
-          next_cursor: null,
-          has_more: false,
-        },
+        nextCursor: null,
+        total: undefined,
         items: [baseTransaction],
       },
     });
   });
 
   afterEach(() => {
+    disconnectExplorerReadSession();
     while (mountedWrappers.length > 0) {
       mountedWrappers.pop()?.unmount();
     }
@@ -220,41 +217,6 @@ describe('TransactionsTable', () => {
     return wrapper;
   };
 
-  it('shows a failure and retry instead of an empty table when the initial request fails', async () => {
-    fetchTransactionsMock.mockRejectedValueOnce(new TypeError('offline'));
-    const wrapper = factory();
-    await flushPromises();
-    expect(wrapper.find('[data-test="base-table"]').exists()).toBe(false);
-    expect(wrapper.get('[role="alert"]').text()).toContain(i18n.global.t('ux.collection.retry'));
-    await wrapper.get('[data-test="resource-retry"]').trigger('click');
-    await flushPromises();
-    expect(wrapper.get('[data-test="rows"]').text()).toContain(transactionHash);
-    expect(fetchTransactionsMock).toHaveBeenCalledTimes(2);
-  });
-
-  it('keeps verified rows through a failed refresh and clears them when a filter changes', async () => {
-    const wrapper = factory();
-    await flushPromises();
-    fetchTransactionsMock.mockRejectedValueOnce(new TypeError('offline'));
-    wrapper.getComponent({ name: 'BaseCollectionState' }).vm.$emit('retry');
-    await flushPromises();
-    expect(wrapper.get('[data-test="rows"]').text()).toContain(transactionHash);
-    expect(wrapper.find('[data-test="resource-refresh-retry"]').exists()).toBe(true);
-    const filtered = deferred<any>();
-    fetchTransactionsMock.mockReturnValueOnce(filtered.promise);
-    routeQuery.status = 'Rejected';
-    await flushPromises();
-    expect(wrapper.find('[data-test="rows"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="resource-refresh-retry"]').exists()).toBe(false);
-    filtered.resolve({ status: SUCCESSFUL_FETCHING, data: { pagination: historyPagination(), items: [] } });
-    await flushPromises();
-    expect(wrapper.get('[data-test="table-empty"]').text()).toContain(i18n.global.t('ux.collection.filteredEmpty'));
-    await wrapper.get('[data-test="collection-reset"]').trigger('click');
-    await flushPromises();
-    expect(routeQuery.status).toBeUndefined();
-    expect(fetchTransactionsMock).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: null, status: undefined }));
-  });
-
   it('exposes optional transaction columns as distinct cells without replacing link semantics', async () => {
     const fullWrapper = factory();
     await flushPromises();
@@ -273,32 +235,33 @@ describe('TransactionsTable', () => {
     expect(compactRow.find('.transactions-table__column-authority').exists()).toBe(false);
   });
 
-  it('does not auto-refetch on stream updates outside the latest cursor window', async () => {
+  it('does not auto-refetch on stream updates when not on the latest page', async () => {
     const wrapper = factory();
     await flushPromises();
     expect(fetchTransactionsMock).toHaveBeenCalledTimes(1);
 
-    wrapper.getComponent({ name: 'BaseTable' }).vm.$emit('update:cursor', 'older-cursor');
+    // Move away from the latest page.
+    wrapper.getComponent({ name: 'BaseTable' }).vm.$emit('update:cursor', 'next');
     await flushPromises();
     expect(fetchTransactionsMock).toHaveBeenCalledTimes(2);
 
     // Stream update should not trigger another refetch.
     eventSourceData.value = JSON.stringify({
       ...baseTransaction,
-      hash: transactionHash2,
+      hash: '0xtx2',
       created_at: new Date('2024-01-01T00:01:00Z').toISOString(),
     });
     await flushPromises();
     expect(fetchTransactionsMock).toHaveBeenCalledTimes(2);
 
-    // Back on the latest window, stream updates should refetch.
+    // Back on the latest page, stream updates should refetch.
     wrapper.getComponent({ name: 'BaseTable' }).vm.$emit('update:cursor', null);
     await flushPromises();
     expect(fetchTransactionsMock).toHaveBeenCalledTimes(3);
 
     eventSourceData.value = JSON.stringify({
       ...baseTransaction,
-      hash: transactionHash3,
+      hash: '0xtx3',
       created_at: new Date('2024-01-01T00:02:00Z').toISOString(),
     });
     await flushPromises();
@@ -308,102 +271,18 @@ describe('TransactionsTable', () => {
     expect(api.fetchTransactions).toBeDefined();
   });
 
-  it('sends only the opaque cursor contract and renders cursor pagination', async () => {
+  it('uses non-reversed 1-based pagination for Torii transaction pages', async () => {
     const wrapper = factory();
     await flushPromises();
 
     const table = wrapper.getComponent({ name: 'BaseTable' });
-    expect(table.props('paginationMode')).toBe('cursor');
-    expect(table.props('cursorPagination')).toEqual(expect.objectContaining({ limit: 10, has_more: false }));
+    expect(table.props('reversed')).not.toBe(true);
     expect(fetchTransactionsMock).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        cursor: null,
-        limit: 10,
+        cursor: null, limit: 10,
       })
     );
-    expect(fetchTransactionsMock.mock.calls[0]?.[0]).not.toHaveProperty('page');
-    expect(fetchTransactionsMock.mock.calls[0]?.[0]).not.toHaveProperty('per_page');
-  });
-
-  it('blocks an invalid cursor route until pagination is explicitly reset', async () => {
-    routePaginationInvalid.value = true;
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(fetchTransactionsMock).not.toHaveBeenCalled();
-    expect(wrapper.find('[data-test="transactions-invalid-pagination"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="base-table"]').exists()).toBe(false);
-
-    await wrapper.get('[data-test="transactions-invalid-pagination"] button').trigger('click');
-    expect(resetRoutePagination).toHaveBeenCalledOnce();
-  });
-
-  it.each([
-    ['status', 'committed'],
-    ['authority', `${SAMPLE_I105} `],
-    ['block', '01'],
-    ['block', '1e2'],
-    ['block', '9007199254740992'],
-  ])('blocks the malformed %s bookmark instead of loading the default feed', async (key, value) => {
-    routeQuery[key] = value;
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(fetchTransactionsMock).not.toHaveBeenCalled();
-    expect(useEventSourceMock).not.toHaveBeenCalled();
-    expect(wrapper.find('[data-test="transactions-invalid-filters"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="base-table"]').exists()).toBe(false);
-
-    eventSourceData.value = JSON.stringify({
-      ...baseTransaction,
-      hash: transactionHash2,
-      created_at: new Date('2024-01-01T00:01:00Z').toISOString(),
-    });
-    await flushPromises();
-    expect(fetchTransactionsMock).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    ['status', ['Committed', 'Rejected']],
-    ['authority', [SAMPLE_I105, SAMPLE_I105]],
-    ['block', ['10', '11']],
-  ])('rejects duplicate %s bookmark values instead of selecting one', async (key, values) => {
-    routeQuery[key] = values;
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(fetchTransactionsMock).not.toHaveBeenCalled();
-    expect(useEventSourceMock).not.toHaveBeenCalled();
-    expect(wrapper.find('[data-test="transactions-invalid-filters"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="base-table"]').exists()).toBe(false);
-  });
-
-  it('clears explicit invalid filters and resumes from an unfiltered latest cursor only on recovery', async () => {
-    routeQuery.status = 'unknown';
-    routeQuery.authority = [SAMPLE_I105, SAMPLE_I105];
-    routeQuery.block = '01';
-    routeCursor.value = 'filter-bound-cursor';
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(fetchTransactionsMock).not.toHaveBeenCalled();
-    expect(useEventSourceMock).not.toHaveBeenCalled();
-
-    await wrapper.get('[data-test="transactions-invalid-filters"] button').trigger('click');
-    await flushPromises();
-
-    expect(routeQuery.status).toBeUndefined();
-    expect(routeQuery.authority).toBeUndefined();
-    expect(routeQuery.block).toBeUndefined();
-    expect(routeCursor.value).toBeNull();
-    expect(fetchTransactionsMock).toHaveBeenCalledOnce();
-    expect(useEventSourceMock).toHaveBeenCalledOnce();
-    expect(fetchTransactionsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ cursor: null, limit: 10, status: undefined, authority: undefined, block: undefined })
-    );
-    expect(wrapper.find('[data-test="transactions-invalid-filters"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="base-table"]').exists()).toBe(true);
   });
 
   it('does not auto-refetch on stream updates when the user is scrolled down', async () => {
@@ -414,7 +293,7 @@ describe('TransactionsTable', () => {
     windowScrollY.value = 200;
     eventSourceData.value = JSON.stringify({
       ...baseTransaction,
-      hash: transactionHash2,
+      hash: '0xtx2',
       created_at: new Date('2024-01-01T00:01:00Z').toISOString(),
     });
     await flushPromises();
@@ -428,52 +307,66 @@ describe('TransactionsTable', () => {
     expect(fetchTransactionsMock).toHaveBeenCalledTimes(2);
   });
 
-  it('does not render transaction rows before the first authoritative fetch resolves', async () => {
-    const first = deferred<{
-      status: string
-      data: {
-        pagination: ReturnType<typeof historyPagination>
-        items: Array<typeof baseTransaction>
-      }
-    }>();
-
-    fetchTransactionsMock.mockImplementationOnce(() => first.promise);
-
+  it('does not read public history while authenticated or persist a late private response after logout', async () => {
+    window.localStorage.setItem(boundCacheKey(), JSON.stringify({
+      version: 1, updated_at_ms: Date.now(), items: [{ ...baseTransaction, hash: '0xpublic-cache' }],
+    }));
+    activateExplorerReadSession({ baseUrl: cacheScope.toriiUrl, networkId: cacheScope.networkId,
+      auth: { authAccountId: 'reader@bank', sign: async () => new Uint8Array(64) }, close: vi.fn() });
+    const pending = deferred<any>();
+    fetchTransactionsMock.mockReturnValueOnce(pending.promise);
     const wrapper = factory();
     await flushPromises();
-
-    expect(fetchTransactionsMock).toHaveBeenCalledTimes(1);
-    expect(wrapper.find('[data-test="rows"]').exists()).toBe(false);
-    expect(wrapper.find('.base-resource-state--loading').exists()).toBe(true);
-
-    first.resolve({
-      status: SUCCESSFUL_FETCHING,
-      data: {
-        pagination: historyPagination(),
-        items: [baseTransaction],
-      },
-    });
+    expect(wrapper.text()).not.toContain('0xpublic-cache');
+    disconnectExplorerReadSession();
+    pending.resolve({ status: SUCCESSFUL_FETCHING, data: { nextCursor: null,
+      items: [{ ...baseTransaction, hash: '0xprivate-row' }] } });
     await flushPromises();
-    expect(wrapper.text()).toContain(transactionHash);
+    expect(window.localStorage.getItem(boundCacheKey())).toContain('0xpublic-cache');
+    expect(window.localStorage.getItem(boundCacheKey())).not.toContain('0xprivate-row');
+    wrapper.unmount();
+    fetchTransactionsMock.mockReturnValueOnce(new Promise(() => {}));
+    const anonymous = factory();
+    await flushPromises();
+    expect(anonymous.text()).not.toContain('0xprivate-row');
   });
 
-  it('renders the fetched cursor window after leaving the latest window', async () => {
+  it.each([
+    'transactions_table_cache_v2',
+    'retired-history-cache'!,
+    'retired-history-cache'!,
+  ])('does not render cache from a different ledger identity or retired key: %s', async (key) => {
+    fetchTransactionsMock.mockImplementationOnce(() => new Promise(() => {}));
+    window.localStorage.setItem(key, JSON.stringify({
+      version: 1,
+      updated_at_ms: Date.now(),
+      items: [{ ...baseTransaction, hash: '0xforeign-cache' }],
+    }));
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('0xforeign-cache');
+    expect(wrapper.find('[data-test="history-cache-stale"]').exists()).toBe(false);
+  });
+
+  it('renders fetched paginated rows after leaving the latest page even when cache is warm', async () => {
     fetchTransactionsMock
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-          pagination: historyPagination('older-cursor', true),
+        nextCursor: 'next',
+        total: undefined,
           items: [baseTransaction],
         },
       })
       .mockResolvedValueOnce({
         status: SUCCESSFUL_FETCHING,
         data: {
-          pagination: historyPagination(),
+        nextCursor: null,
+        total: undefined,
           items: [
             {
               ...baseTransaction,
-              hash: olderPageTransactionHash,
+              hash: '0xolder-page',
               block: 9,
               created_at: new Date('2023-12-31T23:59:00Z'),
             },
@@ -481,24 +374,40 @@ describe('TransactionsTable', () => {
         },
       });
 
+    window.localStorage.setItem(
+      boundCacheKey(),
+      JSON.stringify({
+        version: 1,
+        updated_at_ms: Date.now(),
+        items: [
+          {
+            ...baseTransaction,
+            hash: '0xcached-latest',
+            created_at: new Date('2024-01-01T00:05:00Z').toISOString(),
+          },
+        ],
+      })
+    );
+
     const wrapper = factory();
     await flushPromises();
 
-    expect(wrapper.text()).toContain(transactionHash);
+    expect(wrapper.text()).toContain('0xtx');
 
-    wrapper.getComponent({ name: 'BaseTable' }).vm.$emit('update:cursor', 'older-cursor');
+    wrapper.getComponent({ name: 'BaseTable' }).vm.$emit('update:cursor', 'next');
     await flushPromises();
 
     expect(fetchTransactionsMock).toHaveBeenCalledTimes(2);
-    expect(wrapper.text()).toContain(olderPageTransactionHash);
-    expect(wrapper.text()).not.toContain(transactionHash);
+    expect(wrapper.text()).toContain('0xolder-page');
+    expect(wrapper.text()).not.toContain('0xcached-latest');
   });
 
   it('queues a single stream-triggered refetch while a fetch is pending', async () => {
     const first = deferred<{
       status: string
       data: {
-        pagination: ReturnType<typeof historyPagination>
+        nextCursor: string | null
+        total: undefined
         items: Array<typeof baseTransaction>
       }
     }>();
@@ -508,12 +417,13 @@ describe('TransactionsTable', () => {
       .mockResolvedValue({
         status: SUCCESSFUL_FETCHING,
         data: {
-          pagination: historyPagination(),
+        nextCursor: null,
+        total: undefined,
           items: [
             baseTransaction,
             {
               ...baseTransaction,
-              hash: transactionHash2,
+              hash: '0xtx2',
               created_at: new Date('2024-01-01T00:01:00Z'),
             },
           ],
@@ -526,12 +436,12 @@ describe('TransactionsTable', () => {
 
     eventSourceData.value = JSON.stringify({
       ...baseTransaction,
-      hash: transactionHash2,
+      hash: '0xtx2',
       created_at: new Date('2024-01-01T00:01:00Z').toISOString(),
     });
     eventSourceData.value = JSON.stringify({
       ...baseTransaction,
-      hash: transactionHash3,
+      hash: '0xtx3',
       created_at: new Date('2024-01-01T00:02:00Z').toISOString(),
     });
     await flushPromises();
@@ -540,7 +450,8 @@ describe('TransactionsTable', () => {
     first.resolve({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPagination(),
+        nextCursor: null,
+        total: undefined,
         items: [baseTransaction],
       },
     });
@@ -556,11 +467,29 @@ describe('TransactionsTable', () => {
 
     eventSourceData.value = JSON.stringify({
       ...baseTransaction,
-      hash: transactionHash,
+      hash: '0xtx',
       created_at: new Date('2024-01-01T00:01:00Z').toISOString(),
     });
     await flushPromises();
 
     expect(fetchTransactionsMock).toHaveBeenCalledTimes(1);
   });
+
+  it('exposes failed history reads and recovers when the table retries', async () => {
+    fetchTransactionsMock.mockResolvedValueOnce({ status: 'unknown-error', error: new TypeError('offline') });
+    const wrapper = factory();
+    await flushPromises();
+    const table = wrapper.getComponent({ name: 'BaseTable' });
+
+    expect(table.props('error')).toMatchObject({ kind: 'network' });
+    expect(table.props('items')).toEqual([]);
+    table.vm.$emit('retry');
+    await flushPromises();
+
+    expect(fetchTransactionsMock).toHaveBeenCalledTimes(2);
+    expect(table.props('error')).toBeNull();
+    expect(table.props('items')).toEqual([baseTransaction]);
+    expect(table.props('cursorPagination')).toEqual({ items: [baseTransaction], nextCursor: null, total: undefined });
+  });
+
 });

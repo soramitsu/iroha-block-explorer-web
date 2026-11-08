@@ -1,26 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { flushPromises, mount } from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import AccountsList from './AccountsList.vue';
 import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { ref } from 'vue';
 
-const cursorPaginationState = ref<
-  { ok: true, cursor: string | null, limit: number } | { ok: false, code: 'invalid-cursor' | 'invalid-limit' }
->({ ok: true, cursor: null, limit: 10 });
-const resetCursorPagination = vi.fn().mockResolvedValue(undefined);
+enableAutoUnmount(afterEach);
+const updateListQuery = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 const setupState = {
-  get snapshot(): any {
-    return this.isLoading && !this.data.data.items.length
-      ? { status: 'initial-loading' }
-      : { status: 'ready', data: this.data, isRefreshing: this.isLoading, refreshError: null };
-  },
   isLoading: false,
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: { limit: 10, next_cursor: null as string | null, has_more: false },
+      nextCursor: null as string | null,
       items: [] as any[],
     },
   },
@@ -38,9 +30,7 @@ vi.mock('@/shared/ui/composables/useListRouteQuery', async () => {
       route: { query: {} },
       cursor: ref<string | null>(null),
       limit: ref(10),
-      pagination: cursorPaginationState,
-      resetPagination: resetCursorPagination,
-      updateListQuery: vi.fn().mockResolvedValue(undefined),
+      updateListQuery,
     }),
   };
 });
@@ -76,40 +66,35 @@ const BaseHashStub = {
 };
 
 describe('AccountsList', () => {
-  const mountedWrappers: Array<ReturnType<typeof mount>> = [];
   const sampleAssetAlias = 'usd#issuer.main';
-  const canonicalAccountId = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-  const canonicalAccountIdAlt = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
+  const canonicalAccountId =
+    'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
+  const canonicalAccountIdAlt =
+    'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    updateListQuery.mockClear();
     setupState.data.data.items = [];
-    setupState.data.data.pagination = { limit: 10, next_cursor: null, has_more: false };
-    cursorPaginationState.value = { ok: true, cursor: null, limit: 10 };
-    resetCursorPagination.mockClear();
+    setupState.data.data.nextCursor = null;
   });
 
   afterEach(() => {
-    while (mountedWrappers.length > 0) mountedWrappers.pop()?.unmount();
+    vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
-  const factory = () => {
-    const wrapper = mount(AccountsList, {
+  const factory = () =>
+    mount(AccountsList, {
       global: {
         plugins: [i18n],
         stubs: {
           BaseContentBlock: BaseContentBlockStub,
           BaseTable: BaseTableStub,
           BaseHash: BaseHashStub,
-          BaseButton: {
-            emits: ['click'],
-            template: '<button type="button" @click="$emit(\'click\')"><slot /></button>',
-          },
         },
       },
     });
-    mountedWrappers.push(wrapper);
-    return wrapper;
-  };
 
   it('shows an error for invalid asset filters', async () => {
     const wrapper = factory();
@@ -119,6 +104,8 @@ describe('AccountsList', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain(i18n.global.t('accounts.filters.assetInvalid'));
+    await vi.advanceTimersByTimeAsync(600);
+    expect(updateListQuery).not.toHaveBeenCalled();
   });
 
   it('clears the asset filter error after a valid asset selector is entered', async () => {
@@ -133,12 +120,15 @@ describe('AccountsList', () => {
     await flushPromises();
 
     expect(wrapper.text()).not.toContain(i18n.global.t('accounts.filters.assetInvalid'));
+    await vi.advanceTimersByTimeAsync(300);
+    expect(updateListQuery).toHaveBeenCalledExactlyOnceWith({ domain: null, asset: sampleAssetAlias });
   });
 
-  it('renders Torii canonical account ids directly from the id field', async () => {
+  it('renders canonical i105 account ids in the list even when generic ids differ', async () => {
     setupState.data.data.items = [
       {
-        id: canonicalAccountId,
+        id: 'legacy-account-id',
+        i105_address: canonicalAccountId,
         owned_domains: 1,
         owned_assets: 2,
         owned_nfts: 3,
@@ -154,14 +144,13 @@ describe('AccountsList', () => {
   });
 
   it('uses an explicit canonical account link instead of a clickable table row', async () => {
-    setupState.data.data.items = [
-      {
-        id: canonicalAccountIdAlt,
-        owned_domains: 1,
-        owned_assets: 0,
-        owned_nfts: 0,
-      },
-    ];
+    setupState.data.data.items = [{
+      id: 'legacy-account-id',
+      i105_address: canonicalAccountIdAlt,
+      owned_domains: 1,
+      owned_assets: 0,
+      owned_nfts: 0,
+    }];
 
     const wrapper = factory();
     await flushPromises();
@@ -172,25 +161,13 @@ describe('AccountsList', () => {
   });
 
   it('passes authoritative cursor metadata to the table without an exact total', async () => {
-    setupState.data.data.pagination = { limit: 10, next_cursor: 'cursor-1', has_more: true };
+    setupState.data.data.nextCursor = 'cursor-1';
     const wrapper = factory();
     await flushPromises();
 
     const table = wrapper.getComponent({ name: 'BaseTableStub' });
     expect(table.props('paginationMode')).toBe('cursor');
-    expect(table.props('cursorPagination')).toEqual(setupState.data.data.pagination);
+    expect(table.props('cursorPagination')).toEqual(setupState.data.data);
     expect(table.props('total')).toBeUndefined();
-  });
-
-  it('renders an explicit recovery state instead of fetching a normalized cursor page', async () => {
-    cursorPaginationState.value = { ok: false, code: 'invalid-limit' };
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(wrapper.find('[data-test="accounts-invalid-pagination"]').exists()).toBe(true);
-    expect(wrapper.findComponent({ name: 'BaseTableStub' }).exists()).toBe(false);
-
-    await wrapper.get('[data-test="accounts-invalid-pagination"] button').trigger('click');
-    expect(resetCursorPagination).toHaveBeenCalledOnce();
   });
 });

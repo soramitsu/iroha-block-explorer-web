@@ -7,7 +7,6 @@ import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 
 const fetchAccountsMock = vi.fn();
-const ACCOUNT_ID = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
 
 function requestedAccountsDomain(domain: string): boolean {
   return fetchAccountsMock.mock.calls.some(([params]) => params?.domain === domain);
@@ -89,9 +88,9 @@ const BaseTableStub = defineComponent({
         </div>
       </div>
       <button
-        v-if="cursorPagination?.next_cursor"
+        v-if="cursorPagination?.nextCursor"
         data-test="cursor-next"
-        @click="$emit('update:cursor', cursorPagination.next_cursor)"
+        @click="$emit('update:cursor', cursorPagination.nextCursor)"
       >Next</button>
     </div>
   `,
@@ -137,8 +136,7 @@ describe('Accounts data smoke', () => {
 
   const mockAccounts = [
     {
-      id: ACCOUNT_ID,
-      network_prefix: 753,
+      i105_address: 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE',
       metadata: {},
       owned_assets: 2,
       owned_nfts: 1,
@@ -148,17 +146,13 @@ describe('Accounts data smoke', () => {
 
   beforeEach(() => {
     fetchAccountsMock.mockReset();
-    fetchAccountsMock.mockImplementation((params) =>
-      Promise.resolve({
-        status: SUCCESSFUL_FETCHING,
-        data: {
-          pagination: params?.cursor
-            ? { limit: 10, next_cursor: null, has_more: false }
-            : { limit: 10, next_cursor: 'YWNjb3VudHMtY3Vyc29yLTI', has_more: true },
-          items: mockAccounts,
-        },
-      })
-    );
+    fetchAccountsMock.mockImplementation((params) => Promise.resolve({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        nextCursor: params?.cursor ? null : 'YWNjb3VudHMtY3Vyc29yLTI',
+        items: mockAccounts,
+      },
+    }));
   });
 
   afterEach(() => {
@@ -181,7 +175,7 @@ describe('Accounts data smoke', () => {
 
     const firstRow = wrapper.find('[data-test="base-table-row"]');
     expect(firstRow.exists()).toBe(true);
-    expect(firstRow.text()).toContain(ACCOUNT_ID);
+    expect(firstRow.text()).toContain(mockAccounts[0].i105_address);
     expect(firstRow.text()).toContain(String(mockAccounts[0].owned_domains));
     expect(firstRow.text()).toContain(String(mockAccounts[0].owned_assets + mockAccounts[0].owned_nfts));
 
@@ -211,7 +205,7 @@ describe('Accounts data smoke', () => {
     expect(errorHint.text()).toBe(i18n.global.t('accounts.filters.assetInvalid'));
 
     expect(wrapper.get('[data-test="base-hash"]').attributes('data-link')).toBe(
-      `/accounts/${encodeURIComponent(ACCOUNT_ID)}`
+      `/accounts/${encodeURIComponent(mockAccounts[0].i105_address)}`
     );
-  }, 20000);
+  });
 });

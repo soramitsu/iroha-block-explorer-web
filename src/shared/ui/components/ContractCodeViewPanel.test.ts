@@ -63,6 +63,9 @@ function makeView(sourceText: string, codeHash = 'ef'.repeat(32)): ContractCodeV
     code_hash: codeHash,
     declared_code_hash: codeHash,
     compiler_fingerprint: 'kotodama-current',
+    abi_hash: null,
+    access_hints: null,
+    analysis: null,
     byte_len: 42,
     permissions: [],
     entrypoints: [
@@ -71,6 +74,7 @@ function makeView(sourceText: string, codeHash = 'ef'.repeat(32)): ContractCodeV
         kind: 'public',
         params: [{ name: 'amount', type_name: 'u32' }],
         return_type: 'bool',
+        permission: null,
         read_keys: [],
         write_keys: [],
         access_hints_complete: true,

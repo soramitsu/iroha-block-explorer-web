@@ -28,7 +28,7 @@
           :placeholder="$t('contracts.filters.contractAddressPlaceholder')"
         />
       </label>
-      <label>
+      <label v-if="activeTab === 'activity'">
         <span>{{ $t('contracts.filters.contractAlias') }}</span>
         <input
           v-model="filterDraft.contract_alias"
@@ -45,10 +45,6 @@
         />
       </label>
       <template v-else>
-        <label>
-          <span>{{ $t('contracts.filters.module') }}</span>
-          <input v-model="filterDraft.module" name="module" :placeholder="$t('contracts.filters.modulePlaceholder')" />
-        </label>
         <label>
           <span>{{ $t('contracts.filters.eventKind') }}</span>
           <input
@@ -78,7 +74,6 @@
           <select v-model="filterDraft.provenance" name="provenance">
             <option value="">{{ $t('contracts.filters.any') }}</option>
             <option value="emitted">{{ $t('contracts.filters.emitted') }}</option>
-            <option value="derived">{{ $t('contracts.filters.derived') }}</option>
           </select>
         </label>
       </template>
@@ -130,12 +125,12 @@
     >
       <template #default="{ data }">
         <BaseTable
-          v-model:page="page"
-          v-model:page-size="pageSize"
+          v-model:cursor="cursor"
+          v-model:page-size="limit"
           :loading="false"
-          :total="data.total"
+          pagination-mode="cursor"
+          :cursor-pagination="data"
           :items="data.items"
-          :max-fetch-size="PINNED_TORII_DEFAULT_MAX_FETCH_SIZE"
           :row-key="activityRowKey"
           container-class="smart-contracts-page__container"
         >
@@ -154,7 +149,7 @@
               <div class="smart-contracts-page__stack" role="cell">
                 <BaseHash :hash="item.contract_address" :type="addressHashType" copy />
                 <small>
-                  {{ item.contract_alias ?? $t('contracts.noAlias') }} ·
+                  {{ $t('contracts.noAlias') }} ·
                   {{ item.contract_entrypoint ?? $t('contracts.unknownEntrypoint') }}
                 </small>
               </div>
@@ -284,13 +279,13 @@
         <div v-if="liveEvents.length > 0" class="smart-contracts-page__live-events">
           <article v-for="event in liveEvents" :key="event.event_id" class="smart-contracts-page__live-event">
             <div>
-              <strong>{{ event.module }} · {{ event.event_kind }}</strong>
+              <strong>{{ event.event_kind }}</strong>
               <small>
                 {{ contractProvenanceLabel(event.provenance) }} ·
                 {{ $t('contracts.live.block', { height: event.block_height }) }}
               </small>
             </div>
-            <BaseHash :hash="event.tx_hash_hex" :link="transactionPath(event.tx_hash_hex)" :type="hashType" copy />
+            <BaseHash :hash="event.execution_hash_hex" :link="transactionPath(event.execution_hash_hex)" :type="hashType" copy />
             <details v-if="event.payload !== undefined || event.numeric_fields !== undefined">
               <summary>{{ $t('contracts.live.decodedEvent') }}</summary>
               <BaseJson :value="jsonRecord(event.payload ?? event.numeric_fields)" />
@@ -318,13 +313,13 @@
       >
         <template #default="{ data }">
           <BaseTable
-            v-model:page="page"
-            v-model:page-size="pageSize"
+            v-model:cursor="cursor"
+            v-model:page-size="limit"
             :loading="false"
-            :total="data.total"
+            pagination-mode="cursor"
+          :cursor-pagination="data"
             :items="data.items"
-            :max-fetch-size="PINNED_TORII_DEFAULT_MAX_FETCH_SIZE"
-            :row-key="eventRowKey"
+              :row-key="eventRowKey"
             container-class="smart-contracts-page__container"
           >
             <template #header>
@@ -343,7 +338,7 @@
                 <div class="smart-contracts-page__stack" role="cell">
                   <BaseHash :hash="item.event_id" :type="hashType" copy />
                   <small>
-                    {{ item.module }} · {{ item.event_kind }} · {{ contractProvenanceLabel(item.provenance) }}
+                    {{ item.event_kind }} · {{ contractProvenanceLabel(item.provenance) }}
                   </small>
                   <time v-if="item.timestamp_ms !== undefined" :datetime="new Date(item.timestamp_ms).toISOString()">
                     {{ defaultFormat(new Date(item.timestamp_ms)) }}
@@ -351,7 +346,7 @@
                 </div>
                 <div class="smart-contracts-page__stack" role="cell">
                   <BaseHash :hash="item.contract_address" :type="addressHashType" copy />
-                  <small>{{ item.contract_alias ?? $t('contracts.noAlias') }}</small>
+                  <small>{{ $t('contracts.noAlias') }}</small>
                   <BaseHash
                     v-if="item.authority"
                     :hash="item.authority"
@@ -388,7 +383,7 @@
                   <BaseHash :hash="item.block_hash_hex" :type="hashType" copy />
                 </div>
                 <div role="cell">
-                  <BaseHash :hash="item.tx_hash_hex" :link="transactionPath(item.tx_hash_hex)" :type="hashType" copy />
+                  <BaseHash :hash="item.execution_hash_hex" :link="transactionPath(item.execution_hash_hex)" :type="hashType" copy />
                 </div>
                 <div role="cell">
                   <details
@@ -428,7 +423,7 @@ import { computed, onScopeDispose, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n';
 import { useParamScope } from '@vue-kakuyaku/core';
 import * as http from '@/shared/api';
-import { PINNED_TORII_DEFAULT_MAX_FETCH_SIZE, type ContractActivity, type ContractEvent } from '@/shared/api/schemas';
+import type { ContractActivity, ContractEvent } from '@/shared/api/schemas';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
@@ -440,7 +435,7 @@ import BaseTable from '@/shared/ui/components/BaseTable.vue';
 import BaseTabs from '@/shared/ui/components/BaseTabs.vue';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
-import { useListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
+import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
 import {
   appendLiveContractEvent,
   contractAccountPath,
@@ -470,7 +465,6 @@ const filterKeys = [
   'contract_address',
   'contract_alias',
   'contract_entrypoint',
-  'module',
   'event_kind',
   'participant',
   'asset_id',
@@ -479,7 +473,7 @@ const filterKeys = [
   'since_timestamp_ms',
   'until_timestamp_ms',
 ] as const;
-const eventOnlyFilterKeys = ['module', 'event_kind', 'participant', 'asset_id', 'provenance'] as const;
+const eventOnlyFilterKeys = ['event_kind', 'participant', 'asset_id', 'provenance'] as const;
 const contractValidationKeys = {
   providedOnce: 'contracts.validation.providedOnce',
   stringValue: 'contracts.validation.stringValue',
@@ -495,7 +489,7 @@ const contractValidationKeys = {
   provenanceValue: 'contracts.validation.provenanceValue',
 } as const satisfies Record<ContractFilterValidationCode, string>;
 
-const { route, page, pageSize, pagination, resetPagination, updateListQuery } = useListRouteQuery();
+const { route, cursor, limit, pagination, resetPagination, updateListQuery } = useCursorListRouteQuery();
 const activeTab = computed(() => parseContractExplorerTab(route.query.tab));
 const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full', lg: 'medium', xs: 'two-line' }, 'short');
 const addressHashType = useAdaptiveHash({ xxl: 'full', xl: 'full', lg: 'medium', md: 'short' }, 'two-line');
@@ -523,6 +517,7 @@ function selectTab(value: string) {
     for (const key of eventOnlyFilterKeys) patch[key] = null;
   } else {
     patch.contract_entrypoint = null;
+    patch.contract_alias = null;
   }
   updateListQuery(patch, { history: 'push' }).catch(() => {});
 }
@@ -531,7 +526,7 @@ function applyFilters() {
   const relevant =
     activeTab.value === 'activity'
       ? filterKeys.filter((key) => !eventOnlyFilterKeys.includes(key as (typeof eventOnlyFilterKeys)[number]))
-      : filterKeys.filter((key) => key !== 'contract_entrypoint');
+      : filterKeys.filter((key) => key !== 'contract_entrypoint' && key !== 'contract_alias');
   const patch = Object.fromEntries(filterKeys.map((key) => [key, null])) as Record<string, RouteQueryPatchValue>;
   for (const key of relevant) patch[key] = filterDraft[key] || null;
   updateListQuery(patch).catch(() => {});
@@ -548,12 +543,12 @@ function contractFilterValidationMessage(issues: readonly ContractFilterValidati
 }
 
 function contractProvenanceLabel(provenance: ContractEvent['provenance']) {
-  return t(provenance === 'emitted' ? 'contracts.filters.emitted' : 'contracts.filters.derived');
+  return t(`contracts.filters.${provenance}`);
 }
 
-const activityParams = computed(() => parseContractActivitySearchParams(route.query, page.value, pageSize.value));
+const activityParams = computed(() => parseContractActivitySearchParams(route.query, cursor.value, limit.value));
 const paginationError = computed(() =>
-  pagination.value.ok ? undefined : t('table.invalidPagination', { maxFetchSize: pagination.value.maxFetchSize })
+  pagination.value.ok ? undefined : t('table.invalidCursorPagination')
 );
 const activityListValid = computed(() => pagination.value.ok && activityParams.value.ok);
 const activityErrorLabel = computed(
@@ -582,7 +577,7 @@ const activitySnapshot = computed(() =>
   })
 );
 
-const eventParams = computed(() => parseContractEventSearchParams(route.query, page.value, pageSize.value));
+const eventParams = computed(() => parseContractEventSearchParams(route.query, cursor.value, limit.value));
 const eventListValid = computed(() => pagination.value.ok && eventParams.value.ok);
 const eventErrorLabel = computed(
   () =>

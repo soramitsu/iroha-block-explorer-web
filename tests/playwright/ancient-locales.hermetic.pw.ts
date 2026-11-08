@@ -20,20 +20,28 @@ function saveLocalePreference(locale: string): void {
 }
 
 async function installHermeticApi(page: Page): Promise<void> {
+  await page.route('**/config.json', (route) => route.fulfill({ json: {
+    toriiBaseUrl: 'https://taira.sora.org',
+    networkId: `hash:${'AB'.repeat(32)}#B99E`,
+    networkPrefix: 369,
+  } }));
   await page.route('**/v1/**', async (route: Route) => {
     const url = new URL(route.request().url());
-    if (url.pathname === '/v1/explorer/accounts') {
+    const headers = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
+    if (route.request().method() === 'OPTIONS') return await route.fulfill({ status: 204, headers });
+    if (url.pathname === '/v1/explorer/accounts/query') {
       await route.fulfill({
         status: 200,
+        headers,
         contentType: 'application/json',
         body: JSON.stringify({
-          pagination: { limit: 10, next_cursor: null, has_more: false },
+          next_cursor: null,
           items: [],
         }),
       });
       return;
     }
-    await route.fulfill({ status: 503, contentType: 'application/json', body: '{}' });
+    await route.fulfill({ status: 503, headers, contentType: 'application/json', body: '{}' });
   });
 }
 

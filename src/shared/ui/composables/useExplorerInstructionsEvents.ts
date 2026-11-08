@@ -1,13 +1,14 @@
-import { computed, effectScope, getCurrentScope, onScopeDispose, ref } from 'vue';
+import { computed, effectScope, getCurrentScope, onScopeDispose, ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import type { EffectScope } from 'vue';
 import { useEventSource } from '@vueuse/core';
 import { buildToriiUrl } from '@/shared/api';
+import { explorerReadIsPublic, explorerReadAuthRevision } from '@/shared/lib/explorer-read-auth';
 
 interface ExplorerInstructionsEventSource {
-  data: Ref<string | null>;
-  status: Ref<'CONNECTING' | 'OPEN' | 'CLOSED'>;
-  close: () => void;
+  data: Ref<string | null>
+  status: Ref<'CONNECTING' | 'OPEN' | 'CLOSED'>
+  close: () => void
 }
 
 let sharedEvents: ExplorerInstructionsEventSource | null = null;
@@ -15,9 +16,11 @@ let consumers = 0;
 let sharedScope: EffectScope | null = null;
 
 function createEventSource(): ExplorerInstructionsEventSource {
-  const isSupported = typeof window !== 'undefined' && typeof EventSource !== 'undefined';
+  const isSupported =
+    typeof window !== 'undefined' &&
+    typeof EventSource !== 'undefined';
 
-  if (!isSupported) {
+  if (!isSupported || !explorerReadIsPublic.value) {
     return {
       data: ref<string | null>(null),
       status: ref<'CONNECTING' | 'OPEN' | 'CLOSED'>('CLOSED'),
@@ -27,6 +30,9 @@ function createEventSource(): ExplorerInstructionsEventSource {
 
   const streamUrl = computed(() => buildToriiUrl('/v1/explorer/instructions/stream'));
   const { data, status, close } = useEventSource(streamUrl, [], { autoReconnect: true });
+  // Native EventSource cannot sign canonical account headers. Authenticated
+  // views refresh through their signed SDK snapshots instead.
+  watch(explorerReadAuthRevision, () => { close(); data.value = null; }, { flush: 'sync' });
   return { data, status, close };
 }
 

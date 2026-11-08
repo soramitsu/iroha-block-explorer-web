@@ -5,6 +5,11 @@
     :role="rendersDesktopRows ? 'table' : undefined"
     :aria-busy="props.loading"
   >
+    <BaseResourceState
+      v-if="props.error"
+      :snapshot="{ status: 'error', problem: props.error }"
+      @retry="emit('retry')"
+    />
     <div
       v-if="$slots.header && rendersDesktopRows && !isEmpty"
       role="rowgroup"
@@ -25,7 +30,7 @@
       <BaseLoading />
     </div>
     <div
-      v-else-if="isEmpty"
+      v-else-if="isEmpty && !props.error"
       class="content-row content-row_empty row-text"
       role="status"
     >
@@ -104,16 +109,19 @@
 import { computed, ref, useSlots } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import BaseLoading from './BaseLoading.vue';
+import BaseResourceState from './BaseResourceState.vue';
+import type { ApiProblem } from '@/shared/utils/resource-state';
 import BasePagination from '@/shared/ui/components/BasePagination.vue';
 import BaseCursorPagination from '@/shared/ui/components/BaseCursorPagination.vue';
-import type { CursorPagination, Pagination } from '@/shared/api/schemas';
+import type { CollectionContinuation, Pagination } from '@/shared/api/schemas';
 
 interface Props {
   loading: boolean
+  error?: ApiProblem | null
   emptyLabel?: string
   total?: number
   payloadPagination?: Pagination | null
-  cursorPagination?: CursorPagination | null
+  cursorPagination?: CollectionContinuation | null
   paginationMode?: 'numbered' | 'cursor'
   disablePagination?: boolean
   paginationBreakpoint?: number
@@ -128,10 +136,12 @@ interface Props {
 
 const emit = defineEmits<{
   'click:row': [data: T]
+  retry: []
 }>();
 
 const props = withDefaults(defineProps<Props>(), {
   breakpoint: 960,
+  error: null,
   disablePagination: false,
   rowPointer: false,
   rowKey: undefined,

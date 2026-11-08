@@ -1,15 +1,6 @@
 {
-  "networkId": "hash:32C903E5B3497E34C2B844EBFE8A39C19E6CF8F95D44C1FFB8BA9DCB42F91149#A2F0",
-  "toriiBaseUrl": "https://torii.example",
-  "toriiForceBaseUrl": false,
-  "kotodamaCompilerUrl": "https://compiler.example",
-  "toriiFailoverEnabled": true,
-  "toriiFailoverNodes": ["https://torii-backup-1.example", "https://torii-backup-2.example"],
-  "toriiFailoverFailureThreshold": 5,
-  "toriiFailoverWindowMs": 60000,
-  "toriiFailoverProbeTimeoutMs": 1500,
-  "toriiFailoverPersistSwitch": true,
-  "toriiRequestTimeoutMs": 5000,
-  "toriiRequestRetryCount": 1,
-  "toriiRequestRetryBaseDelayMs": 200
+  "toriiBaseUrl": "https://taira.sora.org",
+  "toriiForceBaseUrl": true,
+  "networkId": "<canonical checked NetworkId from authenticated deployment metadata>",
+  "networkPrefix": 369
 }

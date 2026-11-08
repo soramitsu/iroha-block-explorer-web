@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "explorer-taira",
+      "runtimeExecutable": "./node_modules/.bin/vite",
+      "runtimeArgs": [
+        "--config",
+        "/private/tmp/claude-501/-Users-takemiyamakoto-dev-iroha-block-explorer-web/2d09de18-aa32-4152-9461-3ed29a11854e/scratchpad/dev/vite.taira.mts"
+      ],
+      "port": 5199
+    }
+  ]
+}

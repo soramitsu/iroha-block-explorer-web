@@ -22,8 +22,8 @@
   "table": {
     "rowsPerPage": "Zeilen pro Seite",
     "pageOf": "{0}-{1} von {2}",
-    "cursorPage": "{0} Zeilen auf dieser Seite; genaue Gesamtsumme nicht verfügbar",
-    "scanSample": "{0} Datensätze durchsucht; genaue Gesamtsumme nicht verfügbar",
+    "cursorPage": "{0} Zeilen auf dieser Seite; genaue Gesamtzahl nicht verfügbar",
+    "scanSample": "{0} Datensätze gescannt; genaue Gesamtzahl nicht verfügbar",
     "cursorRepeated": "Die Seitennavigation wurde beendet, weil Torii einen Cursor wiederholt hat",
     "invalidPagination": "Seite und Zeilenzahl pro Seite müssen kanonische positive ganze Zahlen sein; die Zeilenzahl muss 10, 20, 50 oder 100 betragen, und die Auswahl muss innerhalb der ersten {maxFetchSize} passenden Torii-Zeilen bleiben.",
     "invalidCursorPagination": "Cursor und Zeilen pro Seite müssen kanonische Torii-Werte verwenden: einen base64url-Cursor ohne Auffüllzeichen und 10, 20, 50 oder 100 Zeilen.",
@@ -255,7 +255,7 @@
       "loading": "Ledger-Nachweise werden geladen",
       "loadError": "Die Ledger-Nachweise konnten nicht geladen werden",
       "retry": "Nachweise erneut laden",
-      "scope": "Die Aufnahme des Transaktionseintrags sowie seine Übereinstimmung mit der angeforderten Transaktion und dem Referenzblock werden lokal geprüft. Ein Ausführungsergebnispfad wird nur gegen die im selben Nachweis bereitgestellte Ergebniswurzel geprüft; diese Wurzel ist hier nicht unabhängig verankert. Zustandswurzeln und Quorumzertifikate werden genau so angezeigt, wie dieser Knoten sie bereitgestellt hat; dieser Browser prüft ihre aggregierte BLS-Signatur nicht.",
+      "scope": "Dieser Browser prüft nur Transaktions- und Netzwerkkennung sowie die Blockhöhe. Der Knoten liefert die Inklusionspfade und das Konsenszertifikat; Merkle-Pfade und Validatorsignaturen werden hier nicht verifiziert.",
       "blockProof": "Merkle-Beweis des Blocks",
       "entryVerified": "Transaktionseintrag lokal verifiziert",
       "verificationFailed": "Lokale Verifizierung fehlgeschlagen",
@@ -303,7 +303,10 @@
       "quorumUnavailable": "Auf diesem Knoten ist kein dauerhaft gespeichertes Commit-Quorumzertifikat verfügbar.",
       "quorumRequestFailed": "Die Anfrage nach dem Quorumzertifikat ist fehlgeschlagen.",
       "stateAgreement": "Die vom Knoten bereitgestellten Umschläge für Zustandswurzel und Zustandsnachweis bezeichnen den angeforderten Block und enthalten identische Block-Hashes und Zustandswurzeln.",
-      "stateMismatch": "Warnung: Die vom Knoten bereitgestellten Umschläge für Zustandswurzel und Zustandsnachweis bezeichnen nicht denselben angeforderten Block und dieselbe Zustandswurzel."
+      "stateMismatch": "Warnung: Die vom Knoten bereitgestellten Umschläge für Zustandswurzel und Zustandsnachweis bezeichnen nicht denselben angeforderten Block und dieselbe Zustandswurzel.",
+      "proofUnavailable": "Dieser Nachweis ist für den aktuellen Leser nicht verfügbar. Verbinden Sie für einen privaten Datenraum über den Lesezugriff eine berechtigte Wallet.",
+      "transactionEntryHash": "Hash des Transaktionseintrags",
+      "executionOutputHash": "Hash der Ausführungsausgabe"
     },
     "filters": {
       "authorityLabel": "Kontofilter",
@@ -848,7 +851,7 @@
       "contractAlias": "Vertragsalias",
       "contractDataspace": "Datenraum",
       "contractNamespace": "Namensraum",
-      "contractId": "Vertrag",
+      "contractId": "Smart Contract",
       "codeHash": "Code-Hash",
       "abiHash": "ABI-Hash",
       "abiVersion": "ABI-Version",
@@ -856,8 +859,8 @@
     }
   },
   "contracts": {
-    "nav": "Intelligente Verträge",
-    "title": "Intelligente Verträge",
+    "nav": "Smart Contracts",
+    "title": "Smart Contracts",
     "explorerHint": "Prüfen Sie bestätigte Vertragsaufrufe, den indexierten Ereignisverlauf und Live-Vertragsereignisse.",
     "tabs": {
       "activity": "Aktivität",
@@ -927,7 +930,7 @@
       "timestamp": "Zeitstempel",
       "decodedCallData": "Dekodierte Aufrufdaten",
       "event": "Ereignis",
-      "contract": "Vertrag",
+      "contract": "Smart Contract",
       "participantsAssets": "Teilnehmer / Vermögenswerte",
       "decodedEventData": "Entcodierte Ereignisdaten"
     },
@@ -1179,7 +1182,7 @@
   "assets": {
     "assets": "Vermögenswerte",
     "assetsAndNFT": "Vermögenswerte und NFTs",
-    "assetsAndNFTAndRWA": "Vermögenswerte, NFTs & RWAs",
+    "assetsAndNFTAndRWA": "Vermögenswerte, NFTs und RWAs",
     "asset": "Vermögenswert {0}",
     "rwa": "RWA {0}",
     "assetTransactions": "Asset-Transaktionen",
@@ -1189,16 +1192,16 @@
     "nfts": "NFTs",
     "rwas": "RWAs",
     "numerics": "Vermögenswerte",
-    "heldQuantity": "Gehaltene Menge",
+    "heldQuantity": "Reservierte Menge",
     "availableQuantity": "Verfügbare Menge",
-    "primaryReference": "Primärreferenz",
-    "provenanceGraph": "Provenienzgraph",
-    "provenanceNoParents": "Für dieses Los ist keine Herkunft aus Vorgängerlosen erfasst.",
-    "provenanceIncomplete": "Einige Vorgänger-Lots konnten nicht geladen werden; dieser Graph ist daher unvollständig.",
-    "provenanceTruncated": "Der Provenienzgraph hat die sichere Abrufgrenze erreicht und ist möglicherweise abgeschnitten.",
+    "primaryReference": "Hauptreferenz",
+    "provenanceGraph": "Herkunftsgraph",
+    "provenanceNoParents": "Für dieses Los sind keine Vorgängerlose erfasst.",
+    "provenanceIncomplete": "Einige vorgelagerte Lose konnten nicht geladen werden, daher ist dieser Graph unvollständig.",
+    "provenanceTruncated": "Der Herkunftsgraph hat das Sicherheitslimit für Abrufe erreicht und ist möglicherweise abgeschnitten.",
     "provenanceUnavailableParent": "Vorgängerlos nicht verfügbar",
-    "provenanceContribution": "Beitrag des Vorgängerloses",
-    "frozen": "Gesperrt",
+    "provenanceContribution": "Anteil des Vorgängerloses",
+    "frozen": "Eingefroren",
     "frozenYes": "Ja",
     "frozenNo": "Nein",
     "definitionFields": {
@@ -1268,7 +1271,7 @@
     "window": "Fenster",
     "coverageShort": "Abdeckung",
     "coverageComplete": "vollständig",
-    "coverageSampled": "probiert",
+    "coverageSampled": "Stichprobe",
     "gini": "Gini (Inhaber)",
     "hhi": "HHI",
     "effectiveHolders": "Effektive Inhaber (1/HHI)",
@@ -1442,7 +1445,7 @@
     "epoch": "Epoche",
     "finalized": "Abgeschlossen",
     "finalizedYes": "Ja",
-    "finalizedNo": "NEIN",
+    "finalizedNo": "Nein",
     "seed": "Samen",
     "participants": "Teilnehmer",
     "commitments": "Commitments",
@@ -1473,7 +1476,7 @@
     "deliveryPaymentLegs": "Lieferung: {0} · Zahlung: {1}",
     "primaryCounterLegs": "Primär: {0} · Gegenposition: {1}",
     "committedYes": "Ja",
-    "committedNo": "NEIN",
+    "committedNo": "Nein",
     "fxWindowMs": "FX-Fenster",
     "noSettlementEvents": "Noch keine Abwicklungsereignisse",
     "nexusFee": "Snapshot der Nexus-Gebühren",
@@ -1787,7 +1790,7 @@
       "outputChannel": "Ausgabekanal",
       "outputChannelPlaceholder": "Wählen Sie eine Ausgabe",
       "outputChannelNotification": "Benachrichtigung",
-      "outputChannelDashboard": "Armaturenbrett",
+      "outputChannelDashboard": "Dashboard",
       "outputChannelLog": "Protokoll",
       "outputAudience": "Publikum",
       "linkFrom": "Von Schritt",
@@ -2770,5 +2773,252 @@
       "technicalDetails": "Technische Details",
       "ttl": "Gültigkeitsdauer (ms)"
     }
+  },
+  "dashboards": {
+    "nav": "Dashboards",
+    "tabs": {
+      "label": "Dashboards",
+      "network": "Netzwerkpuls",
+      "activity": "Aktivität",
+      "ledger": "Ledger"
+    },
+    "titles": {
+      "network": "Netzwerkpuls",
+      "activity": "Transaktionsaktivität",
+      "ledger": "Zusammensetzung des Ledgers"
+    },
+    "subtitles": {
+      "network": "Blockproduktion, Commit-Latenz und Kapazität live, gelesen vom verbundenen Torii-Peer.",
+      "activity": "Wann das Netzwerk ausgelastet ist und welche Arten von Transaktionen es verarbeitet.",
+      "ledger": "Wie sich Konten, Domains und Vermögenswerte über den Ledger verteilen."
+    },
+    "window": {
+      "label": "Verlaufsfenster",
+      "blocks": "{count} Blöcke"
+    },
+    "live": {
+      "streaming": "Live",
+      "polling": "Aktualisierung alle 10 s"
+    },
+    "coverage": {
+      "scanning": "Verlauf wird gelesen: {loaded} von {target} Blöcken",
+      "complete": "Letzte {loaded} Blöcke",
+      "genesis": "Alle {loaded} Blöcke seit Genesis",
+      "incomplete": "{loaded} von {target} Blöcken gelesen (unvollständig)"
+    },
+    "errors": {
+      "history": "Der Blockverlauf konnte nicht gelesen werden.",
+      "status": "Der Peer-Status ist nicht verfügbar.",
+      "retry": "Erneut versuchen"
+    },
+    "chart": {
+      "showTable": "Tabelle",
+      "showChart": "Diagramm",
+      "unknown": "Blockinhalt nicht verfügbar: Anzahl unbekannt",
+      "partial": "Teilweise erfasst: eine Untergrenze",
+      "noData": "Nicht gescannt",
+      "total": "Gesamt",
+      "empty": "Noch nicht genügend Blöcke.",
+      "height": "Höhe",
+      "time": "Zeit",
+      "blockTitle": "Block {height}",
+      "from": "Von",
+      "to": "Bis"
+    },
+    "peerScope": "Laut Angaben des verbundenen Torii-Peers",
+    "state": {
+      "producing": "Produziert Blöcke",
+      "pending": "Transaktionen warten",
+      "idle": "Leerlauf: nichts ausstehend",
+      "delayed": "Vermutete Verzögerung bei diesem Peer",
+      "stale": "Peer-Status ist veraltet",
+      "unknown": "Zustand unbekannt"
+    },
+    "instruments": {
+      "title": "Instrumententafel",
+      "height": "Blockhöhe",
+      "lastBlock": "Letzter Block vor {age}",
+      "commit": "Commit-Latenz",
+      "commitHint": "Letzter Block, von der Erstellung bis zum Commit bei diesem Peer",
+      "queue": "Transaktionswarteschlange",
+      "queueHint": "{inflight} in Bearbeitung; älteste wartet seit {age}",
+      "queueSaturated": "Warteschlange voll",
+      "rejections": "Abgelehnte Transaktionen",
+      "rejectionsValue": "{rejected} von {total}",
+      "rejectionsHint": "{recent} in den letzten 5 Minuten",
+      "peers": "Verbundene Peers",
+      "peersHint": "Ohne den meldenden Peer",
+      "viewChanges": "Leaderwechsel in dieser Runde",
+      "sinceGenesis": "Seit Genesis",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "Letzte Stunde",
+      "lastHourUnit": "Transaktionen",
+      "lastHourRate": "{rate} pro Minute",
+      "lastHourPartial": "{minutes} Min. beobachtet; eine Untergrenze",
+      "busiestMinute": "Aktivste Minute im Fenster: {count} um {time}"
+    },
+    "charts": {
+      "distribution": {
+        "title": "Zeit zwischen Blöcken",
+        "caption": "Wartezeiten zwischen aufeinanderfolgenden Blöcken über die letzten {count} Blöcke. Iroha schreibt nur dann einen Block fest, wenn Transaktionen eintreffen; eine lange Wartezeit bedeutet also Ruhe, keinen langsamen Konsens.",
+        "series": "Blöcke",
+        "range": "Wartezeit",
+        "median": "Median-Wartezeit {value}"
+      },
+      "perBlock": {
+        "title": "Transaktionen pro Block",
+        "caption": "Bestätigte und abgelehnte Transaktionen in jedem der letzten {count} Blöcke.",
+        "committed": "Bestätigt",
+        "rejected": "Abgelehnt",
+        "subset": "Angezeigt werden die letzten {shown} von {count} gelesenen Blöcken (#{from}–#{to})."
+      },
+      "throughput": {
+        "title": "Durchsatz im Zeitverlauf",
+        "caption": "Transaktionen pro {bucket}, zwischen Blöcken mit Nullen aufgefüllt. Hohle Markierungen kennzeichnen teilweise erfasste Intervalle.",
+        "committed": "Bestätigt",
+        "rejected": "Abgelehnt"
+      },
+      "lanes": {
+        "title": "Spurkapazität",
+        "caption": "Bestätigte TEU im Verhältnis zur Kapazität im jüngsten Slot-Rahmen jeder Spur.",
+        "lane": "Spur {id}",
+        "value": "{committed} von {capacity} TEU",
+        "empty": "Dieser Peer meldet keine Spuren."
+      },
+      "blockFill": {
+        "title": "Blockfüllung",
+        "caption": "Blöcke nach der Anzahl der für Sie sichtbaren Transaktionen. Ein Block kann zusätzlich Transaktionen aus privaten Datenräumen enthalten.",
+        "series": "Blöcke",
+        "bucket": "Transaktionen"
+      }
+    },
+    "stats": {
+      "transactions": "Transaktionen",
+      "rejectionRate": "Ablehnungsquote",
+      "meanPerBlock": "Mittelwert pro Block",
+      "busiest": "Aktivster Block",
+      "span": "Zeitspanne",
+      "blocks": "Gelesene Blöcke",
+      "unreadable": "Nicht lesbare Blöcke",
+      "unreadableHint": "Anzahl unbekannt; in den Summen nicht enthalten",
+      "medianPerBlock": "Median {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "Aktivität nach Stunde",
+        "caption": "Transaktionen pro Stunde für jeden Kalendertag in Ihrer Ortszeit. Schraffierte Stunden liegen außerhalb des gelesenen Verlaufs.",
+        "value": "Transaktionen",
+        "blocks": "Blöcke"
+      },
+      "byHour": {
+        "title": "Tagesprofil nach Stunden",
+        "caption": "Transaktionen in jeder lokalen Stunde über die gelesenen Tage.",
+        "series": "Transaktionen"
+      },
+      "sample": {
+        "caption": "Neueste {count} sichtbare Transaktionen",
+        "size": "{count} Transaktionen"
+      },
+      "executables": {
+        "title": "Executable-Mix",
+        "caption": "Anteil der Transaktionen in der Stichprobe nach Executable-Art.",
+        "Instructions": "Anweisungen",
+        "ContractCall": "Vertragsaufruf",
+        "Ivm": "IVM-Bytecode",
+        "IvmProved": "IVM mit Beweis",
+        "Batch": "Batch",
+        "other": "Sonstige"
+      },
+      "outcomes": {
+        "title": "Ergebnisse",
+        "committed": "Bestätigt",
+        "rejected": "Abgelehnt"
+      },
+      "authorities": {
+        "title": "Aktivste Unterzeichner",
+        "caption": "Konten, die die meisten Transaktionen der Stichprobe signiert haben.",
+        "empty": "Keine Transaktionen in der Stichprobe."
+      },
+      "authoritiesCount": "Verschiedene Unterzeichner",
+      "latency": {
+        "title": "Aufnahmelatenz",
+        "caption": "Zeit von der Erstellung jeder Transaktion der Stichprobe bis zu dem Block, der sie aufgenommen hat. Die Erstellungszeit stammt von der eigenen Uhr des Unterzeichners.",
+        "series": "Transaktionen",
+        "median": "Median der Aufnahmelatenz",
+        "p95": "95. Perzentil {value}",
+        "clockAhead": "{count} Transaktionen melden eine Erstellungszeit nach ihrem Block (Uhr des Unterzeichners geht vor) und werden ausgelassen.",
+        "unmatched": "{count} Transaktionen der Stichprobe liegen außerhalb des Blockfensters.",
+        "empty": "Noch fällt keine Transaktion der Stichprobe in das Blockfenster."
+      }
+    },
+    "ledger": {
+      "accounts": "Konten",
+      "domains": "Domains",
+      "assets": "Vermögenswerte und NFTs",
+      "nodes": "Knoten",
+      "domainsByAccounts": {
+        "title": "Domains nach Konten",
+        "caption": "In jeder Domain registrierte Konten; die Top {count} werden angezeigt."
+      },
+      "mintability": {
+        "title": "Prägbarkeit",
+        "caption": "Asset-Definitionen nach Prägungsrichtlinie.",
+        "Infinitely": "Prägbar",
+        "Once": "Einmal prägbar",
+        "Not": "Feste Menge",
+        "Limited": "Begrenzt",
+        "other": "Sonstige"
+      },
+      "homes": {
+        "title": "Registrierungsorte der Vermögenswerte",
+        "caption": "Wo Asset-Definitionen registriert sind.",
+        "domain": "Domain",
+        "dataspace": "Datenraum",
+        "global": "Global"
+      },
+      "holdings": {
+        "title": "Bestände pro Konto",
+        "caption": "Konten nach der Anzahl der gehaltenen Vermögenswerte.",
+        "series": "Konten",
+        "bucket": "Gehaltene Vermögenswerte"
+      },
+      "scan": "{loaded} {kind} gelesen",
+      "scanIncomplete": "Die ersten {loaded} {kind} gelesen; es gibt weitere",
+      "kinds": {
+        "domains": "Domains",
+        "definitions": "Asset-Definitionen",
+        "accounts": "Konten"
+      },
+      "countsLive": "Live-Summen aus dem Telemetriestream",
+      "countsStale": "Letzte Summen aus dem Telemetriestream; die Verbindung wird wiederhergestellt",
+      "countsUnavailable": "Der Telemetriestream ist nicht verfügbar",
+      "definitionsByBalances": {
+        "title": "Saldoeinträge je Asset-Definition",
+        "caption": "Die ersten {count} nach Anzahl der Saldoeinträge."
+      }
+    }
+  },
+  "navigation": {
+    "menu": "Menü",
+    "groups": {
+      "explore": "Erkunden",
+      "analytics": "Analysen",
+      "network": "Netzwerk",
+      "build": "Entwickeln",
+      "services": "Dienste"
+    },
+    "hints": {
+      "explore": "Ledger-Einträge durchsuchen",
+      "analytics": "Dashboards und ökonomische Kennzahlen",
+      "network": "Peers, Konsens und Netzwerkdienste",
+      "build": "Smart Contracts schreiben, prüfen und nachverfolgen",
+      "services": "Speicher und Rechenleistung auf SORA Nexus"
+    }
+  },
+  "readAccess": {
+    "title": "Lesezugriff",
+    "description": "Verbinden Sie eine Wallet, um Datensätze gemäß Ihren Kontoberechtigungen zu lesen.",
+    "disconnect": "Trennen",
+    "public": "Öffentlich fortfahren"
   }
 }

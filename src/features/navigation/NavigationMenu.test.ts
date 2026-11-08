@@ -23,11 +23,11 @@ async function factory(layout: 'sidebar' | 'inline' = 'sidebar') {
 
 describe('Always-visible navigation', () => {
   it.each(['sidebar', 'inline'] as const)('shows every destination without disclosures in %s layout', async (layout) => {
-    expect(menu).toHaveLength(20);
-    expect(new Set(menu.map((item) => item.to)).size).toBe(20);
+    expect(menu).toHaveLength(21);
+    expect(new Set(menu.map((item) => item.to)).size).toBe(21);
     expect(navigationGroups.map((group) => group.id)).toEqual(['explore', 'analysis', 'network', 'develop']);
     const { wrapper } = await factory(layout);
-    expect(wrapper.findAll('a')).toHaveLength(20);
+    expect(wrapper.findAll('a')).toHaveLength(21);
     expect(wrapper.findAll('a').every((link) => link.isVisible())).toBe(true);
     expect(wrapper.find('button, details, [aria-expanded]').exists()).toBe(false);
     expect(wrapper.get('[aria-current=page]').attributes('href')).toBe('/');

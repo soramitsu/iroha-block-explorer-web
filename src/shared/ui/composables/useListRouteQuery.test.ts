@@ -104,7 +104,7 @@ describe('useCursorListRouteQuery', () => {
   it.each([
     [undefined, undefined, { ok: true, cursor: null, limit: 10 }],
     ['Y3Vyc29yLTE', '100', { ok: true, cursor: 'Y3Vyc29yLTE', limit: 100 }],
-    ['padded=', '20', { ok: false, code: 'invalid-cursor' }],
+    ['padded=', '20', { ok: true, cursor: 'padded=', limit: 20 }],
     ['', '20', { ok: false, code: 'invalid-cursor' }],
     [null, '20', { ok: false, code: 'invalid-cursor' }],
     [['cursor-1'], '20', { ok: false, code: 'invalid-cursor' }],
@@ -114,38 +114,13 @@ describe('useCursorListRouteQuery', () => {
     expect(parseCursorListPagination(rawCursor, rawLimit)).toEqual(expected);
   });
 
-  it('uses the authoritative 1,424-byte world and 192-byte history cursor ceilings', () => {
-    const worldCursor = 'w'.repeat(1424);
-    const historyCursor = 'h'.repeat(192);
-
-    expect(parseCursorListPagination(worldCursor, '10')).toEqual({ ok: true, cursor: worldCursor, limit: 10 });
-    expect(parseCursorListPagination(`${worldCursor}w`, '10')).toEqual({ ok: false, code: 'invalid-cursor' });
-    expect(parseCursorListPagination(historyCursor, '10', { cursorKind: 'history' })).toEqual({
-      ok: true,
-      cursor: historyCursor,
-      limit: 10,
-    });
-    expect(parseCursorListPagination(`${historyCursor}h`, '10', { cursorKind: 'history' })).toEqual({
-      ok: false,
-      code: 'invalid-cursor',
-    });
-  });
-
-  it('rejects an oversized history cursor through the route composable without rewriting it', async () => {
-    route.query = { cursor: 'h'.repeat(193), limit: '10' };
-    updateRouteQuery.mockClear();
-    const state = useCursorListRouteQuery({ cursorKind: 'history' });
-    await nextTick();
-
-    expect(state.pagination.value).toEqual({ ok: false, code: 'invalid-cursor' });
-    expect(updateRouteQuery.mock.calls.every(([patch]) => !Object.hasOwn(patch, 'cursor'))).toBe(true);
-    expect(() => {
-      state.cursor.value = 'h'.repeat(193);
-    }).toThrow(TypeError);
+  it('preserves long opaque cursors without applying retired frame ceilings', () => {
+    const cursor = 'opaque=' + 'h'.repeat(2048);
+    expect(parseCursorListPagination(cursor, '10')).toEqual({ ok: true, cursor, limit: 10 });
   });
 
   it('retains malformed cursor pagination until the user explicitly resets it', async () => {
-    route.query = { cursor: 'padded=', limit: '30', domain: 'wonderland' };
+    route.query = { cursor: '', limit: '30', domain: 'wonderland' };
     updateRouteQuery.mockClear();
     const state = useCursorListRouteQuery();
     await nextTick();
@@ -164,7 +139,7 @@ describe('useCursorListRouteQuery', () => {
     route.query = {};
     const state = useCursorListRouteQuery();
     expect(() => {
-      state.cursor.value = 'padded=';
+      state.cursor.value = '';
     }).toThrow(TypeError);
     expect(() => {
       state.limit.value = 30;

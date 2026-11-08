@@ -32,7 +32,7 @@ describe('ordered CI gates', () => {
     const gates = buildCiGates({ storeDir: testStore });
     expect(gates.map(({ label }) => label)).toEqual([
       'exact Node version',
-      'exact Iroha SDK pin',
+      'exact SDK archive integrity',
       'frozen dependency fetch',
       'offline frozen install',
       'roadmap integrity',
@@ -45,6 +45,10 @@ describe('ordered CI gates', () => {
     ]);
     expect(gates[0]).toMatchObject({
       args: ['scripts/check-node-version.mjs'],
+      command: 'node',
+    });
+    expect(gates[1]).toMatchObject({
+      args: ['scripts/verify-iroha-sdk.mjs', '--archive-only'],
       command: 'node',
     });
     expect(gates[2]).toMatchObject({
@@ -230,7 +234,7 @@ describe('ordered CI gates', () => {
       .mockReturnValueOnce({ status: 7 });
     expect(() =>
       executeCiGates(buildCiGates({ storeDir: testStore }).slice(0, 3), spawn)
-    ).toThrow('exact Iroha SDK pin exited with status 7');
+    ).toThrow('exact SDK archive integrity exited with status 7');
     expect(spawn).toHaveBeenCalledTimes(2);
   });
 

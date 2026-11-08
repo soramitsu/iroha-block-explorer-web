@@ -16,7 +16,7 @@
     </div>
     <template v-else>
       <div
-        v-if="streamStatus !== 'OPEN'"
+        v-if="isStale"
         class="home-page-info__availability"
         role="status"
       >
@@ -43,7 +43,7 @@ import { computed } from 'vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import { useTelemetryMetrics } from '@/shared/ui/composables/useTelemetryMetrics';
-const { metrics, isLoading: isMetricsLoading, streamStatus, reconnect } = useTelemetryMetrics();
+const { metrics, isLoading: isMetricsLoading, isStale, reconnect } = useTelemetryMetrics();
 const items = computed(() => [
   { value: metrics.value?.accounts, i18nKey: 'homePage.totalAccounts' },
   { value: metrics.value?.assets, i18nKey: 'homePage.totalAssets' },

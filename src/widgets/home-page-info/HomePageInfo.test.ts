@@ -6,6 +6,7 @@ const telemetry = vi.hoisted(() => ({
   metrics: { __v_isRef: true, value: null as null | Record<string, unknown> },
   isLoading: { __v_isRef: true, value: false },
   streamStatus: { __v_isRef: true, value: 'OPEN' },
+  isStale: { __v_isRef: true, get value() { return telemetry.streamStatus.value !== 'OPEN'; } },
   reconnect: vi.fn(),
 }));
 

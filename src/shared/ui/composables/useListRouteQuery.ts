@@ -1,6 +1,7 @@
 import { computed, watch } from 'vue';
 
-import { HistoryCursorSchema, PINNED_TORII_DEFAULT_MAX_FETCH_SIZE, WorldCursorSchema } from '@/shared/api/schemas';
+import { z } from 'zod/v4';
+import { PINNED_TORII_DEFAULT_MAX_FETCH_SIZE } from '@/shared/lib/pagination';
 import { parseCanonicalRoutePositiveInteger, type RouteQueryPatchValue } from '@/shared/lib/route-query';
 import { useRouteQueryState } from '@/shared/ui/composables/useRouteQueryState';
 
@@ -18,11 +19,7 @@ export type CursorListPaginationState =
   | { ok: true; cursor: string | null; limit: number }
   | { ok: false; code: 'invalid-cursor' | 'invalid-limit' };
 
-export type ExplorerCursorKind = 'world' | 'history';
-
-function cursorSchemaForKind(kind: ExplorerCursorKind) {
-  return kind === 'history' ? HistoryCursorSchema : WorldCursorSchema;
-}
+const OpaqueCursorSchema = z.string().min(1);
 
 export function parseNumberedListPagination(
   rawPage: unknown,
@@ -47,10 +44,10 @@ export function parseNumberedListPagination(
 export function parseCursorListPagination(
   rawCursor: unknown,
   rawLimit: unknown,
-  options: { defaultLimit?: number; cursorKind?: ExplorerCursorKind } = {}
+  options: { defaultLimit?: number } = {}
 ): CursorListPaginationState {
   const defaultLimit = options.defaultLimit ?? 10;
-  const cursorSchema = cursorSchemaForKind(options.cursorKind ?? 'world');
+  const cursorSchema = OpaqueCursorSchema;
   const cursor = rawCursor === undefined ? null : cursorSchema.safeParse(rawCursor);
   if (cursor !== null && !cursor.success) return { ok: false, code: 'invalid-cursor' };
 
@@ -132,27 +129,25 @@ export function useCursorListRouteQuery(
     cursorKey?: string;
     limitKey?: string;
     defaultLimit?: number;
-    cursorKind?: ExplorerCursorKind;
   } = {}
 ) {
   const cursorKey = options.cursorKey ?? 'cursor';
   const limitKey = options.limitKey ?? 'limit';
   const defaultLimit = options.defaultLimit ?? 10;
-  const cursorKind = options.cursorKind ?? 'world';
-  const cursorSchema = cursorSchemaForKind(cursorKind);
+  const cursorSchema = OpaqueCursorSchema;
   const { route, updateRouteQuery } = useRouteQueryState();
   const defaults = { [cursorKey]: null, [limitKey]: defaultLimit };
   if (!PAGE_SIZES.has(defaultLimit)) throw new TypeError('defaultLimit must be one of 10, 20, 50, or 100');
 
   const pagination = computed(() =>
-    parseCursorListPagination(route.query[cursorKey], route.query[limitKey], { defaultLimit, cursorKind })
+    parseCursorListPagination(route.query[cursorKey], route.query[limitKey], { defaultLimit })
   );
 
   const cursor = computed<string | null>({
     get: () => (pagination.value.ok ? pagination.value.cursor : null),
     set: (value) => {
       if (value !== null && !cursorSchema.safeParse(value).success) {
-        throw new TypeError('cursor must be an unpadded base64url Torii cursor');
+        throw new TypeError('cursor must be a non-empty opaque Torii cursor');
       }
       updateRouteQuery({ [cursorKey]: value }, { history: 'push', defaults }).catch(() => undefined);
     },
@@ -160,7 +155,7 @@ export function useCursorListRouteQuery(
   const limit = computed({
     get: () => (pagination.value.ok ? pagination.value.limit : defaultLimit),
     set: (value: number) => {
-      const candidate = parseCursorListPagination(undefined, String(value), { defaultLimit, cursorKind });
+      const candidate = parseCursorListPagination(undefined, String(value), { defaultLimit });
       if (!candidate.ok) throw new RangeError('limit must be one of 10, 20, 50, or 100');
       updateRouteQuery({ [cursorKey]: null, [limitKey]: candidate.limit }, { history: 'replace', defaults }).catch(
         () => undefined

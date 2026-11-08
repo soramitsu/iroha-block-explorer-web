@@ -28,7 +28,6 @@
         </BaseButton>
       </div>
       <div
-        v-if="latestSampleDate"
         class="latest-blocks__freshness"
         :data-tone="latestSampleTone"
         data-test="latest-blocks-freshness"
@@ -41,51 +40,41 @@
         <span v-else>{{ $t('telemetry.dataUnknown') }}</span>
         <span>({{ $t(latestSampleToneKey) }})</span>
       </div>
-      <BaseCollectionState
-        :snapshot="setup.snapshot"
-        :count="blocks.length"
+      <BaseResourceState
+        v-if="setup.error"
+        :snapshot="{ status: 'error', problem: setup.error }"
         @retry="setup.refetch()"
-      >
-        <div>
-          <template
-            v-for="block in blocks"
-            :key="block.height"
+      />
+      <div v-if="!isInitialLoading">
+        <template
+          v-for="block in blocks"
+          :key="block.height"
+        >
+          <div
+            class="latest-blocks__row"
+            tabindex="0"
+            role="link"
+            @click="handleRowClick(block.height)"
+            @keydown.enter.space="handleRowClick(block.height)"
           >
-            <div
-              class="latest-blocks__row"
-            >
-              <div class="latest-blocks__row-block-height row-text">
-                {{ block.created_at === null ? '?' : block.transactions_hash ? '◉' : 'O' }}
-                <BaseLink
-                  :to="`/blocks/${block.height}`"
-                  monospace
-                >
-                  {{ block.height }}
-                </BaseLink>
-              </div>
-
-              <div class="latest-blocks__row-time">
-                <TimeIcon
-                  class="latest-blocks__row-time-icon"
-                  aria-hidden="true"
-                />
-                <TimeStamp
-                  v-if="block.created_at"
-                  :value="block.created_at"
-                />
-                <span
-                  v-else
-                  data-test="latest-block-created-at-unavailable"
-                >{{ $t('telemetry.dataUnknown') }}</span>
-              </div>
-
-              <span class="latest-blocks__row-number row-text-monospace">
-                {{ $t('widgets.transactionCount', { count: block.transactions_total }) }}
-              </span>
+            <div class="latest-blocks__row-block-height row-text">
+              {{ block.transactions_hash ? '◉' : 'O' }}
+              <span class="row-text-monospace">{{ block.height }}</span>
             </div>
-          </template>
-        </div>
-      </BaseCollectionState>
+
+            <div class="latest-blocks__row-time">
+              <TimeIcon class="latest-blocks__row-time-icon" />
+              <TimeStamp :value="block.created_at" />
+            </div>
+
+            <span class="latest-blocks__row-number row-text-monospace">{{ $t('widgets.transactionCount', { count: block.transactions_total }) }}</span>
+          </div>
+        </template>
+      </div>
+      <BaseLoading
+        v-else
+        class="latest-blocks_loading"
+      />
     </template>
   </BaseContentBlock>
 </template>
@@ -94,9 +83,9 @@
 import TimeIcon from '@/shared/ui/icons/clock.svg';
 import * as http from '@/shared/api';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
-import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
-import BaseCollectionState from '@/shared/ui/components/BaseCollectionState.vue';
+import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import { computed, ref, watch } from 'vue';
 import TimeStamp from '@/shared/ui/components/TimeStamp.vue';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
@@ -104,7 +93,9 @@ import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import { useBlockStream } from '@/shared/ui/composables/useBlockStream';
 import { classifySampleFreshness } from '@/shared/lib/freshness';
 import { useIntervalFn } from '@vueuse/core';
+import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 
+const navigation = useScopedExplorerNavigation();
 let refetchLatestBlocks: (() => void) | null = null;
 let isFetchPending: (() => boolean) | null = null;
 const blockStream = useBlockStream(() => {
@@ -120,6 +111,7 @@ refetchLatestBlocks = () => setup.refetch();
 isFetchPending = () => setup.isLoading;
 
 const blocks = computed(() => (setup.data?.status === SUCCESSFUL_FETCHING ? setup.data.data.items : []));
+const isInitialLoading = computed(() => setup.isLoading && blocks.value.length === 0);
 const availability = http.useToriiAvailability();
 const showAvailabilityNotice = computed(() => availability.state.value !== 'healthy');
 const availabilityNoticeKey = computed(() => `settings.nodeHealth.${availability.state.value}`);
@@ -130,15 +122,10 @@ useIntervalFn(() => {
 }, 1000);
 
 const latestSampleDate = computed<Date | null>(() => {
-  const timestamps = blocks.value
-    .map((block) => block.created_at)
-    .filter((createdAt): createdAt is Date => createdAt !== null);
-  if (!timestamps.length) return null;
-  return timestamps.reduce((latest, createdAt) => (createdAt > latest ? createdAt : latest), timestamps[0]);
+  if (!blocks.value.length) return null;
+  return blocks.value.reduce((latest, block) => (block.created_at > latest ? block.created_at : latest), blocks.value[0].created_at);
 });
-const latestSampleTone = computed(() =>
-  classifySampleFreshness(latestSampleDate.value?.getTime() ?? null, nowMs.value)
-);
+const latestSampleTone = computed(() => classifySampleFreshness(latestSampleDate.value?.getTime() ?? null, nowMs.value));
 const latestSampleToneKeyMap = {
   fresh: 'telemetry.dataFresh',
   delayed: 'telemetry.dataDelayed',
@@ -158,6 +145,9 @@ watch(
   { immediate: true }
 );
 
+function handleRowClick(height: number) {
+  navigation.push(`/blocks/${height}`).catch(() => {});
+}
 
 async function retryAvailabilityFailover() {
   await http.retryToriiFailover();
@@ -175,21 +165,18 @@ async function retryAvailabilityFailover() {
     margin-top: 20px;
   }
 
-  container-type: inline-size;
-
   &__row {
-    cursor: default;
+    cursor: pointer;
     padding: size(1) size(4);
     border-bottom: 1px solid theme-color('border-primary');
     justify-content: space-between;
     align-items: center;
     min-height: 64px;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 12px;
+    display: flex;
 
     &:hover {
-      background: theme-color('background-hover');
+      box-shadow: theme-shadow('row');
+      border-color: transparent;
     }
 
     & > * {
@@ -210,8 +197,8 @@ async function retryAvailabilityFailover() {
       display: flex;
       justify-content: flex-start;
       align-items: center;
-      min-width: 0;
-      gap: 4px;
+      width: size(18);
+      gap: size(2);
       position: relative;
 
       &-icon {
@@ -219,19 +206,18 @@ async function retryAvailabilityFailover() {
           fill: theme-color('content-quaternary');
         }
       }
+
+      &:hover .context-tooltip {
+        display: flex;
+        left: size(20);
+      }
     }
 
     &-number {
-      min-width: 0;
-      max-width: 100%;
+      width: size(11);
       text-align: right;
       color: theme-color('content-primary');
     }
-  }
-
-  @container (max-width: 400px) {
-    &__row { grid-template-columns: minmax(0, 1fr) auto; }
-    &__row-time { grid-column: 1 / -1; grid-row: 2; }
   }
 
   &__availability {

@@ -1,0 +1,40 @@
+@use './theme' as *;
+
+/// Raised soft-UI module: a lit top-left bevel over a warm chassis.
+@mixin dash-raised-surface($radius: 24px) {
+  border-radius: $radius;
+  background: linear-gradient(145deg, theme-color('dash-panel-top'), theme-color('dash-panel-bottom'));
+  border: 1px solid color-mix(in srgb, theme-color('dash-bezel-light') 50%, transparent);
+  box-shadow: theme-shadow('dash-raised');
+}
+
+/// Recessed well that holds data; its flat fill is the surface charts are validated against.
+@mixin dash-well-surface($radius: 16px) {
+  border-radius: $radius;
+  background: theme-color('dash-well');
+  box-shadow: theme-shadow('dash-inset');
+}
+
+/// Small physical control (switch, key) in its resting position.
+@mixin dash-key-surface($radius: 12px) {
+  border-radius: $radius;
+  background: linear-gradient(145deg, theme-color('dash-panel-top'), theme-color('dash-panel-bottom'));
+  box-shadow: theme-shadow('dash-raised-sm');
+}
+
+/// Tabular figures for values that align in columns or tick while updating.
+@mixin dash-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/// Hidden from sight, still read by assistive technology.
+@mixin dash-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

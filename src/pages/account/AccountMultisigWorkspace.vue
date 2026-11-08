@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { getRuntimeNetworkPrefix } from '@/shared/runtime-config';
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { NetworkId } from '@iroha/iroha-js/browser';
+import { NetworkId } from '@iroha/iroha-js/connect-browser';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import * as http from '@/shared/api';
 import { getRuntimeConfig } from '@/shared/runtime-config';
@@ -33,6 +34,7 @@ import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import InstructionSemanticCard from '@/shared/ui/components/InstructionSemanticCard.vue';
 import { useRouteQueryState } from '@/shared/ui/composables/useRouteQueryState';
 
+const networkPrefix = getRuntimeNetworkPrefix();
 const props = defineProps<{
   accountId: string;
 }>();
@@ -595,8 +597,8 @@ onBeforeUnmount(() => closeAppSession());
                   class="account-multisig__instruction"
                 >
                   <InstructionSemanticCard
-                    v-if="buildDecodedInstructionPresentation(instruction)"
-                    :presentation="buildDecodedInstructionPresentation(instruction)!"
+                    v-if="buildDecodedInstructionPresentation(instruction, networkPrefix)"
+                    :presentation="buildDecodedInstructionPresentation(instruction, networkPrefix)!"
                     compact
                   />
                   <div v-else>

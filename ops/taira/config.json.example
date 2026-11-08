@@ -1,0 +1,6 @@
+{
+  "toriiBaseUrl": "https://taira.sora.org",
+  "toriiForceBaseUrl": true,
+  "networkId": "<canonical checked NetworkId from authenticated deployment metadata>",
+  "networkPrefix": 369
+}

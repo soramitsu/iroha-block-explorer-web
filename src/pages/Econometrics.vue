@@ -187,7 +187,7 @@ const assetDefinitionsScope = useParamScope(
 const isAssetDefinitionsLoading = computed(() => !!assetDefinitionsScope.value?.expose.isLoading);
 const assetDefinitionsPagination = computed(() =>
   assetDefinitionsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? assetDefinitionsScope.value.expose.data.data.pagination
+    ? assetDefinitionsScope.value.expose.data.data
     : null
 );
 const assetDefinitions = computed(() =>

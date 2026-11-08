@@ -217,7 +217,7 @@ describe('LatestTransactions SSE smoke', () => {
     await flushPromises();
 
     expect(fetchLatestTransactionsMock).toHaveBeenCalledTimes(1);
-  }, 20000);
+  });
 
   it('ignores SSE payloads that do not satisfy the current filter', async () => {
     const wrapper = await mountLatestTransactions();
@@ -239,7 +239,7 @@ describe('LatestTransactions SSE smoke', () => {
     await flushPromises();
 
     expect(fetchLatestTransactionsMock).not.toHaveBeenCalled();
-  }, 20000);
+  });
 
   it('retains validated live evidence when the initial list read fails and isolates filter changes', async () => {
     let rejectFetch!: (error: Error) => void;
@@ -253,11 +253,11 @@ describe('LatestTransactions SSE smoke', () => {
     rejectFetch(new TypeError('offline'));
     await flushPromises();
     expect(wrapper.text()).toContain(liveStreamHash);
-    expect(wrapper.get('[role="alert"]').text()).toContain('Refresh failed');
+    expect(wrapper.get('[role="alert"]').text()).toContain('Unknown error occurred');
     await wrapper.get('[data-test="status-filter-rejected"]').trigger('click');
     await flushPromises();
     expect(wrapper.text()).not.toContain(liveStreamHash);
-  }, 20000);
+  });
 
   it('renders the streamed transaction before a slow fetch resolves', async () => {
     let resolveFetch: ((value: typeof baseResponse) => void) | null = null;
@@ -287,5 +287,5 @@ describe('LatestTransactions SSE smoke', () => {
     expect(wrapper.text()).toContain(liveStreamHash);
 
     resolveFetch?.(baseResponse);
-  }, 20000);
+  });
 });

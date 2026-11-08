@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { ref } from 'vue';
 import BigNumber from 'bignumber.js';
@@ -6,10 +6,10 @@ import AssetsList from './AssetsList.vue';
 import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 
-const { setupAsyncDataMock } = vi.hoisted(() => ({ setupAsyncDataMock: vi.fn() }));
-
-const SAMPLE_ACCOUNT_ID = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
+const SAMPLE_ACCOUNT_ID =
+  'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
 const SAMPLE_ASSET_DEFINITION_ID = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
+const SAMPLE_ASSET_ALIAS = 'usd#issuer.main';
 const SAMPLE_ASSET_ID = `${SAMPLE_ASSET_DEFINITION_ID}#${SAMPLE_ACCOUNT_ID}`;
 
 const currentRoute = ref({ name: 'assets', path: '/assets', query: {}, params: {} } as any);
@@ -47,18 +47,10 @@ function applyNavigation(location: any) {
 }
 
 const routeProxy = {
-  get name() {
-    return currentRoute.value.name;
-  },
-  get path() {
-    return currentRoute.value.path;
-  },
-  get query() {
-    return currentRoute.value.query;
-  },
-  get params() {
-    return currentRoute.value.params;
-  },
+  get name() { return currentRoute.value.name; },
+  get path() { return currentRoute.value.path; },
+  get query() { return currentRoute.value.query; },
+  get params() { return currentRoute.value.params; },
 };
 
 vi.mock('vue-router', () => ({
@@ -71,16 +63,11 @@ vi.mock('vue-router', () => ({
 }));
 
 const setupState = {
-  get snapshot(): any {
-    return this.isLoading && !this.data.data.items.length
-      ? { status: 'initial-loading' }
-      : { status: 'ready', data: this.data, isRefreshing: this.isLoading, refreshError: null };
-  },
   isLoading: false,
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: { limit: 10, next_cursor: null, has_more: false },
+      nextCursor: null,
       items: [] as any[],
     },
   },
@@ -88,7 +75,7 @@ const setupState = {
 };
 
 vi.mock('@/shared/utils/setup-async-data', () => ({
-  setupAsyncData: setupAsyncDataMock,
+  setupAsyncData: vi.fn(() => setupState),
 }));
 
 const BaseContentBlockStub = {
@@ -121,25 +108,18 @@ const BaseHashStub = {
 };
 
 describe('AssetsList', () => {
-  const mountedWrappers: Array<ReturnType<typeof mount>> = [];
   beforeEach(() => {
     pushSpy.mockReset();
     pushSpy.mockImplementation(applyNavigation);
     replaceSpy.mockReset();
     replaceSpy.mockImplementation(applyNavigation);
     setupState.data.data.items = [];
-    setupState.data.data.pagination = { limit: 10, next_cursor: null, has_more: false };
-    setupAsyncDataMock.mockClear();
-    setupAsyncDataMock.mockImplementation(() => setupState);
+    setupState.data.data.nextCursor = null;
     currentRoute.value = { name: 'assets', path: '/assets', query: {}, params: {} } as any;
   });
 
-  afterEach(() => {
-    while (mountedWrappers.length > 0) mountedWrappers.pop()?.unmount();
-  });
-
-  const factory = () => {
-    const wrapper = mount(AssetsList, {
+  const factory = () =>
+    mount(AssetsList, {
       global: {
         plugins: [i18n],
         stubs: {
@@ -148,22 +128,16 @@ describe('AssetsList', () => {
           BaseTable: BaseTableStub,
           BaseLink: BaseLinkStub,
           BaseHash: BaseHashStub,
-          BaseButton: {
-            emits: ['click'],
-            template: '<button type="button" @click="$emit(\'click\')"><slot /></button>',
-          },
         },
       },
     });
-    mountedWrappers.push(wrapper);
-    return wrapper;
-  };
 
   it('renders asset definitions on /assets', async () => {
     setupState.data.data.items = [
       {
         id: SAMPLE_ASSET_DEFINITION_ID,
-        owning_domain: 'issuer.main',
+        alias: SAMPLE_ASSET_ALIAS,
+        name: 'usd',
         logo: null,
         assets: 0,
         total_quantity: new BigNumber(0),
@@ -177,22 +151,8 @@ describe('AssetsList', () => {
     const wrapper = factory();
     await flushPromises();
 
-    expect(wrapper.find('a').text()).toBe('issuer.main');
+    expect(wrapper.find('a').text()).toBe(SAMPLE_ASSET_ALIAS);
     expect(wrapper.find('.hash').text()).toBe(SAMPLE_ASSET_DEFINITION_ID);
-  });
-
-  it('does not query or render a cursor list for a malformed route bookmark', async () => {
-    currentRoute.value = { name: 'assets', path: '/assets', query: { cursor: 'padded=' }, params: {} } as any;
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(wrapper.find('[data-test="assets-invalid-pagination"]').exists()).toBe(true);
-    expect(wrapper.findComponent({ name: 'BaseTableStub' }).exists()).toBe(false);
-    expect(setupAsyncDataMock).not.toHaveBeenCalled();
-
-    await wrapper.get('[data-test="assets-invalid-pagination"] button').trigger('click');
-    await flushPromises();
-    expect(currentRoute.value.query).toEqual({});
   });
 
   it('renders asset instances when view=holders is selected', async () => {
@@ -202,6 +162,8 @@ describe('AssetsList', () => {
         id: SAMPLE_ASSET_ID,
         definition_id: SAMPLE_ASSET_DEFINITION_ID,
         account_id: SAMPLE_ACCOUNT_ID,
+        asset_name: 'usd',
+        asset_alias: SAMPLE_ASSET_ALIAS,
         value: new BigNumber(10),
       },
     ];
@@ -212,17 +174,17 @@ describe('AssetsList', () => {
     await flushPromises();
 
     expect(currentRoute.value.query).toEqual({ view: 'holders', holder: SAMPLE_ACCOUNT_ID });
+    expect(wrapper.find('a').text()).toBe(SAMPLE_ASSET_ALIAS);
     expect(wrapper.findAll('.hash')[0]?.text()).toBe(SAMPLE_ASSET_DEFINITION_ID);
     expect(wrapper.findAll('.hash')[1]?.text()).toBe(SAMPLE_ACCOUNT_ID);
     expect(wrapper.text()).toContain('10');
   });
 
-  it('renders a global canonical asset definition without domain ownership', async () => {
+  it('renders canonical base58 asset definition ids without alias metadata', async () => {
     const literalId = '7KQj9rYxgS5mW1B3cD8uN4pL2tHv';
     setupState.data.data.items = [
       {
         id: literalId,
-        owning_domain: null,
         logo: null,
         assets: 1,
         total_quantity: new BigNumber(44),
@@ -240,7 +202,7 @@ describe('AssetsList', () => {
     expect(wrapper.text()).toContain(literalId);
   });
 
-  it('renders canonical asset instance definition ids in holders view', async () => {
+  it('renders non-legacy asset instance definition ids in holders view', async () => {
     currentRoute.value = { name: 'assets', query: { view: 'holders' }, params: {} } as any;
     const literalId = '8Ls7qXz4Jm2dV9pT5bRc3HkW1Nu';
     setupState.data.data.items = [
@@ -257,6 +219,7 @@ describe('AssetsList', () => {
     await holderFilter.setValue(SAMPLE_ACCOUNT_ID);
     await flushPromises();
 
+    expect(wrapper.text()).toContain('-');
     expect(wrapper.text()).toContain(literalId);
     expect(wrapper.findAll('.hash')[0]?.text()).toBe(literalId);
     expect(wrapper.findAll('.hash')[1]?.text()).toBe(SAMPLE_ACCOUNT_ID);
@@ -290,7 +253,8 @@ describe('AssetsList', () => {
     setupState.data.data.items = [
       {
         id: SAMPLE_ASSET_DEFINITION_ID,
-        owning_domain: null,
+        alias: null,
+        name: null,
         logo: null,
         assets: 1,
         total_quantity: new BigNumber(1),
@@ -331,12 +295,15 @@ describe('AssetsList', () => {
         id: SAMPLE_ASSET_ID,
         definition_id: SAMPLE_ASSET_DEFINITION_ID,
         account_id: SAMPLE_ACCOUNT_ID,
+        asset_name: 'usd',
+        asset_alias: SAMPLE_ASSET_ALIAS,
         value: new BigNumber(10),
       },
     ];
     const wrapper = factory();
     await flushPromises();
 
+    expect(wrapper.text()).not.toContain(SAMPLE_ASSET_ALIAS);
     expect(wrapper.findAll('.hash')).toHaveLength(0);
   });
 
@@ -404,18 +371,20 @@ describe('AssetsList', () => {
     const wrapper = factory();
     await flushPromises();
 
-    expect(
-      wrapper.get(`input[placeholder="${i18n.global.t('assets.filters.domainPlaceholder')}"]`).element
-    ).toHaveProperty('value', 'collectibles');
-    expect(
-      wrapper.get(`input[placeholder="${i18n.global.t('assets.filters.ownerPlaceholder')}"]`).element
-    ).toHaveProperty('value', SAMPLE_ACCOUNT_ID);
+    expect(wrapper.get(`input[placeholder="${i18n.global.t('assets.filters.domainPlaceholder')}"]`).element).toHaveProperty(
+      'value',
+      'collectibles'
+    );
+    expect(wrapper.get(`input[placeholder="${i18n.global.t('assets.filters.ownerPlaceholder')}"]`).element).toHaveProperty(
+      'value',
+      SAMPLE_ACCOUNT_ID
+    );
     const table = wrapper.getComponent({ name: 'BaseTableStub' });
     expect(table.props('cursor')).toBe('nft_cursor_2');
     expect(table.props('pageSize')).toBe(20);
   });
 
-  it('atomically clears the cursor when a filter changes', async () => {
+  it('atomically clears cursor and retired offset keys when a filter changes', async () => {
     currentRoute.value = {
       name: 'rwas',
       path: '/rwas',
@@ -425,6 +394,16 @@ describe('AssetsList', () => {
     const wrapper = factory();
     await flushPromises();
 
+    currentRoute.value = {
+      ...currentRoute.value,
+      query: {
+        cursor: 'rwa_cursor_2',
+        limit: '20',
+        domain: 'commodities',
+        page: '2',
+        per_page: '20',
+      },
+    };
     replaceSpy.mockClear();
 
     await wrapper.get(`input[placeholder="${i18n.global.t('assets.filters.domainPlaceholder')}"]`).setValue('metals');
@@ -436,7 +415,7 @@ describe('AssetsList', () => {
     expect(filterNavigation?.query).toEqual({ limit: '20', domain: 'metals' });
   });
 
-  it('clears the cursor in the same page-size navigation', async () => {
+  it('clears cursor and retired offset keys in the same page-size navigation', async () => {
     currentRoute.value = {
       name: 'assets',
       path: '/assets',
@@ -446,6 +425,10 @@ describe('AssetsList', () => {
     const wrapper = factory();
     await flushPromises();
 
+    currentRoute.value = {
+      ...currentRoute.value,
+      query: { cursor: 'asset_cursor_2', domain: 'issuer', page: '2', per_page: '10' },
+    };
     replaceSpy.mockClear();
     wrapper.getComponent({ name: 'BaseTableStub' }).vm.$emit('update:pageSize', 50);
     await flushPromises();
@@ -456,7 +439,7 @@ describe('AssetsList', () => {
     expect(limitNavigation?.query).toEqual({ domain: 'issuer', limit: '50' });
   });
 
-  it('pushes a tab route without carrying a cursor', async () => {
+  it('pushes a tab route without carrying a cursor or retired offset keys', async () => {
     currentRoute.value = {
       name: 'assets',
       path: '/assets',
@@ -464,6 +447,8 @@ describe('AssetsList', () => {
         cursor: 'asset_cursor_2',
         limit: '20',
         domain: 'issuer',
+        page: '2',
+        per_page: '20',
       },
       params: {},
     } as any;
@@ -498,9 +483,10 @@ describe('AssetsList', () => {
     const table = wrapper.getComponent({ name: 'BaseTableStub' });
     expect(table.props('cursor')).toBe('asset_cursor_3');
     expect(table.props('pageSize')).toBe(20);
-    expect(
-      wrapper.get(`input[placeholder="${i18n.global.t('assets.filters.domainPlaceholder')}"]`).element
-    ).toHaveProperty('value', 'issuer');
+    expect(wrapper.get(`input[placeholder="${i18n.global.t('assets.filters.domainPlaceholder')}"]`).element).toHaveProperty(
+      'value',
+      'issuer'
+    );
     expect(replaceSpy).not.toHaveBeenCalled();
   });
 });

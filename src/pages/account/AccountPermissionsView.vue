@@ -1,29 +1,28 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { PINNED_TORII_DEFAULT_MAX_FETCH_SIZE } from '@/shared/api/schemas';
 import * as http from '@/shared/api';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
-import { useListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
+import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
 
 const props = defineProps<{
   accountId: string;
 }>();
 
-const { page, pageSize, pagination, resetPagination } = useListRouteQuery({
-  pageKey: 'permissions_page',
-  pageSizeKey: 'permissions_per_page',
+const { cursor, limit, pagination, resetPagination } = useCursorListRouteQuery({
+  cursorKey: 'permissions_cursor',
+  limitKey: 'permissions_limit',
 });
 
 const permissionsResource = setupAsyncData(
   () =>
     http.fetchAccountPermissions(props.accountId, {
-      page: page.value,
-      per_page: pageSize.value,
+      cursor: cursor.value,
+      limit: limit.value,
     }),
   { immediate: pagination.value.ok }
 );
@@ -36,7 +35,6 @@ const apiResult = computed(() => permissionsResource.data);
 const permissionDenied = computed(() => apiResult.value?.status === 'permission-denied');
 const response = computed(() => (apiResult.value?.status === SUCCESSFUL_FETCHING ? apiResult.value.data : null));
 const permissions = computed(() => response.value?.items ?? []);
-const totalItems = computed(() => response.value?.total ?? 0);
 </script>
 
 <template>
@@ -57,7 +55,7 @@ const totalItems = computed(() => response.value?.total ?? 0);
         role="alert"
         data-test="permissions-invalid-pagination"
       >
-        <span>{{ $t('table.invalidPagination', { maxFetchSize: pagination.maxFetchSize }) }}</span>
+        <span>{{ $t('table.invalidCursorPagination') }}</span>
         <BaseButton bordered @click="resetPagination">
           {{ $t('table.resetPagination') }}
         </BaseButton>
@@ -98,7 +96,7 @@ const totalItems = computed(() => response.value?.total ?? 0);
 
       <template v-else-if="response">
         <div
-          v-if="permissions.length === 0 && totalItems === 0"
+          v-if="permissions.length === 0"
           class="account-permissions__state row-text"
           role="status"
           data-test="permissions-empty"
@@ -107,13 +105,13 @@ const totalItems = computed(() => response.value?.total ?? 0);
         </div>
 
         <BaseTable
-          v-if="totalItems > 0"
-          v-model:page="page"
-          v-model:page-size="pageSize"
+          v-if="response"
+          v-model:cursor="cursor"
+          v-model:page-size="limit"
           :loading="permissionsResource.isLoading"
-          :total="totalItems"
+          pagination-mode="cursor"
+          :cursor-pagination="response"
           :items="permissions"
-          :max-fetch-size="PINNED_TORII_DEFAULT_MAX_FETCH_SIZE"
           container-class="account-permissions__rows"
           :breakpoint="760"
         >

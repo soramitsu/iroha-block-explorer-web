@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ToriiBrowserStreamGapError } from '@iroha/iroha-js/torii-browser';
+import { ToriiStreamGapError } from '@iroha/iroha-js/torii-browser';
 import type { ContractEvent } from '@/shared/api/schemas';
 import {
   appendLiveContractEvent,
@@ -26,12 +26,14 @@ function event(eventId: string): ContractEvent {
     event_id: eventId,
     schema_version: 1,
     provenance: 'emitted',
-    tx_hash_hex: 'a'.repeat(64),
+    execution_hash_hex: 'a'.repeat(64),
+    output_index: 0,
+    emission_index: 0,
+    emission: {},
     block_height: 12,
     block_hash_hex: 'b'.repeat(64),
     result_ok: true,
     contract_address: contractAddress,
-    module: 'router',
     event_kind: 'swap',
   };
 }
@@ -56,14 +58,14 @@ describe('contract explorer route state', () => {
           until_timestamp_ms: '200',
           result_ok: 'false',
         },
-        3,
+        'cursor-3',
         20
       )
     ).toEqual({
       ok: true,
       value: {
-        page: 3,
-        per_page: 20,
+        cursor: 'cursor-3',
+        limit: 20,
         authority: canonicalAccountId,
         contract_address: contractAddress,
         contract_alias: contractAlias,
@@ -141,7 +143,7 @@ describe('contract explorer route state', () => {
       },
     ],
   ])('returns a locale-neutral issue for invalid or ambiguous filters %#', (query, issue) => {
-    const parsed = parseContractActivitySearchParams(query, 1, 10);
+    const parsed = parseContractActivitySearchParams(query, null, 10);
     expect(parsed).toEqual({ ok: false, issues: [issue] });
   });
 
@@ -153,7 +155,7 @@ describe('contract explorer route state', () => {
           result_ok: 'yes',
           since_timestamp_ms: '9007199254740992',
         },
-        1,
+        null,
         10
       )
     ).toEqual({
@@ -172,14 +174,13 @@ describe('contract explorer route state', () => {
   it('maps all event-only filters and strips pagination for the live stream', () => {
     const parsed = parseContractEventSearchParams(
       {
-        module: 'router',
         event_kind: 'swap_filled',
         participant: participantAlias,
         asset_id: 'usd#issuer.main',
-        provenance: 'derived',
+        provenance: 'emitted',
         result_ok: 'true',
       },
-      2,
+      'cursor-2',
       50
     );
 
@@ -188,12 +189,10 @@ describe('contract explorer route state', () => {
     expect(contractEventFiltersFromSearchParams(parsed.value)).toEqual({
       authority: undefined,
       contract_address: undefined,
-      contract_alias: undefined,
-      module: 'router',
       event_kind: 'swap_filled',
       participant: participantAlias,
       asset_id: 'usd#issuer.main',
-      provenance: 'derived',
+      provenance: 'emitted',
       since_timestamp_ms: undefined,
       until_timestamp_ms: undefined,
       result_ok: true,
@@ -202,16 +201,16 @@ describe('contract explorer route state', () => {
 
   it.each(['null', 'NULL', 'true', '123', '1e3'])(
     'rejects an event selector Torii would scalar-coerce before DTO decoding: %s',
-    (module) => {
-      expect(parseContractEventSearchParams({ module }, 1, 10)).toEqual({
+    (eventKind) => {
+      expect(parseContractEventSearchParams({ event_kind: eventKind }, null, 10)).toEqual({
         ok: false,
-        issues: [{ code: 'noritoStringValue', params: { field: 'module' } }],
+        issues: [{ code: 'noritoStringValue', params: { field: 'event_kind' } }],
       });
     }
   );
 
   it('rejects an event provenance outside the route contract', () => {
-    const parsed = parseContractEventSearchParams({ provenance: 'synthetic' }, 1, 10);
+    const parsed = parseContractEventSearchParams({ provenance: 'synthetic' }, null, 10);
     expect(parsed).toEqual({
       ok: false,
       issues: [
@@ -232,7 +231,7 @@ describe('contract list resource states', () => {
           status: 'ready',
           data: {
             status: 'ok',
-            data: { items: [event('one')], total: 1, has_more: false, count_mode: 'exact' as const },
+            data: { items: [event('one')], nextCursor: null },
           },
           isRefreshing: true,
           refreshError: { kind: 'network', message: 'refresh failed' },
@@ -243,7 +242,7 @@ describe('contract list resource states', () => {
       status: 'ready',
       isRefreshing: true,
       refreshError: { kind: 'network' },
-      data: { total: 1 },
+      data: { nextCursor: null },
     });
   });
 
@@ -254,7 +253,7 @@ describe('contract list resource states', () => {
           status: 'ready',
           data: {
             status: 'ok',
-            data: { items: [], total: 0, has_more: false, count_mode: 'exact' as const },
+            data: { items: [], nextCursor: null },
           },
           isRefreshing: false,
           refreshError: null,
@@ -264,14 +263,14 @@ describe('contract list resource states', () => {
     ).toEqual({ status: 'not-found' });
   });
 
-  it('keeps an empty out-of-range page ready so pagination can return to available rows', () => {
+  it('keeps an empty nonterminal page ready so its continuation remains available', () => {
     expect(
       unwrapContractListSnapshot(
         {
           status: 'ready',
           data: {
             status: 'ok',
-            data: { items: [], total: 7, has_more: false, count_mode: 'exact' as const },
+            data: { items: [], nextCursor: 'more' },
           },
           isRefreshing: false,
           refreshError: null,
@@ -280,7 +279,7 @@ describe('contract list resource states', () => {
       )
     ).toMatchObject({
       status: 'ready',
-      data: { items: [], total: 7 },
+      data: { items: [], nextCursor: 'more' },
     });
   });
 
@@ -335,7 +334,7 @@ describe('contract explorer semantic links and live state', () => {
 
   it('preserves typed stream-gap evidence and marks replay unavailable', () => {
     const state = contractStreamStaleState(
-      new ToriiBrowserStreamGapError('events were lost', {
+      new ToriiStreamGapError('events were lost', {
         code: 'stream_lagged',
         droppedMessages: 4,
         replayAvailable: false,

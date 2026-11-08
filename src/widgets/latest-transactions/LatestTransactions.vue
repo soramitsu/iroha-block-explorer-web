@@ -34,7 +34,6 @@
         </BaseButton>
       </div>
       <div
-        v-if="latestSampleDate"
         class="latest-transactions__freshness"
         :data-tone="latestSampleTone"
         data-test="latest-transactions-freshness"
@@ -48,48 +47,53 @@
         <span>({{ $t(latestSampleToneKey) }})</span>
       </div>
 
-      <BaseCollectionState
-        :snapshot="collectionSnapshot"
-        :count="transactions.length"
-        :filtered="listState.status !== null"
-        @retry="scope.expose.refetch()"
-        @reset="listState.status = null"
-      >
-        <div>
-          <div
-            v-for="transaction in transactions"
-            :key="transaction.hash"
-            class="latest-transactions__row"
-          >
-            <TransactionStatus
-              :committed="transaction.status === 'Committed'"
-              type="tooltip"
-              class="latest-transactions__status"
-            />
+      <BaseResourceState
+        v-if="scope?.expose.error"
+        :snapshot="{ status: 'error', problem: scope?.expose.error }"
+        @retry="scope?.expose.refetch()"
+      />
+      <div v-if="!isInitialLoading">
+        <div
+          v-for="transaction in transactions"
+          :key="transaction.hash"
+          class="latest-transactions__row"
+        >
+          <TransactionStatus
+            :committed="transaction.status === 'Committed'"
+            type="tooltip"
+            class="latest-transactions__status"
+          />
 
+          <BaseHash
+            :hash="transaction.hash"
+            type="medium"
+            :link="`/transactions/${encodeURIComponent(transaction.hash)}`"
+            class="latest-transactions__hash"
+            copy
+          />
+
+          <div class="latest-transactions__info">
             <BaseHash
-              :hash="transaction.hash"
-              :type="hashType"
-              :link="`/transactions/${transaction.hash}`"
-              copy
+              :hash="transaction.authority"
+              type="medium"
+              :link="`/accounts/${transaction.authority}`"
+              class="latest-transactions__account"
             />
 
-            <div class="latest-transactions__info">
-              <div class="latest-transactions__time">
-                <TimeIcon />
-                <TimeStamp :value="transaction.created_at" />
-              </div>
-
-              <BaseHash
-                :hash="transaction.authority"
-                :type="hashType"
-                :link="`/accounts/${transaction.authority}`"
-                class="latest-transactions__account"
+            <div class="latest-transactions__time">
+              <TimeIcon
+                class="latest-transactions__clock"
+                aria-hidden="true"
               />
+              <TimeStamp :value="transaction.created_at" />
             </div>
           </div>
         </div>
-      </BaseCollectionState>
+      </div>
+      <BaseLoading
+        v-else
+        class="latest-transactions_loading"
+      />
     </template>
   </BaseContentBlock>
 </template>
@@ -102,18 +106,19 @@ import TransactionStatus from '@/entities/transaction/TransactionStatus.vue';
 import BaseHash from '@/shared/ui/components/BaseHash.vue';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
-import BaseCollectionState from '@/shared/ui/components/BaseCollectionState.vue';
+import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import * as http from '@/shared/api';
 import TimeStamp from '@/shared/ui/components/TimeStamp.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
-import type { ResourceSnapshot } from '@/shared/utils/resource-state';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
-import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import { useIntervalFn, useThrottleFn } from '@vueuse/core';
 import { Transaction as TransactionSchema } from '@/shared/api/schemas';
 import type { Transaction as TransactionDto, TransactionStatus as TransactionStatusType } from '@/shared/api/schemas';
-import { mergeLatestTransactions } from '@/widgets/latest-transactions/model';
+import {
+  mergeLatestTransactions,
+} from '@/widgets/latest-transactions/model';
 import { classifySampleFreshness } from '@/shared/lib/freshness';
 import { useExplorerTransactionsEvents } from '@/shared/ui/composables/useExplorerTransactionsEvents';
 
@@ -123,15 +128,17 @@ const listState = reactive({
 });
 
 async function fetchTransactions(params: typeof listState) {
-  return await http.fetchLatestTransactions({
-    ...params,
-    status: params.status ?? undefined,
-  });
+  return await http.fetchLatestTransactions({ ...params, status: params.status ?? undefined });
 }
 
-const hashType = useAdaptiveHash({ lg: 'short', xxs: 'short' }, 'medium');
-
 const transactionsStream = useExplorerTransactionsEvents();
+const streamRevision = ref(0);
+
+watch(
+  () => transactionsStream.status.value,
+  () => { streamRevision.value += 1; },
+  { flush: 'sync' }
+);
 
 const scope = useParamScope(
   () => {
@@ -140,11 +147,22 @@ const scope = useParamScope(
       payload: listState,
     };
   },
-  ({ payload }) =>
-    setupAsyncData(() => fetchTransactions(payload), {
+  ({ payload }) => {
+    const params = { ...payload };
+    let snapshotStreamRevision = -1;
+    return setupAsyncData(async () => {
+      const revision = streamRevision.value;
+      snapshotStreamRevision = -1;
+      const result = await fetchTransactions(params);
+      if (result.status === SUCCESSFUL_FETCHING) snapshotStreamRevision = revision;
+      return result;
+    }, {
       interval: 5000,
-      pollWhen: () => transactionsStream.status.value !== 'OPEN',
-    })
+      // An open delta stream cannot replace a successful history snapshot.
+      // Reconcile each connection and filter, including after refresh errors.
+      pollWhen: () => transactionsStream.status.value !== 'OPEN' || snapshotStreamRevision !== streamRevision.value,
+    });
+  }
 );
 
 const isLoading = computed(() => scope.value?.expose.isLoading ?? false);
@@ -155,19 +173,7 @@ const streamedTransactions = ref<TransactionDto[]>([]);
 const transactions = computed(() =>
   mergeLatestTransactions([streamedTransactions.value, fetchedTransactions.value], listState.limit)
 );
-// SSE rows are independently schema-validated evidence, even before the first list response.
-const collectionSnapshot = computed<ResourceSnapshot<TransactionDto[]>>(() => {
-  const snapshot = scope.value.expose.snapshot;
-  if (snapshot.status === 'ready') return { ...snapshot, data: transactions.value };
-  if (!streamedTransactions.value.length) return snapshot;
-  return {
-    status: 'ready',
-    data: transactions.value,
-    isRefreshing: false,
-    refreshError: snapshot.status === 'error' ? snapshot.problem
-      : snapshot.status === 'not-found' ? { kind: 'http', status: 404, message: '404' } : null,
-  };
-});
+const isInitialLoading = computed(() => isLoading.value && transactions.value.length === 0);
 const availability = http.useToriiAvailability();
 const showAvailabilityNotice = computed(() => availability.state.value !== 'healthy');
 const availabilityNoticeKey = computed(() => `settings.nodeHealth.${availability.state.value}`);
@@ -190,7 +196,9 @@ const latestSampleDate = computed<Date | null>(() => {
     transactions.value[0].created_at
   );
 });
-const latestSampleTone = computed(() => classifySampleFreshness(latestSampleDate.value?.getTime() ?? null, nowMs.value));
+const latestSampleTone = computed(() =>
+  classifySampleFreshness(latestSampleDate.value?.getTime() ?? null, nowMs.value)
+);
 const latestSampleToneKeyMap = {
   fresh: 'telemetry.dataFresh',
   delayed: 'telemetry.dataDelayed',
@@ -218,7 +226,9 @@ watch(
 watch(
   () => fetchedTransactions.value,
   (items) => {
-    if (!streamedTransactions.value.length || !items.length) return;
+    if (scope.value?.expose.data?.status !== SUCCESSFUL_FETCHING) return;
+
+    if (!streamedTransactions.value.length) return;
     const fetchedHashes = new Set(items.map((item) => item.hash));
     streamedTransactions.value = streamedTransactions.value.filter((item) => !fetchedHashes.has(item.hash));
   },
@@ -251,40 +261,64 @@ async function retryAvailabilityFailover() {
   }
 
   &__row {
-    border-bottom: 1px solid theme-color('border-primary');
     display: grid;
-    grid-gap: size(1);
-    grid-template-columns: 32px minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    justify-content: start;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas: 'status hash' 'status info';
+    column-gap: 12px;
     align-items: center;
-    min-height: 64px;
-    overflow-wrap: anywhere;
+    padding: 12px 16px;
+    border-bottom: 1px solid theme-color('border-primary');
+    transition: background-color 120ms ease;
+
+    &:last-child {
+      border-bottom: 0;
+    }
 
     &:hover {
       background: theme-color('background-hover');
     }
+  }
 
-    & > * {
-      width: fit-content;
-    }
-
-    @include xxs {
-      padding: size(3) size(4);
-      grid-gap: size(1) size(2);
-    }
-
-    @include lg {
-      grid-gap: size(1.5) size(2);
-    }
+  &__hash {
+    grid-area: hash;
+    min-width: 0;
+    min-height: 44px;
+    gap: 4px;
   }
 
   &__info {
-    display: grid;
-    grid-gap: size(0.5) size(4);
-
+    grid-area: info;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0 16px;
     min-width: 0;
-    grid-template-columns: minmax(0, 1fr);
+  }
+
+  &__hash .base-link,
+  &__account .base-link {
+    font-size: 12px;
+    line-height: 1.5;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__account {
+    min-width: 0;
+    min-height: 32px;
+    align-items: center;
+
+    .base-link {
+      color: theme-color('content-secondary');
+
+      &:hover {
+        color: theme-color('primary');
+      }
+    }
   }
 
   &__filters {
@@ -301,22 +335,32 @@ async function retryAvailabilityFailover() {
   }
 
   &__time {
-    user-select: none;
-    cursor: default;
     position: relative;
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    flex: 0 0 auto;
+    min-height: 32px;
+    gap: 6px;
+    color: theme-color('content-secondary');
+    white-space: nowrap;
 
-    svg {
-      fill: theme-color('content-quaternary');
-      width: 10px;
-      height: 10px;
-      margin-right: 6px;
+    .time-ago {
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
     }
   }
 
+  &__clock {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+  }
+
   &__status {
-    grid-row: 1 / -1;
+    grid-area: status;
+    align-self: start;
   }
 
   &__availability {

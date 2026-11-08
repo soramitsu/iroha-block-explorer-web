@@ -29,7 +29,7 @@ const setupState = {
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: { limit: 10, next_cursor: null, has_more: false },
+      nextCursor: null,
       items: [],
     },
   },
@@ -87,7 +87,7 @@ describe('DomainsList', () => {
 
     const table = wrapper.getComponent({ name: 'BaseTable' });
     expect(table.props('paginationMode')).toBe('cursor');
-    expect(table.props('cursorPagination')).toEqual(setupState.data.data.pagination);
+    expect(table.props('cursorPagination')).toEqual(setupState.data.data);
     expect(setupAsyncDataMock).toHaveBeenCalledOnce();
   });
 

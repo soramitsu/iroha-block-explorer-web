@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import NotificationsInstance from '@/shared/ui/components/NotificationsInstance.vue';
 import BasePageLayout from '@/shared/ui/components/BasePageLayout.vue';
@@ -34,7 +34,11 @@ import { parseExplorerScopeFromRoute } from '@/shared/lib/explorer-scope';
 
 const TheHeader = defineAsyncComponent(async () => (await import('@/widgets/header')).TheHeader);
 
+import { disconnectExplorerReadSession, explorerReadAuthRevision } from '@/shared/lib/explorer-read-auth';
+
 const route = useRoute();
+watch(() => getToriiBaseUrl(), disconnectExplorerReadSession, { flush: 'sync' });
+onBeforeUnmount(disconnectExplorerReadSession);
 const mainContent = ref<HTMLElement | null>(null);
 
 watch(
@@ -57,7 +61,7 @@ watch(
 
 const routerViewKey = computed(() => {
   const scope = parseExplorerScopeFromRoute(route);
-  return JSON.stringify([getToriiBaseUrl(), scope?.dataspaceLaneId, scope?.dataspaceId]);
+  return JSON.stringify([getToriiBaseUrl(), explorerReadAuthRevision.value, scope?.dataspaceLaneId, scope?.dataspaceId]);
 });
 const isFullBleedRoute = computed(() => route.name === 'kotodama-studio');
 const isHomeRoute = computed(() => route.name === 'home');

@@ -2,94 +2,82 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import Dataspaces from './Dataspaces.vue';
+vi.mock('@vueuse/core', async (original) => ({
+  ...await original<typeof import('@vueuse/core')>(),
+  useElementSize: () => ({ width: { value: 1440 }, height: { value: 900 } }),
+}));
+
 import { i18n } from '@/shared/lib/localization';
-import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
+import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
+
+const pushSpy = vi.fn();
 
 vi.mock('@/shared/api', () => ({
-  fetchNexusDataspacesAccountSummary: vi.fn(),
+  fetchNexusPublicStatus: vi.fn(),
+}));
+
+vi.mock('@/shared/ui/composables/useExplorerScopeNavigation', () => ({
+  useScopedExplorerNavigation: () => ({
+    push: pushSpy,
+  }),
 }));
 
 import * as api from '@/shared/api';
 
-const SAMPLE_ACCOUNT_ID = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-const MISSING_ACCOUNT_ID = 'testuﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-const summaryPayload = {
-  account: SAMPLE_ACCOUNT_ID,
-  account_id: SAMPLE_ACCOUNT_ID,
-  uaid: 'uaid:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-  totals: {
-    dataspaces: 2,
-    accounts_bound: 3,
-    portfolio_accounts: 2,
-    portfolio_positions: 5,
-    manifests_total: 2,
-    manifests_active: 1,
-    consensus_entries: 3,
-    consensus_tx_count: 9,
-    consensus_chunks_total: 18,
-    consensus_rbc_bytes_total: 1800,
-    consensus_teu_total: 900,
-  },
-  dataspaces: [
+const statusPayload = {
+  blocks: 21,
+  txs_approved: 120,
+  txs_rejected: 2,
+  queue_size: 1,
+  dataspace_catalog: [
+    { lane_id: 0, dataspace_id: '0', alias: 'universal' },
+    { lane_id: 3, dataspace_id: '10', alias: 'sbp' },
+    { lane_id: 1, dataspace_id: '12', alias: 'uae' },
+  ],
+  teu_dataspace_backlog: [
     {
-      dataspace_id: 10,
-      dataspace_alias: 'sbp',
-      accounts: [SAMPLE_ACCOUNT_ID],
-      portfolio: { accounts: 1, positions: 2, asset_definitions: 1 },
-      manifest: {
-        present: true,
-        status: 'Active',
-        active: true,
-        issued_ms: 1700000000000,
-        activation_epoch: 100,
-        expiry_epoch: null,
-        activated_epoch: 101,
-        expired_epoch: null,
-        revoked_epoch: null,
-        revoked_reason: null,
-        entries: 1,
-      },
-      consensus: {
-        entries: 2,
-        lane_ids: [0, 3],
-        tx_count: 7,
-        total_chunks: 14,
-        rbc_bytes_total: 1400,
-        teu_total: 700,
-        last_block_height: 123,
-        last_block_hash: '0xabc',
-        details: [],
-      },
+      lane_id: 3,
+      dataspace_id: '10',
+      fault_tolerance: 1,
+      backlog: 4,
+      age_slots: 5,
+      virtual_finish: 9,
+      tx_served: 7,
+      alias: 'sbp',
+      description: 'State Bank of Pakistan dataspace',
     },
     {
-      dataspace_id: 12,
-      dataspace_alias: null,
-      accounts: [SAMPLE_ACCOUNT_ID, 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV'],
-      portfolio: { accounts: 2, positions: 3, asset_definitions: 2 },
-      manifest: {
-        present: false,
-        status: 'Missing',
-        active: false,
-        issued_ms: null,
-        activation_epoch: null,
-        expiry_epoch: null,
-        activated_epoch: null,
-        expired_epoch: null,
-        revoked_epoch: null,
-        revoked_reason: null,
-        entries: 0,
-      },
-      consensus: {
-        entries: 1,
-        lane_ids: [],
-        tx_count: 2,
-        total_chunks: 4,
-        rbc_bytes_total: 400,
-        teu_total: 200,
-        last_block_height: null,
-        last_block_hash: null,
-        details: [],
-      },
+      lane_id: 1,
+      dataspace_id: '12',
+      fault_tolerance: 1,
+      backlog: 3,
+      age_slots: 2,
+      virtual_finish: 7,
+      tx_served: 11,
+      alias: 'uae',
+      description: 'Mock UAE central bank dataspace',
+    },
+    {
+      lane_id: 0,
+      dataspace_id: '0',
+      fault_tolerance: 3,
+      backlog: 0,
+      age_slots: 0,
+      virtual_finish: 0,
+      tx_served: 1,
+      alias: 'universal',
+      description: 'Single-lane data space',
+    },
+    {
+      lane_id: 0,
+      dataspace_id: '10',
+      fault_tolerance: 1,
+      backlog: 1,
+      age_slots: 1,
+      virtual_finish: 2,
+      tx_served: 5,
+      alias: 'sbp',
+      description: 'State Bank of Pakistan dataspace',
     },
   ],
 };
@@ -99,27 +87,22 @@ const BaseContentBlockStub = {
   template: '<section><h2>{{ title }}</h2><slot /></section>',
 };
 
-const BaseButtonStub = {
-  props: ['disabled', 'nativeType', 'to'],
-  template:
-    '<button :disabled="disabled" :type="nativeType || \'button\'" :data-route="to ? JSON.stringify(to) : undefined"><slot /></button>',
-};
-
 const BaseTableStub = {
   props: ['items', 'rowKey'],
   emits: ['click:row'],
   template:
-    '<div><slot name="header" /><button v-for="item in items" :key="rowKey(item)" :data-test="\'row-\' + rowKey(item)" @click="$emit(\'click:row\', item)"><slot name="row" :item="item" /></button></div>',
+    '<div><slot name="header" /><button v-for="item in items" :key="rowKey ? rowKey(item) : item.dataspace_id" :data-test="\'row-\' + (rowKey ? rowKey(item) : item.dataspace_id)" @click="$emit(\'click:row\', item)"><slot name="row" :item="item" /></button></div>',
 };
 
-const DataFieldStub = {
-  props: ['title', 'value'],
-  template: '<div class="data-field"><span>{{ title }}</span><span>{{ value }}</span></div>',
+const BaseLoadingStub = {
+  template: '<div>loading...</div>',
 };
 
-describe('Dataspaces account-summary page', () => {
+describe('Dataspaces overview page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pushSpy.mockReset();
+    pushSpy.mockReturnValue(Promise.resolve());
   });
 
   const factory = () =>
@@ -127,111 +110,205 @@ describe('Dataspaces account-summary page', () => {
       global: {
         plugins: [i18n],
         stubs: {
-          BaseButton: BaseButtonStub,
           BaseContentBlock: BaseContentBlockStub,
-          BaseLoading: { template: '<div>loading...</div>' },
           BaseTable: BaseTableStub,
-          DataField: DataFieldStub,
+          BaseLoading: BaseLoadingStub,
         },
       },
     });
 
-  async function submitLookup(wrapper: ReturnType<typeof factory>, literal = SAMPLE_ACCOUNT_ID) {
-    await wrapper.get('input').setValue(literal);
-    await wrapper.get('[data-test="dataspaces-lookup"]').trigger('submit');
+  it('loads registered dataspaces on mount and renders registry stats', async () => {
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: statusPayload,
+    });
+
+    const wrapper = factory();
     await flushPromises();
-  }
 
-  it('does not query diagnostic or account data before an explicit lookup', () => {
-    factory();
-    expect(api.fetchNexusDataspacesAccountSummary).not.toHaveBeenCalled();
+    expect(api.fetchNexusPublicStatus).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('[data-test="dataspaces-stats"]').text()).toContain('Registered dataspaces');
+    expect(wrapper.text()).toContain('sbp (#10)');
+    expect(wrapper.text()).toContain('uae (#12)');
+    expect(wrapper.findAll('[data-test^="row-"]')).toHaveLength(3);
   });
 
-  it('requires a canonical i105 account ID without issuing a request', async () => {
-    const wrapper = factory();
-    await wrapper.get('[data-test="dataspaces-lookup"]').trigger('submit');
-
-    expect(api.fetchNexusDataspacesAccountSummary).not.toHaveBeenCalled();
-    expect(wrapper.get('[data-test="dataspaces-error"]').text()).toContain(i18n.global.t('dataspaces.accountRequired'));
-  });
-
-  it('rejects account aliases before issuing a request', async () => {
-    const wrapper = factory();
-    await submitLookup(wrapper, 'treasury@banking.retail');
-
-    expect(api.fetchNexusDataspacesAccountSummary).not.toHaveBeenCalled();
-    expect(wrapper.get('[data-test="dataspaces-error"]').text()).toContain(i18n.global.t('dataspaces.accountInvalid'));
-  });
-
-  it('renders the authoritative account summary and selects its first dataspace', async () => {
-    vi.mocked(api.fetchNexusDataspacesAccountSummary).mockResolvedValue({
+  it('exposes all six visual columns through table header and cell roles', async () => {
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
-      data: summaryPayload,
-    } as never);
+      data: statusPayload,
+    });
 
     const wrapper = factory();
-    await submitLookup(wrapper);
+    await flushPromises();
 
-    expect(api.fetchNexusDataspacesAccountSummary).toHaveBeenCalledWith(SAMPLE_ACCOUNT_ID);
-    expect(wrapper.get('[data-test="dataspaces-identity"]').text()).toContain('uaid:0123456789abcdef');
-    expect(wrapper.get('[data-test="dataspaces-stats"]').text()).toContain('1/2');
-    expect(wrapper.findAll('[role="columnheader"]')).toHaveLength(7);
-    expect(wrapper.get('[data-test="row-10"]').text()).toContain('sbp (#10)');
-    expect(wrapper.get('[data-test="row-10"]').text()).toContain('0, 3');
-    expect(wrapper.get('[data-test="dataspaces-selected"]').text()).toContain('sbp (#10)');
-    expect(wrapper.findAll('[data-test="dataspaces-lane-links"] button')).toHaveLength(2);
+    expect(wrapper.findAll('[role="columnheader"]')).toHaveLength(6);
+    expect(wrapper.findAll('[data-test^="row-"]')[0].findAll('[role="cell"]')).toHaveLength(6);
   });
 
-  it('switches selected detail and represents missing manifest and commit data exactly', async () => {
-    vi.mocked(api.fetchNexusDataspacesAccountSummary).mockResolvedValue({
+  it('applies the same page grid scope to real table headers and data rows', async () => {
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: statusPayload });
+    const previousWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { value: 1440, configurable: true });
+    const wrapper = mount(Dataspaces, {
+      global: {
+        plugins: [i18n],
+        stubs: { BaseContentBlock: BaseContentBlockStub, BaseLoading: BaseLoadingStub },
+      },
+    });
+    try {
+      await flushPromises();
+      const rows = wrapper.findAll('.base-table [role="row"]');
+      expect(rows).toHaveLength(4);
+      expect(rows[0].findAll('[role="columnheader"]')).toHaveLength(6);
+      for (const row of rows) {
+        expect(row.element.matches('.dataspaces-page__table .content-row')).toBe(true);
+      }
+    } finally {
+      wrapper.unmount();
+      Object.defineProperty(window, 'innerWidth', { value: previousWidth, configurable: true });
+    }
+  });
+
+  it('sorts dataspaces by id, aggregates only catalog lanes, and routes to the representative detail lane on row click', async () => {
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
-      data: summaryPayload,
-    } as never);
+      data: statusPayload,
+    });
 
     const wrapper = factory();
-    await submitLookup(wrapper);
-    await wrapper.get('[data-test="row-12"]').trigger('click');
+    await flushPromises();
 
-    const selected = wrapper.get('[data-test="dataspaces-selected"]');
-    expect(selected.text()).toContain('#12');
-    expect(selected.text()).toContain('Missing');
-    expect(selected.text()).toContain('None');
-    expect(wrapper.find('[data-test="dataspaces-lane-links"]').exists()).toBe(false);
+    const rows = wrapper.findAll('[data-test^="row-"]');
+    expect(rows[0].text()).toContain('universal (#0)');
+    expect(rows[1].text()).toContain('sbp (#10)');
+    expect(rows[1].findAll('[role="cell"]')[1].text()).toBe('3');
+    expect(rows[1].findAll('[role="cell"]')[3].text()).toBe('4');
+    expect(rows[1].findAll('[role="cell"]')[5].text()).toBe('7');
+    expect(rows[2].text()).toContain('uae (#12)');
+
+    await rows[1].trigger('click');
+    expect(pushSpy).toHaveBeenCalledWith({
+      name: 'dataspaces-details',
+      params: {
+        laneId: '3',
+        dataspaceId: '10',
+      },
+    });
   });
 
-  it.each([
-    [NOT_FOUND, 'Account not found'],
-    [UNKNOWN_ERROR, 'Unable to load dataspace summary'],
-  ])('maps %s responses without retaining stale summary data', async (status, message) => {
-    vi.mocked(api.fetchNexusDataspacesAccountSummary)
-      .mockResolvedValueOnce({ status: SUCCESSFUL_FETCHING, data: summaryPayload } as never)
-      .mockResolvedValueOnce({ status } as never);
+  it('preserves the real BPNG u64 ID and selects catalogue lane8 rather than backlog lane0', async () => {
+    const id = '8648377547929788715';
+    const adjacentId = '8648377547929788716';
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        ...statusPayload,
+        dataspace_catalog: [
+          { lane_id: 8, dataspace_id: id, alias: 'bpng' },
+          { lane_id: 7, dataspace_id: adjacentId, alias: 'neighbor' },
+        ],
+        teu_dataspace_backlog: [
+          ...[0, 8].map((lane_id) => ({ ...statusPayload.teu_dataspace_backlog[0], lane_id, dataspace_id: id, alias: 'bpng' })),
+          { ...statusPayload.teu_dataspace_backlog[0], lane_id: 7, dataspace_id: adjacentId, alias: 'neighbor' },
+        ],
+      },
+    });
+    const wrapper = factory();
+    await flushPromises();
+    const rows = wrapper.findAll('[data-test^="row-"]');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].text()).toContain(`bpng (#${id})`);
+    expect(rows[1].text()).toContain(`neighbor (#${adjacentId})`);
+    await rows[0].trigger('click');
+    expect(pushSpy).toHaveBeenCalledWith({ name: 'dataspaces-details', params: { laneId: '8', dataspaceId: id } });
+  });
+
+  it('uses the eight registered lane bindings instead of the scheduler cross-product', async () => {
+    const catalog = [
+      ...[0, 1, 2].map((lane_id) => ({ lane_id, dataspace_id: '0', alias: 'universal' })),
+      { lane_id: 3, dataspace_id: '9884542487407331249', alias: 'dpn' },
+      { lane_id: 4, dataspace_id: '9700280040122529948', alias: 'is2' },
+      { lane_id: 5, dataspace_id: '8648377547929788715', alias: 'bpng' },
+      { lane_id: 6, dataspace_id: '6983892400042691068', alias: 'cbsi' },
+      { lane_id: 7, dataspace_id: '6647857470246403404', alias: 'is' },
+    ];
+    const dataspaces = [...new Map(catalog.map((entry) => [entry.dataspace_id, entry])).values()];
+    const registeredBindings = new Set(catalog.map((entry) => `${entry.dataspace_id}:${entry.lane_id}`));
+    const backlog = dataspaces.flatMap((entry) => Array.from({ length: 8 }, (_, lane_id) => {
+      const registered = registeredBindings.has(`${entry.dataspace_id}:${lane_id}`);
+      return {
+        ...statusPayload.teu_dataspace_backlog[0],
+        ...entry,
+        lane_id,
+        backlog: registered ? lane_id + 1 : 99999,
+        age_slots: registered ? lane_id : 99999,
+        tx_served: registered ? 10 * (lane_id + 1) : 99999,
+      };
+    }));
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: { ...statusPayload, dataspace_catalog: catalog, teu_dataspace_backlog: backlog },
+    });
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.findAll('[data-test^="row-"]')).toHaveLength(6);
+    for (const entry of dataspaces) {
+      const lanes = catalog.filter((row) => row.dataspace_id === entry.dataspace_id).map((row) => row.lane_id);
+      const row = wrapper.get(`[data-test="row-${entry.dataspace_id}"]`);
+      const cells = row.findAll('[role="cell"]');
+      expect(cells[0].text()).toBe(`${entry.alias} (#${entry.dataspace_id})`);
+      expect(cells[1].text()).toBe(lanes.join(', '));
+      expect(cells[3].text()).toBe(String(lanes.reduce((sum, lane) => sum + lane + 1, 0)));
+      expect(cells[4].text()).toBe(String(Math.max(...lanes)));
+      expect(cells[5].text()).toBe(String(lanes.reduce((sum, lane) => sum + 10 * (lane + 1), 0)));
+      await row.trigger('click');
+      expect(pushSpy).toHaveBeenLastCalledWith({ name: 'dataspaces-details', params: { laneId: String(lanes[0]), dataspaceId: entry.dataspace_id } });
+    }
+    expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.overviewSystemIds'));
+  });
+
+  it('does not invent a lane binding from backlog when the catalogue has no matching row', async () => {
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: { ...statusPayload, dataspace_catalog: [] },
+    });
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.findAll('[data-test^="row-"]')).toHaveLength(0);
+    expect(pushSpy).not.toHaveBeenCalled();
+  });
+
+  it('shows load failure when registry request is unsuccessful', async () => {
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: UNKNOWN_ERROR,
+    });
 
     const wrapper = factory();
-    await submitLookup(wrapper);
-    await submitLookup(wrapper, MISSING_ACCOUNT_ID);
+    await flushPromises();
 
-    expect(wrapper.get('[data-test="dataspaces-error"]').text()).toContain(message);
-    expect(wrapper.find('[data-test="dataspaces-stats"]').exists()).toBe(false);
+    expect(wrapper.get('[data-test="dataspaces-error"]').text()).toContain('Unable to load dataspace summary');
   });
 
-  it('disables lookup while the request is in flight', async () => {
+  it('disables refresh button while request is in flight', async () => {
     let resolveRequest!: (value: unknown) => void;
-    vi.mocked(api.fetchNexusDataspacesAccountSummary).mockReturnValue(
-      new Promise((resolve) => {
-        resolveRequest = resolve;
-      }) as never
-    );
+    const pendingRequest = new Promise((resolve) => {
+      resolveRequest = resolve;
+    });
+
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockReturnValue(pendingRequest);
 
     const wrapper = factory();
-    await wrapper.get('input').setValue(SAMPLE_ACCOUNT_ID);
-    await wrapper.get('[data-test="dataspaces-lookup"]').trigger('submit');
     await nextTick();
 
-    expect(wrapper.get('[data-test="dataspaces-submit"]').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('[data-test="dataspaces-refresh"]').attributes('disabled')).toBeDefined();
 
-    resolveRequest({ status: SUCCESSFUL_FETCHING, data: summaryPayload });
+    resolveRequest({
+      status: SUCCESSFUL_FETCHING,
+      data: statusPayload,
+    });
     await flushPromises();
-    expect(wrapper.get('[data-test="dataspaces-submit"]').attributes('disabled')).toBeUndefined();
+
+    expect(wrapper.get('[data-test="dataspaces-refresh"]').attributes('disabled')).toBeUndefined();
   });
 });

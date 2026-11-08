@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { ToriiBrowserStreamGapError } from '@iroha/iroha-js/torii-browser';
+import { ToriiStreamGapError } from '@iroha/iroha-js/torii-browser';
 import SmartContractsPage from './SmartContractsPage.vue';
 import { i18n } from '@/shared/lib/localization';
 
@@ -53,10 +53,10 @@ const BaseTabsStub = {
 };
 
 const BaseTableStub = {
-  props: ['items', 'total', 'maxFetchSize'],
+  props: ['items', 'cursorPagination'],
   emits: ['click:row', 'update:page', 'update:pageSize'],
   template: `
-    <div class="table-stub" :data-total="total" :data-max-fetch-size="maxFetchSize">
+    <div class="table-stub" :data-next-cursor="cursorPagination?.nextCursor ?? ''">
       <slot name="header" />
       <button
         v-for="(item, index) in items"
@@ -117,23 +117,21 @@ const BaseButtonStub = {
 };
 
 function emptyList() {
-  return { status: 'ok', data: { items: [], total: 0, has_more: false, count_mode: 'exact' } };
+  return { status: 'ok', data: { items: [], nextCursor: null } };
 }
 
 function contractEvent() {
   return {
     event_id: `${eventTransactionHash}:0`,
     schema_version: 1,
-    provenance: 'derived',
+    provenance: 'emitted',
     authority: accountId,
     timestamp_ms: 1_750_000_000_000,
-    tx_hash_hex: eventTransactionHash,
+    execution_hash_hex: eventTransactionHash,
     block_height: 77,
     block_hash_hex: eventBlockHash,
     result_ok: true,
     contract_address: contractAddress,
-    contract_alias: contractAlias,
-    module: 'router',
     event_kind: 'swap_filled',
     participants: [accountId],
     asset_ids: ['usd#issuer.main'],
@@ -197,8 +195,8 @@ describe('SmartContractsPage route-backed views', () => {
     expect(router.currentRoute.value.query.tab).toBeUndefined();
     expect(apiMocks.fetchContractActivity).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        page: 1,
-        per_page: 10,
+        cursor: null,
+        limit: 10,
         authority: accountId,
         contract_entrypoint: 'swap',
         result_ok: false,
@@ -223,9 +221,7 @@ describe('SmartContractsPage route-backed views', () => {
             fee_payment: { payer: 'authority' },
           },
         ],
-        total: 1,
-        has_more: false,
-        count_mode: 'exact',
+        nextCursor: null,
       },
     };
     const { wrapper } = await factory({ tab: 'activity', contract_entrypoint: 'swap' });
@@ -268,24 +264,23 @@ describe('SmartContractsPage route-backed views', () => {
   });
 
   it('rejects malformed pagination without opening a contract list request', async () => {
-    const { wrapper } = await factory({ page: '0', per_page: '30' });
+    const { wrapper } = await factory({ cursor: '', limit: '30' });
 
     expect(apiMocks.fetchContractActivity).not.toHaveBeenCalled();
-    expect(wrapper.get('.resource-error').text()).toContain('first 500 matching rows');
+    expect(wrapper.get('.resource-error').text()).toContain('cursor');
     expect(wrapper.get('.resource-retry').text()).toBe('Reset pagination');
   });
 
-  it('keeps recovery pagination for an empty out-of-range page and caps it to Torii', async () => {
+  it('retains a server continuation for an empty collection page', async () => {
     apiState.activity = {
       status: 'ok',
-      data: { items: [], total: 7, has_more: false, count_mode: 'exact' },
+      data: { items: [], nextCursor: 'continue' },
     };
 
-    const { wrapper } = await factory({ page: '2' });
+    const { wrapper } = await factory({ cursor: 'previous' });
 
     expect(wrapper.get('.resource-state').attributes('data-status')).toBe('ready');
-    expect(wrapper.get('.table-stub').attributes('data-total')).toBe('7');
-    expect(wrapper.get('.table-stub').attributes('data-max-fetch-size')).toBe('500');
+    expect(wrapper.get('.table-stub').attributes('data-next-cursor')).toBe('continue');
   });
 
   it('localizes a successful transport response that is not a contract list', async () => {
@@ -299,15 +294,14 @@ describe('SmartContractsPage route-backed views', () => {
   it('sends every event-history query filter and renders semantic event links', async () => {
     apiState.events = {
       status: 'ok',
-      data: { items: [contractEvent()], total: 1, has_more: false, count_mode: 'exact' },
+      data: { items: [contractEvent()], nextCursor: null },
     };
     const { wrapper } = await factory({
       tab: 'events',
-      module: 'router',
       event_kind: 'swap_filled',
       participant: accountId,
       asset_id: 'usd#issuer.main',
-      provenance: 'derived',
+      provenance: 'emitted',
       result_ok: 'true',
       since_timestamp_ms: '100',
       until_timestamp_ms: '200',
@@ -315,11 +309,10 @@ describe('SmartContractsPage route-backed views', () => {
 
     expect(apiMocks.fetchContractEvents).toHaveBeenCalledWith(
       expect.objectContaining({
-        module: 'router',
-        event_kind: 'swap_filled',
+          event_kind: 'swap_filled',
         participant: accountId,
         asset_id: 'usd#issuer.main',
-        provenance: 'derived',
+        provenance: 'emitted',
         result_ok: true,
         since_timestamp_ms: 100,
         until_timestamp_ms: 200,
@@ -328,7 +321,7 @@ describe('SmartContractsPage route-backed views', () => {
     expect(wrapper.get(`[data-hash="${eventTransactionHash}"]`).attributes('data-link')).toBe(
       `/transactions/${eventTransactionHash}`
     );
-    expect(wrapper.text()).toContain('router · swap_filled · Derived');
+    expect(wrapper.text()).toContain('swap_filled · Emitted');
     expect(
       wrapper.findAll('.base-link-stub').some((link) => link.attributes('data-to') === '/assets/usd%23issuer.main')
     ).toBe(true);
@@ -345,18 +338,18 @@ describe('SmartContractsPage live events', () => {
   it('marks a typed gap stale and waits for an explicit history reload before opening another stream', async () => {
     apiState.events = {
       status: 'ok',
-      data: { items: [contractEvent()], total: 1, has_more: false, count_mode: 'exact' },
+      data: { items: [contractEvent()], nextCursor: null },
     };
     apiState.streamImplementation = () =>
       (async function* () {
         yield* [];
-        throw new ToriiBrowserStreamGapError('events were lost', {
+        throw new ToriiStreamGapError('events were lost', {
           code: 'stream_lagged',
           droppedMessages: 4,
           replayAvailable: false,
         });
       })();
-    const { wrapper } = await factory({ tab: 'events', module: 'router' });
+    const { wrapper } = await factory({ tab: 'events' });
 
     await wrapper.get('[data-test="start-contract-stream"]').trigger('click');
     await flushPromises();
@@ -379,7 +372,7 @@ describe('SmartContractsPage live events', () => {
   it('shows decoded live events and forwards an explicit stop to the AbortSignal', async () => {
     apiState.events = {
       status: 'ok',
-      data: { items: [contractEvent()], total: 1, has_more: false, count_mode: 'exact' },
+      data: { items: [contractEvent()], nextCursor: null },
     };
     let observedSignal: AbortSignal | undefined;
     apiState.streamImplementation = (_filters, signal) =>
@@ -394,8 +387,8 @@ describe('SmartContractsPage live events', () => {
 
     await wrapper.get('[data-test="start-contract-stream"]').trigger('click');
     await flushPromises();
-    expect(wrapper.text()).toContain('router · swap_filled');
-    expect(wrapper.text()).toContain('Derived · block 77');
+    expect(wrapper.text()).toContain('swap_filled');
+    expect(wrapper.text()).toContain('Emitted · block 77');
     expect(wrapper.text()).toContain('1 event retained');
 
     await wrapper.get('[data-test="stop-contract-stream"]').trigger('click');

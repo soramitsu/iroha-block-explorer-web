@@ -8,17 +8,23 @@ import {
   collectEntryBootManifestKeys,
   collectStaticManifestKeys,
   evaluateBundleBudgets,
+  formatBundleBudgetReport,
   validateBundleBudgets,
 } from './check-bundle-budget.mjs';
 
 const temporaryDirectories: string[] = [];
+const wasmFile = '_assets/iroha_js_codec_wasm_bg-fixture.wasm';
+const wasmBytes = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
 
 function fixture() {
   const distDir = mkdtempSync(join(tmpdir(), 'explorer-bundle-budget-'));
   temporaryDirectories.push(distDir);
   mkdirSync(join(distDir, '_assets'));
-  const files: Record<string, string> = {
+  const files: Record<string, string | Buffer> = {
+    'index.html': '<!doctype html><script type="module" src="/_assets/index.js"></script>',
     '_assets/index.js': 'const entry = "entry";'.repeat(50),
+    '_assets/index.css': '.entry { color: red; }'.repeat(50),
+    '_assets/font.woff2': 'font bytes'.repeat(50),
     '_assets/bootstrap.js': 'const bootstrap = "bootstrap";'.repeat(50),
     '_assets/shared.js': 'const shared = "shared";'.repeat(50),
     '_assets/route.js': 'const route = "route";'.repeat(50),
@@ -33,6 +39,8 @@ function fixture() {
       isEntry: true,
       imports: ['_shared.js'],
       dynamicImports: ['_bootstrap.js'],
+      css: ['_assets/index.css'],
+      assets: ['_assets/font.woff2'],
     },
     '_shared.js': { file: '_assets/shared.js', name: 'shared' },
     '_bootstrap.js': {
@@ -57,7 +65,7 @@ function fixture() {
 
 function budgets(overrides: Record<string, unknown> = {}) {
   return {
-    schema_version: 1,
+    schema_version: 3,
     default_chunk_gzip_bytes: 10_000,
     chunk_gzip_bytes: {
       index: 10_000,
@@ -67,6 +75,7 @@ function budgets(overrides: Record<string, unknown> = {}) {
       'contract.worker': 10_000,
     },
     entry_gzip_bytes: { 'index.html': 10_000 },
+    entry_startup_gzip_bytes: { 'index.html': 11_024 },
     route_gzip_bytes: { 'src/pages/Route.vue': 10_000 },
     ...overrides,
   };
@@ -98,7 +107,8 @@ describe('bundle budget checker', () => {
       kind: 'entry',
       name: 'index.html',
       actual:
-        sizes['_assets/index.js'] + sizes['_assets/shared.js'] + sizes['_assets/bootstrap.js'],
+        sizes['_assets/index.js'] + sizes['_assets/shared.js'] + sizes['_assets/bootstrap.js']
+        + sizes['_assets/index.css'] + sizes['_assets/font.woff2'] + sizes['index.html'],
       limit: 10_000,
     });
     expect(result.measurements).toContainEqual({
@@ -107,6 +117,88 @@ describe('bundle budget checker', () => {
       actual: sizes['_assets/contract.worker-AbCd1234.js'],
       limit: 10_000,
     });
+  });
+
+  it('charges each startup asset once across shared imports and references', () => {
+    const { distDir, manifest, sizes } = fixture();
+    manifest['index.html'].assets.push('_assets/font.woff2', '_assets/font.woff2');
+    const result = evaluateBundleBudgets({ manifest, budgets: budgets(), distDir });
+    const entry = result.entries[0];
+    const jsCss = sizes['_assets/index.js'] + sizes['_assets/bootstrap.js']
+      + sizes['_assets/shared.js'] + sizes['_assets/index.css'];
+    const other = sizes['index.html'] + sizes['_assets/font.woff2'];
+
+    expect(entry.categories.js_css.gzip_bytes).toBe(jsCss);
+    expect(entry.categories.other_assets.gzip_bytes).toBe(other);
+    expect(entry.total.gzip_bytes).toBe(jsCss + other);
+    expect(result.measurements).toContainEqual({
+      kind: 'entry', name: 'index.html', actual: jsCss + other, limit: 10_000,
+    });
+    expect(result.measurements).toContainEqual({
+      kind: 'startup', name: 'index.html', actual: entry.total.gzip_bytes, limit: 11_024,
+    });
+    expect(formatBundleBudgetReport(result)).toContain(`js_css: ${entry.categories.js_css.raw_bytes} raw bytes; ${jsCss} gzip bytes`);
+    expect(formatBundleBudgetReport(result)).toContain(`other_assets: ${entry.categories.other_assets.raw_bytes} raw bytes; ${other} gzip bytes`);
+    expect(formatBundleBudgetReport(result)).toContain(`total: ${entry.total.raw_bytes} raw bytes; ${entry.total.gzip_bytes} gzip bytes`);
+  });
+
+  it('fails the total startup budget independently of the entry cap', () => {
+    const { distDir, manifest } = fixture();
+    const entryTotal = evaluateBundleBudgets({ manifest, budgets: budgets(), distDir }).entries[0].total.gzip_bytes;
+    const result = evaluateBundleBudgets({
+      manifest, distDir,
+      budgets: budgets({ entry_startup_gzip_bytes: { 'index.html': entryTotal - 1 } }),
+    });
+    expect(result.failures).toEqual([
+      { kind: 'startup', name: 'index.html', actual: entryTotal, limit: entryTotal - 1 },
+    ]);
+    expect(formatBundleBudgetReport(result)).toContain('Bundle budget check failed with 1 over-budget artifact(s).');
+  });
+
+  it('counts unexpected startup assets against both the entry and total budgets', () => {
+    const { distDir, manifest } = fixture();
+    const before = evaluateBundleBudgets({ manifest, budgets: budgets(), distDir });
+    const previousEntry = before.measurements.find(({ kind }: { kind: string }) => kind === 'entry')!;
+    writeFileSync(join(distDir, '_assets/extra.bin'), 'Unexpected asset');
+    manifest['index.html'].assets.push('_assets/extra.bin');
+    const result = evaluateBundleBudgets({
+      manifest, distDir,
+      budgets: budgets({
+        entry_gzip_bytes: { 'index.html': previousEntry.actual },
+        entry_startup_gzip_bytes: { 'index.html': before.entries[0].total.gzip_bytes },
+      }),
+    });
+    expect(result.entries[0].categories.other_assets.files).toContain('_assets/extra.bin');
+    expect(result.failures.map(({ kind }: { kind: string }) => kind)).toEqual(['entry', 'startup']);
+  });
+
+  it.each([wasmFile, '_assets/extra.WASM', '_assets/extra.wasm.gz', '_assets/extra.wasm.br', '_assets/hidden.bin'])(
+    'rejects emitted Wasm even when it is absent from the manifest: %s', (file) => {
+      const { distDir, manifest } = fixture();
+      writeFileSync(join(distDir, file), file.endsWith('.bin') ? wasmBytes : 'artifact bytes');
+      expect(() => evaluateBundleBudgets({ manifest, budgets: budgets(), distDir }))
+        .toThrow(`Wasm artifacts are prohibited: ${file}`);
+    }
+  );
+
+  it('rejects non-CSS assets misclassified as CSS and noncanonical asset aliases', () => {
+    const { distDir, manifest } = fixture();
+    manifest['index.html'].css.push(wasmFile);
+    expect(() => evaluateBundleBudgets({ manifest, budgets: budgets(), distDir }))
+      .toThrow('Manifest CSS asset is not CSS');
+    manifest['index.html'].css.pop();
+    manifest['index.html'].assets.push('_assets/../_assets/index.css');
+    expect(() => evaluateBundleBudgets({ manifest, budgets: budgets(), distDir }))
+      .toThrow('Manifest asset path must be a canonical relative path');
+  });
+
+  it('requires the current complete budget schema and rejects retired Wasm budgets', () => {
+    expect(() => validateBundleBudgets(budgets({ schema_version: 1 })))
+      .toThrow('Unsupported bundle budget schema');
+    expect(() => validateBundleBudgets(budgets({ entry_startup_gzip_bytes: {} })))
+      .toThrow('Every entry must have both an entry and total startup budget');
+    expect(() => validateBundleBudgets(budgets({ sdk_wasm: {} })))
+      .toThrow('Wasm artifacts are prohibited; remove the retired sdk_wasm budget');
   });
 
   it('reports independent route and chunk regressions', () => {

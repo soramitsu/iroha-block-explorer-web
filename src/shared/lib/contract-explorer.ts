@@ -1,4 +1,4 @@
-import { ToriiBrowserStreamGapError } from '@iroha/iroha-js/torii-browser';
+import { ToriiStreamGapError } from '@iroha/iroha-js/torii-browser';
 import type { ContractActivitySearchParams, ContractEventFilters, ContractEventSearchParams } from '@/shared/api';
 import { ContractAddressSchema, ContractAliasSchema, type ContractEvent } from '@/shared/api/schemas';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
@@ -221,13 +221,13 @@ function parseFailure<T>(issues: ContractFilterValidationIssue[], value: T): Con
 
 export function parseContractActivitySearchParams(
   query: Record<string, unknown>,
-  page: number,
-  perPage: number
+  cursor: string | null,
+  limit: number
 ): ContractFilterParseResult<ContractActivitySearchParams> {
   const issues: ContractFilterValidationIssue[] = [];
   const value: ContractActivitySearchParams = {
-    page,
-    per_page: perPage,
+    cursor,
+    limit,
     ...parseCommonFilters(query, issues),
     contract_entrypoint: parseNoritoString(query, 'contract_entrypoint', issues),
   };
@@ -236,39 +236,39 @@ export function parseContractActivitySearchParams(
 
 export function parseContractEventSearchParams(
   query: Record<string, unknown>,
-  page: number,
-  perPage: number
+  cursor: string | null,
+  limit: number
 ): ContractFilterParseResult<ContractEventSearchParams> {
   const issues: ContractFilterValidationIssue[] = [];
   const provenance = parseExactString(query, 'provenance', issues);
-  if (provenance !== undefined && provenance !== 'emitted' && provenance !== 'derived') {
+  if (provenance !== undefined && provenance !== 'emitted') {
     issues.push({
       code: 'provenanceValue',
       params: { field: 'provenance', emittedValue: 'emitted', derivedValue: 'derived' },
     });
   }
 
+  const { contract_alias: _alias, ...common } = parseCommonFilters(query, issues);
   const value: ContractEventSearchParams = {
-    page,
-    per_page: perPage,
-    ...parseCommonFilters(query, issues),
-    module: parseNoritoString(query, 'module', issues),
+    cursor,
+    limit,
+    ...common,
     event_kind: parseNoritoString(query, 'event_kind', issues),
     participant: parseNoritoString(query, 'participant', issues),
     asset_id: parseNoritoString(query, 'asset_id', issues),
-    provenance: provenance === 'emitted' || provenance === 'derived' ? provenance : undefined,
+    provenance: provenance === 'emitted' ? provenance : undefined,
   };
   return parseFailure(issues, value);
 }
 
 export function contractEventFiltersFromSearchParams(params: ContractEventSearchParams): ContractEventFilters {
-  const { page: _page, per_page: _perPage, ...filters } = params;
+  const { cursor: _cursor, limit: _limit, ...filters } = params;
   return filters;
 }
 
 type ApiResult<T> = { status: typeof SUCCESSFUL_FETCHING; data: T } | { status: string; error?: unknown };
 
-export function unwrapContractListSnapshot<T extends { items: readonly unknown[]; total: number }>(
+export function unwrapContractListSnapshot<T extends { items: readonly unknown[]; nextCursor: string | null }>(
   snapshot: ResourceSnapshot<ApiResult<T>>,
   problemMessages: ContractListProblemMessages
 ): ResourceSnapshot<T> {
@@ -285,7 +285,7 @@ export function unwrapContractListSnapshot<T extends { items: readonly unknown[]
       problem: { kind: 'invalid-response', message: problemMessages.invalidListResponse },
     };
   }
-  if (snapshot.data.data.items.length === 0 && snapshot.data.data.total === 0) return { status: 'not-found' };
+  if (snapshot.data.data.items.length === 0 && snapshot.data.data.nextCursor === null) return { status: 'not-found' };
   return {
     status: 'ready',
     data: snapshot.data.data,
@@ -325,7 +325,7 @@ export type ContractStreamState =
     };
 
 export function contractStreamStaleState(error: unknown): ContractStreamState {
-  if (error instanceof ToriiBrowserStreamGapError) {
+  if (error instanceof ToriiStreamGapError) {
     return {
       status: 'stale',
       message: error.message,

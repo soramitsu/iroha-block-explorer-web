@@ -1,36 +1,27 @@
 <script setup lang="ts">
 import { defaultFormat } from '@/shared/lib/time';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
-import BaseCollectionState from '@/shared/ui/components/BaseCollectionState.vue';
 import BaseHash from '@/shared/ui/components/BaseHash.vue';
 import TransactionStatus from '@/entities/transaction/TransactionStatus.vue';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import type { TransactionSearchParams, TransactionStatus as TransactionStatusType } from '@/shared/api/schemas';
 import { TransactionStatusFilter } from '@/features/filter/transactions';
-import { computed, effectScope, onScopeDispose, ref, shallowRef, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import * as http from '@/shared/api';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import type { HashType } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
+import { explorerReadAccountId } from '@/shared/lib/explorer-read-auth';
 import { useI18n } from 'vue-i18n';
 import { useThrottleFn, useWindowScroll, watchDebounced } from '@vueuse/core';
 import { Transaction as TransactionSchema } from '@/shared/api/schemas';
 import type { Transaction as TransactionDto } from '@/shared/api/schemas';
 import { useExplorerTransactionsEvents } from '@/shared/ui/composables/useExplorerTransactionsEvents';
-import { normalizeAccountIdLiteral } from '@/shared/lib/account-literal';
+import { normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
+import { firstRouteQueryValue } from '@/shared/lib/route-query';
 import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
-
-type OptionalRouteFilter<T> = { ok: true, value: T | undefined } | { ok: false };
-
-function parseOptionalRouteFilter<T>(raw: unknown, parse: (value: string) => T | undefined): OptionalRouteFilter<T> {
-  if (raw === undefined) return { ok: true, value: undefined };
-  if (typeof raw !== 'string' || raw.length === 0) return { ok: false };
-
-  const value = parse(raw);
-  return value === undefined ? { ok: false } : { ok: true, value };
-}
 
 function toTransactionTimestamp(value: unknown): number {
   if (value instanceof Date) return value.getTime();
@@ -79,60 +70,42 @@ const limitKey = `${queryPrefix}limit`;
 const statusKey = `${queryPrefix}status`;
 const authorityKey = `${queryPrefix}authority`;
 const blockKey = `${queryPrefix}block`;
-const { route, cursor, limit, pagination, resetPagination, updateListQuery } = useCursorListRouteQuery({
-  cursorKey,
-  limitKey,
-  cursorKind: 'history',
-});
-
-const routeStatusFilter = computed(() =>
-  parseOptionalRouteFilter<TransactionStatusType>(route.query[statusKey], (value) =>
-    value === 'Committed' || value === 'Rejected' ? value : undefined
-  )
-);
-const routeAuthorityFilter = computed(() =>
-  parseOptionalRouteFilter(route.query[authorityKey], (value) => normalizeAccountIdLiteral(value) ?? undefined)
-);
-const routeBlockFilter = computed(() =>
-  parseOptionalRouteFilter(route.query[blockKey], (value) => {
-    if (!/^[1-9]\d*$/u.test(value)) return undefined;
-    const parsed = Number(value);
-    return Number.isSafeInteger(parsed) ? parsed : undefined;
-  })
-);
-const routeFiltersValid = computed(
-  () => routeStatusFilter.value.ok && routeAuthorityFilter.value.ok && routeBlockFilter.value.ok
-);
-const routeAuthorityDraft = computed(() => {
-  const value = route.query[authorityKey];
-  return typeof value === 'string' ? value : '';
-});
-const routeBlockDraft = computed(() => {
-  const value = route.query[blockKey];
-  return typeof value === 'string' ? value : '';
-});
+const { route, cursor, limit, updateListQuery } = useCursorListRouteQuery({ cursorKey, limitKey });
 
 const status = computed<TransactionStatusType | null>({
-  get: () => (routeStatusFilter.value.ok ? (routeStatusFilter.value.value ?? null) : null),
+  get: () => {
+    const value = firstRouteQueryValue(route.query[statusKey]);
+    return value === 'Committed' || value === 'Rejected' ? value : null;
+  },
   set: (value) => {
     updateListQuery({ [statusKey]: value }, { history: 'replace' }).catch(() => undefined);
   },
 });
 
-const routeAuthority = computed<string | undefined>(() =>
-  routeAuthorityFilter.value.ok ? routeAuthorityFilter.value.value : undefined
+const routeAuthority = computed<string | undefined>(() => {
+  const value = firstRouteQueryValue(route.query[authorityKey])?.trim();
+  if (!value) return undefined;
+  return normalizeToriiAccountSelectorLiteral(value) ?? undefined;
+});
+const routeBlock = computed<number | undefined>(() => {
+  const value = firstRouteQueryValue(route.query[blockKey])?.trim();
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+});
+const authority = computed(() =>
+  props.filterBy?.kind === 'authority' ? props.filterBy.value : routeAuthority.value
 );
-const routeBlock = computed<number | undefined>(() =>
-  routeBlockFilter.value.ok ? routeBlockFilter.value.value : undefined
+const block = computed(() =>
+  props.filterBy?.kind === 'block' ? props.filterBy.value : routeBlock.value
 );
-const authority = computed(() => (props.filterBy?.kind === 'authority' ? props.filterBy.value : routeAuthority.value));
-const block = computed(() => (props.filterBy?.kind === 'block' ? props.filterBy.value : routeBlock.value));
 
 const authorityFilter = ref('');
 const blockFilter = ref('');
 const authorityFilterError = ref<string | null>(null);
 const blockFilterError = ref<string | null>(null);
 const streamedTransactions = ref<TransactionDto[]>([]);
+
 let filterByInitialized = false;
 
 watch(
@@ -150,7 +123,7 @@ watch(
 );
 
 watch(
-  routeAuthorityDraft,
+  () => firstRouteQueryValue(route.query[authorityKey]) ?? '',
   (value) => {
     if (props.filterBy?.kind !== 'authority') authorityFilter.value = value;
   },
@@ -158,7 +131,7 @@ watch(
 );
 
 watch(
-  routeBlockDraft,
+  () => firstRouteQueryValue(route.query[blockKey]) ?? '',
   (value) => {
     if (props.filterBy?.kind !== 'block') blockFilter.value = value;
   },
@@ -175,95 +148,66 @@ const searchParams = computed<TransactionSearchParams>(() => {
   };
 });
 
-watchDebounced(
-  authorityFilter,
-  (value) => {
-    if (props.filterBy?.kind === 'authority') return;
-    if (value === routeAuthorityDraft.value) {
-      authorityFilterError.value = routeAuthorityFilter.value.ok ? null : t('transactions.filters.authorityInvalid');
-      return;
-    }
-    const trimmed = value.trim();
-    if (!trimmed) {
-      authorityFilterError.value = null;
-      updateListQuery({ [authorityKey]: null }, { history: 'replace' }).catch(() => undefined);
-      return;
-    }
-    const normalized = normalizeAccountIdLiteral(trimmed);
-    if (!normalized) {
-      authorityFilterError.value = t('searchUnsupported');
-      return;
-    }
+watchDebounced(authorityFilter, (value) => {
+  if (props.filterBy?.kind === 'authority') return;
+  const trimmed = value.trim();
+  if (!trimmed) {
     authorityFilterError.value = null;
-    updateListQuery({ [authorityKey]: normalized }, { history: 'replace' }).catch(() => undefined);
-  },
-  { debounce: 300, maxWait: 600 }
-);
-
-watchDebounced(
-  blockFilter,
-  (value) => {
-    if (props.filterBy?.kind === 'block') return;
-    if (value === routeBlockDraft.value) {
-      blockFilterError.value = routeBlockFilter.value.ok ? null : t('transactions.filters.blockInvalid');
-      return;
-    }
-    const trimmed = value.trim();
-    if (!trimmed) {
-      blockFilterError.value = null;
-      updateListQuery({ [blockKey]: null }, { history: 'replace' }).catch(() => undefined);
-      return;
-    }
-    const parsed = Number(trimmed);
-    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-      blockFilterError.value = t('transactions.filters.blockInvalid');
-      return;
-    }
-    blockFilterError.value = null;
-    updateListQuery({ [blockKey]: parsed }, { history: 'replace' }).catch(() => undefined);
-  },
-  { debounce: 300, maxWait: 600 }
-);
-
-async function resetRouteFilters() {
+    updateListQuery({ [authorityKey]: null }, { history: 'replace' }).catch(() => undefined);
+    return;
+  }
+  const normalized = normalizeToriiAccountSelectorLiteral(trimmed);
+  if (!normalized) {
+    authorityFilterError.value = t('searchUnsupported');
+    return;
+  }
   authorityFilterError.value = null;
+  updateListQuery({ [authorityKey]: normalized }, { history: 'replace' }).catch(() => undefined);
+}, { debounce: 300, maxWait: 600 });
+
+watchDebounced(blockFilter, (value) => {
+  if (props.filterBy?.kind === 'block') return;
+  const trimmed = value.trim();
+  if (!trimmed) {
+    blockFilterError.value = null;
+    updateListQuery({ [blockKey]: null }, { history: 'replace' }).catch(() => undefined);
+    return;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    blockFilterError.value = t('transactions.filters.blockInvalid');
+    return;
+  }
   blockFilterError.value = null;
-  await updateListQuery(
-    {
-      [statusKey]: null,
-      [authorityKey]: null,
-      [blockKey]: null,
-    },
-    { history: 'replace' }
-  );
-}
+  updateListQuery({ [blockKey]: parsed }, { history: 'replace' }).catch(() => undefined);
+}, { debounce: 300, maxWait: 600 });
 
 const scope = useParamScope(
   () => {
-    if (!pagination.value.ok || !routeFiltersValid.value) return null;
     return {
       key: JSON.stringify(searchParams.value),
       payload: searchParams.value,
     };
   },
-  ({ payload }) => setupAsyncData(() => http.fetchTransactions(payload))
+  ({ payload }) => setupAsyncData(() => http.fetchTransactions(payload), {
+    interval: 5000,
+    pollWhen: () => explorerReadAccountId.value !== null,
+  })
 );
 
-const isLoading = computed(() => Boolean(scope.value?.expose.isLoading));
+const isLoading = computed(() => scope.value?.expose.isLoading);
 const fetchedTransactions = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
 );
 const payloadPagination = computed(() =>
-  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.pagination : undefined
+  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data : undefined
 );
 
 const hasAuthorityFilter = computed(() => Boolean(authority.value?.trim()));
 const hasBlockFilter = computed(() => typeof block.value === 'number' && Number.isFinite(block.value));
-const isDefaultFeed = computed(
-  () => routeFiltersValid.value && !status.value && !hasAuthorityFilter.value && !hasBlockFilter.value
-);
-const isLatestCursor = computed(() => pagination.value.ok && pagination.value.cursor === null);
-const shouldRenderLiveDefaultFeed = computed(() => isDefaultFeed.value && isLatestCursor.value);
+const isDefaultFeed = computed(() => !status.value && !hasAuthorityFilter.value && !hasBlockFilter.value);
+const isLatestPage = computed(() => !cursor.value);
+const shouldRenderLiveDefaultFeed = computed(() => isDefaultFeed.value && isLatestPage.value);
 
 const transactions = computed(() =>
   shouldRenderLiveDefaultFeed.value
@@ -278,28 +222,10 @@ const { y: windowScrollY } = useWindowScroll();
 const pendingRefresh = ref(false);
 const pendingAutoRefresh = ref(false);
 
-const transactionsStream = shallowRef<ReturnType<typeof useExplorerTransactionsEvents> | null>(null);
-let transactionsStreamScope: ReturnType<typeof effectScope> | null = null;
-
-watch(
-  routeFiltersValid,
-  (valid) => {
-    transactionsStreamScope?.stop();
-    transactionsStreamScope = null;
-    transactionsStream.value = null;
-    if (!valid) return;
-
-    transactionsStreamScope = effectScope(true);
-    transactionsStream.value = transactionsStreamScope.run(() => useExplorerTransactionsEvents()) ?? null;
-  },
-  { immediate: true }
-);
-
-onScopeDispose(() => transactionsStreamScope?.stop());
+const transactionsStream = useExplorerTransactionsEvents();
 
 const latestTransaction = computed<TransactionDto | null>(() => {
-  if (!routeFiltersValid.value) return null;
-  const raw = transactionsStream.value?.data.value;
+  const raw = transactionsStream.data.value;
   if (!raw) return null;
   try {
     return TransactionSchema.parse(JSON.parse(raw));
@@ -334,6 +260,7 @@ watch(
 watch(
   () => fetchedTransactions.value,
   (items) => {
+
     if (!streamedTransactions.value.length || !items.length) return;
     const fetchedHashes = new Set(items.map((item) => item.hash));
     streamedTransactions.value = streamedTransactions.value.filter((item) => !fetchedHashes.has(item.hash));
@@ -353,7 +280,7 @@ watch(
   () => isLoading.value,
   (loading) => {
     if (loading || !pendingAutoRefresh.value) return;
-    if (!isLatestCursor.value) {
+    if (cursor.value) {
       pendingAutoRefresh.value = false;
       return;
     }
@@ -381,10 +308,10 @@ watch(
     if (visibleTransactionHashes.value.has(transaction.hash)) return;
 
     // Avoid shifting paginated views under the user's cursor.
-    // Only auto-refresh when the table is on the latest cursor window.
-    if (!isLatestCursor.value) return;
+    // Only auto-refresh when the table is on the "latest" page.
+    if (cursor.value) return;
 
-    // Avoid shifting the latest cursor window while the user is scrolled down.
+    // Avoid shifting the page while the user is scrolled down.
     if (windowScrollY.value > 80) {
       pendingRefresh.value = true;
       return;
@@ -434,37 +361,7 @@ watch(
     </div>
 
     <div
-      v-if="!pagination.ok"
-      class="transactions-table__pagination-error content-row"
-      data-test="transactions-invalid-pagination"
-      role="alert"
-    >
-      <span class="row-text">{{ $t('table.invalidCursorPagination') }}</span>
-      <BaseButton
-        bordered
-        @click="resetPagination"
-      >
-        {{ $t('table.resetPagination') }}
-      </BaseButton>
-    </div>
-
-    <div
-      v-if="!routeFiltersValid"
-      class="transactions-table__filter-error content-row"
-      data-test="transactions-invalid-filters"
-      role="alert"
-    >
-      <span class="row-text">{{ $t('searchUnsupported') }}</span>
-      <BaseButton
-        bordered
-        @click="resetRouteFilters"
-      >
-        {{ $t('contracts.filters.clearInvalid') }}
-      </BaseButton>
-    </div>
-
-    <div
-      v-if="pagination.ok && routeFiltersValid && pendingRefresh"
+      v-if="pendingRefresh"
       class="transactions-table__pending content-row"
       data-test="pending-refresh"
     >
@@ -478,127 +375,105 @@ watch(
       </BaseButton>
     </div>
 
-    <BaseCollectionState
-      v-if="scope"
-      v-slot="{ emptyLabel }"
-      table
-      :snapshot="scope.expose.snapshot"
-      :count="transactions.length"
-      :filtered="Boolean(status || (!props.filterBy && (authority || block)))"
-      @retry="scope.expose.refetch()"
-      @reset="resetRouteFilters"
+    <BaseTable
+      v-model:cursor="cursor"
+      v-model:page-size="limit"
+      :loading="isLoading"
+      :error="scope?.expose.error"
+      :items="transactions"
+      :row-key="transactionRowKey"
+      pagination-mode="cursor"
+      :cursor-pagination="payloadPagination"
+      container-class="transactions-table__container"
+      :pagination-breakpoint="1700"
+      @retry="scope?.expose.refetch()"
     >
-      <BaseTable
-        v-if="pagination.ok && routeFiltersValid"
-        v-model:cursor="cursor"
-        v-model:page-size="limit"
-        :empty-label
-        :loading="isLoading"
-        :items="transactions"
-        :row-key="transactionRowKey"
-        :cursor-pagination="payloadPagination"
-        pagination-mode="cursor"
-        container-class="transactions-table__container"
-        :pagination-breakpoint="1700"
-      >
-        <template #row="{ item }">
+      <template #row="{ item }">
+        <div
+          class="transactions-table__row"
+          role="presentation"
+        >
+          <TransactionStatus
+            type="tooltip"
+            class="transactions-table__icon"
+            :committed="item.status === 'Committed'"
+            role="cell"
+          />
+
           <div
-            class="transactions-table__row"
-            role="presentation"
+            class="transactions-table__column transactions-table__column-hash"
+            role="cell"
           >
-            <TransactionStatus
-              type="tooltip"
-              class="transactions-table__icon"
-              :committed="item.status === 'Committed'"
-              role="cell"
+            <div class="transactions-table__label">
+              {{ $t('transactions.transactionID') }}
+            </div>
+
+            <BaseHash
+              :hash="item.hash"
+              :type="hashType"
+              :link="`/transactions/${encodeURIComponent(item.hash)}`"
+              copy
             />
 
+            <time
+              :datetime="item.created_at.toISOString()"
+              class="transactions-table__time row-text-monospace"
+            >
+              {{ defaultFormat(item.created_at) }}
+            </time>
+          </div>
+
+          <div
+            class="transactions-table__columns"
+            role="presentation"
+          >
             <div
-              class="transactions-table__column transactions-table__column-hash"
+              v-if="props.showAuthority"
+              class="transactions-table__column transactions-table__column-authority"
               role="cell"
             >
               <div class="transactions-table__label">
-                {{ $t('transactions.transactionID') }}
+                {{ $t('accounts.accountId') }}
               </div>
 
               <BaseHash
-                :hash="item.hash"
-                :type="hashType"
-                :link="`/transactions/${item.hash}`"
-                copy
+                :hash="item.authority"
+                type="short"
+                :link="`/accounts/${item.authority}`"
               />
-
-              <time
-                :datetime="item.created_at.toISOString()"
-                class="transactions-table__time row-text-monospace"
-              >
-                {{ defaultFormat(item.created_at) }}
-              </time>
             </div>
 
             <div
-              class="transactions-table__columns"
-              role="presentation"
+              v-if="props.showBlock"
+              class="transactions-table__column-block"
+              role="cell"
             >
-              <div
-                v-if="props.showAuthority"
-                class="transactions-table__column transactions-table__column-authority"
-                role="cell"
-              >
-                <div class="transactions-table__label">
-                  {{ $t('accounts.accountId') }}
-                </div>
-
-                <BaseHash
-                  :hash="item.authority"
-                  type="short"
-                  :link="`/accounts/${item.authority}`"
-                />
+              <div class="transactions-table__label">
+                {{ $t('transactions.block') }}
               </div>
 
-              <div
-                v-if="props.showBlock"
-                class="transactions-table__column-block"
-                role="cell"
+              <BaseLink
+                :to="`/blocks/${item.block}`"
+                monospace
               >
-                <div class="transactions-table__label">
-                  {{ $t('transactions.block') }}
-                </div>
+                {{ item.block }}
+              </BaseLink>
+            </div>
 
-                <BaseLink
-                  :to="`/blocks/${item.block}`"
-                  monospace
-                >
-                  {{ item.block }}
-                </BaseLink>
+            <div
+              class="transactions-table__column"
+              role="cell"
+            >
+              <div class="transactions-table__label">
+                {{ $t('transactions.executable') }}
               </div>
 
-              <div
-                class="transactions-table__column"
-                role="cell"
-              >
-                <div class="transactions-table__label">
-                  {{ $t('transactions.executable') }}
-                </div>
-
-                <span class="row-text">{{ item.executable }}</span>
-              </div>
+              <span class="row-text">{{ item.executable }}</span>
             </div>
           </div>
-        </template>
-        <template #empty>
-          <span>{{ emptyLabel }}</span>
-          <BaseButton
-            v-if="Boolean(status || (!props.filterBy && (authority || block)))"
-            bordered
-            data-test="collection-reset"
-            @click="resetRouteFilters"
-          >
-            {{ $t('ux.collection.resetFilters') }}
-          </BaseButton>
-        </template>
-      </BaseTable>
-    </BaseCollectionState>
+        </div>
+      </template>
+    </BaseTable>
   </div>
 </template>
 
@@ -622,17 +497,17 @@ watch(
 
     @include sm {
       display: grid;
-      grid-template-columns: 32px 0.9fr 1fr;
+      grid-template-columns: 32px minmax(0, 0.9fr) minmax(0, 1fr);
       grid-gap: size(2);
       align-items: center;
     }
 
     @include md {
-      grid-template-columns: 32px 0.5fr 1fr;
+      grid-template-columns: 32px minmax(0, 0.5fr) minmax(0, 1fr);
     }
 
     @include lg {
-      grid-template-columns: 32px 0.9fr 1fr;
+      grid-template-columns: 32px minmax(0, 0.9fr) minmax(0, 1fr);
     }
   }
 
@@ -676,6 +551,7 @@ watch(
 
   &__container {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     .content-row {
       padding: 0 size(4);
     }
@@ -714,6 +590,8 @@ watch(
 
   &__columns {
     display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
     gap: size(2);
 
     flex-direction: column;
@@ -724,6 +602,8 @@ watch(
 
   &__column {
     display: grid;
+    min-width: 0;
+    max-width: 100%;
     grid-gap: size(1) size(1);
     margin-bottom: auto;
 
@@ -739,9 +619,6 @@ watch(
     &-hash {
       @include sm {
         width: 100%;
-      }
-      @include xl {
-        width: size(82);
       }
     }
 

@@ -140,9 +140,9 @@ export function buildCiGates({ runLiveMochi = false, storeDir } = {}) {
       label: 'exact Node version',
     }),
     gate({
-      args: ['scripts/check-iroha-pin.mjs'],
+      args: ['scripts/verify-iroha-sdk.mjs', '--archive-only'],
       command: 'node',
-      label: 'exact Iroha SDK pin',
+      label: 'exact SDK archive integrity',
     }),
     gate({
       args: ['fetch', '--frozen-lockfile', '--store-dir', storeDir],

@@ -7,11 +7,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "node ./scripts/verify-iroha-sdk.mjs",
     "dev": "vite",
-    "build": "run-s typecheck build:vite",
+    "build": "node ./scripts/verify-iroha-sdk.mjs && run-s typecheck build:vite",
     "build:vite": "vite build",
     "check:bundle": "node ./scripts/check-bundle-budget.mjs",
-    "check:iroha-pin": "node ./scripts/check-iroha-pin.mjs",
+    "check:sdk": "node ./scripts/verify-iroha-sdk.mjs",
     "check:node-version": "node ./scripts/check-node-version.mjs",
     "check:roadmap": "node ./scripts/check-roadmap.mjs",
     "mochi:up": "node ./scripts/mochi-explorer.mjs up",
@@ -21,10 +22,8 @@
     "mochi:env": "node ./scripts/mochi-explorer.mjs env",
     "mochi:mcp-add-command": "node ./scripts/mochi-explorer.mjs mcp-add-command",
     "mochi:verify-seed": "node ./scripts/verify-mochi-seed.mjs",
-    "prepare:iroha-sdk": "node scripts/prepare-iroha-sdk.mjs",
-    "postinstall": "pnpm prepare:iroha-sdk",
     "preview": "vite preview",
-    "lint": "eslint --ext=.js,.ts,.vue .",
+    "lint": "eslint --ext=.js,.ts,.mts,.vue .",
     "test": "vitest",
     "playwright:install": "playwright install chromium",
     "test:playwright": "playwright test",
@@ -37,7 +36,7 @@
   },
   "dependencies": {
     "@iroha/core": "npm:@jsr/iroha__core@0.5.0-alpha",
-    "@iroha/iroha-js": "github:hyperledger-iroha/iroha#16866ffbe8406c7565548d0be8110209b8cba2bc&path:javascript/iroha_js",
+    "@iroha/iroha-js": "file:vendor/iroha-iroha-js-0.0.3-6e8204f07209.tgz",
     "@ngneat/falso": "^8.0.2",
     "@noble/ciphers": "^1.3.0",
     "@noble/hashes": "^2.0.1",
@@ -54,6 +53,8 @@
     "buffer": "^6.0.3",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "lossless-json": "4.3.1",
+    "qrcode": "^1.5.4",
     "tiny-invariant": "^1.3.3",
     "ts-pattern": "^5.9.0",
     "type-fest": "^5.2.0",
@@ -61,7 +62,8 @@
     "vue-i18n": "^11.1.12",
     "vue-json-pretty": "^2.6.0",
     "vue-router": "^4.6.3",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "tr46": "6.0.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.28.5",
@@ -69,6 +71,7 @@
     "@playwright/test": "^1.58.2",
     "@stylistic/eslint-plugin-ts": "^4.4.1",
     "@types/node": "^24.10.0",
+    "@types/qrcode": "^1.5.6",
     "@typescript-eslint/eslint-plugin": "8.46.3",
     "@typescript-eslint/parser": "8.46.3",
     "@vitejs/plugin-vue": "^6.0.1",
@@ -88,6 +91,7 @@
     "vite-svg-loader": "^5.1.0",
     "vitest": "^4.0.8",
     "vue-eslint-parser": "^10.2.0",
-    "vue-tsc": "^3.1.3"
+    "vue-tsc": "^3.1.3",
+    "@types/tr46": "5.0.1"
   }
 }

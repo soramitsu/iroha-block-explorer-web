@@ -8,6 +8,7 @@ export const navigationGroups = [
     { i18nKey: 'domains.domains', to: '/domains', names: ['domains-list', 'domain-details'] },
   ] },
   { id: 'analysis', i18nKey: 'ux.analysis', items: [
+    { i18nKey: 'dashboards.nav', to: '/dashboards/network', names: ['dashboard-network', 'dashboard-activity', 'dashboard-ledger'] },
     { i18nKey: 'tracing.nav', to: '/tracing', names: ['tracing-workspace'] },
     { i18nKey: 'econometrics.nav', to: '/econometrics', names: ['econometrics'] },
   ] },

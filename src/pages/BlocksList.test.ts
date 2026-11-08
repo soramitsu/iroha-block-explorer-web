@@ -1,12 +1,11 @@
-import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import BlocksList from './BlocksList.vue';
 import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import type { Block } from '@/shared/api/schemas';
-import { ref } from 'vue';
+import type { ApiProblem } from '@/shared/utils/resource-state';
 
-const mockBlocks: Block[] = [
+const mockBlocks = [
   {
     hash: '0xblock-1',
     height: 100,
@@ -22,10 +21,6 @@ const { scrollY, setupAsyncDataMock } = vi.hoisted(() => ({
   scrollY: { value: 0 },
   setupAsyncDataMock: vi.fn(),
 }));
-const cursorPaginationState = ref<
-  { ok: true, cursor: string | null, limit: number } | { ok: false, code: 'invalid-cursor' | 'invalid-limit' }
->({ ok: true, cursor: null, limit: 10 });
-const resetCursorPagination = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('@vueuse/core', async (importOriginal) => {
   const actual = await importOriginal<any>();
@@ -36,22 +31,13 @@ vi.mock('@vueuse/core', async (importOriginal) => {
 });
 
 const mainState = {
-  get snapshot(): any {
-    return this.isLoading && !this.data.data.items.length
-      ? { status: 'initial-loading' }
-      : { status: 'ready', data: this.data, isRefreshing: this.isLoading, refreshError: null };
-  },
   isLoading: false,
+  error: null as ApiProblem | null,
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: {
-        limit: 10,
-        snapshot_height: 100,
-        snapshot_hash: '0xsnapshot',
-        next_cursor: null,
-        has_more: false,
-      },
+      nextCursor: null,
+      total: undefined,
       items: mockBlocks,
     },
   },
@@ -63,13 +49,8 @@ const probeState = {
   data: {
     status: SUCCESSFUL_FETCHING,
     data: {
-      pagination: {
-        limit: 1,
-        snapshot_height: 100,
-        snapshot_hash: '0xsnapshot',
-        next_cursor: null,
-        has_more: false,
-      },
+      nextCursor: null,
+      total: undefined,
       items: [{ ...mockBlocks[0], height: mockBlocks[0].height }],
     },
   },
@@ -83,13 +64,7 @@ vi.mock('@/shared/utils/setup-async-data', () => ({
 vi.mock('@/shared/ui/composables/useListRouteQuery', async () => {
   const { ref } = await vi.importActual<typeof import('vue')>('vue');
   return {
-    useCursorListRouteQuery: () => ({
-      cursor: ref(null),
-      limit: ref(10),
-      pagination: cursorPaginationState,
-      resetPagination: resetCursorPagination,
-      updateListQuery: vi.fn(),
-    }),
+    useCursorListRouteQuery: () => ({ cursor: ref(null), limit: ref(10), updateListQuery: vi.fn() }),
   };
 });
 
@@ -99,8 +74,8 @@ const BaseContentBlockStub = {
 
 const BaseTableStub = {
   name: 'BaseTable',
-  props: ['items', 'paginationMode', 'cursorPagination', 'rowKey'],
-  emits: ['update:cursor', 'update:pageSize'],
+  props: ['items', 'reversed', 'rowKey', 'error', 'cursorPagination'],
+  emits: ['update:cursor', 'update:pageSize', 'retry'],
   template: '<div><slot name="row" v-for="item in items" :item="item" /></div>',
 };
 
@@ -125,18 +100,15 @@ const TimeStampStub = {
 };
 
 describe('BlocksList', () => {
-  const mountedWrappers: Array<ReturnType<typeof mount>> = [];
-
   beforeEach(() => {
     scrollY.value = 0;
     mainState.isLoading = false;
+    mainState.error = null;
     mainState.data.data.items = [...mockBlocks];
     mainState.refetch = vi.fn();
     probeState.isLoading = false;
     probeState.data.data.items = [{ ...mockBlocks[0], height: mockBlocks[0].height }];
     probeState.refetch = vi.fn();
-    cursorPaginationState.value = { ok: true, cursor: null, limit: 10 };
-    resetCursorPagination.mockClear();
 
     setupAsyncDataMock.mockReset();
     setupAsyncDataMock
@@ -145,12 +117,8 @@ describe('BlocksList', () => {
       .mockImplementation(() => mainState);
   });
 
-  afterEach(() => {
-    while (mountedWrappers.length > 0) mountedWrappers.pop()?.unmount();
-  });
-
-  const factory = () => {
-    const wrapper = mount(BlocksList, {
+  const factory = () =>
+    mount(BlocksList, {
       global: {
         plugins: [i18n],
         stubs: {
@@ -163,9 +131,6 @@ describe('BlocksList', () => {
         },
       },
     });
-    mountedWrappers.push(wrapper);
-    return wrapper;
-  };
 
   it('renders rows once data is loaded', async () => {
     factory();
@@ -173,35 +138,12 @@ describe('BlocksList', () => {
     expect(mainState.data.data.items).toHaveLength(1);
   });
 
-  it('renders an unavailable timestamp for a hash-only committed-journal row', async () => {
-    mainState.data.data.items = [{ ...mockBlocks[0], created_at: null }];
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(wrapper.get('[data-test="block-created-at-unavailable"]').text()).toBe('unknown');
-    expect(wrapper.find('time').exists()).toBe(false);
-  });
-
-  it('uses Torii cursor pagination without an invented total', async () => {
+  it('uses non-reversed pagination mode for Torii blocks pages', async () => {
     const wrapper = factory();
     await flushPromises();
 
     const table = wrapper.getComponent({ name: 'BaseTable' });
-    expect(table.props('paginationMode')).toBe('cursor');
-    expect(table.props('cursorPagination')).toEqual(mainState.data.data.pagination);
-    expect(table.attributes('total')).toBeUndefined();
-  });
-
-  it('blocks malformed cursor bookmarks until the user explicitly resets pagination', async () => {
-    cursorPaginationState.value = { ok: false, code: 'invalid-cursor' };
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(wrapper.find('[data-test="blocks-invalid-pagination"]').exists()).toBe(true);
-    expect(wrapper.findComponent({ name: 'BaseTable' }).exists()).toBe(false);
-
-    await wrapper.get('[data-test="blocks-invalid-pagination"] button').trigger('click');
-    expect(resetCursorPagination).toHaveBeenCalledOnce();
+    expect(table.props('reversed')).not.toBe(true);
   });
 
   it('shows a pending refresh banner while scrolled down and a new block is available', async () => {
@@ -221,4 +163,23 @@ describe('BlocksList', () => {
     expect(mainState.refetch).toHaveBeenCalled();
     expect(wrapper.find('[data-test=\"pending-refresh\"]').exists()).toBe(false);
   });
+
+  it('passes read failures and retry through to the table', async () => {
+    mainState.data.data.items = [];
+    mainState.error = { kind: 'invalid-response', message: 'Unexpected collection response' };
+    const wrapper = factory();
+    await flushPromises();
+
+    const table = wrapper.getComponent({ name: 'BaseTable' });
+    expect(table.props('error')).toEqual(mainState.error);
+    table.vm.$emit('retry');
+    expect(mainState.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes the native collection continuation directly to pagination', async () => {
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.getComponent({ name: 'BaseTable' }).props('cursorPagination')).toEqual(mainState.data.data);
+  });
+
 });

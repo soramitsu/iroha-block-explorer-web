@@ -7,6 +7,9 @@ test('keeps protected Soracloud reads behind canonical account authentication', 
     if (pathname.startsWith('/v1/soracloud/')) soracloudRequests.push(pathname);
   });
 
+  await page.route('**/config.json', (route) => route.fulfill({ json: {
+    toriiBaseUrl: 'https://taira.sora.org', networkPrefix: 369,
+  } }));
   await page.goto('/soracloud');
 
   await expect(page.locator('[data-test="soracloud-auth-boundary"]')).toBeVisible();

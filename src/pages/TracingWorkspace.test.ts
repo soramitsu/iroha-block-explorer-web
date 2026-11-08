@@ -3,26 +3,19 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent } from 'vue';
 import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
-import { InstructionsSearchParamsSchema } from '@/shared/api/schemas';
 import TracingWorkspace from './TracingWorkspace.vue';
+import tairaHistory from '../../tests/fixtures/taira-history.json';
 
-const ACCOUNT_ALICE = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-const ACCOUNT_BOB = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
-const ACCOUNT_CAROL = 'sorauﾛ1PaQｽGh1ｴ6pAﾜnqｸfJuｿMﾑVqﾏvQﾐﾚｼｾﾋaﾈｳﾊc1ｺﾊ1GGM2D';
-const ACCOUNT_DAVE = 'sorauﾛ1QEﾄiBzndﾆDwﾉｴxSﾔﾋ6KXﾆ2xﾗﾆrﾐﾚﾄoNqｳZﾘqtHﾛDBCRJ5';
-const ASSET_DEFINITION_ID = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
-const ASSET_ID = `${ASSET_DEFINITION_ID}#${ACCOUNT_ALICE}`;
-const REJECTION_JSON = { Validation: 'TooComplex' } as const;
+const HISTORY_CURSOR = tairaHistory.latestTransactions.next_cursor;
 
-function historyPagination(nextCursor: string | null = null, hasMore = false) {
-  return {
-    limit: 100,
-    snapshot_height: 1,
-    snapshot_hash: '0xsnapshot',
-    next_cursor: nextCursor,
-    has_more: hasMore,
-  };
-}
+const ACCOUNT_ALICE =
+  'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
+const ACCOUNT_BOB =
+  'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
+const ACCOUNT_CAROL = 'reserve@settlement.main';
+const ACCOUNT_DAVE = 'maker@treasury.main';
+const ACCOUNT_ALIAS = 'treasury@banking.retail';
+const ASSET_ID = `66owaQmAQMuHxPzxUN3bqZ6FJfDa#${ACCOUNT_ALICE}`;
 
 const routeState = vi.hoisted((): { query: Record<string, unknown> } => ({ query: {} }));
 
@@ -49,12 +42,12 @@ vi.mock('vue-router', () => ({
 }));
 
 vi.mock('@/shared/api', () => ({
+  isToriiBaseUrlForced: () => false,
   fetchAccount: (...args: unknown[]) => apiMocks.fetchAccount(...args),
   fetchBlocks: (...args: unknown[]) => apiMocks.fetchBlocks(...args),
   fetchInstructions: (...args: unknown[]) => apiMocks.fetchInstructions(...args),
   fetchTransaction: (...args: unknown[]) => apiMocks.fetchTransaction(...args),
   getToriiBaseUrl: () => apiMocks.getToriiBaseUrl(),
-  isToriiBaseUrlForced: () => false,
 }));
 
 vi.mock('@/shared/ui/composables/notifications', () => ({
@@ -120,10 +113,10 @@ function buildInstruction(overrides?: Partial<Record<string, unknown>>) {
       json: {
         kind: 'Transfer',
         payload: {
-          variant: 'Asset',
-          value: {
-            source: ASSET_ID,
-            object: '1',
+            variant: 'Asset',
+            value: {
+            object: ASSET_ID,
+            source: ACCOUNT_ALICE,
             destination: ACCOUNT_BOB,
           },
         },
@@ -140,10 +133,10 @@ function buildTransferInstruction(source: string, destination: string, overrides
       json: {
         kind: 'Transfer',
         payload: {
-          variant: 'Asset',
-          value: {
-            source: `${ASSET_DEFINITION_ID}#${source}`,
-            object: '1',
+            variant: 'Asset',
+            value: {
+            object: ASSET_ID,
+            source,
             destination,
           },
         },
@@ -156,15 +149,13 @@ function buildTransferInstruction(source: string, destination: string, overrides
 function buildCapacityError(retryAfterSeconds = 1) {
   return {
     status: UNKNOWN_ERROR,
-    error: new Error(
-      JSON.stringify({
-        code: 'query_validation_failed',
-        message: 'Query execution capacity limit',
-        details: {
-          retry_after_seconds: retryAfterSeconds,
-        },
-      })
-    ),
+    error: new Error(JSON.stringify({
+      code: 'query_validation_failed',
+      message: 'Query execution capacity limit',
+      details: {
+        retry_after_seconds: retryAfterSeconds,
+      },
+    })),
   };
 }
 
@@ -192,6 +183,10 @@ function factory() {
   });
 }
 
+function historyPage(nextCursor: string | null) {
+  return { nextCursor };
+}
+
 describe('TracingWorkspace', () => {
   beforeEach(() => {
     routeState.query = {};
@@ -204,7 +199,7 @@ describe('TracingWorkspace', () => {
     apiMocks.fetchInstructions.mockReset();
     apiMocks.fetchAccount.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
-      data: { id: ACCOUNT_ALICE },
+      data: { id: ACCOUNT_ALICE, i105_address: ACCOUNT_ALICE },
     });
     apiMocks.fetchBlocks.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
@@ -216,7 +211,7 @@ describe('TracingWorkspace', () => {
       status: SUCCESSFUL_FETCHING,
       data: {
         items: [],
-        pagination: historyPagination(),
+        ...historyPage(null),
       },
     });
     if (typeof localStorage !== 'undefined' && typeof localStorage.clear === 'function') {
@@ -227,29 +222,23 @@ describe('TracingWorkspace', () => {
   it('bootstraps from account seed and scans transfer instructions with account filter', async () => {
     routeState.query = {
       seed_type: 'account',
-      seed_value: ACCOUNT_ALICE,
+      seed_value: ACCOUNT_ALIAS,
     };
 
     factory();
     await settle();
 
-    expect(apiMocks.fetchAccount).toHaveBeenCalledWith(ACCOUNT_ALICE);
-    expect(apiMocks.fetchBlocks).toHaveBeenCalledWith({ limit: 1 });
+    expect(apiMocks.fetchAccount).toHaveBeenCalledWith(ACCOUNT_ALIAS);
+    expect(apiMocks.fetchBlocks).toHaveBeenCalled();
     expect(apiMocks.fetchInstructions).toHaveBeenCalledWith(
       expect.objectContaining({
         account: ACCOUNT_ALICE,
         kind: 'Transfer',
-        block: 1,
         cursor: null,
         limit: 100,
       })
     );
-    expect(apiMocks.fetchInstructions.mock.calls[0]?.[0]).not.toHaveProperty('page');
-    expect(apiMocks.fetchInstructions.mock.calls[0]?.[0]).not.toHaveProperty('per_page');
-    expect(() => InstructionsSearchParamsSchema.parse(apiMocks.fetchInstructions.mock.calls[0]?.[0])).not.toThrow();
-    expect(
-      (apiMocks.fetchInstructions.mock.calls[0]?.[0] as Record<string, unknown>)?.transaction_status
-    ).toBeUndefined();
+    expect((apiMocks.fetchInstructions.mock.calls[0]?.[0] as Record<string, unknown>)?.transaction_status).toBeUndefined();
   });
 
   it('retries a canonical transient-capacity response and preserves the successful scan', async () => {
@@ -261,13 +250,15 @@ describe('TracingWorkspace', () => {
         seed_type: 'account',
         seed_value: ACCOUNT_ALICE,
       };
-      apiMocks.fetchInstructions.mockResolvedValueOnce(buildCapacityError()).mockResolvedValueOnce({
-        status: SUCCESSFUL_FETCHING,
-        data: {
-          items: [buildInstruction({ transaction_hash: '0xafter-capacity' })],
-          pagination: historyPagination(),
-        },
-      });
+      apiMocks.fetchInstructions
+        .mockResolvedValueOnce(buildCapacityError())
+        .mockResolvedValueOnce({
+          status: SUCCESSFUL_FETCHING,
+          data: {
+            items: [buildInstruction({ transaction_hash: '0xafter-capacity' })],
+            ...historyPage(null),
+          },
+        });
 
       wrapper = factory();
       await flushPromises();
@@ -288,7 +279,7 @@ describe('TracingWorkspace', () => {
     }
   });
 
-  it('paces sequential block scans instead of issuing a zero-delay request burst', async () => {
+  it('paces opaque history continuations instead of issuing a zero-delay request burst', async () => {
     vi.useFakeTimers();
     let wrapper: ReturnType<typeof factory> | undefined;
 
@@ -304,11 +295,17 @@ describe('TracingWorkspace', () => {
         },
       });
 
+      apiMocks.fetchInstructions.mockResolvedValueOnce({
+        status: SUCCESSFUL_FETCHING,
+        data: { items: [], ...historyPage(HISTORY_CURSOR) },
+      });
       wrapper = factory();
       await flushPromises();
 
       expect(apiMocks.fetchInstructions).toHaveBeenCalledTimes(1);
-      expect(apiMocks.fetchInstructions).toHaveBeenLastCalledWith(expect.objectContaining({ block: 2 }));
+      expect(apiMocks.fetchInstructions).toHaveBeenLastCalledWith(
+        expect.objectContaining({ cursor: null, limit: 100 })
+      );
 
       await vi.advanceTimersByTimeAsync(124);
       await flushPromises();
@@ -317,54 +314,9 @@ describe('TracingWorkspace', () => {
       await vi.advanceTimersByTimeAsync(1);
       await flushPromises();
       expect(apiMocks.fetchInstructions).toHaveBeenCalledTimes(2);
-      expect(apiMocks.fetchInstructions).toHaveBeenLastCalledWith(expect.objectContaining({ block: 1 }));
-    } finally {
-      wrapper?.unmount();
-      vi.useRealTimers();
-    }
-  });
-
-  it('follows opaque continuations within a block and stops on a repeated cursor', async () => {
-    vi.useFakeTimers();
-    let wrapper: ReturnType<typeof factory> | undefined;
-
-    try {
-      routeState.query = {
-        seed_type: 'account',
-        seed_value: ACCOUNT_ALICE,
-      };
-      apiMocks.fetchInstructions.mockResolvedValue({
-        status: SUCCESSFUL_FETCHING,
-        data: {
-          items: [],
-          pagination: historyPagination('same-cursor', true),
-        },
-      });
-
-      wrapper = factory();
-      await flushPromises();
-      expect(apiMocks.fetchInstructions).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({
-          cursor: null,
-          limit: 100,
-          block: 1,
-        })
+      expect(apiMocks.fetchInstructions).toHaveBeenLastCalledWith(
+        expect.objectContaining({ cursor: HISTORY_CURSOR, limit: 100 })
       );
-
-      await vi.advanceTimersByTimeAsync(125);
-      await flushPromises();
-
-      expect(apiMocks.fetchInstructions).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({
-          cursor: 'same-cursor',
-          limit: 100,
-          block: 1,
-        })
-      );
-      expect(wrapper.get('.tracing-page__error').text()).toContain('Failed to fetch trace data');
-      expect(wrapper.get('.tracing-page__status').text()).toContain('Active cursors: 1');
     } finally {
       wrapper?.unmount();
       vi.useRealTimers();
@@ -395,10 +347,12 @@ describe('TracingWorkspace', () => {
         status: SUCCESSFUL_FETCHING,
         data: {
           items: [],
-          pagination: historyPagination(),
+          ...historyPage(null),
         },
       });
-      const resumeButton = wrapper.findAll('.base-button-stub').find((button) => button.text().includes('Resume'));
+      const resumeButton = wrapper
+        .findAll('.base-button-stub')
+        .find((button) => button.text().includes('Resume'));
       expect(resumeButton).toBeDefined();
       await resumeButton!.trigger('click');
       await flushPromises();
@@ -412,15 +366,78 @@ describe('TracingWorkspace', () => {
     }
   });
 
+  it('rejects a cursor cycle before ingesting or advancing the failed page', async () => {
+    vi.useFakeTimers();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let wrapper: ReturnType<typeof factory> | undefined;
+    try {
+      routeState.query = { seed_type: 'account', seed_value: ACCOUNT_ALICE };
+      apiMocks.fetchInstructions
+        .mockResolvedValueOnce({
+          status: SUCCESSFUL_FETCHING,
+          data: { items: [], ...historyPage(HISTORY_CURSOR) },
+        })
+        .mockResolvedValueOnce({
+          status: SUCCESSFUL_FETCHING,
+          data: {
+            items: [buildInstruction({ transaction_hash: '0xfailed-page' })],
+            ...historyPage(HISTORY_CURSOR),
+          },
+        });
+      wrapper = factory();
+      await flushPromises();
+      await vi.advanceTimersByTimeAsync(125);
+      await flushPromises();
+      expect(wrapper.get('.tracing-page__error').text()).toContain('Failed to fetch trace data');
+      expect(wrapper.text()).not.toContain('0xfailed-page');
+      expect(wrapper.get('.tracing-page__status').text()).toContain('Active cursors: 1');
+
+      const resume = wrapper.findAll('.base-button-stub').find((button) => button.text().includes('Resume'));
+      await resume!.trigger('click');
+      await flushPromises();
+      expect(apiMocks.fetchInstructions).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: HISTORY_CURSOR }));
+      expect(wrapper.find('.tracing-page__error').exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      errorSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('follows opaque cursors when ingesting a transaction seed', async () => {
+    vi.useFakeTimers();
+    let wrapper: ReturnType<typeof factory> | undefined;
+    try {
+      routeState.query = { seed_type: 'transaction', seed_value: '0xseed' };
+      apiMocks.fetchTransaction.mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: { authority: ACCOUNT_ALICE } });
+      apiMocks.fetchInstructions.mockResolvedValueOnce({
+        status: SUCCESSFUL_FETCHING,
+        data: { items: [], ...historyPage(HISTORY_CURSOR) },
+      });
+      wrapper = factory();
+      await flushPromises();
+      await vi.advanceTimersByTimeAsync(125);
+      await flushPromises();
+      expect(apiMocks.fetchInstructions.mock.calls.slice(0, 2).map(([params]) => params)).toEqual([
+        { cursor: null, limit: 100, transaction_hash: '0xseed', kind: 'Transfer' },
+        { cursor: HISTORY_CURSOR, limit: 100, transaction_hash: '0xseed', kind: 'Transfer' },
+      ]);
+    } finally {
+      wrapper?.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it('updates route query from seed draft form', async () => {
     const wrapper = factory();
     await settle();
-    const transactionHash = 'ab'.repeat(32);
 
     await wrapper.get('[data-test="trace-seed-type"]').setValue('transaction');
-    await wrapper.get('[data-test="trace-seed-value"]').setValue(transactionHash);
+    await wrapper.get('[data-test="trace-seed-value"]').setValue('0xseedhash');
 
-    const startButton = wrapper.findAll('.base-button-stub').find((button) => button.text().includes('Start trace'));
+    const startButton = wrapper
+      .findAll('.base-button-stub')
+      .find((button) => button.text().includes('Start trace'));
     expect(startButton).toBeDefined();
     await startButton!.trigger('click');
 
@@ -428,7 +445,7 @@ describe('TracingWorkspace', () => {
       name: 'tracing-workspace',
       query: {
         seed_type: 'transaction',
-        seed_value: transactionHash,
+        seed_value: '0xseedhash',
       },
     });
   });
@@ -436,7 +453,7 @@ describe('TracingWorkspace', () => {
   it('increments graph viewport reset nonce when reset button is clicked', async () => {
     routeState.query = {
       seed_type: 'account',
-      seed_value: ACCOUNT_ALICE,
+      seed_value: ACCOUNT_ALIAS,
     };
 
     const wrapper = factory();
@@ -456,7 +473,7 @@ describe('TracingWorkspace', () => {
 
     const bundle = {
       format: 'iroha-trace-bundle' as const,
-      version: 2 as const,
+      version: 1 as const,
       exported_at: '2026-02-26T00:00:00.000Z',
       torii_base_url: 'https://torii.example',
       seed: { type: 'account' as const, value: ACCOUNT_ALICE },
@@ -479,16 +496,7 @@ describe('TracingWorkspace', () => {
         edges: [],
         events: [],
       },
-      cursors: [
-        {
-          accountId: ACCOUNT_ALICE,
-          depth: 0,
-          block: 1,
-          cursor: null,
-          visitedCursors: [],
-          exhausted: true,
-        },
-      ],
+      cursors: [{ accountId: ACCOUNT_ALICE, depth: 0, nextCursor: null, visitedCursors: [], exhausted: true }],
       labels: {},
       csv: { nodes: 'id', edges: 'id', events: 'id' },
     };
@@ -523,7 +531,7 @@ describe('TracingWorkspace', () => {
       status: SUCCESSFUL_FETCHING,
       data: {
         items: [buildInstruction()],
-        pagination: historyPagination(),
+        ...historyPage(null),
       },
     });
 
@@ -554,7 +562,7 @@ describe('TracingWorkspace', () => {
             transaction_status: 'Rejected',
           }),
         ],
-        pagination: historyPagination(),
+        ...historyPage(null),
       },
     });
 
@@ -597,7 +605,7 @@ describe('TracingWorkspace', () => {
             authority: ACCOUNT_CAROL,
           }),
         ],
-        pagination: historyPagination(),
+        ...historyPage(null),
       },
     });
     apiMocks.fetchTransaction.mockImplementation(async (hash: string) => ({
@@ -606,8 +614,8 @@ describe('TracingWorkspace', () => {
         hash,
         rejection_reason: {
           message: 'Permission denied',
-          encoded: '0x01',
-          json: REJECTION_JSON,
+          encoded: '',
+          json: null,
         },
       },
     }));
@@ -651,7 +659,7 @@ describe('TracingWorkspace', () => {
           buildTransferInstruction(ACCOUNT_ALICE, ACCOUNT_BOB),
           buildTransferInstruction(ACCOUNT_CAROL, ACCOUNT_ALICE),
         ],
-        pagination: historyPagination(),
+        ...historyPage(null),
       },
     });
 
@@ -678,7 +686,7 @@ describe('TracingWorkspace', () => {
       status: SUCCESSFUL_FETCHING,
       data: {
         items: [buildTransferInstruction(ACCOUNT_ALICE, ACCOUNT_BOB)],
-        pagination: historyPagination(),
+        ...historyPage(null),
       },
     });
 
@@ -708,7 +716,7 @@ describe('TracingWorkspace', () => {
           status: SUCCESSFUL_FETCHING,
           data: {
             items: [buildTransferInstruction(ACCOUNT_ALICE, ACCOUNT_BOB)],
-            pagination: historyPagination(),
+            ...historyPage(null),
           },
         });
       }
@@ -717,7 +725,7 @@ describe('TracingWorkspace', () => {
           status: SUCCESSFUL_FETCHING,
           data: {
             items: [buildTransferInstruction(ACCOUNT_BOB, ACCOUNT_CAROL)],
-            pagination: historyPagination(),
+            ...historyPage(null),
           },
         });
       }
@@ -725,7 +733,7 @@ describe('TracingWorkspace', () => {
         status: SUCCESSFUL_FETCHING,
         data: {
           items: [],
-          pagination: historyPagination(),
+          ...historyPage(null),
         },
       });
     });

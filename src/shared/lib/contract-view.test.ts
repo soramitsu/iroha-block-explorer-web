@@ -7,117 +7,71 @@ import {
   type ContractViewInstructionKind,
 } from './contract-view';
 
-const ACCOUNT_ID = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-const TRANSACTION_HASH = 'ab'.repeat(32);
-const FRAMED_SHA256 = `0x${'cd'.repeat(32)}`;
-
-function makeInstruction(kind: ContractViewInstructionKind, index = 0): Instruction {
-  const wireId = `iroha.instruction.v1::smart_contract_code::${kind}`;
+function instruction(kind: ContractViewInstructionKind, index = 0) {
   return {
-    authority: ACCOUNT_ID,
+    authority: 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE',
     created_at: new Date('2026-08-30T00:00:00Z'),
     kind,
     index,
-    transaction_hash: TRANSACTION_HASH,
+    transaction_hash: 'ab'.repeat(32),
     transaction_status: 'Committed',
     block: 7,
     box: {
-      encoded: '0x01',
-      framed_sha256: FRAMED_SHA256,
-      json: {
-        kind: 'Custom',
-        wire_id: wireId,
-        encoded: '01',
-        payload: { variant: kind, value: { wire_id: wireId, encoded: '01' } },
-      },
+      encoded: 'AQ==',
+      framed_sha256: `0x${'cd'.repeat(32)}`,
+      wire_id: `iroha.instruction.v1::smart_contract_code::${kind}`,
+      json: null,
     },
-  };
+  } satisfies Instruction;
 }
 
-function makeUnrelatedInstruction(index = 0): Instruction {
-  const instruction = makeInstruction('ActivateContractInstance', index);
-  return {
-    ...instruction,
-    kind: 'Transfer',
-    box: {
-      ...instruction.box,
-      json: {
-        ...instruction.box.json,
-        kind: 'Transfer',
-        wire_id: 'iroha.instruction.v1::transfer::Asset',
-        payload: { variant: 'Asset', value: {} },
-      },
-    },
-  };
-}
-
-describe('resolveContractViewInstructionKind', () => {
-  it.each(CONTRACT_VIEW_INSTRUCTION_KINDS)('accepts the exact current %s envelope', (kind) => {
-    expect(resolveContractViewInstructionKind(makeInstruction(kind))).toBe(kind);
+describe('native contract-view instruction selection', () => {
+  it.each(CONTRACT_VIEW_INSTRUCTION_KINDS)('recognizes the exact native %s wire identifier', (kind) => {
+    expect(resolveContractViewInstructionKind(instruction(kind))).toBe(kind);
   });
 
-  it('rejects retired wire ids and mismatched discriminants', () => {
-    const legacy = makeInstruction('RegisterSmartContractBytes');
-    legacy.box.json.wire_id = 'iroha_data_model::isi::smart_contract::RegisterSmartContractBytes';
-
-    const mismatchedKind = makeInstruction('RegisterSmartContractCode');
-    mismatchedKind.kind = 'RegisterSmartContractBytes';
-
-    const mismatchedPayload = makeInstruction('ActivateContractInstance');
-    mismatchedPayload.box.json.payload = {
-      variant: 'RegisterSmartContractCode',
-      value: {},
-    };
-
-    expect(resolveContractViewInstructionKind(legacy)).toBeNull();
-    expect(resolveContractViewInstructionKind(mismatchedKind)).toBeNull();
-    expect(resolveContractViewInstructionKind(mismatchedPayload)).toBeNull();
+  it('rejects retired wire identifiers and mismatched kinds', () => {
+    const retired = instruction('RegisterSmartContractBytes');
+    retired.box.wire_id = 'iroha_data_model::isi::smart_contract::RegisterSmartContractBytes';
+    expect(resolveContractViewInstructionKind(retired)).toBeNull();
+    expect(
+      resolveContractViewInstructionKind({
+        ...instruction('RegisterSmartContractBytes'),
+        kind: 'RegisterSmartContractCode',
+      })
+    ).toBeNull();
   });
 
-  it('rejects non-Custom and malformed payload envelopes', () => {
-    const nonCustom = makeInstruction('RegisterSmartContractBytes');
-    nonCustom.box.json.kind = 'Register';
-
-    const malformed = makeInstruction('RegisterSmartContractBytes');
-    malformed.box.json.payload = { variant: 'RegisterSmartContractBytes', value: null };
-
-    const extendedFallback = makeInstruction('RegisterSmartContractBytes');
-    extendedFallback.box.json.payload = {
-      variant: 'RegisterSmartContractBytes',
-      value: {
-        wire_id: extendedFallback.box.json.wire_id,
-        encoded: extendedFallback.box.json.encoded,
-        legacy: true,
-      },
-    };
-
-    expect(resolveContractViewInstructionKind(nonCustom)).toBeNull();
-    expect(resolveContractViewInstructionKind(malformed)).toBeNull();
-    expect(resolveContractViewInstructionKind(extendedFallback)).toBeNull();
-    expect(resolveContractViewInstructionKind(makeUnrelatedInstruction())).toBeNull();
-  });
-});
-
-describe('selectPrimaryContractViewInstruction', () => {
-  it('prefers registered bytes, then uses instruction index as the tie-breaker', () => {
-    const activation = makeInstruction('ActivateContractInstance', 0);
-    const laterBytes = makeInstruction('RegisterSmartContractBytes', 8);
-    const earlierBytes = makeInstruction('RegisterSmartContractBytes', 3);
-    const manifest = makeInstruction('RegisterSmartContractCode', 1);
-
-    expect(selectPrimaryContractViewInstruction([activation, laterBytes, manifest, earlierBytes])).toBe(earlierBytes);
+  it('does not guess contract identity from decoded JSON or the display kind', () => {
+    const source = instruction('RegisterSmartContractBytes');
+    expect(
+      resolveContractViewInstructionKind({
+        ...source,
+        box: {
+          encoded: source.box.encoded,
+          framed_sha256: source.box.framed_sha256,
+          json: { kind: source.kind, payload: { variant: source.kind, value: {} } },
+        },
+      })
+    ).toBeNull();
   });
 
-  it('falls through to manifests and activations when no byte registration exists', () => {
-    const activation = makeInstruction('ActivateContractInstance', 0);
-    const manifest = makeInstruction('RegisterSmartContractCode', 9);
-
-    expect(selectPrimaryContractViewInstruction([activation, manifest])).toBe(manifest);
-    expect(selectPrimaryContractViewInstruction([activation])).toBe(activation);
+  it('orders authoritative candidates by kind then index without mutating the rows', () => {
+    const rows = [
+      instruction('ActivateContractInstance', 0),
+      instruction('RegisterSmartContractCode', 1),
+      instruction('RegisterSmartContractBytes', 7),
+      instruction('RegisterSmartContractBytes', 4),
+    ];
+    const original = [...rows];
+    expect(selectPrimaryContractViewInstruction(rows)).toBe(rows[3]);
+    expect(rows).toEqual(original);
   });
 
-  it('returns null when no canonical contract instruction is present', () => {
+  it('returns no candidate when the native list is empty or unrelated', () => {
+    const unrelated = instruction('ActivateContractInstance');
+    unrelated.box.wire_id = 'iroha.instruction.v1::transfer::Asset';
     expect(selectPrimaryContractViewInstruction([])).toBeNull();
-    expect(selectPrimaryContractViewInstruction([makeUnrelatedInstruction()])).toBeNull();
+    expect(selectPrimaryContractViewInstruction([unrelated])).toBeNull();
   });
 });

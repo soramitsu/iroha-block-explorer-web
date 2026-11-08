@@ -10,40 +10,6 @@ const SHIPPED_LOCALE_FILES = readdirSync(LOCALIZATION_DIR).filter((file) => file
 const SHIPPED_LOCALES = SHIPPED_LOCALE_FILES.map((file) => file.replace(/\.json$/, ''));
 const SHIPPED_NON_EN_LOCALE_FILES = SHIPPED_LOCALE_FILES.filter((file) => file !== 'en.json');
 const ANCIENT_LOCALES = ['akk', 'egy'] as const;
-interface AncientReviewPass {
-  status?: unknown;
-  reviewer?: unknown;
-  notes?: unknown;
-  backTranslation?: unknown;
-}
-interface AncientSourceRecord {
-  uiContext?: unknown;
-  intendedProductConcept?: unknown;
-  ancientScript?: unknown;
-  scholarshipTransliteration?: unknown;
-  scholarlyTransliteration?: unknown;
-  literalBackTranslation?: unknown;
-  modernSemanticInterpretation?: unknown;
-  constructionMode?: unknown;
-  constructionRationale?: unknown;
-  attestationTier?: unknown;
-  candidateConstituents?: unknown[];
-  citedEvidence?: Array<{
-    verification?: AncientReviewPass;
-  }>;
-  review?: {
-    semanticForwardPass?: AncientReviewPass;
-    blindBackTranslationPass?: AncientReviewPass;
-    protectedLiteralPass?: AncientReviewPass;
-  };
-}
-interface AncientSourceManifest {
-  schemaVersion?: unknown;
-  locale?: unknown;
-  direction?: unknown;
-  sourceStatus?: unknown;
-  records: Record<string, AncientSourceRecord>;
-}
 const PROTECTED_LITERAL_KEYS = [
   'homePage.title.firstLine',
   'homePage.search.samples.tx',
@@ -111,6 +77,13 @@ const IDENTICAL_MULTIWORD_ALLOWLIST = new Set([
   'dataspaces.publicNodes.url',
   'kaigi.filterDomain',
   'vpn.profile.fields.tlsSpkiDigest',
+]);
+// Reviewed terminology includes established German and Indonesian borrowings.
+// Scope this exception by locale, key and value so other copy still needs translation.
+const REVIEWED_IDENTICAL_LOCALE_STRINGS = new Set([
+  'de:contracts.nav:Smart Contracts',
+  'de:contracts.title:Smart Contracts',
+  'id:blocks.hash:Hash',
 ]);
 const FULLY_LOCALIZED_SENTINEL_KEYS = [
   'accountId',
@@ -509,74 +482,11 @@ describe('localization catalogs', () => {
     }
   });
 
-  it('keeps unqualified ancient research seeds complete but outside the shipped runtime', () => {
-    const expectedPaths = collectLeafPaths(en).sort();
-    expect(expectedPaths).toHaveLength(2_280);
-
+  it('excludes retired unqualified ancient locales from the release', () => {
     for (const locale of ANCIENT_LOCALES) {
-      const manifest = JSON.parse(
-        readFileSync(`${LOCALIZATION_DIR}/ancient/${locale}.source.json`, 'utf8')
-      ) as AncientSourceManifest;
-
       expect(SHIPPED_LOCALES).not.toContain(locale);
       expect(SUPPORTED_LOCALES).not.toContain(locale);
-      expect(existsSync(`${LOCALIZATION_DIR}/${locale}.json`), `locale=${locale} legacy runtime catalog`).toBe(false);
-      expect(manifest.schemaVersion).toBe(2);
-      expect(manifest.locale).toBe(locale);
-      expect(manifest.direction).toBe('ltr');
-      expect(manifest.sourceStatus).toBe('unreviewed-draft');
-      expect(Object.keys(manifest.records).sort()).toEqual(expectedPaths);
-
-      for (const path of expectedPaths) {
-        const record = manifest.records[path];
-        const english = getAtPath(en, path);
-        expect(record, `locale=${locale} key=${path}`).toBeDefined();
-        expect(record.uiContext, `locale=${locale} key=${path}`).toBe(path);
-        expect(record.intendedProductConcept, `locale=${locale} key=${path}`).toBe(english);
-        expect(record.modernSemanticInterpretation, `locale=${locale} key=${path}`).toBe(english);
-        expect(extractPlaceholders(record.ancientScript as string), `locale=${locale} key=${path}`).toEqual(
-          extractPlaceholders(english as string)
-        );
-        expect(record.scholarshipTransliteration, `locale=${locale} key=${path}`).toBeUndefined();
-        expect(record.scholarlyTransliteration, `locale=${locale} key=${path}`).toEqual(expect.any(String));
-        expect(record.literalBackTranslation, `locale=${locale} key=${path}`).toEqual(expect.any(String));
-        expect(record.constructionRationale, `locale=${locale} key=${path}`).toEqual(expect.any(String));
-        expect(record.citedEvidence, `locale=${locale} key=${path}`).toEqual(expect.any(Array));
-        if (record.constructionMode === 'protected-literal') {
-          expect(record.candidateConstituents, `locale=${locale} key=${path}`).toEqual([]);
-          expect(record.citedEvidence, `locale=${locale} key=${path}`).toEqual([]);
-          expect(record.attestationTier, `locale=${locale} key=${path}`).toBe('transparent extension');
-        } else {
-          expect(record.constructionMode, `locale=${locale} key=${path}`).toBe(
-            'modern-paratactic-interface-sequence'
-          );
-          expect(record.candidateConstituents?.length, `locale=${locale} key=${path}`).toBeGreaterThan(0);
-          expect(record.citedEvidence?.length, `locale=${locale} key=${path}`).toBeGreaterThanOrEqual(2);
-          expect(record.attestationTier, `locale=${locale} key=${path}`).toBe('poetic reconstruction');
-        }
-        expect(record.review?.semanticForwardPass).toEqual({
-          status: 'pending',
-          reviewer: null,
-          notes: null,
-        });
-        expect(record.review?.blindBackTranslationPass).toEqual({
-          status: 'pending',
-          reviewer: null,
-          backTranslation: null,
-          notes: null,
-        });
-        expect(record.review?.protectedLiteralPass?.status).toMatch(/^(?:pending|not-applicable)$/u);
-        expect(record.review?.protectedLiteralPass?.reviewer).toBeNull();
-        expect(record.review?.protectedLiteralPass?.notes).toBeNull();
-
-        for (const [citationIndex, citation] of (record.citedEvidence ?? []).entries()) {
-          expect(citation.verification, `locale=${locale} key=${path} citation=${citationIndex}`).toEqual({
-            status: 'pending',
-            reviewer: null,
-            notes: null,
-          });
-        }
-      }
+      expect(existsSync(`${LOCALIZATION_DIR}/${locale}.json`)).toBe(false);
     }
   });
 
@@ -1208,6 +1118,7 @@ describe('localization catalogs', () => {
       const parsed = JSON.parse(raw) as Record<string, unknown>;
 
       for (const key of FULLY_LOCALIZED_SENTINEL_KEYS) {
+        if (REVIEWED_IDENTICAL_LOCALE_STRINGS.has(`${locale}:${key}:${getAtPath(parsed, key)}`)) continue;
         expect(getAtPath(parsed, key), `locale=${locale} key=${key}`).not.toBe(getAtPath(en, key));
       }
     }
@@ -1244,7 +1155,11 @@ describe('localization catalogs', () => {
         if (typeof expected !== 'string' || actual !== expected) continue;
         if (!/[A-Za-z]{3}\s+[A-Za-z]{3}/u.test(expected)) continue;
 
-        expect(IDENTICAL_MULTIWORD_ALLOWLIST.has(key), `locale=${locale} key=${key} value=${expected}`).toBe(true);
+        expect(
+          IDENTICAL_MULTIWORD_ALLOWLIST.has(key)
+          || REVIEWED_IDENTICAL_LOCALE_STRINGS.has(`${locale}:${key}:${expected}`),
+          `locale=${locale} key=${key} value=${expected}`
+        ).toBe(true);
       }
     }
   });
@@ -1960,6 +1875,56 @@ describe('localization catalogs', () => {
       // Ensure the keys always resolve to something human readable.
       expect(labelLanguage, `locale=${locale}`).not.toBe('settings.language');
       expect(labelTheme, `locale=${locale}`).not.toBe('settings.theme');
+    }
+  });
+
+  it('keeps navigation and dashboards key parity and placeholders across all shipped JSON locales', () => {
+    for (const namespace of ['navigation', 'dashboards'] as const) {
+      const source = (en as Record<string, unknown>)[namespace];
+      const expected = collectLeafPaths(source).sort();
+
+      for (const file of SHIPPED_LOCALE_FILES) {
+        const locale = file.replace(/\.json$/, '');
+        const parsed = JSON.parse(readFileSync(`${LOCALIZATION_DIR}/${file}`, 'utf8')) as Record<string, unknown>;
+        const translated = parsed[namespace] ?? {};
+
+        expect(collectLeafPaths(translated).sort(), `locale=${locale} namespace=${namespace}`).toEqual(expected);
+        for (const key of expected) {
+          expect(extractPlaceholders(getAtPath(translated, key) as string), `locale=${locale} key=${namespace}.${key}`).toEqual(
+            extractPlaceholders(getAtPath(source, key) as string)
+          );
+        }
+      }
+    }
+  });
+
+  it('does not leave the navigation or dashboards namespaces byte-identical to English in shipped JSON locales', () => {
+    for (const namespace of ['navigation', 'dashboards'] as const) {
+      const expected = JSON.stringify((en as Record<string, unknown>)[namespace]);
+
+      for (const file of SHIPPED_NON_EN_LOCALE_FILES) {
+        const locale = file.replace(/\.json$/, '');
+        const parsed = JSON.parse(readFileSync(`${LOCALIZATION_DIR}/${file}`, 'utf8')) as Record<string, unknown>;
+
+        expect(JSON.stringify(parsed[namespace] ?? {}), `locale=${locale} namespace=${namespace}`).not.toBe(expected);
+      }
+    }
+  });
+
+  it('resolves dashboard and navigation labels to strings instead of raw keys across locales', () => {
+    const keys = [
+      'navigation.groups.analytics',
+      'dashboards.titles.network',
+      'dashboards.charts.distribution.title',
+      'dashboards.window.blocks',
+    ] as const;
+
+    for (const locale of SHIPPED_LOCALES) {
+      i18n.global.locale.value = locale as any;
+
+      for (const key of keys) {
+        expect(i18n.global.t(key, { count: 100 }), `locale=${locale} key=${key}`).not.toBe(key);
+      }
     }
   });
 });

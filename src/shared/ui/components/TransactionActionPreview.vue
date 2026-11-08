@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { getRuntimeNetworkPrefix } from '@/shared/runtime-config';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { fetchInstructions, getToriiBaseUrl } from '@/shared/api';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
@@ -25,7 +26,7 @@ const scope = useParamScope(
 const page = computed(() => scope.value.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data : null);
 const previews = computed(() => page.value?.items.map((instruction) => ({
   index: instruction.index,
-  presentation: buildInstructionPresentation(instruction),
+  presentation: buildInstructionPresentation(instruction, getRuntimeNetworkPrefix()),
 })) ?? []);
 </script>
 
@@ -80,7 +81,7 @@ const previews = computed(() => page.value?.items.map((instruction) => ({
         {{ $t('ux.transaction.actionsEmpty') }}
       </p>
       <p
-        v-if="page?.pagination.has_more"
+        v-if="page?.nextCursor"
         data-test="transaction-more-actions"
       >
         {{ $t('ux.transaction.moreActions') }}

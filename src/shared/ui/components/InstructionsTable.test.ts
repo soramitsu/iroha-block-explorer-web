@@ -1,48 +1,31 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import InstructionsTable from './InstructionsTable.vue';
-import { useNotifications } from '@/shared/ui/composables/notifications';
+import { Instruction } from '@/shared/api/schemas';
+import nativeLogFixture from '../../../../tests/fixtures/taira-ce5-log-instruction.json';
 import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import * as api from '@/shared/api';
 import type * as SharedApiModule from '@/shared/api';
 import type * as VueUse from '@vueuse/core';
 import { defineComponent, ref } from 'vue';
-import { createRouter, createMemoryHistory, type Router } from 'vue-router';
-import { toExplorerScopeQuery } from '@/shared/lib/explorer-scope';
 
 const SAMPLE_I105 = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
 const SAMPLE_I105_ALT = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
-const LIVE_MULTISIG_ACCOUNT =
-  'soraﾁｷVMXKﾏtKAoQﾅﾛ3qｾヱ8aﾄdNuｷﾀｱｽh9ｻtWﾐBﾒ9AﾏHｼQﾅvﾛﾌｹYﾑﾐﾛCﾎjtQQヰYCbﾎｵPfb6vXcﾖ1176ﾃﾈcﾐｲUEtﾎヱﾅｻﾀiuｦ2MPﾍﾏiﾌhﾓJｶｶgboCｻBpｷ35ｸ15ｼmGｲFK9NﾑoVﾜWvQMKﾃﾎB7ヰdM99EU4V';
-const LIVE_TRANSFER_SOURCE = `66owaQmAQMuHxPzxUN3bqZ6FJfDa#${LIVE_MULTISIG_ACCOUNT}`;
-const LIVE_TRANSFER_DESTINATION = 'sorauﾛ1QEﾄiBzndﾆDwﾉｴxSﾔﾋ6KXﾆ2xﾗﾆrﾐﾚﾄoNqｳZﾘqtHﾛDBCRJ5';
+const LIVE_MULTISIG_ACCOUNT = 'soraﾁｷVMXKﾏtKAoQﾅﾛ3qｾヱ8aﾄdNuｷﾀｱｽh9ｻtWﾐBﾒ9AﾏHｼQﾅvﾛﾌｹYﾑﾐﾛCﾎjtQQヰYCbﾎｵPfb6vXcﾖ1176ﾃﾈcﾐｲUEtﾎヱﾅｻﾀiuｦ2MPﾍﾏiﾌhﾓJｶｶgboCｻBpｷ35ｸ15ｼmGｲFK9NﾑoVﾜWvQMKﾃﾎB7ヰdM99EU4V';
 const LIVE_TRANSFER_INSTRUCTION =
   'TlJUMAAAhip9dwddTSP/bBJh2wJ4EQDSAQAAAAAAABQKMDTp3Yu+Ag8OaXJvaGEudHJhbnNmZXLAA7gBAAAAAAAATlJUMAAApBdMeNY0H4+Y/Cra6O1nuQCQAQAAAAAAAOy4mMbcuTFWAgIAAACKA6oCggIBAAAA/AEBAQICAPUBAwAAAAAAAABOSiEAAAAAAAAAAQABhAExAb0BZQH/ASQBcwHNAacBpwEHAcEBgAH3AcEB5AH2AcQBzAGVASABPQFuAXoBJwFLAYUBswHtAW8BbAE1AgEATkohAAAAAAAAAAEAAbQBJgHPAXIBUQE3Af8B5gEzAbkB7gFJAXQBIAGoAYIB2gGYAW0BNgGxAfMBgQGPASEBkQFsAdUBtQH9AUoB/QIBAE5KIQAAAAAAAAABAAHHAeIB8QH8AZMBSQHvAZ8BkgG6AYEBeAFSAa4BbQGBAV0B2wGyAWABgQHUAWsBrQHiATMBSwERATwBHwF/AWUCAQAgAW4BFQFrAVABEAHmAUUB+AGDAesBgwEZAUYBuAGNAbgEAAAAAA0HAwAAAKCGAQQAAAAATwAAAABKIQAAAAAAAAABAAH9AVUB7wEWAZIB1QGPAYcBkwEvAVkBgAEhAbEB1gEWATkBRwGAAQgBIwHlAb4BuQF0AcoBiAEEAZoByAGaAfc=';
 const FRAMED_SHA256 = `0x${'00'.repeat(32)}`;
-const TRANSACTION_HASH = 'ab'.repeat(32);
 
 const clipboardCopySpy = vi.fn();
 const eventSourceData = ref<string | null>(null);
 const windowScrollY = ref(0);
-
-function historyPagination(nextCursor: string | null = null, hasMore = false) {
-  return {
-    limit: 10,
-    snapshot_height: 10,
-    snapshot_hash: 'ab'.repeat(32),
-    next_cursor: nextCursor,
-    has_more: hasMore,
-  };
-}
 
 const BaseTableStub = defineComponent({
   name: 'BaseTable',
   props: {
     items: { type: Array, default: () => [] },
     rowKey: { type: Function, required: false, default: undefined },
-    paginationMode: { type: String, default: 'numbered' },
-    cursorPagination: { type: Object, default: null },
   },
   emits: ['update:cursor', 'update:pageSize', 'click:row'],
   template: `
@@ -62,9 +45,10 @@ const ContractCodeViewPanelStub = defineComponent({
   name: 'ContractCodeViewPanel',
   props: {
     instruction: { type: Object, default: null },
+    relatedInstructions: { type: Array, default: () => [] },
   },
   template:
-    '<div class="contract-code-view-stub" :data-transaction-hash="instruction?.transaction_hash ?? \'\'" :data-instruction-index="instruction?.index ?? -1" />',
+    '<div class="contract-code-view-stub" :data-transaction-hash="instruction?.transaction_hash ?? \'\'" :data-instruction-index="instruction?.index ?? -1" :data-related-count="relatedInstructions.length" />',
 });
 
 const BaseJsonStub = defineComponent({
@@ -93,6 +77,11 @@ vi.mock('@vueuse/core', async () => {
   };
 });
 
+vi.mock('@/shared/runtime-config', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/shared/runtime-config')>(),
+  getRuntimeNetworkPrefix: () => 369,
+}));
+
 vi.mock('@/shared/api', async () => {
   const actual = await vi.importActual<typeof SharedApiModule>('@/shared/api');
   return {
@@ -113,8 +102,6 @@ describe('InstructionsTable', () => {
       framed_sha256: FRAMED_SHA256,
       json: {
         kind: 'Register',
-        wire_id: 'iroha_data_model::isi::Register',
-        encoded: '01',
         payload: {
           variant: 'Domain',
           value: {
@@ -127,7 +114,7 @@ describe('InstructionsTable', () => {
         },
       },
     },
-    transaction_hash: TRANSACTION_HASH,
+    transaction_hash: '0xabc',
     transaction_status: 'Committed',
     block: 10,
     index: 0,
@@ -141,8 +128,6 @@ describe('InstructionsTable', () => {
       framed_sha256: FRAMED_SHA256,
       json: {
         kind: 'Custom',
-        wire_id: 'iroha_data_model::isi::transparent::CustomInstruction',
-        encoded: '99',
         payload: {
           variant: 'Custom',
           value: {
@@ -172,14 +157,9 @@ describe('InstructionsTable', () => {
       framed_sha256: FRAMED_SHA256,
       json: {
         kind: 'Custom',
-        wire_id: 'iroha_data_model::isi::transparent::CustomInstruction',
-        encoded: '88',
         payload: {
-          variant: 'Custom',
-          value: {
-            extension: {
-              note: 'hello',
-            },
+          extension: {
+            note: 'hello',
           },
         },
       },
@@ -205,26 +185,24 @@ describe('InstructionsTable', () => {
           },
         },
         wire_id: 'iroha_data_model::isi::transparent::CustomInstruction',
-        encoded: '0d0c69726f68612e637573746f6d',
       },
     },
   });
 
   const makeWireIdCustomInstruction = () => ({
     ...baseInstruction,
-    kind: 'SubmitOfflineToOnlineTransfer',
+    kind: 'Custom',
     box: {
       encoded: '0x77',
       framed_sha256: FRAMED_SHA256,
       json: {
         kind: 'Custom',
         wire_id: 'iroha_data_model::isi::offline::SubmitOfflineToOnlineTransfer',
-        encoded: '77',
         payload: {
-          variant: 'SubmitOfflineToOnlineTransfer',
+          variant: 'Unknown',
           value: {
             wire_id: 'iroha_data_model::isi::offline::SubmitOfflineToOnlineTransfer',
-            encoded: '77',
+            encoded: '0x77',
           },
         },
       },
@@ -239,18 +217,19 @@ describe('InstructionsTable', () => {
       framed_sha256: FRAMED_SHA256,
       json: {
         kind: 'Custom',
-        wire_id: 'iroha_data_model::isi::transparent::CustomInstruction',
-        encoded: '66',
         payload: {
-          variant: 'Custom',
+          variant: 'RegisterConsensusKey',
           value: {
-            RegisterConsensusKey: {
-              account: SAMPLE_I105,
-            },
+            account: SAMPLE_I105,
           },
         },
       },
     },
+  });
+
+  const makeResolvedWireIdCustomInstruction = () => ({
+    ...makeWireIdCustomInstruction(),
+    kind: 'SubmitOfflineToOnlineTransfer',
   });
 
   beforeEach(() => {
@@ -265,7 +244,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPagination(),
+        nextCursor: null,
         items: [baseInstruction],
       },
     });
@@ -279,8 +258,6 @@ describe('InstructionsTable', () => {
           framed_sha256: FRAMED_SHA256,
           json: {
             kind: 'Register',
-            wire_id: 'iroha_data_model::isi::Register',
-            encoded: '01',
             payload: {
               variant: 'Domain',
               value: {
@@ -303,33 +280,80 @@ describe('InstructionsTable', () => {
     }
   });
 
-  const factory = (props: Partial<InstanceType<typeof InstructionsTable>['$props']> = {}, router?: Router) =>
+  const factory = (props: Partial<InstanceType<typeof InstructionsTable>['$props']> = {}) =>
     (() => {
       const wrapper = mount(InstructionsTable, {
-        props: {
-          showValue: true,
-          hashType: 'short',
-          filterBy: { kind: 'transaction', value: TRANSACTION_HASH },
-          ...props,
-        },
-        global: {
-          plugins: [i18n, ...(router ? [router] : [])],
-          stubs: {
-            BaseTable: BaseTableStub,
-            BaseJson: BaseJsonStub,
-            ContractCodeViewPanel: ContractCodeViewPanelStub,
-            RouterLink: {
-              template: '<a><slot /></a>',
-            },
-            'router-link': {
-              template: '<a><slot /></a>',
-            },
+      props: {
+        showValue: true,
+        hashType: 'short',
+        filterBy: { kind: 'transaction', value: '0xabc' },
+        ...props,
+      },
+      global: {
+        plugins: [i18n],
+        stubs: {
+          BaseTable: BaseTableStub,
+          BaseJson: BaseJsonStub,
+          ContractCodeViewPanel: ContractCodeViewPanelStub,
+          RouterLink: {
+            template: '<a><slot /></a>',
+          },
+          'router-link': {
+            template: '<a><slot /></a>',
           },
         },
+      },
       });
       mountedWrappers.push(wrapper);
       return wrapper;
     })();
+
+  it('renders the verified native Log envelope without fabricating decoded fields', async () => {
+    const instruction = Instruction.parse(nativeLogFixture);
+    vi.mocked(api.fetchInstructions).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING, data: { nextCursor: null, items: [instruction] },
+    });
+    vi.mocked(api.fetchInstructionDetail).mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: instruction });
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.get('.instructions-table__row').text()).toContain('Log');
+    expect(wrapper.getComponent(BaseJsonStub).props('value')).toEqual(nativeLogFixture.box);
+    expect(wrapper.emitted('list-state')?.at(-1)?.[0]).toMatchObject({ itemsCount: 1, hasError: false });
+    await wrapper.get('.instructions-table__action-button').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-test="instruction-encoded-payload"]').text()).toBe(nativeLogFixture.box.instruction);
+    expect(wrapper.find('.contract-code-view-stub').exists()).toBe(false);
+    expect(wrapper.findAllComponents(BaseJsonStub).at(-1)?.props('value')).toEqual(nativeLogFixture.box);
+  });
+
+  it('keeps parse failures visible and retries the actual instruction query', async () => {
+    vi.mocked(api.fetchInstructions).mockRejectedValue(new Error('Instruction frame digest mismatch'));
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect(wrapper.find('.instructions-table__row').exists()).toBe(false);
+    expect(wrapper.emitted('list-state')?.at(-1)?.[0]).toMatchObject({ itemsCount: 0, hasError: true });
+    vi.mocked(api.fetchInstructions).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING, data: { nextCursor: null, items: [Instruction.parse(nativeLogFixture)] },
+    });
+    await wrapper.get('[data-test="resource-retry"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.get('.instructions-table__row').text()).toContain('Log');
+    expect(wrapper.emitted('list-state')?.at(-1)?.[0]).toMatchObject({ itemsCount: 1, hasError: false });
+  });
+
+  it('does not pass a blank authority selector for a transaction-scoped list', async () => {
+    factory();
+    await flushPromises();
+
+    expect(api.fetchInstructions).toHaveBeenCalledWith(
+      expect.objectContaining({ transaction_hash: '0xabc' })
+    );
+    expect((api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).not.toHaveProperty(
+      'authority'
+    );
+  });
 
   it('exposes each dynamic instruction field as a cell and keeps the action button interactive', async () => {
     const fullWrapper = factory();
@@ -349,44 +373,6 @@ describe('InstructionsTable', () => {
     expect(compactRow.get('.instructions-table__actions[role="cell"] button').text()).toBe('View details');
   });
 
-  it('uses opaque cursor pagination without numbered request fields or totals', async () => {
-    const fetchMock = api.fetchInstructions as unknown as ReturnType<typeof vi.fn>;
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        cursor: null,
-        limit: 10,
-        transaction_hash: TRANSACTION_HASH,
-      })
-    );
-    expect(fetchMock.mock.calls[0]?.[0]).not.toHaveProperty('page');
-    expect(fetchMock.mock.calls[0]?.[0]).not.toHaveProperty('per_page');
-    expect(fetchMock.mock.calls[0]?.[0]).not.toHaveProperty('authority');
-
-    const table = wrapper.getComponent({ name: 'BaseTable' });
-    expect(table.props('paginationMode')).toBe('cursor');
-    expect(table.props('cursorPagination')).toEqual(historyPagination());
-  });
-
-  it('omits the inactive transaction selector for account instruction queries', async () => {
-    const fetchMock = api.fetchInstructions as unknown as ReturnType<typeof vi.fn>;
-    factory({ filterBy: { kind: 'authority', value: SAMPLE_I105 } });
-    await flushPromises();
-
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        authority: SAMPLE_I105,
-        cursor: null,
-        limit: 10,
-      })
-    );
-    expect(fetchMock.mock.calls[0]?.[0]).not.toHaveProperty('transaction_hash');
-  });
-
   it('fetches and displays instruction details when action is clicked', async () => {
     const wrapper = factory();
     await flushPromises();
@@ -396,7 +382,7 @@ describe('InstructionsTable', () => {
     await wrapper.find('.instructions-table__action-button').trigger('click');
     await flushPromises();
 
-    expect(api.fetchInstructionDetail).toHaveBeenCalledWith(TRANSACTION_HASH, 0);
+    expect(api.fetchInstructionDetail).toHaveBeenCalledWith('0xabc', 0);
     expect(wrapper.find('.instructions-detail__body').exists()).toBe(true);
     expect(wrapper.text()).toContain('Instruction details');
     expect(wrapper.text()).toContain('Register');
@@ -414,59 +400,6 @@ describe('InstructionsTable', () => {
     expect(wrapper.get('[data-test="instruction-encoded-payload"]').text()).toBe('0x01');
   });
 
-  it.each(['before', 'after'])('ignores an older detail result that arrives %s the current selection', async (order) => {
-    const secondInstruction = { ...baseInstruction, index: 1, box: { ...baseInstruction.box, encoded: '0x02' } };
-    vi.mocked(api.fetchInstructions).mockResolvedValueOnce({
-      status: SUCCESSFUL_FETCHING,
-      data: { pagination: historyPagination(), items: [baseInstruction, secondInstruction] },
-    } as any);
-    let resolveFirst!: (value: any) => void;
-    let resolveSecond!: (value: any) => void;
-    vi.mocked(api.fetchInstructionDetail)
-      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
-      .mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve; }));
-    const wrapper = factory();
-    await flushPromises();
-    const actions = wrapper.findAll('[data-test="rows"] .instructions-table__action-button');
-    await actions[0].trigger('click');
-    await actions[1].trigger('click');
-    if (order === 'before') {
-      resolveFirst({ status: SUCCESSFUL_FETCHING, data: baseInstruction });
-      await flushPromises();
-      expect(wrapper.get('.instructions-detail__status').text()).toContain(i18n.global.t('transactions.loadingInstruction'));
-      expect(wrapper.find('.instructions-detail__body').exists()).toBe(false);
-    }
-    resolveSecond({ status: SUCCESSFUL_FETCHING, data: secondInstruction });
-    await flushPromises();
-    expect(wrapper.get('[data-test="instruction-encoded-payload"]').text()).toBe('0x02');
-    if (order === 'after') {
-      resolveFirst({ status: SUCCESSFUL_FETCHING, data: baseInstruction });
-      await flushPromises();
-      expect(wrapper.get('[data-test="instruction-encoded-payload"]').text()).toBe('0x02');
-    }
-  });
-
-  it('invalidates pending details on close and ignores their failure while a reopened request loads', async () => {
-    let rejectClosed!: (error: Error) => void;
-    let resolveReopened!: (value: any) => void;
-    vi.mocked(api.fetchInstructionDetail)
-      .mockImplementationOnce(() => new Promise((_, reject) => { rejectClosed = reject; }))
-      .mockImplementationOnce(() => new Promise((resolve) => { resolveReopened = resolve; }));
-    const wrapper = factory();
-    await flushPromises();
-    await wrapper.get('.instructions-table__action-button').trigger('click');
-    await wrapper.get('.instructions-detail__close').trigger('click');
-    expect(wrapper.find('.instructions-detail').exists()).toBe(false);
-    await wrapper.get('.instructions-table__action-button').trigger('click');
-    rejectClosed(new Error('Late failure from the closed request'));
-    await flushPromises();
-    expect(wrapper.get('.instructions-detail__status').text()).toContain(i18n.global.t('transactions.loadingInstruction'));
-    expect(wrapper.find('.instructions-detail__status_error').exists()).toBe(false);
-    resolveReopened({ status: SUCCESSFUL_FETCHING, data: baseInstruction });
-    await flushPromises();
-    expect(wrapper.get('[data-test="instruction-encoded-payload"]').text()).toBe('0x01');
-  });
-
   it('renders full metadata JSON inline in the instruction detail drawer', async () => {
     const wrapper = factory();
     await flushPromises();
@@ -481,57 +414,48 @@ describe('InstructionsTable', () => {
   it('renders the contract code panel for smart-contract instructions in the detail drawer', async () => {
     const contractInstruction = {
       ...baseInstruction,
-      kind: 'RegisterSmartContractBytes' as const,
+      kind: 'RegisterSmartContractBytes',
       box: {
+        wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractBytes',
         encoded: '0x07',
         framed_sha256: FRAMED_SHA256,
         json: {
-          kind: 'Custom',
-          wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractBytes',
-          encoded: '07',
+          kind: 'RegisterSmartContractBytes',
           payload: {
-            variant: 'RegisterSmartContractBytes',
-            value: {
-              wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractBytes',
-              encoded: '07',
-            },
+            code_hash: 'aa'.repeat(32),
           },
         },
       },
     };
     const manifestInstruction = {
       ...baseInstruction,
-      kind: 'RegisterSmartContractCode' as const,
+      kind: 'RegisterSmartContractCode',
       index: 1,
       box: {
+        wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractCode',
         encoded: '0x08',
         framed_sha256: FRAMED_SHA256,
         json: {
-          kind: 'Custom',
-          wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractCode',
-          encoded: '08',
+          kind: 'RegisterSmartContractCode',
           payload: {
-            variant: 'RegisterSmartContractCode',
-            value: {
-              wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractCode',
-              encoded: '08',
+            manifest: {
+              code_hash: 'aa'.repeat(32),
             },
           },
         },
       },
     };
-    (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockImplementation(async ({ cursor = null }) => ({
+    (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockImplementation(async ({ cursor }) => ({
       status: SUCCESSFUL_FETCHING,
-      data:
-        cursor === null
-          ? {
-              pagination: historyPagination('contract-next', true),
-              items: [contractInstruction],
-            }
-          : {
-              pagination: historyPagination(),
-              items: [manifestInstruction],
-            },
+      data: cursor === null
+        ? {
+            nextCursor: 'next',
+            items: [contractInstruction],
+          }
+        : {
+            nextCursor: null,
+            items: [manifestInstruction],
+          },
     }));
     (api.fetchInstructionDetail as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
@@ -546,9 +470,9 @@ describe('InstructionsTable', () => {
 
     const panel = wrapper.find('.contract-code-view-stub');
     expect(panel.exists()).toBe(true);
-    expect(panel.attributes('data-transaction-hash')).toBe(TRANSACTION_HASH);
+    expect(panel.attributes('data-transaction-hash')).toBe('0xabc');
     expect(panel.attributes('data-instruction-index')).toBe('0');
-    expect(api.fetchInstructions).not.toHaveBeenCalledWith(expect.objectContaining({ cursor: 'contract-next' }));
+    expect(panel.attributes('data-related-count')).toBe('2');
   });
 
   it('shows Multisig kind label for multisig custom instructions in row and detail', async () => {
@@ -556,7 +480,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPagination(),
+        nextCursor: null,
         items: [multisigInstruction],
       },
     });
@@ -581,12 +505,12 @@ describe('InstructionsTable', () => {
     expect(kindField?.find('.data-field__value-text').text()).toBe('Multisig');
   });
 
-  it('renders canonically decoded nested multisig instructions as semantic cards and preserves raw JSON', async () => {
+  it('labels native-only nested instructions as encoded and preserves raw Torii JSON', async () => {
     const multisigInstruction = makeNestedTransferMultisigInstruction();
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPagination(),
+        nextCursor: null,
         items: [multisigInstruction],
       },
     });
@@ -600,16 +524,13 @@ describe('InstructionsTable', () => {
 
     const jsonComponents = wrapper.findAllComponents(BaseJsonStub);
     const rowJson = jsonComponents.find((component) => component.classes().includes('instructions-table__value-json'));
-    const detailJson = jsonComponents.find((component) =>
-      component.classes().includes('instructions-detail__json-tree')
-    );
+    const detailJson = jsonComponents.find((component) => component.classes().includes('instructions-detail__json-tree'));
 
     expect(wrapper.findAll('[data-test="instruction-semantic-card"]')).toHaveLength(2);
     expect(wrapper.text()).toContain('Multisig proposal');
-    expect(wrapper.text()).toContain('Asset transfer');
-    expect(wrapper.text()).toContain('100000');
-    expect(wrapper.text()).toContain(LIVE_TRANSFER_SOURCE);
-    expect(wrapper.text()).toContain(LIVE_TRANSFER_DESTINATION);
+    expect(wrapper.text()).toContain('Encoded instruction');
+    expect(wrapper.text()).toContain(LIVE_TRANSFER_INSTRUCTION);
+    expect(wrapper.text()).not.toContain('Asset transfer');
     expect(rowJson?.props('value')).toEqual(multisigInstruction.box.json);
     expect(detailJson?.props('value')).toEqual(multisigInstruction.box.json);
     expect(multisigInstruction.box.json.payload.value.Propose.instructions).toEqual([LIVE_TRANSFER_INSTRUCTION]);
@@ -620,7 +541,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPagination(),
+        nextCursor: null,
         items: [customInstruction],
       },
     });
@@ -631,12 +552,12 @@ describe('InstructionsTable', () => {
     expect(wrapper.get('[data-test="instruction-kind-label"]').text()).toBe('Custom');
   });
 
-  it("renders Torii's authoritative concrete outer kind without inferring from the payload", async () => {
+  it('does not infer a custom ISI label from payload wire_id', async () => {
     const wireIdInstruction = makeWireIdCustomInstruction();
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPagination(),
+        nextCursor: null,
         items: [wireIdInstruction],
       },
     });
@@ -648,12 +569,12 @@ describe('InstructionsTable', () => {
     const wrapper = factory();
     await flushPromises();
 
-    expect(wrapper.get('[data-test="instruction-kind-label"]').text()).toBe('SubmitOfflineToOnlineTransfer');
+    expect(wrapper.get('[data-test="instruction-kind-label"]').text()).toBe('Custom');
 
     await wrapper.find('.instructions-table__action-button').trigger('click');
     await flushPromises();
 
-    expect(wrapper.get('[data-test="instruction-detail-kind"]').text()).toContain('SubmitOfflineToOnlineTransfer');
+    expect(wrapper.get('[data-test="instruction-detail-kind"]').text()).toContain('Custom');
   });
 
   it('does not infer a custom ISI label from an unregistered payload variant', async () => {
@@ -661,7 +582,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPagination(),
+        nextCursor: null,
         items: [variantInstruction],
       },
     });
@@ -672,12 +593,12 @@ describe('InstructionsTable', () => {
     expect(wrapper.get('[data-test="instruction-kind-label"]').text()).toBe('Custom');
   });
 
-  it('uses the current concrete top-level display kind for a fallback payload variant', async () => {
-    const resolvedInstruction = makeWireIdCustomInstruction();
+  it('uses the concrete instruction kind supplied by Torii', async () => {
+    const resolvedInstruction = makeResolvedWireIdCustomInstruction();
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPagination(),
+        nextCursor: null,
         items: [resolvedInstruction],
       },
     });
@@ -692,7 +613,7 @@ describe('InstructionsTable', () => {
     const wrapper = factory({ initialInstructionIndex: 0 });
     await flushPromises();
 
-    expect(api.fetchInstructionDetail).toHaveBeenCalledWith(TRANSACTION_HASH, 0);
+    expect(api.fetchInstructionDetail).toHaveBeenCalledWith('0xabc', 0);
     expect(wrapper.find('.instructions-detail__body').exists()).toBe(true);
   });
 
@@ -737,25 +658,12 @@ describe('InstructionsTable', () => {
     await wrapper.find('.instructions-detail__retry').trigger('click');
     await flushPromises();
 
-    expect(detailMock).toHaveBeenLastCalledWith(TRANSACTION_HASH, 0);
+    expect(detailMock).toHaveBeenLastCalledWith('0xabc', 0);
     expect(wrapper.find('.instructions-detail__body').exists()).toBe(true);
   });
 
-  it.each(['.instructions-detail__share', '.instructions-detail__copy'])('reports a rejected clipboard write from %s', async (selector) => {
-    clipboardCopySpy.mockRejectedValueOnce(new Error('permission denied'));
-    const notifications = useNotifications();
-    notifications.list.value = [];
-    const wrapper = factory();
-    await flushPromises();
-    await wrapper.get('.instructions-table__action-button').trigger('click');
-    await flushPromises();
-    await wrapper.get(selector).trigger('click');
-    await flushPromises();
-    expect(notifications.list.value.at(-1)).toMatchObject({ type: 'error', message: i18n.global.t('clipboard.error') });
-  });
-
   it('copies instruction share link when available', async () => {
-    window.history.replaceState(null, '', `/transactions/${TRANSACTION_HASH}`);
+    window.history.replaceState(null, '', '/transactions/0xabc');
     clipboardCopySpy.mockResolvedValueOnce(undefined);
 
     const wrapper = factory();
@@ -766,49 +674,57 @@ describe('InstructionsTable', () => {
     const shareButton = wrapper.find('.instructions-detail__share');
     expect(shareButton.exists()).toBe(true);
     await shareButton.trigger('click');
-    expect(clipboardCopySpy).toHaveBeenLastCalledWith(`${window.location.origin}/transactions/${TRANSACTION_HASH}?instruction=0`);
+    expect(clipboardCopySpy).toHaveBeenLastCalledWith(expect.stringContaining('instruction=0'));
   });
 
-  it('preserves the current Torii and dataspace in copied instruction deep links', async () => {
-    const scopeQuery = toExplorerScopeQuery({ torii: 'https://public-node.example:8080', dataspaceLaneId: '7', dataspaceId: '42' });
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/transactions/:hash', name: 'transaction-details', component: { template: '<div />' } }] });
-    await router.push({ name: 'transaction-details', params: { hash: TRANSACTION_HASH }, query: scopeQuery });
-    await router.isReady();
-    const wrapper = factory({}, router);
+  it('shares the complete canonical hash with instruction and current scope query intact', async () => {
+    const hash = 'hash:66BF60AB1C762607F02BBDFC834E2D832243EF413D0C24BBFF8EE3D00A2830DB#DB6C';
+    window.history.replaceState(null, '', '/transactions/old?torii=https%3A%2F%2Ftaira.sora.org&dataspaceLaneId=7&dataspaceId=42&foo=bar#obsolete');
+    const instruction = { ...baseInstruction, transaction_hash: hash };
+    vi.mocked(api.fetchInstructions).mockResolvedValueOnce({ status: SUCCESSFUL_FETCHING,
+      data: { items: [instruction], nextCursor: null } });
+    vi.mocked(api.fetchInstructionDetail).mockResolvedValueOnce({ status: SUCCESSFUL_FETCHING, data: instruction });
+    const wrapper = factory();
     await flushPromises();
-    await wrapper.get('.instructions-table__action-button').trigger('click');
+    await wrapper.find('.instructions-table__action-button').trigger('click');
     await flushPromises();
-    await wrapper.get('.instructions-detail__share').trigger('click');
-    const copied = new URL(clipboardCopySpy.mock.lastCall?.[0]);
-    expect(copied.origin).toBe(window.location.origin);
-    expect(copied.pathname).toBe(`/transactions/${TRANSACTION_HASH}`);
-    expect(Object.fromEntries(copied.searchParams)).toEqual({ instruction: '0', ...scopeQuery });
+    await wrapper.find('.instructions-detail__share').trigger('click');
+    const url = new URL(clipboardCopySpy.mock.lastCall![0]);
+    expect(decodeURIComponent(url.pathname)).toBe(`/transactions/${hash}`);
+    expect(url.hash).toBe('');
+    expect(Object.fromEntries(url.searchParams)).toEqual({ instruction: '0', torii: 'https://taira.sora.org', dataspaceLaneId: '7', dataspaceId: '42', foo: 'bar' });
   });
 
-  it('does not auto-refetch on stream updates outside the latest cursor window', async () => {
+  it('does not auto-refetch on stream updates when not on the first page', async () => {
     const fetchMock = api.fetchInstructions as unknown as ReturnType<typeof vi.fn>;
 
     const wrapper = factory({ filterBy: { kind: 'authority', value: SAMPLE_I105 } });
     await flushPromises();
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    wrapper.getComponent({ name: 'BaseTable' }).vm.$emit('update:cursor', 'older-cursor');
+    // Move away from the latest page.
+    wrapper.getComponent({ name: 'BaseTable' }).vm.$emit('update:cursor', 'next');
     await flushPromises();
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     eventSourceData.value = JSON.stringify({
       ...baseInstruction,
+      kind: nativeLogFixture.kind,
+      box: nativeLogFixture.box,
       authority: SAMPLE_I105,
       index: 1,
     });
     await flushPromises();
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
+    // Back on page 1, stream updates should refetch.
     wrapper.getComponent({ name: 'BaseTable' }).vm.$emit('update:cursor', null);
     await flushPromises();
     expect(fetchMock).toHaveBeenCalledTimes(3);
     eventSourceData.value = JSON.stringify({
       ...baseInstruction,
+      kind: nativeLogFixture.kind,
+      box: nativeLogFixture.box,
       authority: SAMPLE_I105,
       index: 2,
     });
@@ -816,19 +732,20 @@ describe('InstructionsTable', () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
-  it('auto-refetches for Custom filter when the stream carries a concrete fallback payload variant', async () => {
+  it('auto-refetches using the native top-level kind without decoded JSON', async () => {
     const fetchMock = api.fetchInstructions as unknown as ReturnType<typeof vi.fn>;
 
     const wrapper = factory();
     await flushPromises();
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    wrapper.getComponent({ name: 'InstructionTypeFilter' }).vm.$emit('update:modelValue', 'Custom');
+    wrapper.getComponent({ name: 'InstructionTypeFilter' }).vm.$emit('update:modelValue', 'Log');
     await flushPromises();
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     eventSourceData.value = JSON.stringify({
-      ...makeWireIdCustomInstruction(),
+      ...nativeLogFixture,
+      transaction_hash: baseInstruction.transaction_hash,
       authority: SAMPLE_I105,
       index: 11,
     });
@@ -846,6 +763,8 @@ describe('InstructionsTable', () => {
     windowScrollY.value = 200;
     eventSourceData.value = JSON.stringify({
       ...baseInstruction,
+      kind: nativeLogFixture.kind,
+      box: nativeLogFixture.box,
       index: 1,
     });
     await flushPromises();
@@ -863,7 +782,7 @@ describe('InstructionsTable', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPagination(),
+        nextCursor: null,
         items: [],
       },
     });

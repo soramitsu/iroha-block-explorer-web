@@ -2,53 +2,148 @@
   <div class="dataspace-details-page">
     <BaseContentBlock :title="$t('dataspaces.detailTitle')">
       <template #header-action>
-        <BaseButton line to="/dataspaces">
+        <BaseButton
+          line
+          to="/dataspaces"
+        >
           {{ $t('dataspaces.backToOverview') }}
         </BaseButton>
       </template>
 
       <template #default>
-        <p v-if="!hasValidParams" class="dataspace-details-page__error" data-test="dataspace-details-error">
-          {{ $t('dataspaces.detailInvalidRoute') }}
+        <div class="dataspace-details-page__controls">
+          <button
+            type="button"
+            class="dataspace-details-page__refresh"
+            :disabled="state.isLoading"
+            data-test="dataspace-details-refresh"
+            @click="loadDetails"
+          >
+            {{ state.isLoading ? $t('dataspaces.loading') : $t('dataspaces.refresh') }}
+          </button>
+          <p
+            v-if="state.lastUpdated"
+            class="dataspace-details-page__updated"
+            data-test="dataspace-details-updated"
+          >
+            {{ $t('dataspaces.updatedAt', { value: state.lastUpdated }) }}
+          </p>
+        </div>
+
+        <BaseLoading
+          v-if="state.isLoading && !dataspace"
+          data-test="dataspace-details-loading"
+        />
+
+        <p
+          v-else-if="state.error"
+          class="dataspace-details-page__error"
+          data-test="dataspace-details-error"
+        >
+          {{ state.error }}
         </p>
 
-        <template v-else>
-          <div class="dataspace-details-page__grid" data-test="dataspace-details-core">
-            <DataField :title="$t('dataspaces.dataspaceId')" :value="dataspaceId" monospace />
-            <DataField :title="$t('dataspaces.lane')" :value="laneId" monospace />
-          </div>
-
-          <div class="dataspace-details-page__protected" data-test="dataspace-details-diagnostic-protected">
-            <strong>{{ $t('dataspaces.accessBoundary.diagnosticTitle') }}</strong>
-            <i18n-t scope="global" keypath="dataspaces.accessBoundary.diagnosticDescription" tag="p">
-              <template #status><code>/status</code></template>
-            </i18n-t>
-          </div>
-        </template>
+        <div
+          v-else-if="dataspace"
+          class="dataspace-details-page__grid"
+          data-test="dataspace-details-core"
+        >
+          <DataField
+            :title="$t('dataspaces.dataspace')"
+            :value="dataspaceLabel(dataspace)"
+          />
+          <DataField
+            :title="$t('dataspaces.dataspaceId')"
+            :value="dataspace.dataspace_id"
+            monospace
+          />
+          <DataField
+            :title="$t('dataspaces.lane')"
+            :value="dataspace.lane_id"
+            monospace
+          />
+          <DataField
+            :title="$t('dataspaces.dataspaceType')"
+            :value="laneGovernance?.visibility ?? '-'"
+          />
+          <DataField
+            :title="$t('dataspaces.description')"
+            :value="dataspace.description || $t('none')"
+          />
+          <DataField
+            :title="$t('dataspaces.faultTolerance')"
+            :value="dataspace.fault_tolerance"
+            monospace
+          />
+          <DataField
+            :title="$t('dataspaces.backlog')"
+            :value="dataspace.backlog"
+            monospace
+          />
+          <DataField
+            :title="$t('dataspaces.ageSlots')"
+            :value="dataspace.age_slots"
+            monospace
+          />
+          <DataField
+            :title="$t('dataspaces.virtualFinish')"
+            :value="dataspace.virtual_finish"
+            monospace
+          />
+          <DataField
+            :title="$t('dataspaces.lifetimeTxServed')"
+            :value="dataspace.tx_served"
+            monospace
+          />
+        </div>
       </template>
     </BaseContentBlock>
 
     <BaseContentBlock :title="$t('dataspaces.laneGovernanceTitle')">
       <template #default>
-        <div class="dataspace-details-page__protected" data-test="dataspace-details-governance-protected">
-          <strong>{{ $t('dataspaces.accessBoundary.governanceTitle') }}</strong>
-          <i18n-t scope="global" keypath="dataspaces.accessBoundary.governanceDescription" tag="p">
-            <template #operatorSigningContext><code>OperatorSigningContext</code></template>
-          </i18n-t>
+        <p
+          v-if="!laneGovernance"
+          class="dataspace-details-page__empty row-text"
+          data-test="dataspace-details-governance-empty"
+        >
+          {{ $t('dataspaces.laneGovernanceMissing') }}
+        </p>
+
+        <div
+          v-else
+          class="dataspace-details-page__grid"
+          data-test="dataspace-details-governance"
+        >
+          <DataField
+            :title="$t('dataspaces.manifestRequired')"
+            :value="laneGovernance.manifest_required === undefined ? '-' : laneGovernance.manifest_required ? 'Yes' : 'No'"
+          />
+          <DataField
+            :title="$t('dataspaces.manifestReady')"
+            :value="laneGovernance.manifest_ready === undefined ? '-' : laneGovernance.manifest_ready ? 'Yes' : 'No'"
+          />
+          <DataField
+            :title="$t('dataspaces.manifestPath')"
+            :value="laneGovernance.manifest_path || $t('none')"
+            monospace
+          />
         </div>
       </template>
     </BaseContentBlock>
 
-    <BaseContentBlock v-if="hasValidParams" :title="$t('dataspaces.publicNodes.title')">
+    <BaseContentBlock :title="$t('dataspaces.publicNodes.title')">
       <template #default>
-        <form class="dataspace-details-page__public-node-form" @submit.prevent="addPublicNode">
+        <form
+          class="dataspace-details-page__public-node-form"
+          @submit.prevent="addPublicNode"
+        >
           <label>
             <span class="h-sm">{{ $t('dataspaces.publicNodes.label') }}</span>
             <input
               v-model="publicNodeDraft.label"
               type="text"
               :placeholder="$t('dataspaces.publicNodes.labelPlaceholder')"
-            />
+            >
           </label>
           <label>
             <span class="h-sm">{{ $t('dataspaces.publicNodes.url') }}</span>
@@ -56,14 +151,21 @@
               v-model="publicNodeDraft.url"
               type="url"
               :placeholder="$t('dataspaces.publicNodes.urlPlaceholder')"
-            />
+            >
           </label>
-          <BaseButton native-type="submit" :disabled="!publicNodeDraft.url.trim()">
+          <BaseButton
+            native-type="submit"
+            :disabled="!publicNodeDraft.url.trim()"
+          >
             {{ $t('dataspaces.publicNodes.add') }}
           </BaseButton>
         </form>
 
-        <p v-if="publicNodeError" class="dataspace-details-page__error" data-test="dataspace-details-public-node-error">
+        <p
+          v-if="publicNodeError"
+          class="dataspace-details-page__error"
+          data-test="dataspace-details-public-node-error"
+        >
           {{ publicNodeError }}
         </p>
 
@@ -75,17 +177,35 @@
           {{ $t('dataspaces.publicNodes.empty') }}
         </p>
 
-        <div v-else class="dataspace-details-page__public-node-list" data-test="dataspace-details-public-nodes">
-          <div v-for="node in publicNodes" :key="node.url" class="dataspace-details-page__public-node-row">
+        <div
+          v-else
+          class="dataspace-details-page__public-node-list"
+          data-test="dataspace-details-public-nodes"
+        >
+          <div
+            v-for="node in publicNodes"
+            :key="node.url"
+            class="dataspace-details-page__public-node-row"
+          >
             <div class="dataspace-details-page__public-node-main">
               <span class="dataspace-details-page__public-node-label">{{ node.label }}</span>
               <span class="dataspace-details-page__public-node-url">{{ node.url }}</span>
             </div>
             <div class="dataspace-details-page__public-node-actions">
-              <BaseButton bordered data-test="dataspace-details-open-scoped" @click="openScopedExplorer(node)">
+              <BaseButton
+                size="sm"
+                bordered
+                data-test="dataspace-details-open-scoped"
+                @click="openScopedExplorer(node)"
+              >
                 {{ $t('dataspaces.publicNodes.openExplorer') }}
               </BaseButton>
-              <BaseButton data-test="dataspace-details-remove-node" @click="removePublicNode(node.url)">
+              <BaseButton
+                size="sm"
+                variant="secondary"
+                data-test="dataspace-details-remove-node"
+                @click="removePublicNode(node.url)"
+              >
                 {{ $t('dataspaces.publicNodes.remove') }}
               </BaseButton>
             </div>
@@ -97,13 +217,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
+import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
 import * as http from '@/shared/api';
+import { DataspaceId, type NexusPublicStatus, type NexusStatusDataspaceBacklog } from '@/shared/api/schemas';
+import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import {
   listDataspacePublicNodes,
   removeDataspacePublicNode,
@@ -121,6 +244,18 @@ const route = useRoute();
 const { t } = useI18n();
 const navigation = useScopedExplorerNavigation();
 
+const state = reactive<{
+  isLoading: boolean
+  error: string | null
+  nexusStatus: NexusPublicStatus | null
+  lastUpdated: string | null
+}>({
+  isLoading: false,
+  error: null,
+  nexusStatus: null,
+  lastUpdated: null,
+});
+
 const publicNodes = ref<DataspacePublicNodeEntry[]>([]);
 const publicNodeError = ref<string | null>(null);
 const publicNodeDraft = reactive({
@@ -128,25 +263,54 @@ const publicNodeDraft = reactive({
   url: '',
 });
 
-function parseRouteId(raw: unknown): number | null {
+const laneId = computed(() => {
+  const raw = route.params.laneId;
   const value = Array.isArray(raw) ? raw[0] : raw;
-  if (typeof value !== 'string' || !/^\d+$/u.test(value)) return null;
   const parsed = Number(value);
-  return Number.isSafeInteger(parsed) ? parsed : null;
-}
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+});
 
-const laneId = computed(() => parseRouteId(route.params.laneId));
-const dataspaceId = computed(() => parseRouteId(route.params.dataspaceId));
+const dataspaceId = computed(() => {
+  const raw = route.params.dataspaceId;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const parsed = DataspaceId.safeParse(value);
+  return parsed.success ? parsed.data : null;
+});
+
 const hasValidParams = computed(() => laneId.value !== null && dataspaceId.value !== null);
+
+const dataspace = computed<NexusStatusDataspaceBacklog | null>(() => {
+  if (!hasValidParams.value) return null;
+  const lane = laneId.value as number;
+  const id = dataspaceId.value as string;
+  const registered = state.nexusStatus?.dataspace_catalog.some(
+    (entry) => entry.lane_id === lane && entry.dataspace_id === id
+  );
+  if (!registered) return null;
+  const rows = state.nexusStatus?.teu_dataspace_backlog ?? [];
+  return rows.find((item) => item.lane_id === lane && item.dataspace_id === id) ?? null;
+});
+
+const laneGovernance = computed(() => {
+  if (!hasValidParams.value) return null;
+  const lane = laneId.value as number;
+  const id = dataspaceId.value as string;
+  // Public catalog fields describe this exact binding without operator-only telemetry.
+  return state.nexusStatus?.dataspace_catalog.find((item) => item.lane_id === lane && item.dataspace_id === id) ?? null;
+});
 
 const storageScope = computed(() => {
   if (!hasValidParams.value) return null;
   return {
     registryNode: http.getConfiguredToriiBaseUrl(),
     laneId: laneId.value as number,
-    dataspaceId: dataspaceId.value as number,
+    dataspaceId: dataspaceId.value as string,
   };
 });
+
+function dataspaceLabel(item: NexusStatusDataspaceBacklog): string {
+  return item.alias ? `${item.alias} (#${item.dataspace_id})` : `#${item.dataspace_id}`;
+}
 
 function deriveNodeLabel(url: string): string {
   try {
@@ -160,7 +324,48 @@ function deriveNodeLabel(url: string): string {
 function refreshPublicNodes() {
   const scope = storageScope.value;
   publicNodes.value = scope ? listDataspacePublicNodes(scope) : [];
-  publicNodeError.value = null;
+}
+
+async function loadDetails() {
+  if (!hasValidParams.value) {
+    state.error = t('dataspaces.detailInvalidRoute');
+    state.nexusStatus = null;
+    return;
+  }
+
+  state.isLoading = true;
+  state.error = null;
+
+  try {
+    const nexusResponse = await http.fetchNexusPublicStatus();
+
+    if (nexusResponse.status === SUCCESSFUL_FETCHING) {
+      state.nexusStatus = nexusResponse.data;
+    } else {
+      state.nexusStatus = null;
+      state.error = t('dataspaces.loadFailed');
+    }
+
+    if (state.nexusStatus && !dataspace.value) {
+      state.error = t('dataspaces.detailNotFound');
+    }
+
+    state.lastUpdated = new Date().toLocaleString();
+    refreshPublicNodes();
+  } catch {
+    state.nexusStatus = null;
+    state.error = t('dataspaces.loadFailed');
+  } finally {
+    state.isLoading = false;
+  }
+}
+
+function refreshDetails() {
+  loadDetails().catch(() => {
+    state.nexusStatus = null;
+    state.error = t('dataspaces.loadFailed');
+    state.isLoading = false;
+  });
 }
 
 function addPublicNode() {
@@ -205,19 +410,26 @@ function openScopedExplorer(node: DataspacePublicNodeEntry) {
     });
   }
 
-  navigation
-    .push({
-      path: '/blocks',
-      query: toExplorerScopeQuery({
-        torii: node.url,
-        dataspaceLaneId: lane,
-        dataspaceId: id,
-      }),
-    })
-    .catch(() => {});
+  navigation.push({
+    path: '/blocks',
+    query: toExplorerScopeQuery({
+      torii: node.url,
+      dataspaceLaneId: lane,
+      dataspaceId: id,
+    }),
+  }).catch(() => {});
 }
 
-watch(() => [route.params.laneId, route.params.dataspaceId], refreshPublicNodes, { immediate: true });
+watch(
+  () => [route.params.laneId, route.params.dataspaceId],
+  () => {
+    refreshDetails();
+  }
+);
+
+onMounted(() => {
+  refreshDetails();
+});
 </script>
 
 <style lang="scss">
@@ -227,105 +439,116 @@ watch(() => [route.params.laneId, route.params.dataspaceId], refreshPublicNodes,
   display: grid;
   gap: size(3);
 
-  &__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: size(1);
-    padding: 0 size(2);
-
-    @include sm {
-      padding: 0 size(3);
-    }
-  }
-
-  &__protected,
-  &__error,
-  &__empty {
-    margin: 0;
-    padding: size(1.5) size(2);
-
-    @include sm {
-      padding-right: size(3);
-      padding-left: size(3);
-    }
-  }
-
-  &__protected {
-    display: grid;
-    gap: size(0.75);
-    color: theme-color('content-secondary');
-
-    strong {
-      color: theme-color('content-primary');
-    }
-
-    p {
-      margin: 0;
-    }
-  }
-
-  &__error {
-    color: theme-color('error');
-  }
-
-  &__public-node-form {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
-    align-items: end;
+  &__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: size(1.5);
     padding: 0 size(2);
 
     @include sm {
       padding: 0 size(3);
     }
+  }
 
-    @include xs {
-      grid-template-columns: 1fr;
+  &__refresh {
+    padding: size(1.25) size(2);
+    border: 1px solid theme-color('border-primary');
+    border-radius: size(1);
+    color: theme-color('content-primary');
+    background: theme-color('surface-variant');
+    cursor: pointer;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+
+  &__updated {
+    color: theme-color('content-tertiary');
+    @include tpg-s4;
+  }
+
+  &__grid {
+    padding: size(1) size(2) 0;
+    display: grid;
+    gap: size(1.5);
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+
+    @include md {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding: size(1) size(3) 0;
+    }
+  }
+
+  &__error,
+  &__empty {
+    padding: size(1) size(2) 0;
+  }
+
+  &__error {
+    color: theme-color('error');
+    @include tpg-s3;
+  }
+
+  &__public-node-form {
+    display: grid;
+    gap: size(1.5);
+    grid-template-columns: 1fr;
+    padding: 0 size(2);
+
+    @include md {
+      grid-template-columns: 1fr 1fr auto;
+      align-items: end;
     }
 
     label {
-      display: grid;
+      display: flex;
+      flex-direction: column;
       gap: size(0.75);
     }
 
     input {
       width: 100%;
-      min-width: 0;
       padding: size(1.25);
-      border: 1px solid theme-color('border-primary');
       border-radius: size(1);
+      border: 1px solid theme-color('border-primary');
+      background: theme-color('background');
       color: theme-color('content-primary');
-      background: transparent;
+
+      &::placeholder {
+        color: theme-color('content-tertiary');
+      }
     }
   }
 
   &__public-node-list {
     display: grid;
     gap: size(1);
-    padding: size(2);
-
-    @include sm {
-      padding-right: size(3);
-      padding-left: size(3);
-    }
+    padding: size(1) size(2) 0;
   }
 
   &__public-node-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: size(1.5);
     border: 1px solid theme-color('border-primary');
     border-radius: size(1);
-    padding: size(1.5);
     background: theme-color('surface-variant');
+    padding: size(1.25);
+    display: flex;
+    flex-direction: column;
+    gap: size(1);
+
+    @include md {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
   }
 
   &__public-node-main {
     display: grid;
-    min-width: 0;
     gap: size(0.5);
+    min-width: 0;
   }
 
   &__public-node-label {
@@ -335,8 +558,8 @@ watch(() => [route.params.laneId, route.params.dataspaceId], refreshPublicNodes,
 
   &__public-node-url {
     color: theme-color('content-secondary');
-    word-break: break-all;
     @include tpg-s4;
+    word-break: break-all;
   }
 
   &__public-node-actions {

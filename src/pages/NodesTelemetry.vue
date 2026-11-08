@@ -82,7 +82,7 @@ function displayDate(value: Date | null | undefined) {
   return value ? value.toLocaleString() : '—';
 }
 
-function displayEpochMilliseconds(value: number | undefined) {
+function displayEpochMilliseconds(value: number | null | undefined) {
   return typeof value === 'number' ? new Date(value).toLocaleString() : '—';
 }
 
@@ -90,11 +90,11 @@ function displayDuration(value: DurationValue | null | undefined) {
   return value ? t('units.milliseconds', { value: formatNumber(value.ms) }) : '—';
 }
 
-function displayOptionalNumber(value: number | undefined) {
+function displayOptionalNumber(value: number | null | undefined) {
   return typeof value === 'number' ? formatNumber(value) : '—';
 }
 
-function displayGossipConfig(size: number | undefined, period: DurationValue | undefined) {
+function displayGossipConfig(size: number | null | undefined, period: DurationValue | null | undefined) {
   return t('telemetry.networkGossipDetails', [displayOptionalNumber(size), period ? formatNumber(period.ms) : '—']);
 }
 

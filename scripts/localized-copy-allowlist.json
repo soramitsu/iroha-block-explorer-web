@@ -213,5 +213,180 @@
     "file": "src/app/main.ts",
     "value": "Retry",
     "reason": "Fixed, non-sensitive bootstrap failure copy is rendered before trusted runtime configuration and application localization can initialize."
+  },
+  {
+    "file": "src/app/main.ts",
+    "value": "Loading Explorer…",
+    "reason": "Pre-bootstrap loading message displayed before locale catalogs are available."
+  },
+  {
+    "file": "src/shared/api/instruction-envelope.ts",
+    "value": "Instruction must be canonical padded base64",
+    "reason": "Developer protocol-validation diagnostic naming canonical frame encoding."
+  },
+  {
+    "file": "src/shared/api/instruction-envelope.ts",
+    "value": "Instruction frame digest does not match its bytes",
+    "reason": "Developer protocol-validation diagnostic naming canonical frame encoding."
+  },
+  {
+    "file": "src/pages/dashboards/LedgerDashboard.vue",
+    "value": "off",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/pages/dashboards/LedgerDashboard.vue",
+    "value": "warning",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/chain-analytics.ts",
+    "value": "full",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/chain-analytics.ts",
+    "value": "unknown",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/chain-analytics.ts",
+    "value": "stale",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/chain-analytics.ts",
+    "value": "delayed",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/chain-analytics.ts",
+    "value": "producing",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/chain-analytics.ts",
+    "value": "pending",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/chain-analytics.ts",
+    "value": "idle",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/dashboard-models.ts",
+    "value": "genesis",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/dashboard-models.ts",
+    "value": "complete",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/intl-locale.ts",
+    "value": "en",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/iroha-hash.ts",
+    "value": "hash:${body}#${hashLiteralChecksum(body)}",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/ui/composables/useBlockSampleWindow.ts",
+    "value": "error",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/ui/dashboard/DashMeter.vue",
+    "value": "critical",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/ui/dashboard/DashMeter.vue",
+    "value": "warning",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/ui/dashboard/DashMeter.vue",
+    "value": "normal",
+    "reason": "Internal state discriminator or protocol literal; rendered labels use locale catalogs."
+  },
+  {
+    "file": "src/shared/lib/chart-geometry.ts",
+    "value": "M ${round(x)} ${round(y0)} V ${round(y1)} H ${round(x + width)} V ${round(y0)} Z",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/lib/chart-scale.ts",
+    "value": "${Math.round(ms)} ms",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/lib/chart-scale.ts",
+    "value": "${(ms / SECOND_MS).toFixed(1).replace(/\\.0$/, '')} s",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/lib/chart-scale.ts",
+    "value": "${Math.round(ms / SECOND_MS)} s",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/lib/chart-scale.ts",
+    "value": "${hours}h ${String(minutes).padStart(2, '0')}m",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/lib/chart-scale.ts",
+    "value": "${ms}ms",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/lib/chart-scale.ts",
+    "value": "${ms / SECOND_MS}s",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/lib/chart-scale.ts",
+    "value": "${ms / MINUTE_MS}m",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/lib/chart-scale.ts",
+    "value": "${ms / HOUR_MS}h",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/lib/chart-scale.ts",
+    "value": "${ms / DAY_MS}d",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/lib/gauge-geometry.ts",
+    "value": "M ${round(start.x)} ${round(start.y)} A ${radius} ${radius} 0 ${largeArc} 1 ${round(end.x)} ${round(end.y)}",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/ui/dashboard/DashDial.vue",
+    "value": "M ${outer.x} ${outer.y} L ${left.x} ${left.y} L ${right.x} ${right.y} Z",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/ui/dashboard/HeatmapChart.vue",
+    "value": "url(#${hatchId})",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/ui/dashboard/HeatmapChart.vue",
+    "value": "color-mix(in oklab, var(--color_chart-heat-low) 45%, var(--color_dash-well))",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
+  },
+  {
+    "file": "src/shared/ui/dashboard/HeatmapChart.vue",
+    "value": "color-mix(in oklab, var(--color_chart-heat-high) ${share.toFixed(1)}%, var(--color_chart-heat-low))",
+    "reason": "SVG/CSS geometry syntax or compact chart measurement notation; descriptive chart labels are localized."
   }
 ]

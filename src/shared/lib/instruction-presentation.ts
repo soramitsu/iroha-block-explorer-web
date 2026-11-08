@@ -9,10 +9,10 @@ import {
 } from '@/shared/api/schemas';
 import { normalizeDomainIdLiteral } from '@/shared/lib/rwa-id';
 import { normalizeIrohaHash32 } from '@/shared/lib/iroha-hash';
-import { buildMultisigCustomDisplayPayload } from '@/shared/lib/multisig-custom';
+import { requireNetworkPrefix } from '@/shared/lib/network-prefix';
 
 type AnyRecord = Record<string, unknown>;
-type PresentationBuilder = (value: unknown, rawPayload: unknown) => InstructionPresentation | null;
+type PresentationBuilder = (value: unknown) => InstructionPresentation | null;
 type EntityRouteKind = 'account' | 'asset' | 'asset-definition' | 'domain' | 'nft';
 
 export interface InstructionPresentationField {
@@ -587,15 +587,14 @@ function multisigRegisterBuilder(value: unknown): InstructionPresentation | null
   });
 }
 
-function multisigProposeBuilder(value: unknown, rawPayload: unknown): InstructionPresentation | null {
+function multisigProposeBuilder(value: unknown): InstructionPresentation | null {
   const parsed = MultisigProposeSchema.safeParse(value);
   if (!parsed.success) return null;
-  const decoded = buildMultisigCustomDisplayPayload(rawPayload);
-  if (!decoded || decoded.multisig.variant !== 'Propose') return null;
-  const nestedInstructions = decoded.multisig.decoded_instructions.map((instruction, index) => ({
-    index: instruction.index,
-    encoded: parsed.data.instructions[index] ?? '',
-    presentation: buildDecodedInstructionPresentation(instruction.instruction),
+  // The current browser SDK cannot decode native nested Norito frames.
+  const nestedInstructions = parsed.data.instructions.map((encoded, index) => ({
+    index,
+    encoded,
+    presentation: null,
   }));
   const fields = [
     field('account', 'multisigAccount', parsed.data.account, 'account'),
@@ -767,12 +766,15 @@ const DECODED_DIRECT_VARIANTS: Readonly<Record<string, { family: string; variant
 function buildRegisteredPresentation(
   ...[family, variant, value, rawPayload]: [family: string, variant: string, value: unknown, rawPayload: unknown]
 ): InstructionPresentation | null {
-  return registry[`${family}:${variant}`]?.(value, rawPayload) ?? null;
+  return registry[`${family}:${variant}`]?.(value) ?? null;
 }
 
 export function buildInstructionPresentation(
-  instruction: Pick<Instruction, 'kind' | 'box'>
+  instruction: Pick<Instruction, 'kind' | 'box'>,
+  networkPrefix: number
 ): InstructionPresentation | null {
+  requireNetworkPrefix(networkPrefix);
+  if (instruction.box.json === null) return null;
   const payload = ExplorerEnvelopeSchema.safeParse(instruction.box.json.payload);
   if (!payload.success) return null;
   const family = instruction.box.json.kind;
@@ -787,9 +789,22 @@ export function buildInstructionPresentation(
   return buildRegisteredPresentation(family, payload.data.variant, payload.data.value, payload.data);
 }
 
-export function buildDecodedInstructionPresentation(decoded: unknown): InstructionPresentation | null {
+export function buildDecodedInstructionPresentation(
+  decoded: unknown,
+  networkPrefix: number
+): InstructionPresentation | null {
+  requireNetworkPrefix(networkPrefix);
   const root = asRecord(decoded);
   if (!root || Object.keys(root).length !== 1) return null;
+
+  if (Object.prototype.hasOwnProperty.call(root, 'Custom')) {
+    const custom = asRecord(root.Custom);
+    if (!custom || Object.keys(custom).length !== 1 || !Object.prototype.hasOwnProperty.call(custom, 'payload'))
+      return null;
+    const tagged = exactTaggedValue(custom.payload, CUSTOM_MULTISIG_VARIANTS);
+    if (!tagged) return null;
+    return buildRegisteredPresentation('Custom', tagged.variant, tagged.value, custom.payload);
+  }
 
   for (const [family, variants] of Object.entries(DECODED_BOX_VARIANTS)) {
     if (!Object.prototype.hasOwnProperty.call(root, family)) continue;

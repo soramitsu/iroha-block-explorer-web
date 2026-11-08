@@ -30,7 +30,7 @@ const BaseTableStub = defineComponent({
   },
   emits: ['click:row', 'update:cursor', 'update:page-size'],
   template: `
-    <div class="base-table-stub" :data-next-cursor="cursorPagination?.next_cursor ?? ''">
+    <div class="base-table-stub" :data-next-cursor="cursorPagination?.nextCursor ?? ''">
       <slot name="header" />
       <button
         v-for="item in items"

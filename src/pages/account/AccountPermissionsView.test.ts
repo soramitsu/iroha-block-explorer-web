@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { defineComponent } from 'vue';
-import AccountPermissionsView from './AccountPermissionsView.vue';
 import { i18n } from '@/shared/lib/localization';
+import AccountPermissionsView from './AccountPermissionsView.vue';
 
 const apiMocks = vi.hoisted(() => ({
   fetchAccountPermissions: vi.fn(),
@@ -25,11 +25,11 @@ const BaseTableStub = defineComponent({
   name: 'BaseTable',
   props: {
     items: { type: Array, default: () => [] },
-    total: { type: Number, default: 0 },
+    cursorPagination: { type: Object, default: null },
   },
-  emits: ['update:page', 'update:page-size'],
+  emits: ['update:cursor', 'update:pageSize'],
   template: `
-    <div class="base-table-stub" :data-total="total">
+    <div class="base-table-stub" :data-next-cursor="cursorPagination?.nextCursor">
       <slot name="header" />
       <div v-for="item in items" :key="item.name" class="base-table-row">
         <slot name="row" :item="item" />
@@ -44,14 +44,13 @@ const BaseButtonStub = defineComponent({
   template: '<button @click="$emit(\'click\')"><slot /></button>',
 });
 
-function permissionResponse(items: Record<string, unknown>[], total = items.length) {
+function permissionResponse(items: Record<string, unknown>[]) {
   return {
     status: 'ok',
     data: {
       items,
-      total,
-      has_more: false,
-      count_mode: 'exact',
+      total: undefined,
+      nextCursor: 'permissions-next',
     },
   };
 }
@@ -88,34 +87,42 @@ describe('AccountPermissionsView', () => {
 
   it('reads pagination from the URL and renders the exact server payload without invented provenance', async () => {
     apiMocks.fetchAccountPermissions.mockResolvedValue(
-      permissionResponse(
-        [
-          {
-            name: 'CanTransferAsset',
-            payload: {
-              asset: 'rose#wonderland',
-              ceiling: '90071992547409931234567890.000000000000000001',
-              nested: { dataspace: 'private-settlement' },
-            },
+      permissionResponse([
+        {
+          name: 'CanTransferAsset',
+          payload: {
+            asset: 'rose#wonderland',
+            ceiling: '90071992547409931234567890.000000000000000001',
+            nested: { dataspace: 'private-settlement' },
           },
-        ],
-        101
-      )
+        },
+      ])
     );
 
-    const wrapper = await factory({ permissions_page: '3', permissions_per_page: '50' });
+    const wrapper = await factory({ permissions_cursor: 'permissions-current', permissions_limit: '50' });
 
-    expect(apiMocks.fetchAccountPermissions).toHaveBeenCalledWith(ACCOUNT, { page: 3, per_page: 50 });
+    expect(apiMocks.fetchAccountPermissions).toHaveBeenCalledWith(ACCOUNT, { cursor: 'permissions-current', limit: 50 });
     expect(wrapper.text()).toContain('CanTransferAsset');
     expect(wrapper.text()).toContain('90071992547409931234567890.000000000000000001');
     expect(wrapper.text()).toContain('private-settlement');
-    expect(wrapper.get('.base-table-stub').attributes('data-total')).toBe('101');
+    expect(wrapper.get('.base-table-stub').attributes('data-next-cursor')).toBe('permissions-next');
+    expect(wrapper.getComponent(BaseTableStub).props('cursorPagination')?.total).toBeUndefined();
     expect(wrapper.get('[data-test="permissions-provenance-notice"]').text()).toContain(
       'does not provide per-entry provenance'
     );
     expect(wrapper.get('[data-test="permissions-provenance-notice"]').text()).toContain(
       'direct grants and permissions inherited from assigned roles'
     );
+  });
+
+  it('requests the opaque continuation returned by Torii', async () => {
+    apiMocks.fetchAccountPermissions.mockResolvedValue(permissionResponse([{ name: 'CanTransferAsset', payload: {} }]));
+    const wrapper = await factory();
+
+    wrapper.getComponent(BaseTableStub).vm.$emit('update:cursor', 'permissions-next');
+    await flushPromises();
+
+    expect(apiMocks.fetchAccountPermissions).toHaveBeenLastCalledWith(ACCOUNT, { cursor: 'permissions-next', limit: 10 });
   });
 
   it.each([
@@ -129,7 +136,7 @@ describe('AccountPermissionsView', () => {
       'error',
       { status: 'unknown-error', error: new Error('invalid response') },
       '[data-test="permissions-error"]',
-      'could not be loaded',
+      'Effective permissions could not be loaded',
     ],
   ])('renders the %s state distinctly from an empty permission set', async (_name, result, selector, message) => {
     apiMocks.fetchAccountPermissions.mockResolvedValue(result);
@@ -149,30 +156,12 @@ describe('AccountPermissionsView', () => {
     expect(wrapper.get('[data-test="permissions-provenance-notice"]').text()).toContain('unsigned, caller-visible');
   });
 
-  it('rejects malformed URL pagination without calling Torii', async () => {
-    const wrapper = await factory({ permissions_page: '0', permissions_per_page: '30' });
-
-    expect(apiMocks.fetchAccountPermissions).not.toHaveBeenCalled();
-    expect(wrapper.get('[data-test="permissions-invalid-pagination"]').text()).toContain('first 500 matching rows');
-    expect(wrapper.text()).toContain('Reset pagination');
-  });
-
-  it('keeps the table recovery controls for an empty page beyond a nonzero total', async () => {
-    apiMocks.fetchAccountPermissions.mockResolvedValue(permissionResponse([], 7));
-
-    const wrapper = await factory({ permissions_page: '2' });
-
-    expect(wrapper.find('[data-test="permissions-empty"]').exists()).toBe(false);
-    expect(wrapper.get('.base-table-stub').attributes('data-total')).toBe('7');
-  });
-
   it('shows initial loading until the first response settles', async () => {
     let resolveRequest: ((value: ReturnType<typeof permissionResponse>) => void) | undefined;
     apiMocks.fetchAccountPermissions.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveRequest = resolve;
-        })
+      () => new Promise((resolve) => {
+        resolveRequest = resolve;
+      })
     );
 
     const wrapper = await factory();

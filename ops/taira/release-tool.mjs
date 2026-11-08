@@ -32,6 +32,7 @@ import { homedir, tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
+import { isCanonicalIrohaHashLiteral32 } from '../../src/shared/lib/iroha-hash.ts';
 import { checkIrohaPinFiles } from '../../scripts/check-iroha-pin.mjs';
 import { formatBundleBudgetReport, runBundleBudgetCheck } from '../../scripts/check-bundle-budget.mjs';
 import {
@@ -52,7 +53,6 @@ const TAIRA_EXPLORER_URL = 'https://taira-explorer.sora.org/';
 const TAIRA_EXPLORER_ORIGIN = new URL(TAIRA_EXPLORER_URL).origin;
 const TAIRA_TORII_ORIGIN = 'https://taira.sora.org';
 const TAIRA_TORII_STATUS_URL = `${TAIRA_TORII_ORIGIN}/status`;
-export const TAIRA_NETWORK_ID = 'hash:82531CE8EAE8BFF6BEECA4698BFD13A3BC8BEC5F0EE0D23D428C97FC17AB0F3B#3E94';
 const EXPLORER_REPOSITORY = 'github.com/soramitsu/iroha-block-explorer-web';
 const IROHA_REPOSITORY = 'github.com/hyperledger-iroha/iroha';
 const IROHA_REPOSITORY_URL = 'https://github.com/hyperledger-iroha/iroha.git';
@@ -63,19 +63,10 @@ const REQUIRED_PNPM_VERSION = '10.11.0';
 const REQUIRED_NODE_VERSION = '24.19.0';
 const VALIDATED_RUNTIME_CONFIG = Symbol('validated-runtime-config');
 const PUBLIC_RUNTIME_CONFIG_KEYS = Object.freeze([
-  'kotodamaCompilerUrl',
   'networkId',
+  'networkPrefix',
   'toriiBaseUrl',
-  'toriiFailoverEnabled',
-  'toriiFailoverFailureThreshold',
-  'toriiFailoverNodes',
-  'toriiFailoverPersistSwitch',
-  'toriiFailoverProbeTimeoutMs',
-  'toriiFailoverWindowMs',
   'toriiForceBaseUrl',
-  'toriiRequestRetryBaseDelayMs',
-  'toriiRequestRetryCount',
-  'toriiRequestTimeoutMs',
 ]);
 const REVIEWED_BASELINE = Object.freeze({
   explorerRevision: '68ccf50f3944aff310d1d11d5ee3c04f93f250ba',
@@ -458,58 +449,6 @@ export function validateReleasePaths({ servedPath, releasesDir }) {
   return { servedPath: normalizedServed, releasesDir: normalizedReleases };
 }
 
-function validatedHttpsOrigin(value, name) {
-  if (typeof value !== 'string' || value.trim() !== value) {
-    throw new Error(`${name} must be a trimmed HTTPS origin`);
-  }
-  let url;
-  try {
-    url = new URL(value);
-  } catch (error) {
-    throw new Error(`${name} must be a valid HTTPS origin`, { cause: error });
-  }
-  if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
-    throw new Error(`${name} must be a credential-free HTTPS origin without a path, query, or fragment`);
-  }
-  const host = url.hostname.toLowerCase().replace(/\.+$/u, '');
-  const ipv6 = host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : null;
-  const mappedIpv4 = ipv6 ? /^::ffff:([0-9a-f]{1,4}):[0-9a-f]{1,4}$/u.exec(ipv6) : null;
-  const mappedLoopback = mappedIpv4 ? Number.parseInt(mappedIpv4[1], 16) >>> 8 === 0x7f : false;
-  if (host === 'localhost' || ipv6 === '::1' || /^127(?:\.|$)/u.test(host) || mappedLoopback) {
-    throw new Error(`${name} must not use a loopback host`);
-  }
-  return url.origin;
-}
-
-function validateOptionalRuntimeOrigins(config) {
-  for (const key of ['kotodamaCompilerUrl']) {
-    if (config[key] !== undefined) validatedHttpsOrigin(config[key], key);
-  }
-  if (config.toriiFailoverNodes === undefined) return;
-  if (!Array.isArray(config.toriiFailoverNodes)) {
-    throw new Error('toriiFailoverNodes must be an array when present');
-  }
-  for (const [index, node] of config.toriiFailoverNodes.entries()) {
-    validatedHttpsOrigin(node, `toriiFailoverNodes[${index}]`);
-  }
-}
-
-function validateOptionalRuntimeBooleans(config, keys) {
-  for (const key of keys) {
-    if (config[key] !== undefined && typeof config[key] !== 'boolean') {
-      throw new Error(`${key} must be a boolean when present`);
-    }
-  }
-}
-
-function validateOptionalRuntimeIntegers(config, keys, { minimum, qualifier }) {
-  for (const key of keys) {
-    if (config[key] !== undefined && (!Number.isSafeInteger(config[key]) || config[key] < minimum)) {
-      throw new Error(`${key} must be a ${qualifier} integer when present`);
-    }
-  }
-}
-
 export function validateTairaRuntimeConfig(config) {
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     throw new Error('Taira runtime config must be a JSON object');
@@ -518,33 +457,18 @@ export function validateTairaRuntimeConfig(config) {
   if (unexpectedKeys.length > 0) {
     throw new Error(`Taira runtime config contains unknown public fields: ${unexpectedKeys.join(', ')}`);
   }
-  const actualOrigin = validatedHttpsOrigin(config.toriiBaseUrl, 'toriiBaseUrl');
-  if (actualOrigin !== TAIRA_TORII_ORIGIN) {
+  if (config.toriiBaseUrl !== TAIRA_TORII_ORIGIN) {
     throw new Error(`toriiBaseUrl must be exactly ${TAIRA_TORII_ORIGIN}`);
   }
   if (config.toriiForceBaseUrl !== true) {
     throw new Error('toriiForceBaseUrl must be true for the Taira release');
   }
-  if (config.networkId === undefined) {
-    throw new Error('networkId is required for the Taira release');
+  if (!isCanonicalIrohaHashLiteral32(config.networkId)) {
+    throw new Error('networkId must be an exact canonical checked 32-byte Iroha NetworkId');
   }
-  // This release accepts one reviewed canonical literal. Exact equality also rejects
-  // malformed identities without loading package code before provenance verification.
-  if (config.networkId !== TAIRA_NETWORK_ID) {
-    throw new Error(`networkId must match the reviewed Taira genesis identity ${TAIRA_NETWORK_ID}`);
+  if (config.networkPrefix !== 369) {
+    throw new Error('networkPrefix must be 369 for the Taira release');
   }
-
-  validateOptionalRuntimeOrigins(config);
-  validateOptionalRuntimeBooleans(config, ['toriiFailoverEnabled', 'toriiFailoverPersistSwitch']);
-  validateOptionalRuntimeIntegers(
-    config,
-    ['toriiFailoverFailureThreshold', 'toriiFailoverProbeTimeoutMs', 'toriiFailoverWindowMs', 'toriiRequestTimeoutMs'],
-    { minimum: 1, qualifier: 'positive' }
-  );
-  validateOptionalRuntimeIntegers(config, ['toriiRequestRetryBaseDelayMs', 'toriiRequestRetryCount'], {
-    minimum: 0,
-    qualifier: 'non-negative',
-  });
   return config;
 }
 
@@ -1886,10 +1810,17 @@ async function verifyCorsPreflight(url, method, requestedHeaders) {
   }
 }
 
-export async function verifyToriiBrowserCors(toriiUrl) {
-  await verifyCorsPreflight(new URL('/v1/explorer/blocks', toriiUrl), 'GET', ['Accept']);
-  await verifyCorsPreflight(new URL('/v1/pipeline/transactions', toriiUrl), 'POST', ['Content-Type']);
-  await verifyCorsPreflight(new URL('/v1/multisig/spec', toriiUrl), 'POST', [
+export async function verifyToriiBrowserCors(statusUrl) {
+  const originHeaders = { origin: TAIRA_EXPLORER_ORIGIN };
+  const statusResponse = await fetchChecked(statusUrl, {
+    accept: 'application/json',
+    requestHeaders: originHeaders,
+  });
+  requireExactCorsOrigin(statusResponse, statusUrl);
+
+  await verifyCorsPreflight(new URL('/v1/explorer/blocks', statusUrl), 'GET', ['Accept']);
+  await verifyCorsPreflight(new URL('/v1/pipeline/transactions', statusUrl), 'POST', ['Content-Type']);
+  await verifyCorsPreflight(new URL('/v1/multisig/spec', statusUrl), 'POST', [
     'Content-Type',
     'X-Iroha-Account',
     'X-Iroha-Signature',
@@ -1897,11 +1828,11 @@ export async function verifyToriiBrowserCors(toriiUrl) {
     'X-Iroha-Nonce',
     'X-Iroha-Witness',
   ]);
+  return statusResponse;
 }
 
 export async function fetchRuntimeRevision(statusUrl) {
-  const response = await fetchChecked(statusUrl, { accept: 'application/json' });
-  await verifyToriiBrowserCors(statusUrl);
+  const response = await verifyToriiBrowserCors(statusUrl);
   const payload = await response.json();
   const revision = payload?.build?.git_commit_sha;
   assertRevision(revision, 'Torii /status build.git_commit_sha');
@@ -2409,7 +2340,6 @@ const NGINX_ALTERNATE_CONTENT_DIRECTIVES = new Set([
   'uwsgi_pass',
 ]);
 const TAIRA_CERTBOT_ROOT = '/var/www/certbot';
-const TAIRA_NGINX_TLS_OPTIONS_INCLUDE = '/etc/letsencrypt/options-ssl-nginx.conf';
 
 function lexNginxSource(configSource) {
   let cleaned = '';
@@ -2584,15 +2514,9 @@ function verifyNginxStaticServingBlock(servingBlock, { expected, host }) {
   }
   const effectiveDirectives = allNginxDirectives(servingBlock.block);
   const includes = effectiveDirectives.filter((directive) => directive.name === 'include');
-  if (
-    includes.length !== 1 ||
-    includes[0].block ||
-    includes[0].depth !== 0 ||
-    includes[0].value !== TAIRA_NGINX_TLS_OPTIONS_INCLUDE
-  ) {
+  if (includes.length > 0) {
     throw new Error(
-      `nginx server for ${host} must contain exactly one top-level ` +
-        `include ${TAIRA_NGINX_TLS_OPTIONS_INCLUDE} and no routing/content includes`
+      `nginx server for ${host} must not use include directives whose effective routing cannot be verified`
     );
   }
   const alternateContent = effectiveDirectives.filter((directive) =>

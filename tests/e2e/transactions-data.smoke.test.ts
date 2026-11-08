@@ -186,5 +186,5 @@ describe('Transactions data smoke', () => {
     expect(row.text()).toContain(liveStyleAuthority);
     expect(row.text()).toContain('37');
     expect(row.text()).toContain('Instructions');
-  }, 20000);
+  });
 });

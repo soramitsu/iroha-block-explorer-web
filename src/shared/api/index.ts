@@ -1,140 +1,130 @@
-import { appendSearchParams } from './query';
+import {
+  AssetDefinitionAliasSchema,
+  NftIdSchema,
+  RwaIdSchema,
+  type AssetDefinitionSelector,
+} from '@/shared/api/schemas';
+import { normalizeDomainIdLiteral } from '@/shared/lib/rwa-id';
 import type {
-  PaginationParams,
-  AssetSearchParams,
-  AssetDefinitionId,
-  AssetDefinitionSelector,
-  AssetId,
-  TransactionSearchParams,
+  AccountQrSnapshot,
+  DefiOracleAttestationLatestParams,
+  SorafsPinManifestSearchParams,
+  ZkProofFilterParams,
+  ZkProofListParams,
+  ZkVerifyingKeyListParams,
+} from '@/shared/api/schemas';
+
+import {
+  AccountQrResponse,
+  AssetDefinitionIdSchema,
+  ConfidentialAssetPolicy,
+  ConnectSessionResponse,
+  DefiOracleAttestation,
+  DefiOracleAttestationLatestParamsSchema,
+  SoracleFeedEventRecord,
+  SoracleFeedIdSchema,
+  SoracleFeedRegistry,
+  SorafsPinManifestResponse,
+  SystemParameters,
+  VpnProfile,
+  ZkProofCount,
+  ZkProofDetail,
+  ZkProofId,
+  ZkProofRegistryItem,
+  ZkVerifyingKeyDetail,
+  ZkVerifyingKeyId,
+  ZkVerifyingKeyListItem,
+} from '@/shared/api/schemas';
+
+import type {
   AccountSearchParams,
+  AssetDefinitionId,
   AssetDefinitionSearchParams,
-  InstructionsSearchParams,
+  AssetId,
+  AssetSearchParams,
+  CursorPaginationParams,
   DomainSearchParams,
+  InstructionsSearchParams,
+  MultisigProposalStatus,
   NftId,
   NFTsSearchParams,
   RWASearchParams,
   SorafsPinRegistrySearchParams,
-  SorafsPinManifestSearchParams,
-  AccountPermissionsSearchParams,
-  AccountHistorySearchParams,
-  MultisigProposalsSearchParams,
-  ContractActivityFilters,
-  ContractActivitySearchParams,
-  ContractEventFilters,
-  ContractEventSearchParams,
-  ZkProofFilterParams,
-  ZkProofListParams,
-  ZkVerifyingKeyListParams,
-  AccountQrSnapshot,
-  DefiOracleAttestationLatestParams,
+  TransactionSearchParams,
 } from '@/shared/api/schemas';
+import { parseStrictLosslessIntegerJson } from '@/shared/lib/strict-lossless-integer-json';
+import { registerConnectSession, type BrowserConnectSessionPreview } from '@iroha/iroha-js/connect-browser';
+import { parse as parseLosslessJson, parseNumberAndBigInt } from 'lossless-json';
+import { z } from 'zod/v4';
+import { appendSearchParams } from './query';
+import { fetchToriiWithDeadline } from './transport';
+
 import {
   Account,
-  AccountSearchParamsSchema,
-  AccountQrResponse,
-  CursorPaginated,
-  HistoryCursorPaginated,
-  HistoryCursorParamsSchema,
-  AssetDefinitionAliasSchema,
-  AssetDefinitionIdSchema,
-  AssetIdSchema,
-  AssetSearchParamsSchema,
-  ExplorerAsset,
+  AccountHistoryResponse,
+  AccountPermissionsResponse,
   AssetDefinition,
-  AssetDefinitionSearchParamsSchema,
-  ExplorerAssetDefinition,
-  ConfidentialAssetPolicy,
   AssetDefinitionEconometrics,
   AssetDefinitionSnapshot,
-  Domain,
-  DomainSearchParamsSchema,
+  AssetIdSchema,
   Block,
-  Transaction,
-  TransactionSearchParamsSchema,
-  DetailedTransaction,
-  Instruction,
-  InstructionsSearchParamsSchema,
-  ExplorerHealth,
-  PeerInfo,
-  NFT,
-  NFTsSearchParamsSchema,
-  NftIdSchema,
-  LatestTransactionsResponse,
-  LatestInstructionsResponse,
-  PeerMetrics,
-  RWA,
-  RWASearchParamsSchema,
-  RwaIdSchema,
-  SorafsPinRegistryResponse,
-  SorafsPinManifestResponse,
-  ConnectSessionResponse,
-  NexusDataspacesAccountSummary,
-  ContractCodeView,
+  BLOCK_SAMPLE_FIELDS,
+  BlockSampleRow,
+  CanonicalDataspaceId,
+  CollectionPage,
   ContractActivityResponse,
+  ContractCodeView,
   ContractEvent,
   ContractEventResponse,
-  LedgerStateRoot,
-  LedgerStateProof,
-  AccountPermissionsResponse,
-  AccountPermissionsSearchParamsSchema,
-  AccountHistoryResponse,
-  AccountHistorySearchParamsSchema,
-  MultisigSpecResponse,
+  DetailedTransaction,
+  Domain,
+  ExplorerAsset,
+  ExplorerAssetDefinition,
+  ExplorerHealth,
+  Instruction,
   MultisigProposalsQueryResponse,
-  MultisigProposalsSearchParamsSchema,
-  ContractActivitySearchParamsSchema,
-  ContractEventFiltersSchema,
-  ContractEventSearchParamsSchema,
-  ZkProofId,
-  ZkProofRegistryItem,
-  ZkProofDetail,
-  ZkProofCount,
-  ZkVerifyingKeyId,
-  ZkVerifyingKeyListItem,
-  ZkVerifyingKeyDetail,
-  VpnProfile,
-  SystemParameters,
-  SoracleFeedIdSchema,
-  SoracleFeedRegistry,
-  SoracleFeedEventRecord,
-  DefiOracleAttestationLatestParamsSchema,
-  DefiOracleAttestation,
-} from '@/shared/api/schemas';
-import { useEventSource } from '@vueuse/core';
-import { computed, readonly, ref } from 'vue';
-import { z, type ZodType } from 'zod/v4';
-import type { ErrorResponse } from '@/shared/utils/transform-error-response';
-import { transformErrorResponse } from '@/shared/utils/transform-error-response';
-import type { SuccessfulFetching } from '@/shared/api/consts';
-import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
-import { getRuntimeConfig } from '@/shared/runtime-config';
-import { normalizeAccountIdLiteral, normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
-import { normalizeIrohaHash32 } from '@/shared/lib/iroha-hash';
-import { normalizeDomainIdLiteral } from '@/shared/lib/rwa-id';
-import { assertExactOffsetPage } from '@/shared/lib/pagination';
-import { parseStrictLosslessIntegerJson } from '@/shared/lib/strict-lossless-integer-json';
-import { NetworkId } from '@iroha/iroha-js/browser';
-import { registerConnectSession, type BrowserConnectSessionPreview } from '@iroha/iroha-js/connect-browser';
-import { ToriiBrowserClient, ToriiBrowserHttpError, ToriiBrowserStreamGapError } from '@iroha/iroha-js/torii-browser';
-import type {
-  ToriiBlockProofs,
-  ToriiBrowserCanonicalRequestOptions,
-  ToriiSseEvent,
-} from '@iroha/iroha-js/torii-browser';
-export { appendSearchParams } from './query';
-export { ToriiBrowserStreamGapError };
-export type {
-  AccountPermissionsSearchParams,
-  AccountHistorySearchParams,
-  MultisigProposalsSearchParams,
-  ContractActivityFilters,
-  ContractActivitySearchParams,
-  ContractEventFilters,
-  ContractEventSearchParams,
+  MultisigSpecResponse,
+  NexusDataspacesAccountSummary,
+  NexusPublicStatus,
+  NFT,
+  NodeStatusSnapshot,
+  PeerInfo,
+  PeerMetrics,
+  RWA,
+  SorafsPinRegistryResponse,
+  StateFinalityResponse,
+  Transaction,
+  TRANSACTION_SAMPLE_FIELDS,
+  TransactionSampleRow,
 } from '@/shared/api/schemas';
 
+import type { SuccessfulFetching } from '@/shared/api/consts';
+import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
+import { normalizeAccountIdLiteral, normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
+import type { BlockSample } from '@/shared/lib/chain-analytics';
+import { getExplorerReadAuth } from '@/shared/lib/explorer-read-auth';
+import { requireIrohaHash32, requireIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
+import { getRuntimeConfig } from '@/shared/runtime-config';
+import type { ErrorResponse } from '@/shared/utils/transform-error-response';
+import { transformErrorResponse } from '@/shared/utils/transform-error-response';
+import { NetworkId } from '@iroha/iroha-js/connect-browser';
+import type { ToriiBrowserCanonicalRequestOptions, ToriiSseEvent } from '@iroha/iroha-js/torii-browser';
+import {
+  field,
+  ToriiBrowserClient,
+  ToriiHttpError,
+  ToriiStreamGapError,
+  type Filter,
+  type ListQueryInput,
+} from '@iroha/iroha-js/torii-browser';
+import { useEventSource } from '@vueuse/core';
+import { computed, readonly, ref } from 'vue';
+import type { ZodType } from 'zod/v4';
+export { appendSearchParams } from './query';
+export { ToriiStreamGapError };
+
 const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim();
-const defaultOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+const defaultOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 const defaultToriiOrigin = rawApiUrl.length > 0 ? rawApiUrl : defaultOrigin;
 const EXPLORER_SUFFIX = '/v1/explorer';
 const STORAGE_KEY = 'torii_base_url';
@@ -142,14 +132,12 @@ const FAILOVER_STATUSES = new Set([502, 503, 504, 522, 524]);
 const DEFAULT_FAILOVER_THRESHOLD = 5;
 const DEFAULT_FAILOVER_WINDOW_MS = 60_000;
 const DEFAULT_FAILOVER_PROBE_TIMEOUT_MS = 1_500;
-const DEFAULT_REQUEST_TIMEOUT_MS = 5_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
 const DEFAULT_REQUEST_RETRY_COUNT = 1;
 const DEFAULT_REQUEST_RETRY_BASE_DELAY_MS = 200;
 const FAILOVER_HEALTH_PATH = '/v1/explorer/health';
 const MAX_U64 = 18_446_744_073_709_551_615n;
 const ASSET_ID_DATASPACE_SCOPE_PATTERN = /#dataspace:(\d+)$/u;
-const EXACT_JSON_MEDIA_TYPE_PATTERN =
-  /^[ \t]*application\/json(?:[ \t]*;[ \t]*[!#$%&'*+\-.^_`|~0-9A-Za-z]+=(?:[!#$%&'*+\-.^_`|~0-9A-Za-z]+|"(?:[ \t!#-\[\]-~\u0080-\u00ff]|\\[ \t!-~\u0080-\u00ff])*"))*[ \t]*$/iu;
 
 function toriiRequiredHeaders(): Record<string, string> {
   // Torii v1 is a single API contract. The retired pre-release
@@ -242,15 +230,26 @@ const toriiLastFailoverSwitchState = ref<ToriiFailoverSwitch | null>(null);
 const failoverFailureTimestampsMs: number[] = [];
 let failoverInFlight: Promise<boolean> | null = null;
 
-const effectiveToriiBaseUrlState = computed(() => routeScopedToriiBaseUrlState.value ?? toriiBaseUrlState.value);
-const explorerApiBaseState = computed(() => `${effectiveToriiBaseUrlState.value}${EXPLORER_SUFFIX}`);
+function forcedToriiBaseUrl(): string | null {
+  const config = getRuntimeConfig();
+  return config.toriiForceBaseUrl === true && config.toriiBaseUrl ? normalizeToriiBaseUrl(config.toriiBaseUrl) : null;
+}
+
+const effectiveToriiBaseUrlState = computed(
+  () => forcedToriiBaseUrl() ?? routeScopedToriiBaseUrlState.value ?? toriiBaseUrlState.value
+);
+const explorerApiBaseState = computed(() =>
+  effectiveToriiBaseUrlState.value.endsWith(EXPLORER_SUFFIX)
+    ? effectiveToriiBaseUrlState.value
+    : `${effectiveToriiBaseUrlState.value}${EXPLORER_SUFFIX}`
+);
 
 export function getToriiBaseUrl(): string {
   return effectiveToriiBaseUrlState.value;
 }
 
 export function getConfiguredToriiBaseUrl(): string {
-  return toriiBaseUrlState.value;
+  return forcedToriiBaseUrl() ?? toriiBaseUrlState.value;
 }
 
 export function setRouteScopedToriiBaseUrl(baseUrl: string | null): string | null {
@@ -291,7 +290,7 @@ function markToriiHealthy() {
 function failoverRuntimeConfig() {
   const config = getRuntimeConfig();
   return {
-    enabled: config.toriiForceBaseUrl !== true && config.toriiFailoverEnabled !== false,
+    enabled: !forcedToriiBaseUrl() && config.toriiFailoverEnabled !== false,
     nodes: config.toriiFailoverNodes ?? [],
     failureThreshold: config.toriiFailoverFailureThreshold ?? DEFAULT_FAILOVER_THRESHOLD,
     windowMs: config.toriiFailoverWindowMs ?? DEFAULT_FAILOVER_WINDOW_MS,
@@ -399,7 +398,7 @@ async function triggerToriiFailover(trigger: ToriiFailoverSwitch['trigger']): Pr
   failoverInFlight = (async () => {
     toriiAvailabilityState.value = 'failing_over';
     const from = getConfiguredToriiBaseUrl();
-    const candidates = resolveFailoverCandidates(from);
+    const candidates = await resolveFailoverCandidates(from);
     let bestCandidate: ToriiCandidateProbe | null = null;
     for (const candidate of candidates) {
       const probe = await probeToriiCandidate(candidate, runtime.probeTimeoutMs);
@@ -503,10 +502,6 @@ export function resetToriiBaseUrl(): string {
   return toriiBaseUrlState.value;
 }
 
-export function isToriiBaseUrlForced(): boolean {
-  return getRuntimeConfig().toriiForceBaseUrl === true;
-}
-
 export function useToriiAvailability() {
   return {
     state: readonly(toriiAvailabilityState),
@@ -520,6 +515,760 @@ export async function retryToriiFailover(): Promise<boolean> {
   return await triggerToriiFailover('manual');
 }
 
+type GetResult<T> = { status: SuccessfulFetching; data: T } | { status: 'error'; response: Response };
+type ResultWithStatus<T> = { status: SuccessfulFetching; data: T } | ErrorResponse;
+export type PermissionAwareResult<T> = ResultWithStatus<T> | { status: 'permission-denied'; error: Error };
+export type ToriiCanonicalRequestAuth = Pick<
+  ToriiBrowserCanonicalRequestOptions,
+  'authAccountId' | 'sign' | 'nativeIdentity'
+>;
+
+async function fetchWithTimeoutRetry(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  return await fetchToriiWithDeadline(input, init, requestRuntimeConfig());
+}
+
+function normalizeAccountSelectorForApi(value: string): string;
+function normalizeAccountSelectorForApi(value: null): null;
+function normalizeAccountSelectorForApi(value: undefined): undefined;
+function normalizeAccountSelectorForApi(value: string | null | undefined): string | null | undefined;
+function normalizeAccountSelectorForApi(value: unknown): string | null | undefined {
+  if (value === null || value === undefined) return value;
+  if (typeof value !== 'string') throw new TypeError('Account selector must be a string');
+
+  const normalized = normalizeToriiAccountSelectorLiteral(value);
+  if (!normalized) {
+    throw new TypeError('Account selector must be a canonical i105 account ID or account alias');
+  }
+  return normalized;
+}
+
+function normalizeAssetIdForApi(value: AssetId): string {
+  const normalized = AssetIdSchema.parse(value);
+  const scope = ASSET_ID_DATASPACE_SCOPE_PATTERN.exec(normalized);
+  if (!scope) return normalized;
+
+  const dataspace = BigInt(scope[1]!);
+  if (dataspace > MAX_U64) throw new TypeError('Asset ID dataspace scope must be a u64');
+  return `${normalized.slice(0, -scope[0].length)}#dataspace:${dataspace}`;
+}
+
+/** Express active resource selectors through the SDK's canonical filter AST. */
+function collectionQuery(
+  params: (CursorPaginationParams & { max_block_height?: number }) | undefined,
+  selectors: Record<string, string | number | boolean | undefined> = {}
+): ListQueryInput {
+  if (params?.limit !== undefined && (!Number.isInteger(params.limit) || params.limit < 1 || params.limit > 100)) {
+    throw new RangeError('Explorer limit must be an integer in 1..100');
+  }
+  let filter: Filter | undefined;
+  for (const [name, value] of Object.entries(selectors)) {
+    if (value === undefined || value === '') continue;
+    const predicate = field(name).eq(value);
+    filter = filter ? filter.and(predicate) : predicate;
+  }
+  if (params?.max_block_height !== undefined) {
+    const bound = field('block').lte(params.max_block_height);
+    filter = filter ? filter.and(bound) : bound;
+  }
+  return {
+    ...(params?.cursor === undefined || params.cursor === null ? {} : { cursor: params.cursor }),
+    ...(params?.limit === undefined ? {} : { limit: params.limit }),
+    ...(filter ? { filter } : {}),
+  };
+}
+
+/** Validate the SDK page and refuse a repeated continuation without inventing totals. */
+async function fetchCollectionPage<T>(
+  params: CursorPaginationParams | undefined,
+  itemSchema: ZodType<T>,
+  request: (client: ToriiBrowserClient) => Promise<unknown>
+): Promise<ResultWithStatus<CollectionPage<T>>> {
+  const response = await parseToriiSdkResult(request, CollectionPage(itemSchema));
+  if (response.status === SUCCESSFUL_FETCHING) {
+    if (params?.limit !== undefined && response.data.items.length > params.limit) {
+      throw new TypeError('Collection response exceeds the requested limit');
+    }
+    if (typeof params?.cursor === 'string' && response.data.nextCursor === params.cursor) {
+      throw new TypeError('Explorer cursor did not advance');
+    }
+  }
+  return response;
+}
+
+async function toriiSdkFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    const response = await fetchWithTimeoutRetry(input, {
+      cache: 'no-store',
+      ...init,
+    });
+
+    if (!response.ok && FAILOVER_STATUSES.has(response.status)) {
+      trackToriiFailure(`HTTP ${response.status}`);
+      maybeTriggerToriiFailoverOnFailure('http_failure');
+    } else if (response.ok && (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0)) {
+      markToriiHealthy();
+    }
+
+    return response;
+  } catch (error) {
+    // A caller cancelling a read is not evidence that Torii is unhealthy.
+    const requestSignal =
+      init?.signal === undefined && typeof Request !== 'undefined' && input instanceof Request
+        ? input.signal
+        : init?.signal;
+    if (!requestSignal?.aborted) {
+      trackToriiFailure(error instanceof Error ? error.message : String(error));
+      maybeTriggerToriiFailoverOnFailure('network_error');
+    }
+    throw error;
+  }
+}
+
+async function toriiSdkStreamFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    const response = await fetch(input, {
+      ...init,
+      cache: 'no-store',
+    });
+
+    if (!response.ok && FAILOVER_STATUSES.has(response.status)) {
+      trackToriiFailure(`HTTP ${response.status}`);
+    } else if (response.ok && (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0)) {
+      markToriiHealthy();
+    }
+
+    return response;
+  } catch (error) {
+    if (!init?.signal?.aborted) {
+      trackToriiFailure(error instanceof Error ? error.message : String(error));
+    }
+    throw error;
+  }
+}
+
+function toriiSdkClient(fetchImpl = toriiSdkFetch): ToriiBrowserClient {
+  const networkId = getRuntimeConfig().networkId;
+  const baseUrl = getToriiBaseUrl();
+  const canonicalRequestAuth = getExplorerReadAuth(baseUrl, networkId);
+  return new ToriiBrowserClient(baseUrl, {
+    fetchImpl,
+    defaultHeaders: toriiRequiredHeaders(),
+    ...(networkId ? { networkId: NetworkId.parse(networkId) } : {}),
+    ...(canonicalRequestAuth ? { canonicalRequestAuth } : {}),
+  });
+}
+
+async function parseToriiSdkResult<T>(
+  request: (client: ToriiBrowserClient) => Promise<unknown>,
+  schema: ZodType<T>
+): Promise<ResultWithStatus<T>> {
+  try {
+    const payload = await request(toriiSdkClient());
+    return { status: SUCCESSFUL_FETCHING, data: schema.parse(payload) };
+  } catch (error) {
+    if (error instanceof ToriiHttpError) {
+      return error.status === 404 ? { status: NOT_FOUND } : { status: UNKNOWN_ERROR, error };
+    }
+    throw error;
+  }
+}
+
+async function parsePermissionAwareToriiSdkResult<T>(
+  request: (client: ToriiBrowserClient) => Promise<unknown>,
+  schema: ZodType<T>
+): Promise<PermissionAwareResult<T>> {
+  try {
+    const payload = await request(toriiSdkClient());
+    return { status: SUCCESSFUL_FETCHING, data: schema.parse(payload) };
+  } catch (error) {
+    if (error instanceof ToriiHttpError) {
+      if (error.status === 401 || error.status === 403) {
+        return {
+          status: 'permission-denied',
+          error: new Error(error.bodyText || `Torii denied this read with status ${error.status}`),
+        };
+      }
+      return error.status === 404 ? { status: NOT_FOUND } : { status: UNKNOWN_ERROR, error };
+    }
+    throw error;
+  }
+}
+
+export async function fetchAccounts(params?: AccountSearchParams): Promise<ResultWithStatus<CollectionPage<Account>>> {
+  return await fetchCollectionPage(params, Account, (client) =>
+    client.explorerAccounts.list(
+      collectionQuery(params, { domain: params?.domain, with_asset: params?.with_asset?.toString() })
+    )
+  );
+}
+
+export async function fetchAccount(id: string): Promise<ResultWithStatus<Account>> {
+  const normalizedId = normalizeAccountIdForApi(id);
+  return await parseBoundToriiSdkResult((client) => client.getExplorerAccount(normalizedId), Account, {
+    matchesRequest: (data) => data.id === normalizedId,
+    resource: 'account',
+  });
+}
+
+export type AccountPermissionsSearchParams = CursorPaginationParams;
+
+export interface AccountHistorySearchParams extends CursorPaginationParams {
+  asset_id?: string;
+}
+
+export async function fetchAccountPermissions(
+  id: string,
+  params: AccountPermissionsSearchParams
+): Promise<PermissionAwareResult<AccountPermissionsResponse>> {
+  return await parsePermissionAwareToriiSdkResult(
+    (client) => client.accountPermissions(normalizeAccountSelectorForApi(id)).list(collectionQuery(params)),
+    AccountPermissionsResponse
+  );
+}
+
+export async function fetchAccountHistory(
+  id: string,
+  params: AccountHistorySearchParams
+): Promise<PermissionAwareResult<AccountHistoryResponse>> {
+  return await parsePermissionAwareToriiSdkResult(
+    (client) =>
+      client
+        .accountHistory(normalizeAccountSelectorForApi(id))
+        .list(collectionQuery(params, { asset_id: params.asset_id })),
+    AccountHistoryResponse
+  );
+}
+
+export interface MultisigProposalsSearchParams {
+  status?: MultisigProposalStatus[];
+  cursor?: string | null;
+  limit?: number;
+}
+
+export async function fetchMultisigSpec(
+  id: string,
+  auth: ToriiCanonicalRequestAuth
+): Promise<PermissionAwareResult<MultisigSpecResponse>> {
+  const normalizedId = normalizeAccountSelectorForApi(id);
+  const selector = normalizeAccountIdLiteral(normalizedId)
+    ? { multisigAccountId: normalizedId }
+    : { multisigAccountAlias: normalizedId };
+  return await parsePermissionAwareToriiSdkResult(
+    (client) => client.getMultisigSpec(selector, auth),
+    MultisigSpecResponse
+  );
+}
+
+export async function fetchMultisigProposals(
+  id: string,
+  params: MultisigProposalsSearchParams,
+  auth: ToriiCanonicalRequestAuth
+): Promise<PermissionAwareResult<MultisigProposalsQueryResponse>> {
+  const normalizedId = normalizeAccountSelectorForApi(id);
+  const selector = normalizeAccountIdLiteral(normalizedId)
+    ? { multisigAccountId: normalizedId }
+    : { multisigAccountAlias: normalizedId };
+  return await parsePermissionAwareToriiSdkResult(
+    (client) =>
+      client.queryMultisigProposals(
+        {
+          ...selector,
+          status: params.status,
+          cursor: params.cursor,
+          limit: params.limit,
+        },
+        auth
+      ),
+    MultisigProposalsQueryResponse
+  );
+}
+
+export async function fetchAssets(
+  params?: AssetSearchParams
+): Promise<ResultWithStatus<CollectionPage<ExplorerAsset>>> {
+  return await fetchCollectionPage(params, ExplorerAsset, (client) =>
+    client.explorerAssets.list(
+      collectionQuery(params, {
+        account_id: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
+        definition_id: params?.definition?.toString(),
+        id: params?.asset_id === undefined ? undefined : normalizeAssetIdForApi(params.asset_id),
+      })
+    )
+  );
+}
+
+export async function fetchAsset(id: AssetId): Promise<ResultWithStatus<ExplorerAsset>> {
+  const normalizedId = normalizeAssetIdForApi(id.toString());
+  const response = await get<unknown>(`/v1/explorer/assets/${encodeURIComponent(normalizedId)}`);
+  if (response.status !== SUCCESSFUL_FETCHING) {
+    return await transformErrorResponse(response.response);
+  }
+  const data = ExplorerAsset.parse(response.data);
+  assertToriiResponseIdentity('asset', data.id === normalizedId);
+  return { status: SUCCESSFUL_FETCHING, data };
+}
+
+export async function fetchAssetDefinitions(
+  params?: AssetDefinitionSearchParams
+): Promise<ResultWithStatus<CollectionPage<ExplorerAssetDefinition>>> {
+  const owningDataspace = params?.dataspace === undefined ? undefined : CanonicalDataspaceId.parse(params.dataspace);
+  if (owningDataspace !== undefined && params?.domain !== undefined) {
+    throw new TypeError('Asset definition home filters must select either a domain or a dataspace');
+  }
+  return await fetchCollectionPage(params, ExplorerAssetDefinition, (client) =>
+    client.explorerAssetDefinitions.list(
+      collectionQuery(params, {
+        owning_domain: params?.domain,
+        owning_dataspace: owningDataspace,
+        owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
+      })
+    )
+  );
+}
+
+export async function fetchAssetDefinition(
+  selectorInput: AssetDefinitionSelector
+): Promise<ResultWithStatus<AssetDefinition>> {
+  const selector = AssetDefinitionDetailSelectorSchema.parse(selectorInput.toString());
+  return await parseBoundToriiSdkResult((client) => client.getAssetDefinition(selector), AssetDefinition, {
+    matchesRequest: (data) => data.id === selector || data.alias === selector,
+    resource: 'asset definition',
+  });
+}
+
+export async function fetchAssetDefinitionEconometrics(
+  id: AssetDefinitionId
+): Promise<ResultWithStatus<AssetDefinitionEconometrics>> {
+  const normalizedId = AssetDefinitionIdSchema.parse(id.toString());
+  return await parseBoundToriiSdkResult(
+    (client) => client.getExplorerAssetDefinitionEconometrics(normalizedId),
+    AssetDefinitionEconometrics,
+    { matchesRequest: (data) => data.definition_id === normalizedId, resource: 'asset definition econometrics' }
+  );
+}
+
+export async function fetchAssetDefinitionSnapshot(
+  id: AssetDefinitionId
+): Promise<ResultWithStatus<AssetDefinitionSnapshot>> {
+  const normalizedId = AssetDefinitionIdSchema.parse(id.toString());
+  return await parseBoundToriiSdkResult(
+    (client) => client.getExplorerAssetDefinitionSnapshot(normalizedId),
+    AssetDefinitionSnapshot,
+    { matchesRequest: (data) => data.definition_id === normalizedId, resource: 'asset definition snapshot' }
+  );
+}
+
+export async function fetchNFTs(params?: NFTsSearchParams): Promise<ResultWithStatus<CollectionPage<NFT>>> {
+  return await fetchCollectionPage(params, NFT, (client) =>
+    client.explorerNfts.list(
+      collectionQuery(params, {
+        domain: params?.domain,
+        owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
+      })
+    )
+  );
+}
+
+export async function fetchNFTById(id: NftId): Promise<ResultWithStatus<NFT>> {
+  const normalizedId = NftIdSchema.parse(id.toString());
+  return await parseBoundToriiSdkResult((client) => client.getExplorerNft(normalizedId), NFT, {
+    matchesRequest: (data) => data.id === normalizedId,
+    resource: 'NFT',
+  });
+}
+
+export async function fetchRwas(params?: RWASearchParams): Promise<ResultWithStatus<CollectionPage<RWA>>> {
+  return await fetchCollectionPage(params, RWA, (client) =>
+    client.explorerRwas.list(
+      collectionQuery(params, {
+        domain: params?.domain,
+        owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
+      })
+    )
+  );
+}
+
+export async function fetchRwaById(id: string): Promise<ResultWithStatus<RWA>> {
+  const normalizedId = RwaIdSchema.parse(id);
+  return await parseBoundToriiSdkResult((client) => client.getExplorerRwa(normalizedId), RWA, {
+    matchesRequest: (data) => data.id === normalizedId,
+    resource: 'RWA',
+  });
+}
+
+export async function fetchDomains(params?: DomainSearchParams): Promise<ResultWithStatus<CollectionPage<Domain>>> {
+  return await fetchCollectionPage(params, Domain, (client) =>
+    client.explorerDomains.list(
+      collectionQuery(params, { owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined })
+    )
+  );
+}
+
+export async function fetchDomain(id: string): Promise<ResultWithStatus<Domain>> {
+  const normalizedId = normalizeDomainIdLiteral(id);
+  if (!normalizedId) throw new TypeError('Domain ID must be a canonical domain.dataspace literal');
+  return await parseBoundToriiSdkResult((client) => client.getExplorerDomain(normalizedId), Domain, {
+    matchesRequest: (data) => data.id === normalizedId,
+    resource: 'domain',
+  });
+}
+
+export async function fetchBlocks(params?: CursorPaginationParams): Promise<ResultWithStatus<CollectionPage<Block>>> {
+  return await fetchCollectionPage(params, Block, (client) => client.explorerBlocks.list(collectionQuery(params)));
+}
+
+/** One newest-first page of projected block summaries; counts follow the caller's visibility. */
+export async function fetchBlockSamples(
+  params: CursorPaginationParams
+): Promise<ResultWithStatus<CollectionPage<BlockSample>>> {
+  return await fetchCollectionPage(params, BlockSampleRow, (client) =>
+    client.explorerBlocks.list({ ...collectionQuery(params), select: [...BLOCK_SAMPLE_FIELDS] })
+  );
+}
+
+/** One newest-first page of projected visible transactions. */
+export async function fetchTransactionSamples(
+  params: CursorPaginationParams
+): Promise<ResultWithStatus<CollectionPage<TransactionSampleRow>>> {
+  return await fetchCollectionPage(params, TransactionSampleRow, (client) =>
+    client.explorerTransactions.list({ ...collectionQuery(params), select: [...TRANSACTION_SAMPLE_FIELDS] })
+  );
+}
+
+export async function fetchBlock(heightOrHash: number | string): Promise<ResultWithStatus<Block>> {
+  const isHeight = typeof heightOrHash === 'number' || /^[1-9][0-9]{0,19}$/u.test(heightOrHash);
+  const selector = isHeight ? heightOrHash : requireIrohaHash32(heightOrHash as string);
+  return await parseBoundToriiSdkResult((client) => client.getExplorerBlock(selector), Block, {
+    resource: 'block',
+    matchesRequest: (data) =>
+      isHeight ? String(data.height) === String(selector) : requireIrohaHash32(data.hash) === selector,
+  });
+}
+
+export type TransactionProof = Awaited<ReturnType<ToriiBrowserClient['getExplorerTransactionProof']>>;
+
+export async function fetchTransactionProof(transactionHash: string): Promise<ResultWithStatus<TransactionProof>> {
+  try {
+    const proof = await toriiSdkClient().getExplorerTransactionProof(requireIrohaHashLiteral32(transactionHash));
+    return {
+      status: SUCCESSFUL_FETCHING,
+      data: proof,
+    };
+  } catch (error) {
+    if (error instanceof ToriiHttpError) {
+      if (error.status === 404) return { status: NOT_FOUND };
+      // Preserve transport metadata without rendering an undecoded error body.
+      return {
+        status: UNKNOWN_ERROR,
+        error: new ToriiHttpError({
+          status: error.status,
+          expected: error.expected,
+          code: error.code,
+          rejectCode: error.rejectCode,
+          errorMessage:
+            error.status === 401
+              ? 'Transaction evidence requires authenticated access.'
+              : error.status === 403
+                ? 'This account cannot read the transaction evidence.'
+                : 'Transaction evidence request failed.',
+        }),
+      };
+    }
+    throw error;
+  }
+}
+
+export async function fetchLedgerStateRoot(blockHeight: number): Promise<ResultWithStatus<StateFinalityResponse>> {
+  return await parseToriiSdkResult((client) => client.getLedgerStateRoot(blockHeight), StateFinalityResponse);
+}
+
+export async function fetchLedgerStateProof(blockHeight: number): Promise<ResultWithStatus<StateFinalityResponse>> {
+  return await parseToriiSdkResult((client) => client.getLedgerStateProof(blockHeight), StateFinalityResponse);
+}
+
+export async function fetchExplorerHealth(): Promise<ResultWithStatus<ExplorerHealth>> {
+  return await parseToriiSdkResult((client) => client.getExplorerHealth(), ExplorerHealth);
+}
+
+export async function fetchPeersInfo(): Promise<ResultWithStatus<PeerInfo[]>> {
+  const res = await get('/v1/telemetry/peers-info');
+  if (res.status === SUCCESSFUL_FETCHING)
+    return { status: SUCCESSFUL_FETCHING, data: PeerInfo.array().parse(res.data) };
+
+  return await transformErrorResponse(res.response);
+}
+
+export async function fetchTransactions(
+  params?: TransactionSearchParams
+): Promise<ResultWithStatus<CollectionPage<Transaction>>> {
+  return await fetchCollectionPage(params, Transaction, (client) =>
+    client.explorerTransactions.list(
+      collectionQuery(params, {
+        authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined,
+        block: params?.block,
+        status: params?.status,
+        asset_id: params?.asset_id?.toString(),
+      })
+    )
+  );
+}
+
+export async function fetchLatestTransactions(
+  params?: TransactionSearchParams
+): Promise<ResultWithStatus<CollectionPage<Transaction>>> {
+  return await fetchCollectionPage(params, Transaction, (client) =>
+    client.explorerLatestTransactions.list(
+      collectionQuery(params, {
+        authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined,
+        block: params?.block,
+        status: params?.status,
+        asset_id: params?.asset_id?.toString(),
+      })
+    )
+  );
+}
+
+export async function fetchTransaction(hash: string): Promise<ResultWithStatus<DetailedTransaction>> {
+  const normalizedHash = requireIrohaHash32(hash);
+  return await parseBoundToriiSdkResult(
+    (client) => client.getExplorerTransaction(normalizedHash),
+    DetailedTransaction,
+    { matchesRequest: (data) => requireIrohaHash32(data.hash) === normalizedHash, resource: 'transaction' }
+  );
+}
+
+export async function fetchInstructions(
+  params?: InstructionsSearchParams
+): Promise<ResultWithStatus<CollectionPage<Instruction>>> {
+  return await fetchCollectionPage(params, Instruction, (client) =>
+    client.explorerInstructions.list(
+      collectionQuery(params, {
+        account: normalizeAccountSelectorForApi(params?.account) ?? undefined,
+        authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined,
+        kind: params?.kind,
+        transaction_hash: params?.transaction_hash ? requireIrohaHash32(params.transaction_hash) : undefined,
+        transaction_status: params?.transaction_status,
+        block: params?.block,
+        asset_id: params?.asset_id?.toString(),
+      })
+    )
+  );
+}
+
+export interface ContractActivityFilters {
+  authority?: string;
+  contract_address?: string;
+  contract_alias?: string;
+  contract_entrypoint?: string;
+  since_timestamp_ms?: number;
+  until_timestamp_ms?: number;
+  result_ok?: boolean;
+}
+
+export interface ContractActivitySearchParams extends CursorPaginationParams, ContractActivityFilters {}
+
+export interface ContractEventFilters {
+  authority?: string;
+  contract_address?: string;
+  event_kind?: string;
+  participant?: string;
+  asset_id?: string;
+  /** Native contract events are committed native emissions. */
+  provenance?: 'emitted';
+  since_timestamp_ms?: number;
+  until_timestamp_ms?: number;
+  result_ok?: boolean;
+}
+
+export interface ContractEventSearchParams extends CursorPaginationParams, ContractEventFilters {}
+
+function contractEventSdkOptions(params: ContractEventFilters) {
+  return {
+    authority: params.authority,
+    contractAddress: params.contract_address,
+    eventKind: params.event_kind,
+    participant: params.participant,
+    assetId: params.asset_id,
+    provenance: params.provenance,
+    sinceTimestampMs: params.since_timestamp_ms,
+    untilTimestampMs: params.until_timestamp_ms,
+    resultOk: params.result_ok,
+  };
+}
+
+function contractCollectionQuery(
+  params: CursorPaginationParams & ContractActivityFilters & Partial<ContractEventFilters>
+): ListQueryInput {
+  const query = collectionQuery(params, {
+    authority: params.authority,
+    contract_address: params.contract_address,
+    contract_alias: params.contract_alias,
+    contract_entrypoint: params.contract_entrypoint,
+    event_kind: params.event_kind,
+    participants: params.participant,
+    asset_ids: params.asset_id,
+    provenance: params.provenance,
+    result_ok: params.result_ok,
+  });
+  let filter = query.filter as Filter | undefined;
+  for (const predicate of [
+    params.since_timestamp_ms === undefined ? undefined : field('timestamp_ms').gte(params.since_timestamp_ms),
+    params.until_timestamp_ms === undefined ? undefined : field('timestamp_ms').lte(params.until_timestamp_ms),
+  ]) {
+    if (predicate) filter = filter ? filter.and(predicate) : predicate;
+  }
+  return { ...query, ...(filter ? { filter } : {}) };
+}
+
+export async function fetchContractActivity(
+  params: ContractActivitySearchParams
+): Promise<ResultWithStatus<ContractActivityResponse>> {
+  return await parseToriiSdkResult(
+    (client) => client.contractActivity.list(contractCollectionQuery(params)),
+    ContractActivityResponse
+  );
+}
+
+export async function fetchContractEvents(
+  params: ContractEventSearchParams
+): Promise<ResultWithStatus<ContractEventResponse>> {
+  return await parseToriiSdkResult(
+    (client) => client.contractEvents.list(contractCollectionQuery(params)),
+    ContractEventResponse
+  );
+}
+
+export type ContractEventStreamMessage = Omit<ToriiSseEvent<unknown>, 'data'> & { data: ContractEvent };
+
+export async function* streamContractEvents(
+  filters: ContractEventFilters,
+  signal?: AbortSignal
+): AsyncGenerator<ContractEventStreamMessage, void, unknown> {
+  for await (const event of toriiSdkClient(toriiSdkStreamFetch).streamContractEvents<unknown>({
+    ...contractEventSdkOptions(filters),
+    signal,
+  })) {
+    yield {
+      ...event,
+      data: ContractEvent.parse(event.data),
+    };
+  }
+}
+
+export async function fetchLatestInstructions(
+  params?: InstructionsSearchParams
+): Promise<ResultWithStatus<CollectionPage<Instruction>>> {
+  return await fetchCollectionPage(params, Instruction, (client) =>
+    client.explorerLatestInstructions.list(
+      collectionQuery(params, {
+        account: normalizeAccountSelectorForApi(params?.account) ?? undefined,
+        authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined,
+        kind: params?.kind,
+        transaction_hash: params?.transaction_hash ? requireIrohaHash32(params.transaction_hash) : undefined,
+        transaction_status: params?.transaction_status,
+        block: params?.block,
+        asset_id: params?.asset_id?.toString(),
+      })
+    )
+  );
+}
+
+export async function fetchInstructionDetail(
+  transactionHash: string,
+  index: number
+): Promise<ResultWithStatus<Instruction>> {
+  const normalizedHash = requireIrohaHash32(transactionHash);
+  const normalizedIndex = normalizeInstructionIndexForApi(index);
+  return await parseBoundToriiSdkResult(
+    (client) => client.getExplorerInstruction(normalizedHash, normalizedIndex),
+    Instruction,
+    {
+      matchesRequest: (data) =>
+        requireIrohaHash32(data.transaction_hash) === normalizedHash && data.index === normalizedIndex,
+      resource: 'instruction',
+    }
+  );
+}
+
+export async function fetchInstructionContractView(
+  transactionHash: string,
+  index: number
+): Promise<ResultWithStatus<ContractCodeView>> {
+  const normalizedHash = requireIrohaHash32(transactionHash);
+  const normalizedIndex = normalizeInstructionIndexForApi(index);
+  return await parseToriiSdkResult(
+    (client) => client.getExplorerInstructionContractView(normalizedHash, normalizedIndex),
+    ContractCodeView
+  );
+}
+
+export async function fetchNexusDataspacesAccountSummary(
+  literal: string
+): Promise<ResultWithStatus<NexusDataspacesAccountSummary>> {
+  const normalized = normalizeAccountIdForApi(literal);
+  const res = await get<NexusDataspacesAccountSummary>(
+    `/v1/nexus/dataspaces/accounts/${encodeURIComponent(normalized)}/summary`
+  );
+  if (res.status === SUCCESSFUL_FETCHING) {
+    const data = NexusDataspacesAccountSummary.parse(res.data);
+    assertToriiResponseIdentity(
+      'Nexus dataspaces account summary',
+      data.account === normalized && data.account_id === normalized
+    );
+    return { status: SUCCESSFUL_FETCHING, data };
+  }
+
+  return await transformErrorResponse(res.response);
+}
+
+async function fetchToriiStatus<T>(schema: ZodType<T>): Promise<ResultWithStatus<T>> {
+  const url = new URL(`${getToriiBaseUrl()}/status`, defaultOrigin || undefined);
+  let res: Response;
+  try {
+    res = await fetchWithTimeoutRetry(url, {
+      cache: 'no-store',
+      headers: toriiJsonHeaders(),
+    });
+  } catch (error) {
+    trackToriiFailure(error instanceof Error ? error.message : String(error));
+    maybeTriggerToriiFailoverOnFailure('network_error');
+    throw error;
+  }
+
+  if (res.ok) {
+    if (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0) {
+      markToriiHealthy();
+    }
+
+    // Preserve u64 dataspace identifiers before schema validation; JSON.parse rounds them.
+    const payload = parseLosslessJson(await res.text(), undefined, {
+      parseNumber: (literal) => {
+        const value = parseNumberAndBigInt(literal);
+        return typeof value === 'bigint' && Number.isSafeInteger(Number(value)) ? Number(value) : value;
+      },
+    });
+    return { status: SUCCESSFUL_FETCHING, data: schema.parse(payload) };
+  }
+
+  if (FAILOVER_STATUSES.has(res.status)) {
+    trackToriiFailure(`HTTP ${res.status}`);
+    maybeTriggerToriiFailoverOnFailure('http_failure');
+  }
+  return await transformErrorResponse(res);
+}
+
+export async function fetchNexusPublicStatus(): Promise<ResultWithStatus<NexusPublicStatus>> {
+  return await fetchToriiStatus(NexusPublicStatus);
+}
+
+/** The reporting peer's typed status snapshot for dashboard instruments. */
+export async function fetchNodeStatus(): Promise<ResultWithStatus<NodeStatusSnapshot>> {
+  return await fetchToriiStatus(NodeStatusSnapshot);
+}
+
+const EXACT_JSON_MEDIA_TYPE_PATTERN =
+  /^[ \t]*application\/json(?:[ \t]*;[ \t]*[!#$%&'*+\-.^_`|~0-9A-Za-z]+=(?:[!#$%&'*+\-.^_`|~0-9A-Za-z]+|"(?:[ \t!#-\[\]-~\u0080-\u00ff]|\\[ \t!-~\u0080-\u00ff])*"))*[ \t]*$/iu;
+
 export function buildToriiUrl(path: string): string {
   return `${getToriiBaseUrl()}${requireCanonicalToriiV1Path(path)}`;
 }
@@ -529,11 +1278,6 @@ export function buildToriiWsUrl(path: string): string {
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   return url.toString();
 }
-
-type GetResult<T> = { status: SuccessfulFetching; data: T } | { status: 'error'; response: Response };
-type ResultWithStatus<T> = { status: SuccessfulFetching; data: T } | ErrorResponse;
-export type PermissionAwareResult<T> = ResultWithStatus<T> | { status: 'permission-denied'; error: Error };
-export type ToriiCanonicalRequestAuth = Pick<ToriiBrowserCanonicalRequestOptions, 'authAccountId' | 'sign'>;
 
 function requireCanonicalToriiV1Path(path: string): string {
   const hasInvalidSegment = path.split('/').some((segment) => segment === '.' || segment === '..');
@@ -554,110 +1298,6 @@ function requireCanonicalToriiV1Path(path: string): string {
 
 export function resolveApiUrl(path: string): string {
   return buildToriiUrl(path);
-}
-
-class RequestTimeoutError extends Error {
-  constructor(timeoutMs: number) {
-    super(`Request timed out after ${timeoutMs}ms`);
-    this.name = 'RequestTimeoutError';
-  }
-}
-
-function retryDelayMs(attemptIndex: number, baseDelayMs: number): number {
-  const multiplier = Math.max(0, attemptIndex);
-  return baseDelayMs * (multiplier + 1);
-}
-
-function abortReason(signal: AbortSignal): unknown {
-  return signal.reason ?? new DOMException('The operation was aborted', 'AbortError');
-}
-
-async function sleep(ms: number, signal?: AbortSignal | null): Promise<void> {
-  if (signal?.aborted) throw abortReason(signal);
-  if (ms <= 0) return;
-
-  await new Promise<void>((resolve, reject) => {
-    const timeout = globalThis.setTimeout(() => {
-      signal?.removeEventListener('abort', handleAbort);
-      resolve();
-    }, ms);
-    const handleAbort = () => {
-      globalThis.clearTimeout(timeout);
-      signal?.removeEventListener('abort', handleAbort);
-      reject(signal ? abortReason(signal) : new DOMException('The operation was aborted', 'AbortError'));
-    };
-    signal?.addEventListener('abort', handleAbort, { once: true });
-  });
-}
-
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number): Promise<Response> {
-  const callerSignal = init.signal;
-  if (callerSignal?.aborted) throw abortReason(callerSignal);
-
-  const controller = new AbortController();
-  let timedOut = false;
-  const handleCallerAbort = () => {
-    if (!controller.signal.aborted && callerSignal) controller.abort(abortReason(callerSignal));
-  };
-  callerSignal?.addEventListener('abort', handleCallerAbort, { once: true });
-  const timeout = globalThis.setTimeout(() => {
-    if (controller.signal.aborted) return;
-    timedOut = true;
-    controller.abort(new RequestTimeoutError(timeoutMs));
-  }, timeoutMs);
-  try {
-    return await fetch(input, { ...init, signal: controller.signal });
-  } catch (error) {
-    if (timedOut) throw new RequestTimeoutError(timeoutMs);
-    throw error;
-  } finally {
-    globalThis.clearTimeout(timeout);
-    callerSignal?.removeEventListener('abort', handleCallerAbort);
-  }
-}
-
-function shouldRetryResponse(response: Response): boolean {
-  return FAILOVER_STATUSES.has(response.status);
-}
-
-function shouldRetryError(error: unknown): boolean {
-  if (error instanceof RequestTimeoutError) return true;
-  if (error instanceof DOMException) return error.name === 'AbortError';
-  return error instanceof Error;
-}
-
-function isReplaySafeRequest(init: RequestInit): boolean {
-  const method = (init.method ?? 'GET').toUpperCase();
-  if (method !== 'GET' && method !== 'HEAD') return false;
-
-  return !new Headers(init.headers).has('x-iroha-nonce');
-}
-
-async function fetchWithTimeoutRetry(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
-  const runtime = requestRuntimeConfig();
-  const retryCount = isReplaySafeRequest(init) ? Math.max(0, runtime.retryCount) : 0;
-  let attempt = 0;
-
-  while (true) {
-    if (init.signal?.aborted) throw abortReason(init.signal);
-    try {
-      const response = await fetchWithTimeout(input, init, runtime.timeoutMs);
-      if (attempt < retryCount && shouldRetryResponse(response)) {
-        await sleep(retryDelayMs(attempt, runtime.retryBaseDelayMs), init.signal);
-        attempt += 1;
-        continue;
-      }
-      return response;
-    } catch (error) {
-      if (init.signal?.aborted) throw error;
-      if (attempt < retryCount && shouldRetryError(error)) {
-        await sleep(retryDelayMs(attempt, runtime.retryBaseDelayMs), init.signal);
-        attempt += 1;
-        continue;
-      }
-      throw error;
-    }
-  }
 }
 
 async function getWithResponseParser<T>(
@@ -754,253 +1394,10 @@ function normalizeAccountIdForApi(value: unknown): string | undefined {
   return normalized;
 }
 
-function normalizeMultisigAccountSelectorForApi(value: string): string {
-  const normalized = normalizeToriiAccountSelectorLiteral(value);
-  if (!normalized) {
-    throw new TypeError('Multisig account selector must be a canonical i105 account ID or account alias');
-  }
-  return normalized;
-}
-
-function normalizeAssetIdForApi(value: AssetId): string {
-  const normalized = AssetIdSchema.parse(value);
-  const scope = ASSET_ID_DATASPACE_SCOPE_PATTERN.exec(normalized);
-  if (!scope) return normalized;
-
-  const dataspace = BigInt(scope[1]!);
-  if (dataspace > MAX_U64) throw new TypeError('Asset ID dataspace scope must be a u64');
-  return `${normalized.slice(0, -scope[0].length)}#dataspace:${dataspace}`;
-}
-
-function normalizeAccountQueryParams(params?: Record<string, any>): Record<string, any> | undefined {
-  if (!params) return params;
-  const normalized = Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined));
-  for (const key of ['owned_by', 'authority', 'account'] as const) {
-    if (key in normalized) normalized[key] = normalizeAccountIdForApi(normalized[key]);
-  }
-  return normalized;
-}
-
-function toLimitOffsetParams(params?: PaginationParams): { limit?: number; offset?: number } {
-  if (!params) return {};
-  return {
-    limit: params.per_page,
-    offset: (params.page - 1) * params.per_page,
-  };
-}
-
-interface ExplorerCursorSdkParams {
-  cursor?: string;
-  limit?: number;
-}
-
-/** Parse one SDK-backed Torii cursor page without synthesizing numbered-page metadata. */
-async function fetchExplorerCursorPage<T>(
-  params: { cursor?: string | null; limit?: number } | undefined,
-  options: {
-    itemSchema: ZodType<T>;
-    request: (client: ToriiBrowserClient, pagination: ExplorerCursorSdkParams) => Promise<unknown>;
-  }
-): Promise<ResultWithStatus<CursorPaginated<T>>> {
-  const cursor = params?.cursor ?? undefined;
-  const limit = params?.limit;
-  const pagination: ExplorerCursorSdkParams = {
-    ...(cursor === undefined ? {} : { cursor }),
-    ...(limit === undefined ? {} : { limit }),
-  };
-  const response = await parseToriiSdkResult(
-    (client) => options.request(client, pagination),
-    CursorPaginated(options.itemSchema)
-  );
-  if (response.status !== SUCCESSFUL_FETCHING) {
-    return response;
-  }
-
-  const payload = response.data;
-  if (limit !== undefined && payload.pagination.limit !== limit) {
-    throw new TypeError('Explorer response limit must match the requested limit');
-  }
-  if (cursor !== undefined && payload.pagination.next_cursor === cursor) {
-    throw new TypeError('Explorer cursor did not advance');
-  }
-  return { status: SUCCESSFUL_FETCHING, data: payload };
-}
-
-/** Parse one immutable, snapshot-bound Explorer history page. */
-async function fetchExplorerHistoryPage<T>(
-  params: { cursor?: string | null; limit?: number } | undefined,
-  options: {
-    itemSchema: ZodType<T>;
-    request: (client: ToriiBrowserClient, pagination: ExplorerCursorSdkParams) => Promise<unknown>;
-  }
-): Promise<ResultWithStatus<HistoryCursorPaginated<T>>> {
-  const request = HistoryCursorParamsSchema.parse({ cursor: params?.cursor, limit: params?.limit });
-  const cursor = request.cursor ?? undefined;
-  const limit = request.limit;
-  const pagination: ExplorerCursorSdkParams = {
-    ...(cursor === undefined ? {} : { cursor }),
-    ...(limit === undefined ? {} : { limit }),
-  };
-  const response = await parseToriiSdkResult(
-    (client) => options.request(client, pagination),
-    HistoryCursorPaginated(options.itemSchema)
-  );
-  if (response.status !== SUCCESSFUL_FETCHING) return response;
-
-  if (limit !== undefined && response.data.pagination.limit !== limit) {
-    throw new TypeError('Explorer history response limit must match the requested limit');
-  }
-  if (cursor !== undefined && response.data.pagination.next_cursor === cursor) {
-    throw new TypeError('Explorer history cursor did not advance');
-  }
-  return response;
-}
-
-async function toriiSdkFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  try {
-    const response = await fetchWithTimeoutRetry(input, {
-      cache: 'no-store',
-      ...init,
-    });
-
-    if (!response.ok && FAILOVER_STATUSES.has(response.status)) {
-      trackToriiFailure(`HTTP ${response.status}`);
-      maybeTriggerToriiFailoverOnFailure('http_failure');
-    } else if (response.ok && (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0)) {
-      markToriiHealthy();
-    }
-
-    return response;
-  } catch (error) {
-    if (!init?.signal?.aborted) {
-      trackToriiFailure(error instanceof Error ? error.message : String(error));
-      maybeTriggerToriiFailoverOnFailure('network_error');
-    }
-    throw error;
-  }
-}
-
-async function toriiSdkStreamFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  try {
-    const response = await fetch(input, {
-      ...init,
-      cache: 'no-store',
-    });
-
-    if (!response.ok && FAILOVER_STATUSES.has(response.status)) {
-      trackToriiFailure(`HTTP ${response.status}`);
-    } else if (response.ok && (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0)) {
-      markToriiHealthy();
-    }
-
-    return response;
-  } catch (error) {
-    if (!init?.signal?.aborted) {
-      trackToriiFailure(error instanceof Error ? error.message : String(error));
-    }
-    throw error;
-  }
-}
-
-function toriiSdkClient(fetchImpl = toriiSdkFetch): ToriiBrowserClient {
-  const networkIdLiteral = getRuntimeConfig().networkId;
-  return new ToriiBrowserClient(getToriiBaseUrl(), {
-    fetchImpl,
-    networkId: networkIdLiteral ? NetworkId.parse(networkIdLiteral) : undefined,
-    defaultHeaders: toriiRequiredHeaders(),
-  });
-}
-
-async function parseToriiSdkResult<T>(
-  request: (client: ToriiBrowserClient) => Promise<unknown>,
-  schema: ZodType<T>
-): Promise<ResultWithStatus<T>> {
-  try {
-    const payload = await request(toriiSdkClient());
-    return { status: SUCCESSFUL_FETCHING, data: schema.parse(payload) };
-  } catch (error) {
-    if (error instanceof ToriiBrowserHttpError) {
-      return await transformErrorResponse(error.response);
-    }
-    throw error;
-  }
-}
-
 function assertToriiResponseIdentity(resource: string, matchesRequest: boolean): void {
   if (!matchesRequest) {
     throw new Error(`Torii ${resource} response identity does not match the requested resource`);
   }
-}
-
-async function parseBoundToriiSdkResult<T>(
-  request: (client: ToriiBrowserClient) => Promise<unknown>,
-  schema: ZodType<T>,
-  binding: { matchesRequest: (data: T) => boolean; resource: string }
-): Promise<ResultWithStatus<T>> {
-  const result = await parseToriiSdkResult(request, schema);
-  if (result.status === SUCCESSFUL_FETCHING) {
-    assertToriiResponseIdentity(binding.resource, binding.matchesRequest(result.data));
-  }
-  return result;
-}
-
-function normalizeExplorerHashForApi(value: string, resource: string): string {
-  const normalized = normalizeIrohaHash32(value);
-  if (!normalized) {
-    throw new TypeError(`${resource} must be a canonical Iroha 32-byte hash`);
-  }
-  return normalized;
-}
-
-function normalizeInstructionIndexForApi(index: number): number {
-  if (!Number.isInteger(index) || index < 0 || index > 0xffff_ffff) {
-    throw new TypeError('Instruction index must be a u32');
-  }
-  return index;
-}
-
-const AssetDefinitionDetailSelectorSchema = z.union([AssetDefinitionIdSchema, AssetDefinitionAliasSchema]);
-
-async function parsePermissionAwareToriiSdkResult<T>(
-  request: (client: ToriiBrowserClient) => Promise<unknown>,
-  schema: ZodType<T>
-): Promise<PermissionAwareResult<T>> {
-  try {
-    const payload = await request(toriiSdkClient());
-    return { status: SUCCESSFUL_FETCHING, data: schema.parse(payload) };
-  } catch (error) {
-    if (error instanceof ToriiBrowserHttpError) {
-      if (error.status === 401 || error.status === 403) {
-        return {
-          status: 'permission-denied',
-          error: new Error(error.bodyText || `Torii denied this read with status ${error.status}`),
-        };
-      }
-      return await transformErrorResponse(error.response);
-    }
-    throw error;
-  }
-}
-
-export async function fetchAccounts(params?: AccountSearchParams): Promise<ResultWithStatus<CursorPaginated<Account>>> {
-  const request = AccountSearchParamsSchema.parse(params ?? {});
-  return await fetchExplorerCursorPage(request, {
-    itemSchema: Account,
-    request: (client, pagination) =>
-      client.listExplorerAccounts({
-        ...pagination,
-        domain: request.domain,
-        withAsset: request.with_asset,
-      }),
-  });
-}
-
-export async function fetchAccount(id: string): Promise<ResultWithStatus<Account>> {
-  const normalizedId = normalizeAccountIdForApi(id);
-  return await parseBoundToriiSdkResult((client) => client.getExplorerAccount(normalizedId), Account, {
-    matchesRequest: (data) => data.id === normalizedId,
-    resource: 'account',
-  });
 }
 
 export async function fetchAccountQr(id: string, signal?: AbortSignal): Promise<ResultWithStatus<AccountQrSnapshot>> {
@@ -1018,140 +1415,6 @@ export async function fetchAccountQr(id: string, signal?: AbortSignal): Promise<
   return await transformErrorResponse(result.response);
 }
 
-export async function fetchAccountPermissions(
-  id: string,
-  params: AccountPermissionsSearchParams
-): Promise<PermissionAwareResult<AccountPermissionsResponse>> {
-  const normalizedId = normalizeAccountIdForApi(id);
-  const request = AccountPermissionsSearchParamsSchema.parse(params);
-  const result = await parsePermissionAwareToriiSdkResult(
-    (client) =>
-      client.listAccountPermissions(normalizedId, {
-        ...toLimitOffsetParams(request),
-        countMode: 'exact',
-      }),
-    AccountPermissionsResponse
-  );
-  if (result.status === SUCCESSFUL_FETCHING) {
-    assertExactOffsetPage('account permissions', request, result.data);
-  }
-  return result;
-}
-
-export async function fetchAccountHistory(
-  id: string,
-  params: AccountHistorySearchParams
-): Promise<PermissionAwareResult<AccountHistoryResponse>> {
-  const normalizedId = normalizeAccountIdForApi(id);
-  const request = AccountHistorySearchParamsSchema.parse(params);
-  const result = await parsePermissionAwareToriiSdkResult(
-    (client) =>
-      client.listAccountHistory(normalizedId, {
-        ...toLimitOffsetParams(request),
-        countMode: 'exact',
-        assetId: request.asset_id,
-      }),
-    AccountHistoryResponse
-  );
-  if (result.status === SUCCESSFUL_FETCHING) {
-    assertExactOffsetPage('account history', request, result.data);
-  }
-  return result;
-}
-
-export async function fetchMultisigSpec(
-  id: string,
-  auth: ToriiCanonicalRequestAuth
-): Promise<PermissionAwareResult<MultisigSpecResponse>> {
-  const normalizedId = normalizeMultisigAccountSelectorForApi(id);
-  const selector = normalizeAccountIdLiteral(normalizedId)
-    ? { multisigAccountId: normalizedId }
-    : { multisigAccountAlias: normalizedId };
-  return await parsePermissionAwareToriiSdkResult(
-    (client) => client.getMultisigSpec(selector, auth),
-    MultisigSpecResponse
-  );
-}
-
-export async function fetchMultisigProposals(
-  id: string,
-  params: MultisigProposalsSearchParams,
-  auth: ToriiCanonicalRequestAuth
-): Promise<PermissionAwareResult<MultisigProposalsQueryResponse>> {
-  const normalizedId = normalizeMultisigAccountSelectorForApi(id);
-  const request = MultisigProposalsSearchParamsSchema.parse(params);
-  const selector = normalizeAccountIdLiteral(normalizedId)
-    ? { multisigAccountId: normalizedId }
-    : { multisigAccountAlias: normalizedId };
-  return await parsePermissionAwareToriiSdkResult(
-    (client) =>
-      client.queryMultisigProposals(
-        {
-          ...selector,
-          status: request.status,
-          cursor: request.cursor,
-          limit: request.limit,
-        },
-        auth
-      ),
-    MultisigProposalsQueryResponse
-  );
-}
-
-export async function fetchAssets(
-  params?: AssetSearchParams
-): Promise<ResultWithStatus<CursorPaginated<ExplorerAsset>>> {
-  const request = AssetSearchParamsSchema.parse(params ?? {});
-  return await fetchExplorerCursorPage(request, {
-    itemSchema: ExplorerAsset,
-    request: (client, pagination) =>
-      client.listExplorerAssets({
-        ...pagination,
-        ownedBy: normalizeAccountIdForApi(request.owned_by),
-        definition: request.definition,
-        assetId: request.asset_id === undefined ? undefined : normalizeAssetIdForApi(request.asset_id),
-      }),
-  });
-}
-
-export async function fetchAsset(id: AssetId): Promise<ResultWithStatus<ExplorerAsset>> {
-  const normalizedId = normalizeAssetIdForApi(id.toString());
-  const result = await get<unknown>(`/v1/explorer/assets/${encodeURIComponent(normalizedId)}`);
-  if (result.status === SUCCESSFUL_FETCHING) {
-    const data = ExplorerAsset.parse(result.data);
-    if (data.id !== normalizedId) {
-      throw new Error('Torii asset response id does not match the requested asset ID');
-    }
-    return { status: SUCCESSFUL_FETCHING, data };
-  }
-  return await transformErrorResponse(result.response);
-}
-
-export async function fetchAssetDefinitions(
-  params?: AssetDefinitionSearchParams
-): Promise<ResultWithStatus<CursorPaginated<ExplorerAssetDefinition>>> {
-  const request = AssetDefinitionSearchParamsSchema.parse(params ?? {});
-  return await fetchExplorerCursorPage(request, {
-    itemSchema: ExplorerAssetDefinition,
-    request: (client, pagination) =>
-      client.listExplorerAssetDefinitions({
-        ...pagination,
-        owningDomain: request.owning_domain,
-        ownedBy: normalizeAccountIdForApi(request.owned_by),
-      }),
-  });
-}
-
-export async function fetchAssetDefinition(
-  selectorInput: AssetDefinitionSelector
-): Promise<ResultWithStatus<AssetDefinition>> {
-  const selector = AssetDefinitionDetailSelectorSchema.parse(selectorInput.toString());
-  return await parseBoundToriiSdkResult((client) => client.getAssetDefinition(selector), AssetDefinition, {
-    matchesRequest: (data) => data.id === selector || data.alias === selector,
-    resource: 'asset definition',
-  });
-}
-
 export async function fetchConfidentialAssetTransitions(
   id: AssetDefinitionId
 ): Promise<ResultWithStatus<ConfidentialAssetPolicy>> {
@@ -1165,186 +1428,6 @@ export async function fetchConfidentialAssetTransitions(
     return { status: SUCCESSFUL_FETCHING, data };
   }
   return await transformErrorResponse(result.response);
-}
-
-export async function fetchAssetDefinitionEconometrics(
-  id: AssetDefinitionId
-): Promise<ResultWithStatus<AssetDefinitionEconometrics>> {
-  const normalizedId = AssetDefinitionIdSchema.parse(id.toString());
-  return await parseBoundToriiSdkResult(
-    (client) => client.getExplorerAssetDefinitionEconometrics(normalizedId),
-    AssetDefinitionEconometrics,
-    { matchesRequest: (data) => data.definition_id === normalizedId, resource: 'asset definition econometrics' }
-  );
-}
-
-export async function fetchAssetDefinitionSnapshot(
-  id: AssetDefinitionId
-): Promise<ResultWithStatus<AssetDefinitionSnapshot>> {
-  const normalizedId = AssetDefinitionIdSchema.parse(id.toString());
-  return await parseBoundToriiSdkResult(
-    (client) => client.getExplorerAssetDefinitionSnapshot(normalizedId),
-    AssetDefinitionSnapshot,
-    { matchesRequest: (data) => data.definition_id === normalizedId, resource: 'asset definition snapshot' }
-  );
-}
-
-export async function fetchNFTs(params?: NFTsSearchParams): Promise<ResultWithStatus<CursorPaginated<NFT>>> {
-  const request = NFTsSearchParamsSchema.parse(params ?? {});
-  return await fetchExplorerCursorPage(request, {
-    itemSchema: NFT,
-    request: (client, pagination) =>
-      client.listExplorerNfts({
-        ...pagination,
-        domain: request.domain,
-        ownedBy: normalizeAccountIdForApi(request.owned_by),
-      }),
-  });
-}
-
-export async function fetchNFTById(id: NftId): Promise<ResultWithStatus<NFT>> {
-  const normalizedId = NftIdSchema.parse(id.toString());
-  return await parseBoundToriiSdkResult((client) => client.getExplorerNft(normalizedId), NFT, {
-    matchesRequest: (data) => data.id === normalizedId,
-    resource: 'NFT',
-  });
-}
-
-export async function fetchRwas(params?: RWASearchParams): Promise<ResultWithStatus<CursorPaginated<RWA>>> {
-  const request = RWASearchParamsSchema.parse(params ?? {});
-  return await fetchExplorerCursorPage(request, {
-    itemSchema: RWA,
-    request: (client, pagination) =>
-      client.listExplorerRwas({
-        ...pagination,
-        domain: request.domain,
-        ownedBy: normalizeAccountIdForApi(request.owned_by),
-      }),
-  });
-}
-
-export async function fetchRwaById(id: string): Promise<ResultWithStatus<RWA>> {
-  const normalizedId = RwaIdSchema.parse(id);
-  return await parseBoundToriiSdkResult((client) => client.getExplorerRwa(normalizedId), RWA, {
-    matchesRequest: (data) => data.id === normalizedId,
-    resource: 'RWA',
-  });
-}
-
-export async function fetchDomains(params?: DomainSearchParams): Promise<ResultWithStatus<CursorPaginated<Domain>>> {
-  const request = DomainSearchParamsSchema.parse(params ?? {});
-  return await fetchExplorerCursorPage(request, {
-    itemSchema: Domain,
-    request: (client, pagination) =>
-      client.listExplorerDomains({
-        ...pagination,
-        ownedBy: normalizeAccountIdForApi(request.owned_by),
-      }),
-  });
-}
-
-export async function fetchDomain(id: string): Promise<ResultWithStatus<Domain>> {
-  const normalizedId = normalizeDomainIdLiteral(id);
-  if (!normalizedId) throw new TypeError('Domain ID must be a canonical domain.dataspace literal');
-  return await parseBoundToriiSdkResult((client) => client.getExplorerDomain(normalizedId), Domain, {
-    matchesRequest: (data) => data.id === normalizedId,
-    resource: 'domain',
-  });
-}
-
-export async function fetchBlocks(params?: {
-  cursor?: string | null;
-  limit?: number;
-}): Promise<ResultWithStatus<HistoryCursorPaginated<Block>>> {
-  return await fetchExplorerHistoryPage(params, {
-    itemSchema: Block,
-    request: (client, pagination) => client.listExplorerBlocks(pagination),
-  });
-}
-
-export async function fetchBlock(heightOrHash: number | string): Promise<ResultWithStatus<Block>> {
-  const isDecimalHeight = typeof heightOrHash === 'string' && /^\d+$/u.test(heightOrHash);
-  if (typeof heightOrHash === 'number' || isDecimalHeight) {
-    if (typeof heightOrHash === 'string' && !/^[1-9]\d*$/u.test(heightOrHash)) {
-      throw new TypeError('Block height string must be a canonical positive decimal integer');
-    }
-    const height = typeof heightOrHash === 'number' ? heightOrHash : Number(heightOrHash);
-    if (!Number.isSafeInteger(height) || height < 1) {
-      throw new TypeError('Block height must be a positive safe integer');
-    }
-    return await parseBoundToriiSdkResult((client) => client.getExplorerBlock(height), Block, {
-      matchesRequest: (data) => data.height === height,
-      resource: 'block',
-    });
-  }
-
-  const normalizedHash = normalizeExplorerHashForApi(heightOrHash, 'Block hash');
-  return await parseBoundToriiSdkResult((client) => client.getExplorerBlock(normalizedHash), Block, {
-    matchesRequest: (data) => data.hash === normalizedHash,
-    resource: 'block',
-  });
-}
-
-export interface TransactionBlockEvidence {
-  proof: ToriiBlockProofs;
-  pathVerification: {
-    valid: boolean;
-    entry_hash_matches: boolean;
-    entry_proof_valid: boolean;
-    result_proof_valid: boolean;
-  };
-}
-
-export async function fetchLedgerBlockProof(
-  blockHeight: number,
-  transactionHash: string
-): Promise<ResultWithStatus<TransactionBlockEvidence>> {
-  try {
-    const proof = await toriiSdkClient().getLedgerBlockProof(blockHeight, transactionHash);
-    const { verifyBlockMerkleProof } = await import('@iroha/iroha-js/norito');
-    const expectedEntryHash = normalizeIrohaHash32(transactionHash);
-    const proofEntryHash = normalizeIrohaHash32(proof.entry_hash);
-    const entryHashMatches = expectedEntryHash !== null && expectedEntryHash === proofEntryHash;
-    const entryProofValid = verifyBlockMerkleProof(
-      proof.entry_proof.leaf,
-      proof.entry_proof.proof,
-      proof.entry_commitment
-    );
-    const resultProofValid = verifyBlockMerkleProof(
-      proof.result_proof.leaf,
-      proof.result_proof.proof,
-      proof.result_commitment
-    );
-    return {
-      status: SUCCESSFUL_FETCHING,
-      data: {
-        proof,
-        pathVerification: {
-          valid: entryHashMatches && entryProofValid && resultProofValid,
-          entry_hash_matches: entryHashMatches,
-          entry_proof_valid: entryProofValid,
-          result_proof_valid: resultProofValid,
-        },
-      },
-    };
-  } catch (error) {
-    if (error instanceof ToriiBrowserHttpError) {
-      return await transformErrorResponse(error.response);
-    }
-    throw error;
-  }
-}
-
-export async function fetchLedgerStateRoot(blockHeight: number): Promise<ResultWithStatus<LedgerStateRoot>> {
-  return await parseToriiSdkResult((client) => client.getLedgerStateRoot(blockHeight), LedgerStateRoot);
-}
-
-export async function fetchLedgerStateProof(blockHeight: number): Promise<ResultWithStatus<LedgerStateProof>> {
-  return await parseToriiSdkResult((client) => client.getLedgerStateProof(blockHeight), LedgerStateProof);
-}
-
-export async function fetchExplorerHealth(): Promise<ResultWithStatus<ExplorerHealth>> {
-  return await parseToriiSdkResult((client) => client.getExplorerHealth(), ExplorerHealth);
 }
 
 export async function fetchSystemParameters(): Promise<ResultWithStatus<SystemParameters>> {
@@ -1399,7 +1482,11 @@ export async function fetchLatestDefiOracleAttestation(
 
 export function streamTelemetryMetrics() {
   const telemetryLiveUrl = computed(() => buildToriiUrl('/v1/telemetry/live'));
-  const { data: streamedMetrics, status, open } = useEventSource(telemetryLiveUrl, [], {
+  const {
+    data: streamedMetrics,
+    status,
+    open,
+  } = useEventSource(telemetryLiveUrl, [], {
     autoReconnect: true,
   });
 
@@ -1418,243 +1505,11 @@ export function streamTelemetryMetrics() {
   };
 }
 
-export async function fetchPeersInfo(): Promise<ResultWithStatus<PeerInfo[]>> {
-  const res = await get('/v1/telemetry/peers-info');
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: PeerInfo.array().parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
 export async function fetchVpnProfile(): Promise<ResultWithStatus<VpnProfile>> {
   const res = await get<unknown>('/v1/vpn/profile');
   if (res.status === SUCCESSFUL_FETCHING) {
     return { status: SUCCESSFUL_FETCHING, data: VpnProfile.parse(res.data) };
   }
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchTransactions(
-  params?: TransactionSearchParams
-): Promise<ResultWithStatus<HistoryCursorPaginated<Transaction>>> {
-  const request = TransactionSearchParamsSchema.parse(params ?? {});
-  return await fetchExplorerHistoryPage(request, {
-    itemSchema: Transaction,
-    request: (client, pagination) =>
-      client.listExplorerTransactions(
-        normalizeAccountQueryParams({
-          ...pagination,
-          authority: request.authority,
-          block: request.block,
-          status: request.status?.toLowerCase(),
-          asset_id: request.asset_id === undefined ? undefined : normalizeAssetIdForApi(request.asset_id),
-        })
-      ),
-  });
-}
-
-export async function fetchLatestTransactions(
-  params?: TransactionSearchParams
-): Promise<ResultWithStatus<LatestTransactionsResponse>> {
-  const request = TransactionSearchParamsSchema.parse(params ?? {});
-  return await parseToriiSdkResult(
-    (client) =>
-      client.listLatestExplorerTransactions(
-        normalizeAccountQueryParams({
-          cursor: request.cursor ?? undefined,
-          limit: request.limit,
-          authority: request.authority,
-          block: request.block,
-          status: request.status?.toLowerCase(),
-          asset_id: request.asset_id === undefined ? undefined : normalizeAssetIdForApi(request.asset_id),
-        })
-      ),
-    LatestTransactionsResponse
-  );
-}
-
-export async function fetchTransaction(hash: string): Promise<ResultWithStatus<DetailedTransaction>> {
-  const normalizedHash = normalizeExplorerHashForApi(hash, 'Transaction hash');
-  return await parseBoundToriiSdkResult(
-    (client) => client.getExplorerTransaction(normalizedHash),
-    DetailedTransaction,
-    { matchesRequest: (data) => data.hash === normalizedHash, resource: 'transaction' }
-  );
-}
-
-export async function fetchInstructions(
-  params?: InstructionsSearchParams
-): Promise<ResultWithStatus<HistoryCursorPaginated<Instruction>>> {
-  const request = InstructionsSearchParamsSchema.parse(params ?? {});
-  return await fetchExplorerHistoryPage(request, {
-    itemSchema: Instruction,
-    request: (client, pagination) =>
-      client.listExplorerInstructions(
-        normalizeAccountQueryParams({
-          ...pagination,
-          account: request.account,
-          authority: request.authority,
-          kind: request.kind,
-          transaction_hash:
-            request.transaction_hash === undefined
-              ? undefined
-              : normalizeExplorerHashForApi(request.transaction_hash, 'Instruction transaction hash'),
-          transaction_status: request.transaction_status?.toLowerCase(),
-          block: request.block,
-          asset_id: request.asset_id === undefined ? undefined : normalizeAssetIdForApi(request.asset_id),
-        })
-      ),
-  });
-}
-
-function contractEventSdkOptions(params: ContractEventFilters) {
-  return {
-    authority: params.authority,
-    contractAddress: params.contract_address,
-    contractAlias: params.contract_alias,
-    module: params.module,
-    eventKind: params.event_kind,
-    participant: params.participant,
-    assetId: params.asset_id,
-    provenance: params.provenance,
-    sinceTimestampMs: params.since_timestamp_ms,
-    untilTimestampMs: params.until_timestamp_ms,
-    resultOk: params.result_ok,
-  };
-}
-
-export async function fetchContractActivity(
-  params: ContractActivitySearchParams
-): Promise<ResultWithStatus<ContractActivityResponse>> {
-  const request = ContractActivitySearchParamsSchema.parse(params);
-  const result = await parseToriiSdkResult(
-    (client) =>
-      client.listContractActivity({
-        ...toLimitOffsetParams(request),
-        countMode: 'exact',
-        authority: request.authority,
-        contractAddress: request.contract_address,
-        contractAlias: request.contract_alias,
-        contractEntrypoint: request.contract_entrypoint,
-        sinceTimestampMs: request.since_timestamp_ms,
-        untilTimestampMs: request.until_timestamp_ms,
-        resultOk: request.result_ok,
-      }),
-    ContractActivityResponse
-  );
-  if (result.status === SUCCESSFUL_FETCHING) {
-    assertExactOffsetPage('contract activity', request, result.data);
-  }
-  return result;
-}
-
-export async function fetchContractEvents(
-  params: ContractEventSearchParams
-): Promise<ResultWithStatus<ContractEventResponse>> {
-  const request = ContractEventSearchParamsSchema.parse(params);
-  const result = await parseToriiSdkResult(
-    (client) =>
-      client.listContractEvents({
-        ...toLimitOffsetParams(request),
-        countMode: 'exact',
-        ...contractEventSdkOptions(request),
-      }),
-    ContractEventResponse
-  );
-  if (result.status === SUCCESSFUL_FETCHING) {
-    assertExactOffsetPage('contract events', request, result.data);
-  }
-  return result;
-}
-
-export type ContractEventStreamMessage = Omit<ToriiSseEvent<unknown>, 'data'> & { data: ContractEvent };
-
-export async function* streamContractEvents(
-  filters: ContractEventFilters,
-  signal?: AbortSignal
-): AsyncGenerator<ContractEventStreamMessage, void, unknown> {
-  const request = ContractEventFiltersSchema.parse(filters);
-  for await (const event of toriiSdkClient(toriiSdkStreamFetch).streamContractEvents<unknown>({
-    ...contractEventSdkOptions(request),
-    signal,
-  })) {
-    yield {
-      ...event,
-      data: ContractEvent.parse(event.data),
-    };
-  }
-}
-
-export async function fetchLatestInstructions(
-  params?: InstructionsSearchParams
-): Promise<ResultWithStatus<LatestInstructionsResponse>> {
-  const request = InstructionsSearchParamsSchema.parse(params ?? {});
-  return await parseToriiSdkResult(
-    (client) =>
-      client.listLatestExplorerInstructions(
-        normalizeAccountQueryParams({
-          cursor: request.cursor ?? undefined,
-          limit: request.limit,
-          account: request.account,
-          authority: request.authority,
-          kind: request.kind,
-          transaction_hash:
-            request.transaction_hash === undefined
-              ? undefined
-              : normalizeExplorerHashForApi(request.transaction_hash, 'Instruction transaction hash'),
-          transaction_status: request.transaction_status?.toLowerCase(),
-          block: request.block,
-          asset_id: request.asset_id === undefined ? undefined : normalizeAssetIdForApi(request.asset_id),
-        })
-      ),
-    LatestInstructionsResponse
-  );
-}
-
-export async function fetchInstructionDetail(
-  transactionHash: string,
-  index: number
-): Promise<ResultWithStatus<Instruction>> {
-  const normalizedHash = normalizeExplorerHashForApi(transactionHash, 'Transaction hash');
-  const normalizedIndex = normalizeInstructionIndexForApi(index);
-  return await parseBoundToriiSdkResult(
-    (client) => client.getExplorerInstruction(normalizedHash, normalizedIndex),
-    Instruction,
-    {
-      matchesRequest: (data) => data.transaction_hash === normalizedHash && data.index === normalizedIndex,
-      resource: 'instruction',
-    }
-  );
-}
-
-export async function fetchInstructionContractView(
-  transactionHash: string,
-  index: number
-): Promise<ResultWithStatus<ContractCodeView>> {
-  const normalizedHash = normalizeExplorerHashForApi(transactionHash, 'Transaction hash');
-  const normalizedIndex = normalizeInstructionIndexForApi(index);
-  return await parseToriiSdkResult(
-    (client) => client.getExplorerInstructionContractView(normalizedHash, normalizedIndex),
-    ContractCodeView
-  );
-}
-
-export async function fetchNexusDataspacesAccountSummary(
-  literal: string
-): Promise<ResultWithStatus<NexusDataspacesAccountSummary>> {
-  const normalized = normalizeAccountIdForApi(literal);
-  const res = await get<NexusDataspacesAccountSummary>(
-    `/v1/nexus/dataspaces/accounts/${encodeURIComponent(normalized)}/summary`
-  );
-  if (res.status === SUCCESSFUL_FETCHING) {
-    const data = NexusDataspacesAccountSummary.parse(res.data);
-    assertToriiResponseIdentity(
-      'Nexus dataspaces account summary',
-      data.account === normalized && data.account_id === normalized
-    );
-    return { status: SUCCESSFUL_FETCHING, data };
-  }
-
   return await transformErrorResponse(res.response);
 }
 
@@ -1953,3 +1808,28 @@ export async function fetchZkVerifyingKey(
 
   return await transformErrorResponse(res.response);
 }
+
+export function isToriiBaseUrlForced(): boolean {
+  return getRuntimeConfig().toriiForceBaseUrl === true;
+}
+
+async function parseBoundToriiSdkResult<T>(
+  request: (client: ToriiBrowserClient) => Promise<unknown>,
+  schema: ZodType<T>,
+  binding: { matchesRequest: (data: T) => boolean; resource: string }
+): Promise<ResultWithStatus<T>> {
+  const result = await parseToriiSdkResult(request, schema);
+  if (result.status === SUCCESSFUL_FETCHING) {
+    assertToriiResponseIdentity(binding.resource, binding.matchesRequest(result.data));
+  }
+  return result;
+}
+
+function normalizeInstructionIndexForApi(index: number): number {
+  if (!Number.isInteger(index) || index < 0 || index > 0xffff_ffff) {
+    throw new TypeError('Instruction index must be a u32');
+  }
+  return index;
+}
+
+const AssetDefinitionDetailSelectorSchema = z.union([AssetDefinitionIdSchema, AssetDefinitionAliasSchema]);

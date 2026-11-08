@@ -25,7 +25,7 @@ const FRAMED_SHA256 = '0xc7e4bbea488a546f542484289d335695684a5fc6180b18b3584abd7
 const LIVE_TRANSFER_INSTRUCTION =
   'TlJUMAAAhip9dwddTSP/bBJh2wJ4EQDSAQAAAAAAABQKMDTp3Yu+Ag8OaXJvaGEudHJhbnNmZXLAA7gBAAAAAAAATlJUMAAApBdMeNY0H4+Y/Cra6O1nuQCQAQAAAAAAAOy4mMbcuTFWAgIAAACKA6oCggIBAAAA/AEBAQICAPUBAwAAAAAAAABOSiEAAAAAAAAAAQABhAExAb0BZQH/ASQBcwHNAacBpwEHAcEBgAH3AcEB5AH2AcQBzAGVASABPQFuAXoBJwFLAYUBswHtAW8BbAE1AgEATkohAAAAAAAAAAEAAbQBJgHPAXIBUQE3Af8B5gEzAbkB7gFJAXQBIAGoAYIB2gGYAW0BNgGxAfMBgQGPASEBkQFsAdUBtQH9AUoB/QIBAE5KIQAAAAAAAAABAAHHAeIB8QH8AZMBSQHvAZ8BkgG6AYEBeAFSAa4BbQGBAV0B2wGyAWABgQHUAWsBrQHiATMBSwERATwBHwF/AWUCAQAgAW4BFQFrAVABEAHmAUUB+AGDAesBgwEZAUYBuAGNAbgEAAAAAA0HAwAAAKCGAQQAAAAATwAAAABKIQAAAAAAAAABAAH9AVUB7wEWAZIB1QGPAYcBkwEvAVkBgAEhAbEB1gEWATkBRwGAAQgBIwHlAb4BuQF0AcoBiAEEAZoByAGaAfc=';
 
-function explorerInstruction(kind: Instruction['box']['json']['kind'], variant: string, value: unknown) {
+function explorerInstruction(kind: NonNullable<Instruction['box']['json']>['kind'], variant: string, value: unknown) {
   return {
     kind,
     box: {
@@ -41,8 +41,8 @@ function explorerInstruction(kind: Instruction['box']['json']['kind'], variant: 
   };
 }
 
-function present(kind: Instruction['box']['json']['kind'], variant: string, value: unknown) {
-  return buildInstructionPresentation(explorerInstruction(kind, variant, value));
+function present(kind: NonNullable<Instruction['box']['json']>['kind'], variant: string, value: unknown) {
+  return buildInstructionPresentation(explorerInstruction(kind, variant, value), 369);
 }
 
 function localize(message: InstructionPresentationMessage): string {
@@ -187,38 +187,44 @@ describe('instruction presentation registry', () => {
 
   it('rejects legacy, ambiguous, mismatched, and non-string quantity shapes', () => {
     expect(
-      buildInstructionPresentation({
-        kind: 'Transfer',
-        box: {
-          encoded: '0x01',
-          framed_sha256: FRAMED_SHA256,
-          json: {
-            kind: 'Transfer',
-            payload: { source: ASSET_ID, object: '1', destination: ACCOUNT },
-            wire_id: 'iroha.transfer',
-            encoded: '01',
+      buildInstructionPresentation(
+        {
+          kind: 'Transfer',
+          box: {
+            encoded: '0x01',
+            framed_sha256: FRAMED_SHA256,
+            json: {
+              kind: 'Transfer',
+              payload: { source: ASSET_ID, object: '1', destination: ACCOUNT },
+              wire_id: 'iroha.transfer',
+              encoded: '01',
+            },
           },
-        },
-      } as unknown as Instruction)
+        } as unknown as Instruction,
+        369
+      )
     ).toBeNull();
     expect(
-      buildInstructionPresentation({
-        kind: 'Transfer',
-        box: {
-          encoded: '0x01',
-          framed_sha256: FRAMED_SHA256,
-          json: {
-            kind: 'Transfer',
-            payload: {
-              variant: 'Asset',
-              value: { source: ASSET_ID, object: '1', destination: ACCOUNT },
-              extra: true,
+      buildInstructionPresentation(
+        {
+          kind: 'Transfer',
+          box: {
+            encoded: '0x01',
+            framed_sha256: FRAMED_SHA256,
+            json: {
+              kind: 'Transfer',
+              payload: {
+                variant: 'Asset',
+                value: { source: ASSET_ID, object: '1', destination: ACCOUNT },
+                extra: true,
+              },
+              wire_id: 'iroha.transfer',
+              encoded: '01',
             },
-            wire_id: 'iroha.transfer',
-            encoded: '01',
           },
-        },
-      } as unknown as Instruction)
+        } as unknown as Instruction,
+        369
+      )
     ).toBeNull();
     expect(present('Transfer', 'MadeUpVariant', { object: DOMAIN })).toBeNull();
     expect(
@@ -258,7 +264,7 @@ describe('instruction presentation registry', () => {
     expect(invalidate?.primaryEntity?.value).toBe(ACCOUNT);
   });
 
-  it('decodes and presents nested Norito instructions in an exact multisig proposal', () => {
+  it('preserves opaque nested Norito instructions in an exact multisig proposal', () => {
     const result = present('Custom', 'Custom', {
       Propose: {
         account: MULTISIG_ACCOUNT,
@@ -269,10 +275,8 @@ describe('instruction presentation registry', () => {
 
     expect(result && localize(result.title)).toBe('Multisig proposal');
     expect(result?.nestedInstructions).toHaveLength(1);
-    expect(result?.nestedInstructions[0]?.presentation?.registryKey).toBe('Transfer:Asset');
-    expect(result?.nestedInstructions[0]?.presentation?.fields.find((field) => field.key === 'amount')?.value).toBe(
-      '100000'
-    );
+    expect(result?.nestedInstructions[0]?.presentation).toBeNull();
+    expect(result?.nestedInstructions[0]?.encoded).toBe(LIVE_TRANSFER_INSTRUCTION);
   });
 
   it('requires one explicit multisig tag and never treats an arbitrary first key as a variant', () => {
@@ -295,24 +299,27 @@ describe('instruction presentation registry', () => {
   });
 
   it('presents only whitelisted exact decoded instruction tags', () => {
-    const decoded = buildDecodedInstructionPresentation({
-      Transfer: {
-        Asset: {
-          source: ASSET_ID,
-          object: EXACT_AMOUNT,
-          destination: ACCOUNT,
+    const decoded = buildDecodedInstructionPresentation(
+      {
+        Transfer: {
+          Asset: {
+            source: ASSET_ID,
+            object: EXACT_AMOUNT,
+            destination: ACCOUNT,
+          },
         },
       },
-    });
+      369
+    );
     expect(decoded?.registryKey).toBe('Transfer:Asset');
-    expect(buildDecodedInstructionPresentation({ Transfer: { Asset: {} }, Register: {} })).toBeNull();
-    expect(buildDecodedInstructionPresentation({ GuessMe: { object: DOMAIN } })).toBeNull();
+    expect(buildDecodedInstructionPresentation({ Transfer: { Asset: {} }, Register: {} }, 369)).toBeNull();
+    expect(buildDecodedInstructionPresentation({ GuessMe: { object: DOMAIN } }, 369)).toBeNull();
   });
 
   it.each(['Shield', 'ZkTransfer', 'Unshield', 'SetParameter', 'ActivateRuntimeUpgrade'])(
     'keeps unsupported complex %s decoded payloads in the authoritative raw view',
     (kind) => {
-      expect(buildDecodedInstructionPresentation({ [kind]: {} })).toBeNull();
+      expect(buildDecodedInstructionPresentation({ [kind]: {} }, 369)).toBeNull();
     }
   );
 

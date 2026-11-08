@@ -149,7 +149,33 @@ $light-color-map: (
   'info-background-hover': $info-10,
   'debug': $debug-90,
   'debug-background': $debug-5,
-  'debug-background-hover': $debug-10
+  'debug-background-hover': $debug-10,
+  // Dashboard instrument surfaces (warm soft-UI chassis, recessed chart wells)
+  'dash-chassis': #ece7e5,
+  'dash-panel-top': #f7f4f3,
+  'dash-panel-bottom': #e6e0de,
+  'dash-well': #f7f4f3,
+  'dash-ink-muted': #7d5d5d,
+  'dash-grid': #e3dcda,
+  'dash-axis': #cdbfbe,
+  'dash-led-off': #d9d1cf,
+  'dash-lcd': #e4e1d8,
+  'dash-lcd-ink': #3a2a2a,
+  'dash-bezel-light': #ffffff,
+  'dash-bezel-dark': #c9bdbb,
+  // Chart marks; validated against `dash-well` (see chart-palette notes)
+  'chart-accent': $primary-70,
+  'chart-good': $success-60,
+  'chart-critical': $error-60,
+  'chart-warning': $warning-60,
+  'chart-series-1': #2a78d6,
+  'chart-series-2': #eb6834,
+  'chart-series-3': #1baf7a,
+  'chart-series-4': #eda100,
+  'chart-series-5': #e87ba4,
+  'chart-heat-low': $primary-20,
+  'chart-heat-high': $primary-80,
+  'chart-unknown': #cfc5c3
 );
 
 $dark-color-map: (
@@ -197,7 +223,31 @@ $dark-color-map: (
   'info-background-hover': $info-10,
   'debug': $debug-90,
   'debug-background': $debug-5,
-  'debug-background-hover': $debug-10
+  'debug-background-hover': $debug-10,
+  'dash-chassis': #151414,
+  'dash-panel-top': #1f1d1d,
+  'dash-panel-bottom': #141313,
+  'dash-well': #161515,
+  'dash-ink-muted': $neutral-40,
+  'dash-grid': #2a2828,
+  'dash-axis': #3d3939,
+  'dash-led-off': #2c2929,
+  'dash-lcd': #0c0b0b,
+  'dash-lcd-ink': #ff8a80,
+  'dash-bezel-light': #3a3636,
+  'dash-bezel-dark': #050505,
+  'chart-accent': $primary-50,
+  'chart-good': $success-50,
+  'chart-critical': $error-50,
+  'chart-warning': $warning-30,
+  'chart-series-1': #3987e5,
+  'chart-series-2': #d95926,
+  'chart-series-3': #199e70,
+  'chart-series-4': #c98500,
+  'chart-series-5': #d55181,
+  'chart-heat-low': #3a1414,
+  'chart-heat-high': $primary-30,
+  'chart-unknown': #3a3636
 );
 
 $light-shadow-map: (
@@ -230,6 +280,10 @@ $light-shadow-map: (
   'elevated-active-3': inset 1px 1px 2px rgba(255, 255, 255, 0.8),
   'notification-1': 8px 8px 20px rgba(0, 0, 0, 0.2),
   'notification-2': -8px -8px 20px rgba(0, 0, 0, 0.2),
+  'dash-raised': (10px 10px 24px rgba(112, 78, 78, 0.18), -10px -10px 24px rgba(255, 255, 255, 0.92)),
+  'dash-raised-sm': (4px 4px 10px rgba(112, 78, 78, 0.2), -4px -4px 10px rgba(255, 255, 255, 0.95)),
+  'dash-inset': (inset 3px 3px 8px rgba(112, 78, 78, 0.18), inset -3px -3px 8px rgba(255, 255, 255, 0.9)),
+  'dash-inset-deep': (inset 5px 5px 14px rgba(80, 52, 52, 0.26), inset -5px -5px 12px rgba(255, 255, 255, 0.95)),
 );
 
 $dark-shadow-map: (
@@ -262,6 +316,10 @@ $dark-shadow-map: (
   'elevated-active-3': inset 1px 1px 2px rgba(0, 0, 0, 0.8),
   'notification-1': 8px 8px 20px rgba(255, 255, 255, 0.15),
   'notification-2': -8px -8px 20px rgba(255, 255, 255, 0.15),
+  'dash-raised': (10px 10px 26px rgba(0, 0, 0, 0.72), -6px -6px 18px rgba(255, 255, 255, 0.045)),
+  'dash-raised-sm': (4px 4px 10px rgba(0, 0, 0, 0.7), -3px -3px 8px rgba(255, 255, 255, 0.05)),
+  'dash-inset': (inset 3px 3px 9px rgba(0, 0, 0, 0.75), inset -2px -2px 6px rgba(255, 255, 255, 0.04)),
+  'dash-inset-deep': (inset 5px 5px 14px rgba(0, 0, 0, 0.9), inset -3px -3px 10px rgba(255, 255, 255, 0.05)),
 );
 
 @mixin make-theme($map, $prefix) {

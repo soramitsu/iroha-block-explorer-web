@@ -10,7 +10,7 @@ import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 import * as http from '@/shared/api';
 import type { Instruction, TransactionStatus } from '@/shared/api/schemas';
-import { normalizeAccountIdLiteral } from '@/shared/lib/account-literal';
+import { normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
 import { useNotifications } from '@/shared/ui/composables/notifications';
 import TraceGraphWebGL from '@/shared/ui/components/TraceGraphWebGL.vue';
 import {
@@ -30,6 +30,7 @@ import {
   type TraceSeed,
 } from '@/shared/lib/tracing';
 import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
+import { advanceHistoryScanCursor, createHistoryScanCursor } from '@/shared/lib/history-scan';
 
 const route = useRoute();
 const navigation = useScopedExplorerNavigation();
@@ -41,48 +42,47 @@ const SCAN_REQUEST_PACING_MS = 125;
 const SCAN_CAPACITY_MAX_RETRIES = 3;
 const SCAN_CAPACITY_RETRY_BASE_MS = 500;
 const SCAN_CAPACITY_RETRY_MAX_MS = 4_000;
-const SCAN_CURSOR_PAGE_LIMIT = 1_024;
 
 type TraceInstructionsParams = NonNullable<Parameters<typeof http.fetchInstructions>[0]>;
 type TraceInstructionsResponse = Awaited<ReturnType<typeof http.fetchInstructions>>;
 
 interface GraphNodeContextPayload {
-  nodeId: string | null;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  nodeId: string | null
+  x: number
+  y: number
+  width: number
+  height: number
 }
 
 interface DirectionalFlow {
-  edgeId: string;
-  accountId: string;
-  count: number;
-  latestSeenMs: number;
-  variants: string[];
+  edgeId: string
+  accountId: string
+  count: number
+  latestSeenMs: number
+  variants: string[]
 }
 
 type TraceStatusFilter = 'all' | TransactionStatus;
 
 interface TraceTransactionState {
-  hash: string;
-  status: TransactionStatus;
-  authority: string;
-  latestBlock: number;
-  firstSeenMs: number;
-  latestSeenMs: number;
-  instructionCount: number;
-  eventCount: number;
-  participants: string[];
-  variants: string[];
-  assetIds: string[];
+  hash: string
+  status: TransactionStatus
+  authority: string
+  latestBlock: number
+  firstSeenMs: number
+  latestSeenMs: number
+  instructionCount: number
+  eventCount: number
+  participants: string[]
+  variants: string[]
+  assetIds: string[]
 }
 
 interface RejectionReasonGroup {
-  reason: string;
-  count: number;
-  hashes: string[];
-  authorities: string[];
+  reason: string
+  count: number
+  hashes: string[]
+  authorities: string[]
 }
 
 const nodesMap = reactive(new Map<string, TraceNode>());
@@ -147,8 +147,7 @@ const activeSeed = computed<TraceSeed | null>(() => {
   const trimmed = rawValue.trim();
   if (!trimmed) return null;
 
-  const normalizedValue =
-    rawType === 'account' ? normalizeAccountIdLiteral(trimmed) : /^[0-9a-f]{64}$/u.test(trimmed) ? trimmed : null;
+  const normalizedValue = rawType === 'account' ? normalizeToriiAccountSelectorLiteral(trimmed) : trimmed;
   if (!normalizedValue) return null;
 
   return {
@@ -160,13 +159,13 @@ const activeSeed = computed<TraceSeed | null>(() => {
 const rankedNodes = computed(() =>
   [...nodes.value].sort(
     (left, right) =>
-      right.risk.score - left.risk.score || right.eventCount - left.eventCount || left.id.localeCompare(right.id)
+      right.risk.score - left.risk.score ||
+      right.eventCount - left.eventCount ||
+      left.id.localeCompare(right.id)
   )
 );
 const recentEvents = computed(() =>
-  [...allEventsMap.values()].sort(
-    (left, right) => right.createdAtMs - left.createdAtMs || left.id.localeCompare(right.id)
-  )
+  [...allEventsMap.values()].sort((left, right) => right.createdAtMs - left.createdAtMs || left.id.localeCompare(right.id))
 );
 const layout = computed(() => buildTraceLayout(nodes.value));
 const nodeProminenceById = computed(() => {
@@ -176,7 +175,9 @@ const nodeProminenceById = computed(() => {
 
   for (let index = 0; index < ranked.length; index += 1) {
     const node = ranked[index];
-    const rankWeight = rankedWindow <= 1 || index >= rankedWindow ? 0 : 1 - index / (rankedWindow - 1);
+    const rankWeight = rankedWindow <= 1 || index >= rankedWindow
+      ? 0
+      : 1 - index / (rankedWindow - 1);
     const activityWeight = Math.min(1, Math.log10(node.eventCount + 1) / 3);
     const riskWeight = Math.min(1, node.risk.score / 100);
     const prominence = Math.max(0.08, rankWeight * 0.75 + activityWeight * 0.15 + riskWeight * 0.1);
@@ -225,9 +226,9 @@ const renderEdges = computed(() =>
     .filter((edge): edge is NonNullable<typeof edge> => edge !== null)
 );
 
-const selectedNode = computed(() => (selectedNodeId.value ? (nodesMap.get(selectedNodeId.value) ?? null) : null));
+const selectedNode = computed(() => (selectedNodeId.value ? nodesMap.get(selectedNodeId.value) ?? null : null));
 const selectedNodeLabel = computed(() =>
-  selectedNodeId.value ? (manualLabels[selectedNodeId.value] ?? { tag: '', risky: false }) : { tag: '', risky: false }
+  selectedNodeId.value ? manualLabels[selectedNodeId.value] ?? { tag: '', risky: false } : { tag: '', risky: false }
 );
 const selectedNodeIsExpanded = computed(() =>
   selectedNodeId.value ? expandedNodeIds.has(selectedNodeId.value) : false
@@ -257,8 +258,8 @@ const filteredTransactionStates = computed(() =>
     .filter((transaction) => {
       if (transactionStatusFilter.value !== 'all' && transaction.status !== transactionStatusFilter.value) return false;
       if (
-        normalizedTransactionHashFilter.value &&
-        !transaction.hash.toLowerCase().includes(normalizedTransactionHashFilter.value)
+        normalizedTransactionHashFilter.value
+        && !transaction.hash.toLowerCase().includes(normalizedTransactionHashFilter.value)
       ) {
         return false;
       }
@@ -274,12 +275,8 @@ const filteredTransactionStates = computed(() =>
 const displayEvents = computed(() =>
   recentEvents.value
     .filter((event) => {
-      if (transactionStatusFilter.value !== 'all' && event.transactionStatus !== transactionStatusFilter.value)
-        return false;
-      if (
-        normalizedTransactionHashFilter.value &&
-        !event.transactionHash.toLowerCase().includes(normalizedTransactionHashFilter.value)
-      ) {
+      if (transactionStatusFilter.value !== 'all' && event.transactionStatus !== transactionStatusFilter.value) return false;
+      if (normalizedTransactionHashFilter.value && !event.transactionHash.toLowerCase().includes(normalizedTransactionHashFilter.value)) {
         return false;
       }
       return true;
@@ -289,9 +286,7 @@ const displayEvents = computed(() =>
 const rejectedReasonLookupInProgress = computed(() => rejectedReasonLookupCount.value > 0);
 const rejectedReasonGroups = computed<RejectionReasonGroup[]>(() => {
   const groups = new Map<string, RejectionReasonGroup>();
-  const rejectedTransactions = Array.from(transactionStatesMap.values()).filter(
-    (transaction) => transaction.status === 'Rejected'
-  );
+  const rejectedTransactions = Array.from(transactionStatesMap.values()).filter((transaction) => transaction.status === 'Rejected');
 
   for (const transaction of rejectedTransactions) {
     const reason = rejectionReasonByHash.get(transaction.hash) ?? t('tracing.rejectionUnavailable');
@@ -371,7 +366,7 @@ function collectDirectionalFlows(nodeId: string | null, direction: 'incoming' | 
 const selectedNodeIncomingFlows = computed(() => collectDirectionalFlows(selectedNodeId.value, 'incoming'));
 const selectedNodeOutgoingFlows = computed(() => collectDirectionalFlows(selectedNodeId.value, 'outgoing'));
 
-function clampNodeMenuPosition(anchor: GraphNodeContextPayload): { left: number; top: number } {
+function clampNodeMenuPosition(anchor: GraphNodeContextPayload): { left: number, top: number } {
   const menuWidth = 330;
   const menuHeight = 260;
   const padding = 8;
@@ -652,7 +647,7 @@ function syncCursorSetsFromState() {
 }
 
 function enqueueAccount(accountId: string, depth: number) {
-  const normalized = normalizeAccountIdLiteral(accountId);
+  const normalized = normalizeToriiAccountSelectorLiteral(accountId);
   if (!normalized) return;
   if (completedAccountIds.has(normalized)) return;
   const existing = cursors.value.find((cursor) => cursor.accountId === normalized);
@@ -664,9 +659,7 @@ function enqueueAccount(accountId: string, depth: number) {
   cursors.value.push({
     accountId: normalized,
     depth,
-    block: Math.max(1, state.latestBlock),
-    cursor: null,
-    visitedCursors: [],
+    ...createHistoryScanCursor(),
     exhausted: false,
   });
   queuedAccountIds.add(normalized);
@@ -708,6 +701,7 @@ function ingestTraceEvent(event: TraceEvent, depthHint: number, _scannedAccountI
       latestSeenMs: event.createdAtMs,
     });
   }
+
 }
 
 async function fetchLatestBlockHeight() {
@@ -729,9 +723,9 @@ function canonicalCapacityRetryAfterMs(response: TraceInstructionsResponse): num
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
 
   const envelope = payload as {
-    code?: unknown;
-    message?: unknown;
-    details?: unknown;
+    code?: unknown
+    message?: unknown
+    details?: unknown
   };
   if (
     typeof envelope.code !== 'string' ||
@@ -774,8 +768,11 @@ async function fetchTraceInstructions(params: TraceInstructionsParams): Promise<
     const retryAfterMs = canonicalCapacityRetryAfterMs(response);
     if (retryAfterMs === null || retryIndex >= SCAN_CAPACITY_MAX_RETRIES) return response;
 
-    const exponentialDelayMs = SCAN_CAPACITY_RETRY_BASE_MS * 2 ** retryIndex;
-    await waitForScanDelay(Math.min(SCAN_CAPACITY_RETRY_MAX_MS, Math.max(retryAfterMs, exponentialDelayMs)));
+    const exponentialDelayMs = SCAN_CAPACITY_RETRY_BASE_MS * (2 ** retryIndex);
+    await waitForScanDelay(Math.min(
+      SCAN_CAPACITY_RETRY_MAX_MS,
+      Math.max(retryAfterMs, exponentialDelayMs)
+    ));
     retryIndex += 1;
   }
 }
@@ -786,16 +783,16 @@ async function ingestTransactionSeed(seedHash: string) {
     enqueueAccount(txResponse.data.authority, 0);
   }
 
-  let cursor: string | null = null;
-  const visitedCursors = new Set<string>();
-  for (let pageNumber = 1; pageNumber <= SCAN_CURSOR_PAGE_LIMIT; pageNumber += 1) {
+  let cursor = createHistoryScanCursor();
+  do {
     const response = await fetchTraceInstructions({
-      cursor,
+      cursor: cursor.nextCursor,
       limit: SCAN_PAGE_SIZE,
       transaction_hash: seedHash,
       kind: 'Transfer',
     });
-    if (response.status !== SUCCESSFUL_FETCHING) break;
+    if (response.status !== SUCCESSFUL_FETCHING) throw new Error(t('tracing.fetchError'));
+    cursor = advanceHistoryScanCursor(cursor, response.data);
     for (const instruction of response.data.items) {
       const traceEvents = instructionToTraceEvents(instruction);
       upsertTransactionStateFromInstruction(instruction, traceEvents);
@@ -803,23 +800,8 @@ async function ingestTransactionSeed(seedHash: string) {
     }
     await hydrateRejectedReasons();
     refreshGraphSnapshots();
-
-    if (!response.data.pagination.has_more) break;
-    if (pageNumber === SCAN_CURSOR_PAGE_LIMIT) {
-      state.error = t('tracing.fetchError');
-      state.paused = true;
-      break;
-    }
-    const nextCursor = response.data.pagination.next_cursor;
-    if (!nextCursor || visitedCursors.has(nextCursor)) {
-      state.error = t('tracing.fetchError');
-      state.paused = true;
-      break;
-    }
-    visitedCursors.add(nextCursor);
-    cursor = nextCursor;
-    await waitForScanDelay(SCAN_REQUEST_PACING_MS);
-  }
+    if (cursor.nextCursor !== null) await waitForScanDelay(SCAN_REQUEST_PACING_MS);
+  } while (cursor.nextCursor !== null);
 }
 
 async function bootstrapFromSeed(seed: TraceSeed) {
@@ -838,7 +820,9 @@ async function bootstrapFromSeed(seed: TraceSeed) {
 
     if (seed.type === 'account') {
       const resolvedAccount = await http.fetchAccount(seed.value);
-      const canonicalSeed = resolvedAccount.status === SUCCESSFUL_FETCHING ? resolvedAccount.data.id : seed.value;
+      const canonicalSeed = resolvedAccount.status === SUCCESSFUL_FETCHING
+        ? resolvedAccount.data.i105_address
+        : seed.value;
       rootAccountId.value = canonicalSeed;
       expandedNodeIds.add(canonicalSeed);
       enqueueAccount(canonicalSeed, 0);
@@ -858,16 +842,15 @@ async function bootstrapFromSeed(seed: TraceSeed) {
 }
 
 async function scanCursor(cursor: TraceCursor): Promise<void> {
-  if (cursor.exhausted || cursor.block < 1) {
+  if (cursor.exhausted) {
     markCursorCompleted(cursor);
     return;
   }
 
   const response = await fetchTraceInstructions({
-    cursor: cursor.cursor,
+    cursor: cursor.nextCursor,
     limit: SCAN_PAGE_SIZE,
     account: cursor.accountId,
-    block: cursor.block,
     kind: 'Transfer',
   });
   if (response.status !== SUCCESSFUL_FETCHING) {
@@ -875,6 +858,8 @@ async function scanCursor(cursor: TraceCursor): Promise<void> {
     state.paused = true;
     return;
   }
+  // Validate continuity before ingesting this page or advancing its checkpoint.
+  const continuation = advanceHistoryScanCursor(cursor, response.data);
   state.error = '';
 
   for (const instruction of response.data.items) {
@@ -888,28 +873,8 @@ async function scanCursor(cursor: TraceCursor): Promise<void> {
   await hydrateRejectedReasons();
   refreshGraphSnapshots();
 
-  if (response.data.pagination.has_more) {
-    const nextCursor = response.data.pagination.next_cursor;
-    if (
-      !nextCursor ||
-      cursor.visitedCursors.includes(nextCursor) ||
-      cursor.visitedCursors.length >= SCAN_CURSOR_PAGE_LIMIT - 1
-    ) {
-      state.error = t('tracing.fetchError');
-      state.paused = true;
-      return;
-    }
-    cursor.visitedCursors.push(nextCursor);
-    cursor.cursor = nextCursor;
-  } else {
-    cursor.cursor = null;
-    cursor.visitedCursors = [];
-    cursor.block -= 1;
-  }
-
-  if (cursor.block < 1) {
-    markCursorCompleted(cursor);
-  }
+  Object.assign(cursor, continuation);
+  if (cursor.nextCursor === null) markCursorCompleted(cursor);
 }
 
 async function runScanLoop() {
@@ -1003,22 +968,19 @@ function toggleNodeExpansion(nodeId: string) {
 function openSeedFromDraft() {
   const value = seedDraft.value.trim();
   if (!value) return;
-  const normalizedValue =
-    seedDraft.type === 'account' ? normalizeAccountIdLiteral(value) : /^[0-9a-f]{64}$/u.test(value) ? value : null;
+  const normalizedValue = seedDraft.type === 'account' ? normalizeToriiAccountSelectorLiteral(value) : value;
   if (!normalizedValue) {
     state.error = t('searchUnsupported');
     return;
   }
   state.error = '';
-  navigation
-    .replace({
-      name: 'tracing-workspace',
-      query: {
-        seed_type: seedDraft.type,
-        seed_value: normalizedValue,
-      },
-    })
-    .catch(() => {});
+  navigation.replace({
+    name: 'tracing-workspace',
+    query: {
+      seed_type: seedDraft.type,
+      seed_value: normalizedValue,
+    },
+  }).catch(() => {});
 }
 
 function updateManualLabel(label: ManualLabel) {
@@ -1043,25 +1005,6 @@ function formatParticipants(accounts: readonly string[]): string {
   if (accounts.length === 0) return '-';
   if (accounts.length <= 3) return accounts.join(', ');
   return `${accounts.slice(0, 3).join(', ')} +${accounts.length - 3}`;
-}
-
-const RISK_FLAG_MESSAGE_KEYS = {
-  high_fan_out: 'tracing.riskSignals.highFanOut',
-  high_fan_in: 'tracing.riskSignals.highFanIn',
-  hub_activity: 'tracing.riskSignals.hubActivity',
-  high_activity: 'tracing.riskSignals.highActivity',
-  rapid_hops: 'tracing.riskSignals.rapidHops',
-  manual_risky_label: 'tracing.riskSignals.manualRiskyLabel',
-} as const;
-
-function formatRiskFlags(flags: readonly string[]): string {
-  if (flags.length === 0) return '-';
-  return flags
-    .map((flag) => {
-      const key = RISK_FLAG_MESSAGE_KEYS[flag as keyof typeof RISK_FLAG_MESSAGE_KEYS];
-      return key ? t(key) : t('tracing.riskSignals.unknown', { flag });
-    })
-    .join(', ');
 }
 
 function statusBadgeClass(status: TransactionStatus) {
@@ -1122,20 +1065,18 @@ function applyBundle(bundle: TraceBundle) {
   cursors.value = bundle.cursors.map((cursor) => ({ ...cursor }));
   syncCursorSetsFromState();
   refreshGraphSnapshots();
-  state.latestBlock = Math.max(1, ...cursors.value.map((cursor) => cursor.block), state.latestBlock);
+  state.latestBlock = Math.max(1, ...bundle.graph.events.map((event) => event.block), state.latestBlock);
   state.discoveredEvents = bundle.graph.events.length;
 
   seedDraft.type = bundle.seed.type;
   seedDraft.value = bundle.seed.value;
-  navigation
-    .replace({
-      name: 'tracing-workspace',
-      query: {
-        seed_type: bundle.seed.type,
-        seed_value: bundle.seed.value,
-      },
-    })
-    .catch(() => {});
+  navigation.replace({
+    name: 'tracing-workspace',
+    query: {
+      seed_type: bundle.seed.type,
+      seed_value: bundle.seed.value,
+    },
+  }).catch(() => {});
 
   state.paused = false;
   triggerScanLoop();
@@ -1167,7 +1108,7 @@ function exportBundle() {
 
   const bundle: TraceBundle = {
     format: 'iroha-trace-bundle',
-    version: 2,
+    version: 1,
     exported_at: new Date().toISOString(),
     torii_base_url: http.getToriiBaseUrl(),
     seed,
@@ -1206,6 +1147,26 @@ async function onImportInputChanged(event: Event) {
     if (target) target.value = '';
   }
 }
+
+const RISK_FLAG_MESSAGE_KEYS = {
+  high_fan_out: 'tracing.riskSignals.highFanOut',
+  high_fan_in: 'tracing.riskSignals.highFanIn',
+  hub_activity: 'tracing.riskSignals.hubActivity',
+  high_activity: 'tracing.riskSignals.highActivity',
+  rapid_hops: 'tracing.riskSignals.rapidHops',
+  manual_risky_label: 'tracing.riskSignals.manualRiskyLabel',
+} as const;
+
+function formatRiskFlags(flags: readonly string[]): string {
+  if (flags.length === 0) return '-';
+  return flags
+    .map((flag) => {
+      const key = RISK_FLAG_MESSAGE_KEYS[flag as keyof typeof RISK_FLAG_MESSAGE_KEYS];
+      return key ? t(key) : t('tracing.riskSignals.unknown', { flag });
+    })
+    .join(', ');
+}
+
 
 function formatRelativeAge(timestampMs: number): string {
   const delta = Math.max(0, Date.now() - timestampMs);
@@ -1768,9 +1729,7 @@ watch(
     min-width: 0;
     padding: size(0.5) size(0.75);
     text-align: left;
-    transition:
-      border-color 0.18s ease,
-      transform 0.18s ease;
+    transition: border-color 0.18s ease, transform 0.18s ease;
 
     &:hover {
       border-color: theme-color('primary');

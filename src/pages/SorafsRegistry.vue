@@ -39,7 +39,7 @@
         v-model:page-size="limit"
         :loading="isManifestsLoading"
         pagination-mode="cursor"
-        :cursor-pagination="pinPagination"
+        :cursor-pagination="pinPagination ? { nextCursor: pinPagination.next_cursor } : null"
         :items="manifests"
         :row-key="manifestRowKey"
         container-class="sorafs-registry-page__table"

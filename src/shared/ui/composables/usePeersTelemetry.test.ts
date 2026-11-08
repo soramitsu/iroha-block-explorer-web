@@ -19,6 +19,9 @@ const hoisted = vi.hoisted(() => ({
       url: 'https://node-a',
       connected: true,
       telemetry_unsupported: false,
+      config: null,
+      location: null,
+      connected_peers: null,
     },
   ] satisfies PeerInfo[],
   propagationSample: [

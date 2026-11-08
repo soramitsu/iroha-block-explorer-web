@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { compileKotodamaProgram } from './kotodama-studio-compiler';
+import { IROHA_SDK_SPECIFIER } from '../../../scripts/verify-iroha-sdk.mjs';
 
 const INSTALLED_IROHA_JS_ROOT = path.resolve(
   process.cwd(),
@@ -23,6 +24,8 @@ function compilerFailureResponse() {
       notes: [],
       help: null,
       fix: null,
+      alternative_fixes: [],
+      localized: null,
     }]),
   }), {
     status: 200,
@@ -31,13 +34,10 @@ function compilerFailureResponse() {
 }
 
 describe('current Iroha Kotodama compiler package boundary', () => {
-  it('installs the package boundary selected by the exact commit/subdirectory pin', () => {
+  it('installs the compiler boundary from the current canonical consumer archive', () => {
     const explorerPackage = JSON.parse(
       readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8')
     ) as { dependencies: Record<string, string> };
-    const profile = JSON.parse(
-      readFileSync(path.resolve(process.cwd(), 'tests/mochi/explorer-profile.json'), 'utf8')
-    ) as { iroha_revision: string };
     const installedPackage = JSON.parse(
       readFileSync(path.join(INSTALLED_IROHA_JS_ROOT, 'package.json'), 'utf8')
     ) as { name: string, dependencies: Record<string, string> };
@@ -47,9 +47,7 @@ describe('current Iroha Kotodama compiler package boundary', () => {
     );
 
     expect(explorerPackage.dependencies['@iroha/iroha-js'])
-      .toBe(
-        `github:hyperledger-iroha/iroha#${profile.iroha_revision}&path:javascript/iroha_js`
-      );
+      .toBe(IROHA_SDK_SPECIFIER);
     expect(installedPackage.name).toBe('@iroha/iroha-js');
     expect(installedPackage.dependencies['@scure/bip39']).toBe('^2.2.0');
     expect(installedDeclaration).toContain('compileKotodamaProgram');
@@ -109,6 +107,7 @@ describe('current Iroha Kotodama compiler package boundary', () => {
       source: SOURCE,
       sourceName: 'studio.ko',
       zk: false,
+      artifacts: [],
     });
   });
 

@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { ref } from 'vue';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import TheHeader from './TheHeader.vue';
+import { i18n } from '@/shared/lib/localization';
 
 const scope = ref<unknown>(null);
 vi.mock('@/shared/ui/composables/useExplorerScopeNavigation', () => ({ useCurrentExplorerScope: () => scope }));
@@ -19,7 +20,7 @@ async function factory(path = '/accounts') {
   ] });
   await router.push(path);
   await router.isReady();
-  return { router, wrapper: mount(TheHeader, { global: { plugins: [router], mocks: { $t: (key: string) => key }, stubs } }) };
+  return { router, wrapper: mount(TheHeader, { global: { plugins: [router, i18n], mocks: { $t: (key: string) => key }, stubs } }) };
 }
 beforeEach(() => { scope.value = null; });
 
@@ -29,7 +30,7 @@ describe('Explorer shell', () => {
     expect(wrapper.find('[role=search]').exists()).toBe(true);
     expect(wrapper.find('.explorer-sidebar nav').exists()).toBe(true);
     expect(wrapper.find('.explorer-mobile-navigation').exists()).toBe(true);
-    expect(wrapper.find('dialog, [aria-expanded]').exists()).toBe(false);
+    expect(wrapper.find('.explorer-sidebar dialog, .explorer-sidebar [aria-expanded]').exists()).toBe(false);
     expect(wrapper.find('[data-test=theme]').exists()).toBe(true);
   });
 

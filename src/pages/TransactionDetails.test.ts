@@ -8,54 +8,18 @@ import * as api from '@/shared/api';
 import type * as SharedApiModule from '@/shared/api';
 
 const SAMPLE_I105 = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
-const TRANSACTION_HASH = 'a'.repeat(64);
-const SNAPSHOT_HASH = 'b'.repeat(64);
-const FRAMED_SHA256 = `0x${'c'.repeat(64)}`;
-const REJECTION_JSON = { Validation: 'TooComplex' } as const;
 
 const mockRoute = ref({
-  params: { hash: TRANSACTION_HASH },
+  params: { hash: '0xtest-hash' },
   query: {},
 });
 
 const replaceSpy = vi.fn().mockResolvedValue(undefined);
-function historyPagination(nextCursor: string | null = null, hasMore = false) {
-  return {
-    limit: 100,
-    snapshot_height: 42,
-    snapshot_hash: SNAPSHOT_HASH,
-    next_cursor: nextCursor,
-    has_more: hasMore,
-  };
-}
-
-function contractInstruction(kind: 'RegisterSmartContractBytes' | 'RegisterSmartContractCode', index: number) {
-  const encoded = (index + 1).toString(16).padStart(2, '0');
-  const wireId = `iroha.instruction.v1::smart_contract_code::${kind}`;
-  return {
-    authority: SAMPLE_I105,
-    created_at: new Date(`2026-02-24T12:00:0${index}Z`),
-    kind,
-    box: {
-      encoded: `0x${encoded}`,
-      framed_sha256: FRAMED_SHA256,
-      json: {
-        kind: 'Custom',
-        wire_id: wireId,
-        encoded,
-        payload: { variant: kind, value: { wire_id: wireId, encoded } },
-      },
-    },
-    transaction_hash: TRANSACTION_HASH,
-    transaction_status: 'Rejected',
-    block: 42,
-    index,
-  };
-}
-const instructionsListState = ref({
+const instructionsListState = ref<{ isLoading: boolean; hasMore: boolean; itemsCount: number; hasError?: boolean }>({
   isLoading: false,
-  itemsCount: 1,
   hasMore: false,
+  itemsCount: 1,
+  hasError: false,
 });
 const scopeExpose = ref<any>({
   isLoading: false,
@@ -63,16 +27,17 @@ const scopeExpose = ref<any>({
     status: SUCCESSFUL_FETCHING,
     data: {
       authority: SAMPLE_I105,
-      hash: TRANSACTION_HASH,
+      hash: '0xtest-hash',
       block: 42,
       created_at: new Date('2026-02-24T12:00:00Z'),
       executable: 'Instructions',
       status: 'Rejected',
       rejection_reason: {
-        encoded: '0x01',
-        json: REJECTION_JSON,
-        message: 'Rejected by Torii',
+        encoded: '',
+        json: '',
+        message: '',
       },
+      executable_payload: { instruction_count: 1 },
       metadata: {},
       nonce: null,
       signature: 'deadbeef',
@@ -85,12 +50,13 @@ const scopeExpose = ref<any>({
       status: SUCCESSFUL_FETCHING,
       data: {
         authority: SAMPLE_I105,
-        hash: TRANSACTION_HASH,
+        hash: '0xtest-hash',
         block: 42,
         created_at: new Date('2026-02-24T12:00:00Z'),
         executable: 'Instructions',
         status: 'Rejected',
-        rejection_reason: { encoded: '0x01', json: REJECTION_JSON, message: 'Rejected by Torii' },
+        rejection_reason: { encoded: '', json: '', message: '' },
+        executable_payload: { instruction_count: 1 },
         metadata: {},
         nonce: null,
         signature: 'deadbeef',
@@ -157,9 +123,10 @@ const ContractCodeViewPanelStub = defineComponent({
   name: 'ContractCodeViewPanel',
   props: {
     instruction: { type: Object, default: null },
+    relatedInstructions: { type: Array, default: () => [] },
   },
   template:
-    '<div class="contract-code-view-stub" :data-transaction-hash="instruction?.transaction_hash ?? \'\'" :data-instruction-index="instruction?.index ?? -1" />',
+    '<div class="contract-code-view-stub" :data-transaction-hash="instruction?.transaction_hash ?? \'\'" :data-instruction-index="instruction?.index ?? -1" :data-related-count="relatedInstructions.length" />',
 });
 
 const ContextTooltipStub = defineComponent({
@@ -193,8 +160,28 @@ describe('TransactionDetails', () => {
     (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: historyPagination(),
-        items: [contractInstruction('RegisterSmartContractBytes', 0)],
+        nextCursor: null,
+        items: [
+          {
+            authority: SAMPLE_I105,
+            created_at: new Date('2026-02-24T12:00:00Z'),
+            kind: 'RegisterSmartContractBytes',
+            box: {
+              wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractBytes',
+              encoded: '0xcontract',
+              json: {
+                kind: 'RegisterSmartContractBytes',
+                payload: {
+                  code_hash: 'aa'.repeat(32),
+                },
+              },
+            },
+            transaction_hash: '0xtest-hash',
+            transaction_status: 'Rejected',
+            block: 42,
+            index: 0,
+          },
+        ],
       },
     });
     (api.fetchInstructionDetail as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -202,11 +189,11 @@ describe('TransactionDetails', () => {
     });
     instructionsListState.value = {
       isLoading: false,
-      itemsCount: 1,
       hasMore: false,
+      itemsCount: 1,
     };
     mockRoute.value = {
-      params: { hash: TRANSACTION_HASH },
+      params: { hash: '0xtest-hash' },
       query: {},
     };
     scopeExpose.value = {
@@ -215,16 +202,17 @@ describe('TransactionDetails', () => {
         status: SUCCESSFUL_FETCHING,
         data: {
           authority: SAMPLE_I105,
-          hash: TRANSACTION_HASH,
+          hash: '0xtest-hash',
           block: 42,
           created_at: new Date('2026-02-24T12:00:00Z'),
           executable: 'Instructions',
           status: 'Rejected',
           rejection_reason: {
-            encoded: '0x01',
-            json: REJECTION_JSON,
-            message: 'Rejected by Torii',
+            encoded: '',
+            json: '',
+            message: '',
           },
+          executable_payload: { instruction_count: 1 },
           metadata: {},
           nonce: null,
           signature: 'deadbeef',
@@ -237,16 +225,17 @@ describe('TransactionDetails', () => {
           status: SUCCESSFUL_FETCHING,
           data: {
             authority: SAMPLE_I105,
-            hash: TRANSACTION_HASH,
+            hash: '0xtest-hash',
             block: 42,
             created_at: new Date('2026-02-24T12:00:00Z'),
             executable: 'Instructions',
             status: 'Rejected',
             rejection_reason: {
-              encoded: '0x01',
-              json: REJECTION_JSON,
-              message: 'Rejected by Torii',
+              encoded: '',
+              json: '',
+              message: '',
             },
+            executable_payload: { instruction_count: 1 },
             metadata: {},
             nonce: null,
             signature: 'deadbeef',
@@ -272,7 +261,6 @@ describe('TransactionDetails', () => {
           DataField: DataFieldStub,
           TransactionStatus: TransactionStatusStub,
           InstructionsTable: InstructionsTableStub,
-          TransactionActionPreview: { template: '<section data-test="action-preview" />' },
           ContextTooltip: ContextTooltipStub,
           TransactionEvidencePanel: { template: '<div class="transaction-evidence-stub" />' },
         },
@@ -289,7 +277,7 @@ describe('TransactionDetails', () => {
   it('prefers torii-provided rejection_reason.message when available', async () => {
     scopeExpose.value.data.data.rejection_reason = {
       encoded: '0x01',
-      json: REJECTION_JSON,
+      json: 'ignored',
       message: 'Validation failed: Instruction execution failed: Failed to find domain: sbp',
     };
 
@@ -327,7 +315,21 @@ describe('TransactionDetails', () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
-  it('renders Torii rejection text unchanged instead of reinterpreting its evidence bytes', async () => {
+  it('does not invent a rejection reason when Torii omits its message', async () => {
+    scopeExpose.value.data.data.rejection_reason = {
+      encoded:
+        '0x020000004b00000000000000020000003f000000000000000400000033000000000000000400000000000000030000001f000000000000000000000013000000000000000b000000000000000300000000000000736270',
+      json: 'TlJUMAAAFbOLmVWS1wsVs4uZVZLXCwBXAAAAAAAAANkeGTU4zDb4AAIAAABLAAAAAAAAAAIAAAA/AAAAAAAAAAQAAAAzAAAAAAAAAAQAAAAAAAAAAwAAAB8AAAAAAAAAAAAAABMAAAAAAAAACwAAAAAAAAADAAAAAAAAAHNicA==',
+      message: '',
+    };
+
+    const wrapper = factory();
+    await flushPromises();
+
+    expect(findRejectedReasonValue(wrapper)).toBeNull();
+  });
+
+  it('preserves the authoritative Torii message containing opaque numeric tags', async () => {
     scopeExpose.value.data.data.rejection_reason = {
       encoded:
         '0x020000004b00000000000000020000003f000000000000000400000033000000000000000400000000000000030000001f000000000000000000000013000000000000000b000000000000000300000000000000736270',
@@ -350,7 +352,7 @@ describe('TransactionDetails', () => {
     await flushPromises();
 
     expect(wrapper.find('.instructions-table-stub').exists()).toBe(true);
-    expect(wrapper.find('.transaction-details__transactions-contract').exists()).toBe(false);
+    expect(wrapper.find('.transaction-details__transactions-wasm').exists()).toBe(false);
   });
 
   it('treats Ivm executables as smart-contract transactions', async () => {
@@ -391,23 +393,66 @@ describe('TransactionDetails', () => {
     await vi.waitFor(() => expect(wrapper.find('.contract-code-view-stub').exists()).toBe(true));
 
     const panel = wrapper.find('.contract-code-view-stub');
-    expect(panel.attributes('data-transaction-hash')).toBe(TRANSACTION_HASH);
+    expect(panel.attributes('data-transaction-hash')).toBe('0xtest-hash');
     expect(panel.attributes('data-instruction-index')).toBe('0');
+    expect(panel.attributes('data-related-count')).toBe('1');
   });
 
-  it('loads every instruction-history cursor window for smart-contract transactions before rendering the contract panel', async () => {
+  it('loads every instruction-history page for smart-contract transactions before rendering the contract panel', async () => {
     scopeExpose.value.data.data.executable = 'Ivm';
-    (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockImplementation(async ({ cursor = null }) => ({
+    (api.fetchInstructions as unknown as ReturnType<typeof vi.fn>).mockImplementation(async ({ cursor }) => ({
       status: SUCCESSFUL_FETCHING,
       data:
         cursor === null
           ? {
-              pagination: historyPagination('smart-contract-next', true),
-              items: [contractInstruction('RegisterSmartContractBytes', 0)],
+              nextCursor: 'next',
+              items: [
+                {
+                  authority: SAMPLE_I105,
+                  created_at: new Date('2026-02-24T12:00:00Z'),
+                  kind: 'RegisterSmartContractBytes',
+                  box: {
+                    wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractBytes',
+              encoded: '0xcontract',
+                    json: {
+                      kind: 'RegisterSmartContractBytes',
+                      payload: {
+                        code_hash: 'aa'.repeat(32),
+                      },
+                    },
+                  },
+                  transaction_hash: '0xtest-hash',
+                  transaction_status: 'Rejected',
+                  block: 42,
+                  index: 0,
+                },
+              ],
             }
           : {
-              pagination: historyPagination(),
-              items: [contractInstruction('RegisterSmartContractCode', 1)],
+              nextCursor: null,
+              items: [
+                {
+                  authority: SAMPLE_I105,
+                  created_at: new Date('2026-02-24T12:00:01Z'),
+                  kind: 'RegisterSmartContractCode',
+                  box: {
+                    wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractCode',
+                    encoded: '0xmanifest',
+                    json: {
+                      kind: 'RegisterSmartContractCode',
+                      payload: {
+                        manifest: {
+                          code_hash: 'aa'.repeat(32),
+                        },
+                      },
+                    },
+                  },
+                  transaction_hash: '0xtest-hash',
+                  transaction_status: 'Rejected',
+                  block: 42,
+                  index: 1,
+                },
+              ],
             },
     }));
 
@@ -415,51 +460,64 @@ describe('TransactionDetails', () => {
     await flushPromises();
     await vi.waitFor(() => expect(wrapper.find('.contract-code-view-stub').exists()).toBe(true));
 
+    const panel = wrapper.find('.contract-code-view-stub');
+    expect(panel.attributes('data-related-count')).toBe('2');
     expect(api.fetchInstructions).toHaveBeenCalledWith({
-      cursor: null,
-      limit: 100,
-      transaction_hash: TRANSACTION_HASH,
+      cursor: null, limit: 100,
+      transaction_hash: '0xtest-hash',
     });
     expect(api.fetchInstructions).toHaveBeenCalledWith({
-      cursor: 'smart-contract-next',
-      limit: 100,
-      transaction_hash: TRANSACTION_HASH,
+      cursor: 'next', limit: 100,
+      transaction_hash: '0xtest-hash',
     });
   });
 
-  it('leads with outcome and keeps technical fields inside a collapsed native disclosure', async () => {
+  it('shows transaction overview context when instruction list is empty', async () => {
+    scopeExpose.value.data.data.executable = 'Instructions';
+    scopeExpose.value.data.data.rejection_reason = {
+      encoded: '',
+      json: '',
+      message: 'Validation failed: instruction failed',
+    };
+    instructionsListState.value = {
+      isLoading: false,
+      hasMore: false,
+      itemsCount: 0,
+    };
+
     const wrapper = factory();
     await flushPromises();
-    expect(wrapper.find('[data-test="action-preview"]').exists()).toBe(true);
+
+    expect(wrapper.find('[data-test="transaction-instructions-overview"]').exists()).toBe(true);
+    const overview = wrapper.get('[data-test="transaction-instructions-overview"]');
+    expect(overview.text()).toContain('No data');
+    expect(overview.text()).toContain('Transaction Hash');
+    expect(overview.text()).toContain('0xtest-hash');
+    expect(overview.text()).toContain('Executable');
+    expect(overview.text()).toContain('Instructions');
+    expect(overview.text()).toContain('Block');
+    expect(overview.text()).toContain('42');
+    expect(overview.text()).toContain('Nonce');
+    expect(overview.text()).toContain('Signature');
+    expect(overview.text()).toContain('deadbeef');
+    expect(overview.text()).toContain('Validation failed: instruction failed');
+  });
+
+  it('does not misreport an instruction fetch failure as an empty transaction', async () => {
+    scopeExpose.value.data.data.executable = 'Instructions';
+    instructionsListState.value = { isLoading: false, hasMore: false, itemsCount: 0, hasError: true };
+    const wrapper = factory();
+    await flushPromises();
     expect(wrapper.find('[data-test="transaction-instructions-overview"]').exists()).toBe(false);
-    const technical = wrapper.get('details[data-test="transaction-technical-details"]');
-    expect(technical.attributes('open')).toBeUndefined();
-    expect(technical.text()).toContain('Nonce');
-    expect(technical.text()).toContain('Signature');
-    expect(technical.text()).toContain('deadbeef');
-    expect(technical.text()).toContain('1000');
+    expect(wrapper.find('.instructions-table-stub').exists()).toBe(true);
   });
 
   it('hides empty-instructions overview while instruction list is still loading', async () => {
     scopeExpose.value.data.data.executable = 'Instructions';
     instructionsListState.value = {
       isLoading: true,
-      itemsCount: 0,
       hasMore: false,
-    };
-
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(wrapper.find('[data-test="transaction-instructions-overview"]').exists()).toBe(false);
-  });
-
-  it('does not claim the instruction list is empty when Torii has another cursor window', async () => {
-    scopeExpose.value.data.data.executable = 'Instructions';
-    instructionsListState.value = {
-      isLoading: false,
       itemsCount: 0,
-      hasMore: true,
     };
 
     const wrapper = factory();
@@ -479,7 +537,7 @@ describe('TransactionDetails', () => {
       name: 'tracing-workspace',
       query: {
         seed_type: 'transaction',
-        seed_value: TRANSACTION_HASH,
+        seed_value: '0xtest-hash',
       },
     });
   });

@@ -22,8 +22,8 @@
   "table": {
     "rowsPerPage": "ページあたりの行数",
     "pageOf": "{0}-{1}/{2}",
-    "cursorPage": "このページの {0} 行。正確な合計は不明",
-    "scanSample": "{0} 件のレコードを走査しました。正確な合計は不明です",
+    "cursorPage": "このページに {0} 行 (正確な総数は不明)",
+    "scanSample": "{0} 件のレコードをスキャン済み (正確な総数は不明)",
     "cursorRepeated": "Torii が同じカーソルを返したため、ページ送りを停止しました",
     "invalidPagination": "ページ番号と1ページあたりの行数には正規の正の整数を指定し、行数は10、20、50、100のいずれかとし、Toriiで一致する先頭{maxFetchSize}行の範囲内に収める必要があります。",
     "invalidCursorPagination": "カーソルと1ページあたりの行数にはToriiの正規値（パディングなしのbase64urlカーソル、および10、20、50、100行のいずれか）を使用する必要があります。",
@@ -32,15 +32,15 @@
     "newDataAvailable": "新しいデータがあります",
     "load": "読み込む"
   },
-  "address": "住所",
-  "cryptos": "暗号",
+  "address": "アドレス",
+  "cryptos": "暗号資産",
   "id": "ID",
   "name": "名前",
   "accountId": "アカウントID",
   "kind": "種類",
   "searchUnsupported": "サポートされていない検索クエリ",
   "payload": "ペイロード",
-  "value": "価値",
+  "value": "値",
   "entity": "エンティティ",
   "mintable": "発行可能",
   "metadata": "メタデータ",
@@ -176,7 +176,7 @@
     "custom": "カスタム",
     "multisig": "マルチシグ",
     "block": "ブロック",
-    "index": "索引",
+    "index": "インデックス",
     "transactionDetails": "取引詳細",
     "timestamp": "タイムスタンプ",
     "status": "状態",
@@ -255,7 +255,7 @@
       "loading": "台帳証明を読み込み中",
       "loadError": "台帳証明を読み込めませんでした",
       "retry": "証明を再読み込み",
-      "scope": "トランザクションエントリが含まれること、および要求されたトランザクションと参照ブロックに一致することをローカルで検証します。実行結果のパスは、同じ証明で提供された結果ルートに対してのみ検証されます。このルートはここでは独立してアンカーされません。ステートルートとクォーラム証明書はノードから提供されたとおりに表示され、このブラウザでは集約 BLS 署名を検証しません。",
+      "scope": "このブラウザではトランザクション、ネットワーク、ブロック高の一致のみを確認します。包含パスと合意証明書はノードから提供され、メルクルパスやバリデータ署名はここでは検証しません。",
       "blockProof": "ブロックのメルクル証明",
       "entryVerified": "トランザクションエントリをローカルで検証済み",
       "verificationFailed": "ローカル検証に失敗",
@@ -303,7 +303,10 @@
       "quorumUnavailable": "このノードには、永続化されたコミットクォーラム証明書がありません。",
       "quorumRequestFailed": "クォーラム証明書の要求に失敗しました。",
       "stateAgreement": "ノードから提供されたステートルートとステート証明のエンベロープは、要求されたブロックを示し、同一のブロックハッシュとステートルートを含みます。",
-      "stateMismatch": "警告: ノードから提供されたステートルートとステート証明のエンベロープは、同じ要求ブロックとステートルートを示していません。"
+      "stateMismatch": "警告: ノードから提供されたステートルートとステート証明のエンベロープは、同じ要求ブロックとステートルートを示していません。",
+      "proofUnavailable": "現在の閲覧者はこの証明を利用できません。プライベートデータスペースでは、「読み取りアクセス」から権限のあるウォレットを接続してください。",
+      "transactionEntryHash": "トランザクションエントリのハッシュ",
+      "executionOutputHash": "実行出力のハッシュ"
     },
     "filters": {
       "authorityLabel": "アカウントフィルター",
@@ -330,7 +333,7 @@
     "bandwidthClass": "帯域幅",
     "status": "状態",
     "lastReported": "最後に報告された",
-    "statusUnknown": "未知",
+    "statusUnknown": "不明",
     "neverReported": "未報告",
     "hideDetails": "詳細を隠す",
     "relayNotFound": "リレーの詳細が見つかりません",
@@ -340,13 +343,13 @@
       "degraded": "性能低下",
       "unavailable": "利用不可"
     },
-    "hpkeFingerprint": "HPKE 指紋",
+    "hpkeFingerprint": "HPKE フィンガープリント",
     "hpkePublicKey": "HPKE 公開鍵",
     "reportedBy": "報告者",
-    "notes": "注意事項",
+    "notes": "備考",
     "domainMetrics": "ドメイン指標",
     "manifestUpdatesTotal": "マニフェスト更新",
-    "healthReportsTotal": "健康レポート",
+    "healthReportsTotal": "ヘルスレポート",
     "noDomainMetrics": "ドメイン指標はまだありません",
     "liveEvents": "ライブイベント",
     "accessBoundary": {
@@ -370,7 +373,7 @@
     "eventsConnecting": "接続中...",
     "eventKinds": {
       "registration": "登録",
-      "health": "健康",
+      "health": "ヘルス",
       "failover": "フェイルオーバー"
     }
   },
@@ -383,7 +386,7 @@
     "refresh": "再表示",
     "updatedAt": "更新日：{value}",
     "overviewHint": "Nexusステータステレメトリからのライブレジストリとスケジューラの統計。",
-    "overviewSystemIds": "IDS 0/1/2は、組み込みのシステムデータスペース（ユニバーサル、ガバナンス、zk ）です。レーンは別のスケジューラフィールドです。",
+    "overviewSystemIds": "ID 0/1/2は、組み込みのシステムデータスペース（ユニバーサル、ガバナンス、zk ）です。レーンは別のスケジューラフィールドです。",
     "overviewLifetimeTx": "処理済みトランザクションの値は、ノード起動時からの累計です。",
     "totalDataspacesRegistered": "登録されたデータスペース",
     "totalDataspacesCustom": "カスタムデータスペース（ ID ≥ 10 ）",
@@ -401,7 +404,7 @@
     "virtualFinish": "仮想終了値",
     "lifetimeTxServed": "起動後の処理済みトランザクション",
     "dataspaceId": "データスペースID",
-    "dataspaceType": "データ空間タイプ",
+    "dataspaceType": "データスペースタイプ",
     "typeSystem": "システム",
     "typeCustom": "カスタム",
     "description": "説明",
@@ -496,7 +499,7 @@
       "status": "状態",
       "alias": "エイリアス",
       "chunker": "チャンカー",
-      "submittedBy": "によって提出されました",
+      "submittedBy": "提出者",
       "successor": "後続",
       "namespace": "名前空間",
       "manifest": "マニフェスト",
@@ -508,7 +511,7 @@
     },
     "detail": {
       "title": "マニフェスト",
-      "submittedBy": "によって提出されました",
+      "submittedBy": "提出者",
       "submittedEpoch": "送信されたエポック",
       "statusTimestamp": "ステータスのタイムスタンプ (UNIX)",
       "rootCid": "ルート CID",
@@ -558,7 +561,7 @@
     "source": "ソース",
     "refresh": "リフレッシュ",
     "loading": "更新中...",
-    "updatedAt": "{value} を更新しました",
+    "updatedAt": "更新: {value}",
     "loadFailed": "SoraCloud ステータスをロードできません",
     "sectionLoadFailed": "この SoraCloud セクションをロードできません",
     "notFound": "一致する SoraCloud レコードが見つかりませんでした。",
@@ -569,7 +572,7 @@
     "failedAdmissions": "受け入れ失敗",
     "controlPlaneServices": "サービス",
     "recentAudit": "最近の監査イベント",
-    "serviceInspector": "サービス検査員",
+    "serviceInspector": "サービスインスペクター",
     "modelInspector": "モデルおよびトレーニングインスペクター",
     "hfAgentInspector": "HF・ホスト・エージェントインスペクター",
     "serviceConfigStatus": "サービス構成ステータス",
@@ -608,8 +611,8 @@
     "routingRules": "ルーティングルール",
     "defaultLaneId": "デフォルトレーン",
     "defaultDataspaceId": "デフォルトのデータスペース",
-    "queueActive": "キューがアクティブです",
-    "queueQueued": "キューに入れられました",
+    "queueActive": "キュー（アクティブ）",
+    "queueQueued": "キュー（待機中）",
     "queueCapacity": "キュー容量",
     "queueSaturated": "キューが飽和状態です",
     "highLoad": "高負荷",
@@ -632,7 +635,7 @@
     "secretName": "シークレット名",
     "optionalPlaceholder": "任意",
     "currentVersion": "現在のバージョン",
-    "configGeneration": "構成の生成",
+    "configGeneration": "構成の世代",
     "configEntryCount": "構成エントリ",
     "valueHash": "値ハッシュ",
     "lastUpdateSequence": "最終更新シーケンス",
@@ -653,11 +656,11 @@
     "route": "ルート",
     "activeRollout": "アクティブなロールアウト",
     "lastRollout": "最後のロールアウト",
-    "sequence": "順序",
+    "sequence": "シーケンス",
     "action": "アクション",
     "service": "サービス",
-    "fromVersion": "から",
-    "toVersion": "に",
+    "fromVersion": "移行元",
+    "toVersion": "移行先",
     "governanceTxHash": "ガバナンストランザクションハッシュ",
     "jobId": "ジョブ ID",
     "jobIdPlaceholder": "job-123",
@@ -665,7 +668,7 @@
     "modelNamePlaceholder": "llm-demo",
     "workerGroupSize": "ワーカーグループのサイズ",
     "targetSteps": "目標ステップ数",
-    "completedSteps": "完了した手順",
+    "completedSteps": "完了したステップ",
     "checkpointIntervalSteps": "チェックポイント間隔のステップ数",
     "lastCheckpointStep": "最後のチェックポイントステップ",
     "checkpointCount": "チェックポイント数",
@@ -690,14 +693,14 @@
     "trainingConfigHash": "トレーニング構成ハッシュ",
     "reproducibilityHash": "再現性ハッシュ",
     "provenanceAttestationHash": "出所証明書ハッシュ",
-    "registeredSequence": "登録された配列",
+    "registeredSequence": "登録されたシーケンス",
     "promotedSequence": "昇格シーケンス",
     "gateReportHash": "ゲートレポートハッシュ",
     "artifactCount": "アーティファクト数",
     "artifactId": "アーティファクト ID",
     "weightVersion": "重みバージョン",
     "weightVersionPlaceholder": "v1",
-    "consumedByVersion": "バージョンごとに消費される",
+    "consumedByVersion": "消費したバージョン",
     "privateBundleRoot": "プライベートバンドルルート",
     "compileProfileHash": "コンパイルプロファイルハッシュ",
     "chunkManifestRoot": "チャンクマニフェストルート",
@@ -750,17 +753,17 @@
     "revokedPolicyCapabilityCount": "取り消されたポリシー機能の数",
     "pendingWalletRequestCount": "保留中のウォレットリクエスト",
     "pendingMessageCount": "保留中のメッセージ",
-    "autonomyBudgetCeilingUnits": "自律型予算天井ユニット",
-    "autonomyBudgetRemainingUnits": "自治予算の残り単位",
+    "autonomyBudgetCeilingUnits": "自律予算の上限ユニット",
+    "autonomyBudgetRemainingUnits": "自律予算の残り単位",
     "artifactAllowlistCount": "アーティファクト許可リスト件数",
-    "autonomyRunCount": "自律走行数",
-    "processGeneration": "プロセスの生成",
+    "autonomyRunCount": "自律実行回数",
+    "processGeneration": "プロセスの世代",
     "processStartedSequence": "プロセス開始シーケンス",
     "lastActiveSequence": "最後のアクティブなシーケンス",
     "lastCheckpointSequence": "最後のチェックポイント シーケンス",
     "persistentStateTotalBytes": "永続的な状態バイト",
     "persistentStateKeyCount": "永続的な状態キー",
-    "spendLimitCount": "使用制限数",
+    "spendLimitCount": "支出上限数",
     "upgradePolicy": "アップグレードポリシー",
     "lastRestartSequence": "最後の再起動シーケンス",
     "lastRestartReason": "前回の再起動理由",
@@ -770,7 +773,7 @@
     "payload": "ペイロード",
     "payloadHash": "ペイロードハッシュ",
     "enqueuedSequence": "キューに入れられたシーケンス",
-    "budgetCeilingUnits": "予算天井ユニット",
+    "budgetCeilingUnits": "予算上限ユニット",
     "budgetRemainingUnits": "予算の残りの単位",
     "allowlistCount": "ホワイトリストの数",
     "runCount": "実行回数",
@@ -779,7 +782,7 @@
     "runtimeRecentRuns": "ランタイムの最近の実行",
     "yes": "はい",
     "no": "いいえ",
-    "unknownAction": "未知",
+    "unknownAction": "不明",
     "validation": {
       "accountId": "アカウント ID は、正確な正規の半角 i105 リテラルである必要があります。",
       "leaseTermMs": "リース期間は、ミリ秒単位の正の整数である必要があります。",
@@ -808,14 +811,14 @@
     "unlocks": {
       "title": "ロックスイープ統計",
       "currentHeight": "現在の高さ",
-      "expiredLocks": "ロックの有効期限が切れました",
-      "referendaWithExpired": "期限切れのロックを持つリファレンダ",
+      "expiredLocks": "現在の期限切れロック",
+      "referendaWithExpired": "期限切れのロックを持つ住民投票",
       "lastSweepHeight": "最終スイープ高さ",
       "empty": "利用可能なロック統計はありません。"
     },
     "lookup": {
       "title": "住民投票の検索",
-      "referendumId": "国民投票ID",
+      "referendumId": "住民投票 ID",
       "referendumPlaceholder": "例: referendum:demo#1",
       "inspect": "検査する",
       "status": "状態",
@@ -824,17 +827,17 @@
       "windowEnd": "ウィンドウ終了（高さ）",
       "mode": "投票モード",
       "tallyTitle": "二次集計",
-      "approve": "承認する",
-      "reject": "拒否する",
-      "abstain": "棄権する",
+      "approve": "賛成",
+      "reject": "反対",
+      "abstain": "棄権",
       "tallyMissing": "ロックが記録されると、タリーが表示されます。",
       "locksTitle": "アクティブロック",
       "lockOwner": "所有者",
-      "lockAmount": "金額（原単位）",
+      "lockAmount": "金額（基本単位）",
       "lockDirection": "方向",
       "lockExpiry": "有効期限の高さ",
       "lockDuration": "継続時間 (ブロック)",
-      "unknownDirection": "未知",
+      "unknownDirection": "不明",
       "prompt": "状態を確認するには、国民投票 ID を入力してください。"
     },
     "proposals": {
@@ -845,7 +848,7 @@
       "proposer": "提案者",
       "createdHeight": "作成時の高さ",
       "contractAddress": "コントラクトアドレス",
-      "contractAlias": "契約別名",
+      "contractAlias": "コントラクトエイリアス",
       "contractDataspace": "データスペース",
       "contractNamespace": "名前空間",
       "contractId": "コントラクト",
@@ -1039,7 +1042,7 @@
     }
   },
   "accounts": {
-    "address": "住所",
+    "address": "アドレス",
     "accounts": "アカウント",
     "filters": {
       "domainLabel": "ドメインフィルター",
@@ -1171,7 +1174,7 @@
     "accountTransactions": "アカウントのトランザクション",
     "definitionId": "定義ID",
     "accountId": "アカウントID",
-    "value": "価値",
+    "value": "値",
     "accountDoesntHaveAnyAssets": "アカウントには資産がありません",
     "accountDoesntHaveAnyNFTs": "アカウントにはNFTがありません",
     "accountDoesntHaveAnyDomains": "アカウントにはドメインがありません"
@@ -1179,7 +1182,7 @@
   "assets": {
     "assets": "資産",
     "assetsAndNFT": "アセットとNFT",
-    "assetsAndNFTAndRWA": "資産、NFTs & RWAs",
+    "assetsAndNFTAndRWA": "資産、NFT、RWA",
     "asset": "アセット {0}",
     "rwa": "RWA {0}",
     "assetTransactions": "資産トランザクション",
@@ -1187,18 +1190,18 @@
     "assetHolders": "資産保有者",
     "assetDoesntContainAnyInstances": "アセットにはインスタンスが含まれていません",
     "nfts": "NFT",
-    "rwas": "RWAs",
+    "rwas": "RWA",
     "numerics": "資産",
-    "heldQuantity": "保有数量",
+    "heldQuantity": "保留数量",
     "availableQuantity": "利用可能数量",
     "primaryReference": "主要参照",
     "provenanceGraph": "来歴グラフ",
-    "provenanceNoParents": "このロットには由来元となる先行ロットが記録されていません。",
-    "provenanceIncomplete": "一部の祖先ロットをロードできなかったため、このグラフは部分的なものです。",
-    "provenanceTruncated": "来歴グラフが安全なフェッチ制限に達したため、切り捨てられる可能性があります。",
-    "provenanceUnavailableParent": "先行ロットを利用できません",
-    "provenanceContribution": "先行ロットからの寄与",
-    "frozen": "凍結済み",
+    "provenanceNoParents": "このロットには親ロットの来歴が記録されていません。",
+    "provenanceIncomplete": "一部の祖先ロットを読み込めなかったため、このグラフは不完全です。",
+    "provenanceTruncated": "来歴グラフが安全のための取得上限に達したため、途中で打ち切られている可能性があります。",
+    "provenanceUnavailableParent": "取得できない親ロット",
+    "provenanceContribution": "親ロットの寄与量",
+    "frozen": "凍結中",
     "frozenYes": "はい",
     "frozenNo": "いいえ",
     "definitionFields": {
@@ -1234,7 +1237,7 @@
       "domainPlaceholder": "wonderland",
       "ownerLabel": "定義所有者",
       "ownerPlaceholder": "sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE",
-      "holderLabel": "保有者口座",
+      "holderLabel": "保有者アカウント",
       "holderPlaceholder": "treasury.retail"
     }
   },
@@ -1275,7 +1278,7 @@
     "nakamoto33": "中本 (33%)",
     "nakamoto51": "中本 (51%)",
     "nakamoto67": "中本 (67%)",
-    "theil": "テイルT",
+    "theil": "タイルT",
     "entropy": "エントロピ",
     "entropyNormalized": "エントロピー (正規化)",
     "entropyEffectiveHolders": "有効な保有者 (エントロピー)",
@@ -1352,7 +1355,7 @@
     "telemetry": "テレメトリー",
     "nodes": "ノード",
     "location": "位置",
-    "queue": "列",
+    "queue": "キュー",
     "connectionStatus": "接続状態",
     "uptime": "稼働時間",
     "blocksGossiping": "ブロックゴシップ",
@@ -1361,7 +1364,7 @@
     "commitTime": "コミット時間",
     "avgCommitTime": "平均コミット時間",
     "bestBlock": "ベストブロック",
-    "finalizedBlock": "完成したブロック",
+    "finalizedBlock": "確定済みブロック",
     "averageBlockTime": "平均ブロック時間",
     "averageBlockCommitTime": "平均ブロックコミット時間",
     "lastBlock": "最後のブロック",
@@ -1407,7 +1410,7 @@
     "leaderIndex": "リーダーインデックス",
     "viewChangeIndex": "ビュー変更インデックス",
     "highestQc": "最高 QC",
-    "lockedQc": "ロックされています QC",
+    "lockedQc": "ロック済み QC",
     "txQueue": "Tx キュー（深さ/容量）",
     "txQueueSaturated": "キューが飽和状態です",
     "pacemakerDeferrals": "Pacemaker の延期",
@@ -1425,7 +1428,7 @@
     "viewChangeSuggested": "提案された",
     "viewChangeInstalled": "インストール済み",
     "penalties": "罰則",
-    "consensusPenaltiesApplied": "コンセンサスペナルティが適用される",
+    "consensusPenaltiesApplied": "コンセンサスペナルティ適用済み",
     "consensusPenaltiesPending": "コンセンサスペナルティは保留中",
     "vrfPenaltiesApplied": "適用済み VRF ペナルティ",
     "vrfPenaltiesPending": "保留中の VRF ペナルティ",
@@ -1478,8 +1481,8 @@
     "noSettlementEvents": "まだ決済イベントはありません",
     "nexusFee": "Nexus 料金のスナップショット",
     "chargedTotal": "請求総額",
-    "chargedViaPayer": "支払者経由で請求される",
-    "chargedViaSponsor": "スポンサー経由で課金される",
+    "chargedViaPayer": "支払者経由の請求",
+    "chargedViaSponsor": "スポンサー経由の請求",
     "sponsorDisabled": "スポンサーが無効になっています",
     "sponsorCapExceeded": "スポンサーの上限を超えました",
     "configErrors": "設定エラー",
@@ -1506,9 +1509,9 @@
     "currentProducer": "現在のプロデューサー",
     "params": "パラメータ",
     "maxValidators": "最大バリデーター",
-    "minSelfBond": "最小自己結合",
+    "minSelfBond": "最小自己保証金",
     "minNominationBond": "最小指名保証金",
-    "maxNominatorConcentration": "最大指名濃度",
+    "maxNominatorConcentration": "最大指名集中度",
     "seatBand": "シートバンド",
     "maxEntityCorrelation": "最大エンティティ相関",
     "finalityMarginBlocks": "ファイナリティマージン (ブロック)",
@@ -1524,7 +1527,7 @@
     "runtimeUpgrade": "ランタイムアップグレード",
     "runtimeUpgradeAllowed": "許可された",
     "runtimeUpgradeBlocked": "ブロック済み",
-    "privacyCommitments": "プライバシーへの取り組み",
+    "privacyCommitments": "プライバシーコミットメント",
     "noLaneGovernance": "レーンガバナンスのスナップショットはありません",
     "availabilityCollectors": "可用性コレクター",
     "collector": "コレクタ",
@@ -1751,7 +1754,7 @@
     },
     "blueprintsTitle": "青写真",
     "blueprintsHint": "まずは明るいスターターから始めて、ブロックを組み替えましょう。",
-    "metadataTitle": "契約カード",
+    "metadataTitle": "コントラクトカード",
     "metadataHint": "公開デプロイ用のデータスペース、署名者、このドキュメントに残したい補足メモを設定します。",
     "fields": {
       "title": "タイトル",
@@ -1761,7 +1764,7 @@
       "description": "説明",
       "nodeTitle": "ステップのタイトル",
       "nodeCaption": "ステップメモ",
-      "contractAction": "契約アクション",
+      "contractAction": "コントラクトアクション",
       "contractActionCall": "エントリポイントを呼び出す",
       "contractActionDeploy": "デプロイのみ",
       "binding": "エントリポイントバインディング",
@@ -2770,5 +2773,252 @@
       "technicalDetails": "技術的な詳細",
       "ttl": "有効期間（ミリ秒）"
     }
+  },
+  "dashboards": {
+    "nav": "ダッシュボード",
+    "tabs": {
+      "label": "ダッシュボード",
+      "network": "ネットワークパルス",
+      "activity": "アクティビティ",
+      "ledger": "台帳"
+    },
+    "titles": {
+      "network": "ネットワークパルス",
+      "activity": "トランザクションのアクティビティ",
+      "ledger": "台帳の構成"
+    },
+    "subtitles": {
+      "network": "接続中の Torii ピアから読み取った、ブロック生成・コミットレイテンシ・容量のライブ情報。",
+      "activity": "ネットワークが混雑する時間帯と、処理しているトランザクションの種類。",
+      "ledger": "アカウント、ドメイン、アセットが台帳上でどのように分布しているか。"
+    },
+    "window": {
+      "label": "履歴の範囲",
+      "blocks": "{count} ブロック"
+    },
+    "live": {
+      "streaming": "ライブ",
+      "polling": "10 秒ごとに更新"
+    },
+    "coverage": {
+      "scanning": "履歴を読み込み中: {loaded} / {target} ブロック",
+      "complete": "最新 {loaded} ブロック",
+      "genesis": "ジェネシス以降の全 {loaded} ブロック",
+      "incomplete": "{target} ブロック中 {loaded} ブロックを読み込み済み (不完全)"
+    },
+    "errors": {
+      "history": "ブロック履歴を読み込めませんでした。",
+      "status": "ピアのステータスを取得できません。",
+      "retry": "再試行"
+    },
+    "chart": {
+      "showTable": "表",
+      "showChart": "グラフ",
+      "unknown": "ブロック本体を取得できません: 件数不明",
+      "partial": "一部のみ観測: 下限値",
+      "noData": "未スキャン",
+      "total": "合計",
+      "empty": "ブロックがまだ十分にありません。",
+      "height": "高さ",
+      "time": "時刻",
+      "blockTitle": "ブロック {height}",
+      "from": "開始",
+      "to": "終了"
+    },
+    "peerScope": "接続中の Torii ピアの報告による",
+    "state": {
+      "producing": "ブロック生成中",
+      "pending": "トランザクション待機中",
+      "idle": "アイドル: 保留なし",
+      "delayed": "このピアで遅延の疑い",
+      "stale": "ピアのステータスが古くなっています",
+      "unknown": "状態不明"
+    },
+    "instruments": {
+      "title": "計器パネル",
+      "height": "ブロック高",
+      "lastBlock": "最新ブロック: {age} 前",
+      "commit": "コミットレイテンシ",
+      "commitHint": "最新ブロックの作成から、このピアでのコミットまで",
+      "queue": "トランザクションキュー",
+      "queueHint": "処理中 {inflight}、最長待機時間 {age}",
+      "queueSaturated": "キューが飽和状態",
+      "rejections": "拒否されたトランザクション",
+      "rejectionsValue": "{rejected} / {total}",
+      "rejectionsHint": "直近 5 分間で {recent}",
+      "peers": "接続中のピア",
+      "peersHint": "報告元のピアを除く",
+      "viewChanges": "このラウンドのビュー変更",
+      "sinceGenesis": "ジェネシス以降",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "直近 1 時間",
+      "lastHourUnit": "トランザクション",
+      "lastHourRate": "毎分 {rate}",
+      "lastHourPartial": "{minutes} 分間のみ観測: 下限値",
+      "busiestMinute": "範囲内で最も混雑した 1 分間: {time} に {count}"
+    },
+    "charts": {
+      "distribution": {
+        "title": "ブロック間の時間",
+        "caption": "最新 {count} ブロックにおける、連続するブロック間の待ち時間。Iroha はトランザクションが届いたときにのみブロックをコミットするため、長い待ち時間はコンセンサスの遅さではなく閑散時間を意味します。",
+        "series": "ブロック",
+        "range": "待ち時間",
+        "median": "待ち時間の中央値 {value}"
+      },
+      "perBlock": {
+        "title": "ブロックごとのトランザクション",
+        "caption": "最新 {count} ブロックそれぞれの、コミット済みおよび拒否されたトランザクション。",
+        "committed": "コミット済み",
+        "rejected": "拒否",
+        "subset": "読み込んだ {count} ブロックのうち最新 {shown} ブロックを表示 (#{from}–#{to})。"
+      },
+      "throughput": {
+        "title": "スループットの推移",
+        "caption": "{bucket} あたりのトランザクション数。ブロック間はゼロで補完。中抜きのマーカーは一部のみ観測された区間を示します。",
+        "committed": "コミット済み",
+        "rejected": "拒否"
+      },
+      "lanes": {
+        "title": "レーン容量",
+        "caption": "各レーンの最新スロットエンベロープにおける、容量に対するコミット済み TEU。",
+        "lane": "レーン {id}",
+        "value": "{committed} / {capacity} TEU",
+        "empty": "このピアはレーンを報告していません。"
+      },
+      "blockFill": {
+        "title": "ブロックの充填度",
+        "caption": "閲覧可能なトランザクション数別のブロック数。ブロックにはプライベートなデータスペースのトランザクションが含まれる場合もあります。",
+        "series": "ブロック",
+        "bucket": "トランザクション"
+      }
+    },
+    "stats": {
+      "transactions": "トランザクション",
+      "rejectionRate": "拒否率",
+      "meanPerBlock": "ブロックあたり平均",
+      "busiest": "最も混雑したブロック",
+      "span": "期間",
+      "blocks": "ブロック読み込み済み",
+      "unreadable": "読み取れないブロック",
+      "unreadableHint": "件数不明のため合計から除外",
+      "medianPerBlock": "中央値 {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "時間帯別アクティビティ",
+        "caption": "暦日ごと・1 時間ごとのトランザクション数 (ローカル時間)。斜線の時間帯は読み込んだ履歴の範囲外です。",
+        "value": "トランザクション",
+        "blocks": "ブロック"
+      },
+      "byHour": {
+        "title": "時間帯プロファイル",
+        "caption": "読み込んだ期間における、ローカル時間の各時間帯のトランザクション数。",
+        "series": "トランザクション"
+      },
+      "sample": {
+        "caption": "表示可能な最新 {count} 件のトランザクション",
+        "size": "{count} 件のトランザクション"
+      },
+      "executables": {
+        "title": "実行形式の内訳",
+        "caption": "サンプルのトランザクションにおける実行形式別の割合。",
+        "Instructions": "命令",
+        "ContractCall": "コントラクト呼び出し",
+        "Ivm": "IVM バイトコード",
+        "IvmProved": "証明付き IVM",
+        "Batch": "バッチ",
+        "other": "その他"
+      },
+      "outcomes": {
+        "title": "結果",
+        "committed": "コミット済み",
+        "rejected": "拒否"
+      },
+      "authorities": {
+        "title": "最も活発な署名者",
+        "caption": "サンプル内で最も多くのトランザクションに署名したアカウント。",
+        "empty": "サンプルにトランザクションがありません。"
+      },
+      "authoritiesCount": "ユニーク署名者数",
+      "latency": {
+        "title": "取り込みレイテンシ",
+        "caption": "サンプルの各トランザクションの作成から、それを取り込んだブロックまでの時間。作成時刻は署名者自身の時計に基づきます。",
+        "series": "トランザクション",
+        "median": "取り込みレイテンシの中央値",
+        "p95": "95 パーセンタイル {value}",
+        "clockAhead": "{count} 件のトランザクションは作成時刻がブロックより後になっているため (署名者の時計が進んでいる)、除外しています。",
+        "unmatched": "サンプルのうち {count} 件のトランザクションはブロック範囲外です。",
+        "empty": "ブロック範囲内に入るサンプルのトランザクションはまだありません。"
+      }
+    },
+    "ledger": {
+      "accounts": "アカウント",
+      "domains": "ドメイン",
+      "assets": "アセットと NFT",
+      "nodes": "ノード",
+      "domainsByAccounts": {
+        "title": "アカウント数別のドメイン",
+        "caption": "各ドメインに登録されたアカウント数。上位 {count} 件を表示。"
+      },
+      "mintability": {
+        "title": "ミント可否",
+        "caption": "ミントポリシー別のアセット定義。",
+        "Infinitely": "ミント可能",
+        "Once": "1 回のみミント",
+        "Not": "供給量固定",
+        "Limited": "回数制限付き",
+        "other": "その他"
+      },
+      "homes": {
+        "title": "アセットの登録先",
+        "caption": "アセット定義が登録されている場所。",
+        "domain": "ドメイン",
+        "dataspace": "データスペース",
+        "global": "グローバル"
+      },
+      "holdings": {
+        "title": "アカウントあたりの保有数",
+        "caption": "保有アセット数別のアカウント数。",
+        "series": "アカウント",
+        "bucket": "保有アセット数"
+      },
+      "scan": "{loaded} 件の{kind}を読み込み済み",
+      "scanIncomplete": "最初の {loaded} 件の{kind}を読み込み済み (ほかにもあります)",
+      "kinds": {
+        "domains": "ドメイン",
+        "definitions": "アセット定義",
+        "accounts": "アカウント"
+      },
+      "countsLive": "テレメトリーストリームによるライブの合計",
+      "countsStale": "テレメトリーストリームの最終合計 (再接続中)",
+      "countsUnavailable": "テレメトリーストリームを利用できません",
+      "definitionsByBalances": {
+        "title": "資産定義ごとの残高レコード",
+        "caption": "残高レコード数の上位{count}件。"
+      }
+    }
+  },
+  "navigation": {
+    "menu": "メニュー",
+    "groups": {
+      "explore": "探索",
+      "analytics": "分析",
+      "network": "ネットワーク",
+      "build": "開発",
+      "services": "サービス"
+    },
+    "hints": {
+      "explore": "台帳の記録を閲覧",
+      "analytics": "ダッシュボードと経済指標",
+      "network": "ピア、コンセンサス、ネットワークサービス",
+      "build": "コントラクトの作成・検査・トレース",
+      "services": "SORA Nexus 上のストレージとコンピュート"
+    }
+  },
+  "readAccess": {
+    "title": "読み取りアクセス",
+    "description": "ウォレットを接続すると、アカウントの権限で許可された記録を読み取れます。",
+    "disconnect": "切断",
+    "public": "公開アクセスで続行"
   }
 }

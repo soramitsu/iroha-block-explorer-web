@@ -1,37 +1,22 @@
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { InstructionsSearchParamsSchema } from '@/shared/api/schemas';
-import type { Instruction, InstructionsSearchParams } from '@/shared/api/schemas';
+import type { Instruction, InstructionsSearchParams, CollectionPage } from '@/shared/api/schemas';
 
 export interface FetchAllTransactionInstructionsOptions {
-  transactionHash: string;
+  transactionHash: string
   fetchInstructions: (params?: InstructionsSearchParams) => Promise<{
-    status: string;
-    data?: {
-      items: Instruction[];
-      pagination: {
-        next_cursor: string | null;
-        has_more: boolean;
-      };
-    };
-  }>;
-  limit?: number;
-  maxPages?: number;
+    status: string
+    data?: CollectionPage<Instruction>
+  }>
+  limit?: number
+  maxPages?: number
 }
 
 const DEFAULT_LIMIT = 100;
 const DEFAULT_MAX_PAGES = 128;
 
-function requirePositiveInteger(
-  name: string,
-  value: number | undefined,
-  bounds: { fallback: number; max: number }
-): number {
-  const candidate = value ?? bounds.fallback;
-  const { max } = bounds;
-  if (!Number.isSafeInteger(candidate) || candidate < 1 || candidate > max) {
-    throw new TypeError(`${name} must be an integer from 1 through ${max}`);
-  }
-  return candidate;
+function normalizePositiveInteger(value: number | undefined, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(1, Math.floor(value as number));
 }
 
 function uniqueSortedByIndex(instructions: Instruction[]): Instruction[] {
@@ -45,47 +30,23 @@ function uniqueSortedByIndex(instructions: Instruction[]): Instruction[] {
 export async function fetchAllTransactionInstructions(
   options: FetchAllTransactionInstructionsOptions
 ): Promise<Instruction[]> {
-  const limit = requirePositiveInteger('Instruction page limit', options.limit, {
-    fallback: DEFAULT_LIMIT,
-    max: 100,
-  });
-  const maxPages = requirePositiveInteger(
-    'Instruction cursor-page safety limit',
-    options.maxPages,
-    { fallback: DEFAULT_MAX_PAGES, max: DEFAULT_MAX_PAGES }
-  );
+  const limit = Math.min(100, normalizePositiveInteger(options.limit, DEFAULT_LIMIT));
+  const maxPages = normalizePositiveInteger(options.maxPages, DEFAULT_MAX_PAGES);
   const collected: Instruction[] = [];
-  const visitedCursors = new Set<string>();
+
   let cursor: string | null = null;
-
-  for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
-    const request = InstructionsSearchParamsSchema.parse({
-      cursor,
-      limit,
-      transaction_hash: options.transactionHash,
-    });
-    const response = await options.fetchInstructions(request);
-
+  const seen = new Set<string>();
+  for (let page = 1; page <= maxPages; page += 1) {
+    const response = await options.fetchInstructions({ cursor, limit, transaction_hash: options.transactionHash });
     if (response.status !== SUCCESSFUL_FETCHING || !response.data) {
-      throw new Error(`Failed to fetch transaction instructions cursor page ${pageNumber}`);
+      throw new Error(`Failed to fetch transaction instructions page ${page}`);
     }
-
-    collected.push(...response.data.items);
-
-    if (!response.data.pagination.has_more) {
-      return uniqueSortedByIndex(collected);
-    }
-
-    const nextCursor = response.data.pagination.next_cursor;
-    if (!nextCursor) {
-      throw new Error('Instruction history reported more pages without a continuation cursor');
-    }
-    if (visitedCursors.has(nextCursor)) {
-      throw new Error('Instruction history returned a repeated continuation cursor');
-    }
-    visitedCursors.add(nextCursor);
+    const { nextCursor, items } = response.data;
+    collected.push(...items);
+    if (nextCursor === null) return uniqueSortedByIndex(collected);
+    if (!nextCursor || seen.has(nextCursor)) throw new Error('Instruction history cursor did not advance');
+    seen.add(nextCursor);
     cursor = nextCursor;
   }
-
-  throw new Error(`Instruction history exceeded the ${maxPages}-page safety limit`);
+  throw new Error('Instruction history exceeded the bounded page limit');
 }

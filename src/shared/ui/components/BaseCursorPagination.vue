@@ -3,11 +3,11 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ArrowIcon from '@/shared/ui/icons/arrow.svg';
 import BaseDropdown from '@/shared/ui/components/BaseDropdown.vue';
-import type { CursorPagination } from '@/shared/api/schemas';
+import type { CollectionContinuation } from '@/shared/api/schemas';
 
 const props = withDefaults(
   defineProps<{
-    pagination?: CursorPagination | null
+    pagination?: CollectionContinuation | null
     items: number
   }>(),
   { pagination: null }
@@ -55,14 +55,13 @@ watch(
 );
 const canGoPrevious = computed(() => cursor.value !== null);
 const repeatsVisitedCursor = computed(() => {
-  const nextCursor = props.pagination?.next_cursor;
+  const nextCursor = props.pagination?.nextCursor;
   if (nextCursor === null || nextCursor === undefined || !visitedCursors.value.has(nextCursor)) return false;
   return cursor.value === null || knownSuccessors.get(cursor.value) !== nextCursor;
 });
 const canGoNext = computed(
   () =>
-    props.pagination?.has_more === true &&
-    props.pagination.next_cursor !== null &&
+    Boolean(props.pagination?.nextCursor) &&
     !repeatsVisitedCursor.value
 );
 
@@ -74,7 +73,7 @@ function goPrevious() {
 }
 
 function goNext() {
-  const nextCursor = props.pagination?.next_cursor;
+  const nextCursor = props.pagination?.nextCursor;
   if (!canGoNext.value || nextCursor === null || nextCursor === undefined) return;
   knownSuccessors.set(cursor.value, nextCursor);
   cursorTrail.value.push(cursor.value);

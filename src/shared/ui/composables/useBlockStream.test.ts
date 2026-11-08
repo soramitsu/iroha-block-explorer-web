@@ -1,138 +1,74 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { effectScope, nextTick } from 'vue';
-import type { Ref } from 'vue';
-import type { Block } from '@/shared/api/schemas';
-
-const eventSourceMock = vi.hoisted(() => ({
-  data: null as Ref<string | null> | null,
-  status: null as Ref<'CONNECTING' | 'OPEN' | 'CLOSED'> | null,
-  close: vi.fn(),
-  open: vi.fn(),
-}));
-
-vi.mock('@vueuse/core', async () => {
-  const { ref } = await import('vue');
-  eventSourceMock.data = ref<string | null>(null);
-  eventSourceMock.status = ref<'CONNECTING' | 'OPEN' | 'CLOSED'>('CLOSED');
-  return {
-    useEventSource: () => ({
-      data: eventSourceMock.data,
-      status: eventSourceMock.status,
-      close: eventSourceMock.close,
-      open: eventSourceMock.open,
-    }),
-  };
-});
-
-vi.mock('@/shared/api', () => ({
-  buildToriiUrl: (path: string) => `https://torii.example${path}`,
-}));
-
+import { effectScope, nextTick, ref, toValue } from 'vue';
 import { useBlockStream } from './useBlockStream';
+import { activateExplorerReadSession, disconnectExplorerReadSession } from '@/shared/lib/explorer-read-auth';
 
-const originalEventSource = globalThis.EventSource;
-const hash = 'a'.repeat(64);
+const streams = vi.hoisted(() => ({ create: vi.fn() }));
+vi.mock('@vueuse/core', () => ({ useEventSource: (...args: unknown[]) => streams.create(...args) }));
+vi.mock('@/shared/api', () => ({ buildToriiUrl: (path: string) => `https://taira.sora.org${path}` }));
+let stream: { data: ReturnType<typeof ref<string | null>>, status: ReturnType<typeof ref<string>>, close: ReturnType<typeof vi.fn>, open: ReturnType<typeof vi.fn> };
 
-function block(overrides: Partial<Record<keyof Block, unknown>> = {}) {
-  return {
-    hash,
-    height: 12,
-    created_at: '2026-08-31T00:00:00Z',
-    prev_block_hash: null,
-    transactions_hash: null,
-    transactions_rejected: 0,
-    transactions_total: 1,
-    ...overrides,
-  };
+beforeEach(() => {
+  vi.stubGlobal('EventSource', undefined);
+  stream = { data: ref(null), status: ref('CLOSED'), close: vi.fn(), open: vi.fn() };
+  stream.close.mockImplementation(() => { stream.status.value = 'CLOSED'; });
+  stream.open.mockImplementation(() => { stream.status.value = 'OPEN'; });
+  streams.create.mockReset().mockReturnValue(stream);
+});
+afterEach(() => { disconnectExplorerReadSession(); vi.unstubAllGlobals(); });
+
+function activateReader() {
+  activateExplorerReadSession({ baseUrl: 'https://taira.sora.org', networkId: 'network-a',
+    auth: { authAccountId: 'reader@bank', sign: async () => new Uint8Array(64) }, close: vi.fn() });
 }
-
-function enableEventSource() {
-  globalThis.EventSource = class MockEventSource {} as unknown as typeof EventSource;
-}
-
-function ignoreBlock() {}
 
 describe('useBlockStream', () => {
-  beforeEach(() => {
-    eventSourceMock.data!.value = null;
-    eventSourceMock.status!.value = 'CLOSED';
-    eventSourceMock.close.mockReset();
-    eventSourceMock.open.mockReset();
-  });
-
-  afterEach(() => {
-    if (originalEventSource) globalThis.EventSource = originalEventSource;
-    else delete (globalThis as { EventSource?: typeof EventSource }).EventSource;
-  });
-
-  it('is a safe no-op when block streaming is unavailable', () => {
-    delete (globalThis as { EventSource?: typeof EventSource }).EventSource;
+  it('is a safe no-op when block websocket streaming is unavailable', () => {
+    const onBlock = () => undefined;
     const scope = effectScope();
 
-    const api = scope.run(() => useBlockStream(ignoreBlock))!;
+    let api!: ReturnType<typeof useBlockStream>;
+    scope.run(() => {
+      api = useBlockStream(onBlock);
+    });
 
     expect(api.isSupported).toBe(false);
     expect(api.isStreaming.value).toBe(false);
-    expect(api.error.value).toBeNull();
     expect(() => api.connectFrom(10)).not.toThrow();
     expect(() => api.disconnect()).not.toThrow();
 
     scope.stop();
   });
 
-  it('rejects non-JSON messages and surfaces the parse error without refreshing', async () => {
-    enableEventSource();
-    const onBlock = vi.fn();
+  it('keeps authenticated block reads on signed polling without opening an unsigned stream', () => {
+    vi.stubGlobal('EventSource', class {});
+    activateReader();
     const scope = effectScope();
-    const api = scope.run(() => useBlockStream(onBlock))!;
-
+    const api = scope.run(() => useBlockStream(vi.fn()))!;
     api.connectFrom(10);
-    await nextTick();
-    eventSourceMock.data!.value = 'not-json';
-    await nextTick();
-
-    expect(onBlock).not.toHaveBeenCalled();
-    expect(api.error.value).toBeInstanceOf(SyntaxError);
+    expect(toValue(streams.create.mock.calls[0][0])).toBeUndefined();
+    expect(api.isStreaming.value).toBe(false);
+    expect(stream.open).not.toHaveBeenCalled();
     scope.stop();
   });
 
-  it('rejects schema-invalid JSON and clears the error only after an exact block arrives', async () => {
-    enableEventSource();
+  it('closes a public stream immediately on login and ignores late public events', async () => {
+    vi.stubGlobal('EventSource', class {});
     const onBlock = vi.fn();
     const scope = effectScope();
     const api = scope.run(() => useBlockStream(onBlock))!;
-
     api.connectFrom(10);
+    expect(api.isStreaming.value).toBe(true);
+    stream.data.value = '{"height":11}';
     await nextTick();
-    eventSourceMock.data!.value = JSON.stringify(block({ hash: 'not-a-hash' }));
+    expect(onBlock).toHaveBeenCalledOnce();
+    activateReader();
+    expect(stream.close).toHaveBeenCalled();
+    expect(stream.data.value).toBeNull();
+    expect(api.isStreaming.value).toBe(false);
+    stream.data.value = '{"height":12}';
     await nextTick();
-
-    expect(onBlock).not.toHaveBeenCalled();
-    expect(api.error.value).not.toBeNull();
-
-    eventSourceMock.data!.value = JSON.stringify(block());
-    await nextTick();
-
-    expect(api.error.value).toBeNull();
-    expect(onBlock).toHaveBeenCalledTimes(1);
-    expect(onBlock.mock.calls[0]?.[0]).toEqual(expect.objectContaining({ hash, height: 12 }));
-    expect(onBlock.mock.calls[0]?.[0].created_at).toBeInstanceOf(Date);
-    scope.stop();
-  });
-
-  it('validates but ignores exact blocks older than the requested height', async () => {
-    enableEventSource();
-    const onBlock = vi.fn();
-    const scope = effectScope();
-    const api = scope.run(() => useBlockStream(onBlock))!;
-
-    api.connectFrom(10);
-    await nextTick();
-    eventSourceMock.data!.value = JSON.stringify(block({ height: 9 }));
-    await nextTick();
-
-    expect(api.error.value).toBeNull();
-    expect(onBlock).not.toHaveBeenCalled();
+    expect(onBlock).toHaveBeenCalledOnce();
     scope.stop();
   });
 });

@@ -479,12 +479,12 @@ describe('exact CI toolchain bootstrap', () => {
     expect(dockerfile).toContain(`pnpm@${REQUIRED_PNPM_VERSION}+${REQUIRED_PNPM_INTEGRITY}`);
     expect(dockerfile).toContain('test "$(node --version)" = "v24.19.0"');
     expect(dockerfile).toContain('test "$(pnpm --version)" = "10.11.0"');
-    const sdkPrepareCopy = dockerfile.indexOf(
-      'COPY scripts/prepare-iroha-sdk.mjs scripts/prepare-iroha-sdk.mjs'
+    const sdkVerifyCopy = dockerfile.indexOf(
+      'COPY scripts/verify-iroha-sdk.mjs scripts/verify-iroha-sdk.mjs'
     );
     const frozenInstall = dockerfile.indexOf('RUN pnpm install --offline --frozen-lockfile');
-    expect(sdkPrepareCopy).toBeGreaterThanOrEqual(0);
-    expect(frozenInstall).toBeGreaterThan(sdkPrepareCopy);
+    expect(sdkVerifyCopy).toBeGreaterThanOrEqual(0);
+    expect(frozenInstall).toBeGreaterThan(sdkVerifyCopy);
     expect(dockerfile).not.toMatch(/^FROM (?:node|caddy):[^@\n]+$/gmu);
   });
 

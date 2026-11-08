@@ -1,5 +1,7 @@
 import type { Pagination } from '@/shared/api/schemas';
 
+export const PINNED_TORII_DEFAULT_MAX_FETCH_SIZE = 500;
+
 export interface ExactOffsetPageRequest {
   page: number;
   per_page: number;

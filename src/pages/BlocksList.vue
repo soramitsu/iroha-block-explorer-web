@@ -4,21 +4,7 @@
     class="blocks-list-page"
   >
     <div
-      v-if="!pagination.ok"
-      class="blocks-list-page__pagination-error content-row"
-      data-test="blocks-invalid-pagination"
-      role="alert"
-    >
-      <span class="row-text">{{ $t('table.invalidCursorPagination') }}</span>
-      <BaseButton
-        bordered
-        @click="resetPagination"
-      >
-        {{ $t('table.resetPagination') }}
-      </BaseButton>
-    </div>
-    <div
-      v-if="pagination.ok && pendingRefresh"
+      v-if="pendingRefresh"
       class="blocks-list-page__pending content-row"
       data-test="pending-refresh"
     >
@@ -31,160 +17,115 @@
         {{ $t('table.load') }}
       </BaseButton>
     </div>
-    <BaseCollectionState
-      v-if="pagination.ok && scope"
-      v-slot="{ emptyLabel }"
-      table
-      :snapshot="scope.expose.snapshot"
-      :count="blocks.length"
-      @retry="scope.expose.refetch()"
+    <BaseTable
+      v-model:cursor="cursor"
+      v-model:page-size="limit"
+      :loading="isLoading"
+      :error="scope?.expose.error"
+      pagination-mode="cursor"
+      :cursor-pagination="payloadPagination"
+      :items="blocks"
+      :row-key="blockRowKey"
+      container-class="blocks-list-page__container"
+      @retry="scope?.expose.refetch()"
     >
-      <BaseTable
-        v-model:cursor="cursor"
-        v-model:page-size="limit"
-        :empty-label
-        :loading="isLoading"
-        :cursor-pagination="payloadPagination"
-        pagination-mode="cursor"
-        :items="blocks"
-        :row-key="blockRowKey"
-        container-class="blocks-list-page__container"
-      >
-        <template #header>
-          <div
-            class="blocks-list-page__row"
-            role="presentation"
-          >
-            <span
-              class="h-sm cell"
-              role="columnheader"
-              :aria-label="$t('transactions.status')"
+      <template #header>
+        <div
+          class="blocks-list-page__row"
+          role="presentation"
+        >
+          <span
+            class="h-sm cell"
+            role="columnheader"
+            :aria-label="$t('transactions.status')"
+          />
+          <span class="h-sm cell" role="columnheader">{{ $t('blocks.height') }}</span>
+          <span class="h-sm cell" role="columnheader">{{ $t('blocks.age') }}</span>
+          <span class="h-sm cell" role="columnheader">{{ $t('blocks.hash') }}</span>
+          <span class="h-sm cell" role="columnheader">{{ $t('transactions.transactions') }}</span>
+        </div>
+      </template>
+
+      <template #row="{ item }">
+        <div
+          class="blocks-list-page__row"
+          role="presentation"
+        >
+          <span class="row-text" role="cell">{{ item.transactions_hash ? '◉' : 'O' }}</span>
+          <div class="cell" role="cell">
+            <BaseLink
+              :to="`/blocks/${item.height}`"
+              monospace
+            >
+              {{ item.height }}
+            </BaseLink>
+          </div>
+
+          <div class="blocks-list-page__row-time cell" role="cell">
+            <TimeStamp
+              :value="item.created_at"
+              inverted
             />
-            <span
-              class="h-sm cell"
-              role="columnheader"
-            >{{ $t('blocks.height') }}</span>
-            <span
-              class="h-sm cell"
-              role="columnheader"
-            >{{ $t('blocks.age') }}</span>
-            <span
-              class="h-sm cell"
-              role="columnheader"
-            >{{ $t('blocks.hash') }}</span>
-            <span
-              class="h-sm cell"
-              role="columnheader"
-            >{{ $t('transactions.transactions') }}</span>
           </div>
-        </template>
 
-        <template #row="{ item }">
-          <div
-            class="blocks-list-page__row"
-            role="presentation"
-          >
-            <span
-              class="row-text"
-              role="cell"
-            >{{ item.transactions_hash ? '◉' : 'O' }}</span>
-            <div
-              class="cell"
-              role="cell"
-            >
-              <BaseLink
-                :to="`/blocks/${item.height}`"
-                monospace
-              >
-                {{ item.height }}
-              </BaseLink>
-            </div>
-
-            <div
-              class="blocks-list-page__row-time cell"
-              role="cell"
-            >
-              <TimeStamp
-                v-if="item.created_at"
-                :value="item.created_at"
-                inverted
-              />
-              <span
-                v-else
-                data-test="block-created-at-unavailable"
-              >{{ $t('telemetry.dataUnknown') }}</span>
-            </div>
-
-            <div
-              class="cell"
-              role="cell"
-            >
-              <BaseHash
-                :hash="item.hash"
-                :link="`/blocks/${item.hash}`"
-                :type="hashType"
-                copy
-              />
-            </div>
-
-            <div
-              class="cell row-text-monospace"
-              role="cell"
-            >
-              {{ $t('blocks.totalAndRejectedTransactions', [item.transactions_total, item.transactions_rejected]) }}
-            </div>
+          <div class="cell" role="cell">
+            <BaseHash
+              :hash="item.hash"
+              :link="`/blocks/${encodeURIComponent(item.hash)}`"
+              :type="hashType"
+              copy
+            />
           </div>
-        </template>
 
-        <template #mobile-card="{ item }">
-          <div class="blocks-list-page__mobile-card">
-            <span
-              class="row-text"
-              :style="{ 'margin-left': '8px' }"
-            >{{ item.transactions_hash ? '◉' : 'O' }}</span>
-            <div class="blocks-list-page__mobile-row">
-              <span class="h-sm blocks-list-page__mobile-label">{{ $t('blocks.height') }}</span>
-
-              <BaseLink :to="`/blocks/${item.height}`">
-                {{ item.height }}
-              </BaseLink>
-            </div>
-
-            <div class="blocks-list-page__mobile-row">
-              <span class="h-sm blocks-list-page__mobile-label">{{ $t('blocks.age') }}</span>
-              <TimeStamp
-                v-if="item.created_at"
-                class="blocks-list-page__mobile-row-time"
-                :value="item.created_at"
-                inverted
-              />
-              <span
-                v-else
-                data-test="block-created-at-unavailable-mobile"
-              >{{ $t('telemetry.dataUnknown') }}</span>
-            </div>
-
-            <div class="blocks-list-page__mobile-row">
-              <span class="h-sm blocks-list-page__mobile-label">{{ $t('blocks.hash') }}</span>
-
-              <BaseHash
-                :hash="item.hash"
-                :link="`/blocks/${item.height}`"
-                :type="hashType"
-                copy
-              />
-            </div>
-
-            <div class="blocks-list-page__mobile-row">
-              <span class="h-sm blocks-list-page__mobile-label">{{ $t('transactions.transactions') }}</span>
-              <span class="row-text-monospace">{{
-                $t('blocks.totalAndRejectedTransactions', [item.transactions_total, item.transactions_rejected])
-              }}</span>
-            </div>
+          <div class="cell row-text-monospace" role="cell">
+            {{ $t('blocks.totalAndRejectedTransactions', [item.transactions_total, item.transactions_rejected]) }}
           </div>
-        </template>
-      </BaseTable>
-    </BaseCollectionState>
+        </div>
+      </template>
+
+      <template #mobile-card="{ item }">
+        <div class="blocks-list-page__mobile-card">
+          <span
+            class="row-text"
+            :style="{ 'margin-left': '8px' }"
+          >{{ item.transactions_hash ? '◉' : 'O' }}</span>
+          <div class="blocks-list-page__mobile-row">
+            <span class="h-sm blocks-list-page__mobile-label">{{ $t('blocks.height') }}</span>
+
+            <BaseLink :to="`/blocks/${item.height}`">
+              {{ item.height }}
+            </BaseLink>
+          </div>
+
+          <div class="blocks-list-page__mobile-row">
+            <span class="h-sm blocks-list-page__mobile-label">{{ $t('blocks.age') }}</span>
+            <TimeStamp
+              class="blocks-list-page__mobile-row-time"
+              :value="item.created_at"
+              inverted
+            />
+          </div>
+
+          <div class="blocks-list-page__mobile-row">
+            <span class="h-sm blocks-list-page__mobile-label">{{ $t('blocks.hash') }}</span>
+
+            <BaseHash
+              :hash="item.hash"
+              :link="`/blocks/${item.height}`"
+              :type="hashType"
+              copy
+            />
+          </div>
+
+          <div class="blocks-list-page__mobile-row">
+            <span class="h-sm blocks-list-page__mobile-label">{{ $t('transactions.transactions') }}</span>
+            <span class="row-text-monospace">{{
+              $t('blocks.totalAndRejectedTransactions', [item.transactions_total, item.transactions_rejected])
+            }}</span>
+          </div>
+        </div>
+      </template>
+    </BaseTable>
   </BaseContentBlock>
 </template>
 
@@ -194,7 +135,6 @@ import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import * as http from '@/shared/api';
 import BaseHash from '@/shared/ui/components/BaseHash.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
-import BaseCollectionState from '@/shared/ui/components/BaseCollectionState.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import { computed, ref, watch } from 'vue';
 import TimeStamp from '@/shared/ui/components/TimeStamp.vue';
@@ -209,11 +149,8 @@ import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQue
 
 const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full', xxs: 'short' }, 'medium');
 
-const { cursor, limit, pagination, resetPagination } = useCursorListRouteQuery({ cursorKind: 'history' });
-const listParams = computed(() =>
-  pagination.value.ok ? { cursor: pagination.value.cursor, limit: pagination.value.limit } : null
-);
-const isLatestCursor = computed(() => pagination.value.ok && pagination.value.cursor === null);
+const { cursor, limit } = useCursorListRouteQuery();
+const listParams = computed(() => ({ cursor: cursor.value, limit: limit.value }));
 
 const { y: windowScrollY } = useWindowScroll();
 const isScrolledDown = computed(() => windowScrollY.value > 80);
@@ -221,7 +158,7 @@ const pendingRefresh = ref(false);
 
 let refetchLatestBlocks: (() => void) | null = null;
 const blockStream = useBlockStream(() => {
-  if (!isLatestCursor.value) return;
+  if (cursor.value) return;
   if (isScrolledDown.value) {
     pendingRefresh.value = true;
     return;
@@ -231,7 +168,6 @@ const blockStream = useBlockStream(() => {
 
 const scope = useParamScope(
   () => {
-    if (listParams.value === null) return null;
     return {
       key: JSON.stringify(listParams.value),
       payload: listParams.value,
@@ -239,16 +175,18 @@ const scope = useParamScope(
   },
   ({ payload }) =>
     setupAsyncData(() => http.fetchBlocks(payload), {
-      interval: payload.cursor === null ? 5000 : undefined,
-      pollWhen: () => windowScrollY.value <= 80 && (!blockStream.isSupported || !blockStream.isStreaming.value),
+      interval: !payload.cursor ? 5000 : undefined,
+      pollWhen: () =>
+        windowScrollY.value <= 80 &&
+        (!blockStream.isSupported || !blockStream.isStreaming.value),
     })
 );
 
 refetchLatestBlocks = () => scope.value?.expose.refetch?.();
 
-const isLoading = computed(() => Boolean(scope.value?.expose.isLoading));
+const isLoading = computed(() => scope.value?.expose.isLoading);
 const payloadPagination = computed(() =>
-  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.pagination : undefined
+  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data : undefined
 );
 const blocks = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
@@ -260,7 +198,9 @@ const latestBlockProbe = setupAsyncData(() => http.fetchBlocks({ limit: 1 }), {
   interval: 10_000,
   immediate: false,
   pollWhen: () =>
-    isScrolledDown.value && isLatestCursor.value && (!blockStream.isSupported || !blockStream.isStreaming.value),
+    isScrolledDown.value &&
+    !cursor.value &&
+    (!blockStream.isSupported || !blockStream.isStreaming.value),
   onError: () => {
     // Background probe while scrolling should not spam toasts; the main table fetch handles errors.
   },
@@ -279,8 +219,8 @@ const maxDisplayedHeight = computed(() => {
 
 watch(
   () => [latestRemoteHeight.value, maxDisplayedHeight.value, isScrolledDown.value, cursor.value] as const,
-  ([remoteHeight, localHeight, scrolledDown, currentCursor]) => {
-    if (!scrolledDown || currentCursor !== null) {
+  ([remoteHeight, localHeight, scrolledDown, cursor]) => {
+    if (!scrolledDown || cursor) {
       pendingRefresh.value = false;
       return;
     }
@@ -292,16 +232,16 @@ watch(
 
 watch(
   () => [isScrolledDown.value, cursor.value] as const,
-  ([scrolledDown, currentCursor], previous) => {
-    const [prevScrolledDown, previousCursor] = previous ?? [false, currentCursor];
-    if (currentCursor !== null) {
+  ([scrolledDown, cursor], previous) => {
+    const [prevScrolledDown, prevCursor] = previous ?? [false, cursor];
+    if (cursor) {
       pendingRefresh.value = false;
       return;
     }
 
     if (scrolledDown) {
       if (blockStream.isSupported && blockStream.isStreaming.value) return;
-      if (!prevScrolledDown || previousCursor !== currentCursor) {
+      if (!prevScrolledDown || prevCursor !== cursor) {
         latestBlockProbe.refetch();
       }
       return;
@@ -357,10 +297,21 @@ watch(
     width: 100%;
     display: grid;
     justify-content: start;
-    grid-template-columns: 20px minmax(70px, .5fr) minmax(160px, 1fr) minmax(0, 1.8fr) minmax(140px, 1fr);
+    @include lg {
+      grid-template-columns: 20px 130px 260px 300px 1fr;
+    }
+    @include xl {
+      grid-template-columns: 20px 130px 260px 640px 1fr;
+    }
 
     &-time {
       position: relative;
+
+      &:hover .context-tooltip {
+        display: flex;
+        bottom: size(3);
+        left: size(8);
+      }
     }
   }
 
@@ -377,6 +328,12 @@ watch(
 
       @include sm {
         width: 58%;
+      }
+
+      &:hover .context-tooltip {
+        display: flex;
+        bottom: size(3);
+        left: size(6);
       }
     }
   }

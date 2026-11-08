@@ -1,291 +1,303 @@
 <template>
   <div class="dataspaces-page">
-    <BaseContentBlock :title="$t('dataspaces.title')">
+    <BaseContentBlock :title="$t('dataspaces.overviewTitle')">
       <template #default>
-        <form class="dataspaces-page__lookup" data-test="dataspaces-lookup" @submit.prevent="loadSummary">
-          <label>
-            <span class="h-sm">{{ $t('dataspaces.accountLiteralLabel') }}</span>
-            <input
-              v-model="accountLiteral"
-              type="text"
-              autocomplete="off"
-              :placeholder="$t('dataspaces.accountLiteralPlaceholder')"
-            />
-          </label>
-          <BaseButton bordered native-type="submit" :disabled="state.isLoading" data-test="dataspaces-submit">
-            {{ $t('dataspaces.lookup') }}
-          </BaseButton>
-        </form>
+        <div class="dataspaces-page__controls">
+          <button
+            type="button"
+            class="dataspaces-page__refresh"
+            :disabled="state.isLoading"
+            data-test="dataspaces-refresh"
+            @click="loadStatus"
+          >
+            {{ state.isLoading ? $t('dataspaces.loading') : $t('dataspaces.refresh') }}
+          </button>
+          <p
+            v-if="state.lastUpdated"
+            class="dataspaces-page__updated"
+            data-test="dataspaces-updated"
+          >
+            {{ $t('dataspaces.updatedAt', { value: state.lastUpdated }) }}
+          </p>
+        </div>
 
         <p class="dataspaces-page__hint">
-          {{ $t('dataspaces.hint') }}
+          {{ $t('dataspaces.overviewHint') }}
+        </p>
+        <p class="dataspaces-page__meta">
+          {{ $t('dataspaces.overviewLifetimeTx') }}
         </p>
 
-        <BaseLoading v-if="state.isLoading" data-test="dataspaces-loading" />
+        <BaseLoading
+          v-if="state.isLoading && !state.status"
+          data-test="dataspaces-loading"
+        />
 
-        <p v-else-if="state.error" class="dataspaces-page__error" data-test="dataspaces-error">
+        <p
+          v-else-if="state.error"
+          class="dataspaces-page__error"
+          data-test="dataspaces-error"
+        >
           {{ state.error }}
         </p>
 
-        <template v-else-if="state.summary">
-          <div class="dataspaces-page__identity" data-test="dataspaces-identity">
-            <DataField :title="$t('dataspaces.accountLiteralLabel')" :value="state.summary.account_id" monospace />
-            <DataField :title="$t('dataspaces.uaid')" :value="state.summary.uaid ?? $t('none')" monospace />
+        <div
+          v-else-if="state.status"
+          class="dataspaces-page__stats"
+          data-test="dataspaces-stats"
+        >
+          <div class="dataspaces-page__stat">
+            <span class="label">{{ $t('dataspaces.totalDataspacesRegistered') }}</span>
+            <span class="value">{{ summaryStats.totalDataspaces }}</span>
           </div>
-
-          <div class="dataspaces-page__stats" data-test="dataspaces-stats">
-            <DataField :title="$t('dataspaces.totalDataspaces')" :value="state.summary.totals.dataspaces" monospace />
-            <DataField :title="$t('dataspaces.boundAccounts')" :value="state.summary.totals.accounts_bound" monospace />
-            <DataField
-              :title="$t('dataspaces.portfolioPositions')"
-              :value="state.summary.totals.portfolio_positions"
-              monospace
-            />
-            <DataField
-              :title="$t('dataspaces.manifests')"
-              :value="`${state.summary.totals.manifests_active}/${state.summary.totals.manifests_total}`"
-              monospace
-            />
-            <DataField
-              :title="$t('dataspaces.consensusEntries')"
-              :value="state.summary.totals.consensus_entries"
-              monospace
-            />
-            <DataField
-              :title="$t('dataspaces.consensusTx')"
-              :value="state.summary.totals.consensus_tx_count"
-              monospace
-            />
-            <DataField
-              :title="$t('dataspaces.consensusChunks')"
-              :value="state.summary.totals.consensus_chunks_total"
-              monospace
-            />
-            <DataField
-              :title="$t('dataspaces.consensusBytes')"
-              :value="state.summary.totals.consensus_rbc_bytes_total"
-              monospace
-            />
+          <div class="dataspaces-page__stat">
+            <span class="label">{{ $t('dataspaces.totalDataspacesCustom') }}</span>
+            <span class="value">{{ summaryStats.customDataspaces }}</span>
           </div>
-        </template>
+          <div class="dataspaces-page__stat">
+            <span class="label">{{ $t('dataspaces.totalBacklog') }}</span>
+            <span class="value">{{ summaryStats.totalBacklog }}</span>
+          </div>
+          <div class="dataspaces-page__stat">
+            <span class="label">{{ $t('dataspaces.totalLifetimeServed') }}</span>
+            <span class="value">{{ summaryStats.totalTxServed }}</span>
+          </div>
+          <div class="dataspaces-page__stat">
+            <span class="label">{{ $t('dataspaces.nodeBlockHeight') }}</span>
+            <span class="value">{{ summaryStats.blocks }}</span>
+          </div>
+          <div class="dataspaces-page__stat">
+            <span class="label">{{ $t('dataspaces.nodeQueueSize') }}</span>
+            <span class="value">{{ summaryStats.queueSize }}</span>
+          </div>
+          <div class="dataspaces-page__stat">
+            <span class="label">{{ $t('dataspaces.nodeApprovedTx') }}</span>
+            <span class="value">{{ summaryStats.txsApproved }}</span>
+          </div>
+          <div class="dataspaces-page__stat">
+            <span class="label">{{ $t('dataspaces.nodeRejectedTx') }}</span>
+            <span class="value">{{ summaryStats.txsRejected }}</span>
+          </div>
+        </div>
       </template>
     </BaseContentBlock>
 
-    <BaseContentBlock v-if="state.summary" :title="$t('dataspaces.dataspacesTable')">
+    <BaseContentBlock
+      v-if="state.status"
+      :title="$t('dataspaces.dataspacesTable')"
+    >
       <template #default>
         <BaseTable
-          :items="state.summary.dataspaces"
+          class="dataspaces-page__table"
+          :items="dataspaces"
           :loading="state.isLoading"
           :row-key="dataspaceRowKey"
-          container-class="dataspaces-page__table"
+          container-class="dataspaces-page__rows"
           :disable-pagination="true"
           row-pointer
-          @click:row="selectDataspace"
+          @click:row="openDataspace"
         >
           <template #header>
             <span class="dataspaces-page__cell dataspaces-page__cell--header" role="columnheader">
               {{ $t('dataspaces.dataspace') }}
             </span>
-            <span class="dataspaces-page__cell dataspaces-page__cell--header" role="columnheader">
-              {{ $t('dataspaces.accountsInDataspace') }}
+            <span class="dataspaces-page__cell dataspaces-page__cell--header dataspaces-page__cell--numeric" role="columnheader">
+              {{ $t('dataspaces.lane') }}
             </span>
-            <span class="dataspaces-page__cell dataspaces-page__cell--header" role="columnheader">
-              {{ $t('dataspaces.portfolioPositions') }}
+            <span class="dataspaces-page__cell dataspaces-page__cell--header dataspaces-page__cell--numeric" role="columnheader">
+              {{ $t('dataspaces.faultToleranceShort') }}
             </span>
-            <span class="dataspaces-page__cell dataspaces-page__cell--header" role="columnheader">
-              {{ $t('dataspaces.manifestStatus') }}
+            <span class="dataspaces-page__cell dataspaces-page__cell--header dataspaces-page__cell--numeric" role="columnheader">
+              {{ $t('dataspaces.backlog') }}
             </span>
-            <span class="dataspaces-page__cell dataspaces-page__cell--header" role="columnheader">
-              {{ $t('dataspaces.consensusTx') }}
+            <span class="dataspaces-page__cell dataspaces-page__cell--header dataspaces-page__cell--numeric" role="columnheader">
+              {{ $t('dataspaces.ageSlots') }}
             </span>
-            <span class="dataspaces-page__cell dataspaces-page__cell--header" role="columnheader">
-              {{ $t('dataspaces.consensusLanes') }}
-            </span>
-            <span class="dataspaces-page__cell dataspaces-page__cell--header" role="columnheader">
-              {{ $t('dataspaces.lastCommit') }}
+            <span class="dataspaces-page__cell dataspaces-page__cell--header dataspaces-page__cell--numeric" role="columnheader">
+              {{ $t('dataspaces.lifetimeTxServed') }}
             </span>
           </template>
 
           <template #row="{ item }">
             <span class="dataspaces-page__cell row-text" role="cell">{{ dataspaceLabel(item) }}</span>
-            <span class="dataspaces-page__cell row-text-monospace" role="cell">{{ item.accounts.length }}</span>
-            <span class="dataspaces-page__cell row-text-monospace" role="cell">{{ item.portfolio.positions }}</span>
-            <span class="dataspaces-page__cell row-text" role="cell">{{ manifestLabel(item) }}</span>
-            <span class="dataspaces-page__cell row-text-monospace" role="cell">{{ item.consensus.tx_count }}</span>
-            <span class="dataspaces-page__cell row-text-monospace" role="cell">{{ laneLabel(item) }}</span>
-            <span class="dataspaces-page__cell row-text-monospace" role="cell">{{ lastCommitLabel(item) }}</span>
+            <span class="dataspaces-page__cell dataspaces-page__cell--numeric row-text" role="cell">{{ item.lane_summary }}</span>
+            <span class="dataspaces-page__cell dataspaces-page__cell--numeric row-text" role="cell">{{ item.fault_tolerance }}</span>
+            <span class="dataspaces-page__cell dataspaces-page__cell--numeric row-text" role="cell">{{ item.backlog }}</span>
+            <span class="dataspaces-page__cell dataspaces-page__cell--numeric row-text" role="cell">{{ item.age_slots }}</span>
+            <span class="dataspaces-page__cell dataspaces-page__cell--numeric row-text" role="cell">{{ item.tx_served }}</span>
           </template>
 
           <template #mobile-card="{ item }">
             <div class="dataspaces-page__mobile-card">
-              <DataField :title="$t('dataspaces.dataspace')" :value="dataspaceLabel(item)" />
-              <DataField :title="$t('dataspaces.accountsInDataspace')" :value="item.accounts.length" monospace />
-              <DataField :title="$t('dataspaces.portfolioPositions')" :value="item.portfolio.positions" monospace />
-              <DataField :title="$t('dataspaces.manifestStatus')" :value="manifestLabel(item)" />
-              <DataField :title="$t('dataspaces.consensusLanes')" :value="laneLabel(item)" monospace />
+              <div class="dataspaces-page__mobile-row">
+                <span class="label">{{ $t('dataspaces.dataspace') }}</span>
+                <span class="row-text">{{ dataspaceLabel(item) }}</span>
+              </div>
+              <div class="dataspaces-page__mobile-row">
+                <span class="label">{{ $t('dataspaces.lane') }}</span>
+                <span class="row-text">{{ item.lane_summary }}</span>
+              </div>
+              <div class="dataspaces-page__mobile-row">
+                <span class="label">{{ $t('dataspaces.faultToleranceShort') }}</span>
+                <span class="row-text">{{ item.fault_tolerance }}</span>
+              </div>
+              <div class="dataspaces-page__mobile-row">
+                <span class="label">{{ $t('dataspaces.backlog') }}</span>
+                <span class="row-text">{{ item.backlog }}</span>
+              </div>
+              <div class="dataspaces-page__mobile-row">
+                <span class="label">{{ $t('dataspaces.ageSlots') }}</span>
+                <span class="row-text">{{ item.age_slots }}</span>
+              </div>
+              <div class="dataspaces-page__mobile-row">
+                <span class="label">{{ $t('dataspaces.lifetimeTxServed') }}</span>
+                <span class="row-text">{{ item.tx_served }}</span>
+              </div>
             </div>
           </template>
         </BaseTable>
-      </template>
-    </BaseContentBlock>
-
-    <BaseContentBlock v-if="selectedDataspace" :title="$t('dataspaces.selectedTitle')" data-test="dataspaces-selected">
-      <template #default>
-        <div class="dataspaces-page__selected-grid">
-          <DataField :title="$t('dataspaces.dataspace')" :value="dataspaceLabel(selectedDataspace)" />
-          <DataField
-            :title="$t('dataspaces.accountsInDataspace')"
-            :value="selectedDataspace.accounts.join(', ') || $t('none')"
-            monospace
-          />
-          <DataField
-            :title="$t('dataspaces.portfolioPositions')"
-            :value="selectedDataspace.portfolio.positions"
-            monospace
-          />
-          <DataField :title="$t('dataspaces.manifestStatus')" :value="manifestLabel(selectedDataspace)" />
-          <DataField
-            :title="$t('dataspaces.consensusEntries')"
-            :value="selectedDataspace.consensus.entries"
-            monospace
-          />
-          <DataField :title="$t('dataspaces.consensusTx')" :value="selectedDataspace.consensus.tx_count" monospace />
-          <DataField
-            :title="$t('dataspaces.consensusChunks')"
-            :value="selectedDataspace.consensus.total_chunks"
-            monospace
-          />
-          <DataField
-            :title="$t('dataspaces.consensusBytes')"
-            :value="selectedDataspace.consensus.rbc_bytes_total"
-            monospace
-          />
-          <DataField :title="$t('dataspaces.lastCommit')" :value="lastCommitLabel(selectedDataspace)" monospace />
-          <DataField
-            :title="$t('dataspaces.lastCommitHash')"
-            :value="selectedDataspace.consensus.last_block_hash ?? $t('none')"
-            monospace
-          />
-        </div>
-
-        <div
-          v-if="selectedDataspace.consensus.lane_ids.length > 0"
-          class="dataspaces-page__lane-links"
-          data-test="dataspaces-lane-links"
-        >
-          <BaseButton
-            v-for="laneId in selectedDataspace.consensus.lane_ids"
-            :key="laneId"
-            bordered
-            :to="{
-              name: 'dataspaces-details',
-              params: { laneId: String(laneId), dataspaceId: String(selectedDataspace.dataspace_id) },
-            }"
-          >
-            {{ $t('dataspaces.lane') }} {{ laneId }}
-          </BaseButton>
-        </div>
       </template>
     </BaseContentBlock>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive } from 'vue';
 import { useI18n } from 'vue-i18n';
 import * as http from '@/shared/api';
-import type { NexusDataspaceAccountSummaryRow, NexusDataspacesAccountSummary } from '@/shared/api/schemas';
-import { NOT_FOUND, SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import BaseButton from '@/shared/ui/components/BaseButton.vue';
+import type { NexusPublicStatus, NexusStatusDataspaceBacklog } from '@/shared/api/schemas';
+import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
-import DataField from '@/shared/ui/components/DataField.vue';
-import { normalizeAccountIdLiteral } from '@/shared/lib/account-literal';
+import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 
 defineOptions({
   name: 'DataspacesPage',
 });
 
+type DataspaceOverviewRow = Omit<NexusStatusDataspaceBacklog, 'lane_id' | 'backlog' | 'age_slots' | 'tx_served'> & {
+  lane_ids: number[]
+  representative_lane_id: number
+  lane_summary: string
+  backlog: number
+  age_slots: number
+  tx_served: number
+}
+
 const { t } = useI18n();
-const accountLiteral = ref('');
-const selectedDataspaceId = ref<number | null>(null);
+const navigation = useScopedExplorerNavigation();
+
 const state = reactive<{
-  isLoading: boolean;
-  error: string | null;
-  summary: NexusDataspacesAccountSummary | null;
+  isLoading: boolean
+  error: string | null
+  status: NexusPublicStatus | null
+  lastUpdated: string | null
 }>({
   isLoading: false,
   error: null,
-  summary: null,
+  status: null,
+  lastUpdated: null,
 });
 
-const selectedDataspace = computed(() => {
-  const rows = state.summary?.dataspaces ?? [];
-  if (rows.length === 0) return null;
-  return rows.find((item) => item.dataspace_id === selectedDataspaceId.value) ?? rows[0] ?? null;
+const dataspaces = computed<DataspaceOverviewRow[]>(() => {
+  const catalog = state.status?.dataspace_catalog ?? [];
+  // Scheduler telemetry includes every lane/dataspace pair; only the catalog
+  // establishes registered bindings and which rows contribute to each total.
+  const entries = (state.status?.teu_dataspace_backlog ?? []).filter((item) => catalog.some(
+    (entry) => entry.dataspace_id === item.dataspace_id && entry.lane_id === item.lane_id
+  ));
+  const grouped = new Map<string, NexusStatusDataspaceBacklog[]>();
+
+  for (const entry of entries) {
+    const existing = grouped.get(entry.dataspace_id);
+    if (existing) {
+      existing.push(entry);
+    } else {
+      grouped.set(entry.dataspace_id, [entry]);
+    }
+  }
+
+  return [...grouped.entries()]
+    .sort(([left], [right]) => BigInt(left) < BigInt(right) ? -1 : BigInt(left) > BigInt(right) ? 1 : 0)
+    .flatMap(([id, rows]) => {
+      const sortedRows = [...rows].sort((left, right) => left.lane_id - right.lane_id);
+      const registeredLanes = new Set(catalog.filter((entry) => entry.dataspace_id === id).map((entry) => entry.lane_id));
+      const primary = sortedRows.find((item) => registeredLanes.has(item.lane_id));
+      if (!primary) return [];
+      const representativeLane = primary.lane_id;
+      const laneIds = sortedRows.map((item) => item.lane_id);
+
+      return {
+        ...primary,
+        representative_lane_id: representativeLane,
+        lane_ids: laneIds,
+        lane_summary: laneIds.join(', '),
+        backlog: sortedRows.reduce((sum, item) => sum + item.backlog, 0),
+        age_slots: sortedRows.reduce((max, item) => Math.max(max, item.age_slots), 0),
+        tx_served: sortedRows.reduce((sum, item) => sum + item.tx_served, 0),
+      };
+    });
 });
 
-function dataspaceRowKey(item: NexusDataspaceAccountSummaryRow): string {
+const summaryStats = computed(() => {
+  const entries = dataspaces.value;
+  return {
+    totalDataspaces: entries.length,
+    customDataspaces: entries.filter((item) => BigInt(item.dataspace_id) >= 10n).length,
+    totalBacklog: entries.reduce((sum, item) => sum + item.backlog, 0),
+    totalTxServed: entries.reduce((sum, item) => sum + item.tx_served, 0),
+    blocks: state.status?.blocks ?? 0,
+    queueSize: state.status?.queue_size ?? 0,
+    txsApproved: state.status?.txs_approved ?? 0,
+    txsRejected: state.status?.txs_rejected ?? 0,
+  };
+});
+
+function dataspaceRowKey(item: DataspaceOverviewRow) {
   return String(item.dataspace_id);
 }
 
-function dataspaceLabel(item: NexusDataspaceAccountSummaryRow): string {
-  return item.dataspace_alias ? `${item.dataspace_alias} (#${item.dataspace_id})` : `#${item.dataspace_id}`;
+function dataspaceLabel(item: Pick<DataspaceOverviewRow, 'alias' | 'dataspace_id'>): string {
+  return item.alias ? `${item.alias} (#${item.dataspace_id})` : `#${item.dataspace_id}`;
 }
 
-function manifestLabel(item: NexusDataspaceAccountSummaryRow): string {
-  return item.manifest.present ? item.manifest.status : t('dataspaces.manifestMissing');
+function openDataspace(item: DataspaceOverviewRow) {
+  navigation.push({
+    name: 'dataspaces-details',
+    params: {
+      laneId: String(item.representative_lane_id),
+      dataspaceId: String(item.dataspace_id),
+    },
+  }).catch(() => {});
 }
 
-function laneLabel(item: NexusDataspaceAccountSummaryRow): string {
-  return item.consensus.lane_ids.length > 0 ? item.consensus.lane_ids.join(', ') : '—';
-}
-
-function lastCommitLabel(item: NexusDataspaceAccountSummaryRow): string {
-  return item.consensus.last_block_height === null ? '—' : String(item.consensus.last_block_height);
-}
-
-function selectDataspace(item: NexusDataspaceAccountSummaryRow) {
-  selectedDataspaceId.value = item.dataspace_id;
-}
-
-async function loadSummary() {
-  const rawLiteral = accountLiteral.value;
-  if (!rawLiteral.trim()) {
-    state.summary = null;
-    selectedDataspaceId.value = null;
-    state.error = t('dataspaces.accountRequired');
-    return;
-  }
-  const literal = normalizeAccountIdLiteral(rawLiteral);
-  if (!literal) {
-    state.summary = null;
-    selectedDataspaceId.value = null;
-    state.error = t('dataspaces.accountInvalid');
-    return;
-  }
-
+async function loadStatus() {
   state.isLoading = true;
   state.error = null;
-  state.summary = null;
-  selectedDataspaceId.value = null;
 
   try {
-    const response = await http.fetchNexusDataspacesAccountSummary(literal);
+    const response = await http.fetchNexusPublicStatus();
+
     if (response.status === SUCCESSFUL_FETCHING) {
-      state.summary = response.data;
-      selectedDataspaceId.value = response.data.dataspaces[0]?.dataspace_id ?? null;
+      state.status = response.data;
+      state.lastUpdated = new Date().toLocaleString();
       return;
     }
 
-    state.error = response.status === NOT_FOUND ? t('dataspaces.accountNotFound') : t('dataspaces.loadFailed');
+    state.status = null;
+    state.error = t('dataspaces.loadFailed');
   } catch {
+    state.status = null;
     state.error = t('dataspaces.loadFailed');
   } finally {
     state.isLoading = false;
   }
 }
+
+onMounted(() => {
+  loadStatus();
+});
 </script>
 
 <style lang="scss">
@@ -295,10 +307,10 @@ async function loadSummary() {
   display: grid;
   gap: size(3);
 
-  &__lookup {
+  &__controls {
     display: flex;
     flex-wrap: wrap;
-    align-items: end;
+    align-items: center;
     gap: size(1.5);
     padding: 0 size(2);
 
@@ -306,30 +318,41 @@ async function loadSummary() {
       padding: 0 size(3);
     }
 
-    label {
-      display: grid;
-      flex: 1 1 360px;
-      gap: size(0.75);
-      min-width: 0;
-    }
-
-    input {
-      width: 100%;
-      min-width: 0;
-      padding: size(1.25);
-      border: 1px solid theme-color('border-primary');
-      border-radius: size(1);
-      color: theme-color('content-primary');
-      background: transparent;
+    @include md {
+      padding: 0 size(2);
     }
   }
 
+  &__refresh {
+    padding: size(1.25) size(2);
+    border: 1px solid theme-color('border-primary');
+    border-radius: size(1);
+    color: theme-color('content-primary');
+    background: theme-color('surface-variant');
+    cursor: pointer;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+
+  &__updated {
+    color: theme-color('content-tertiary');
+    @include tpg-s4;
+  }
+
   &__hint,
+  &__meta,
   &__error {
     padding: 0 size(2);
 
     @include sm {
       padding: 0 size(3);
+    }
+
+    @include md {
+      padding: 0 size(2);
     }
   }
 
@@ -338,29 +361,56 @@ async function loadSummary() {
     @include tpg-s3;
   }
 
+  &__meta {
+    color: theme-color('content-tertiary');
+    @include tpg-s4;
+  }
+
   &__error {
     color: theme-color('error');
     @include tpg-s3;
   }
 
-  &__identity,
-  &__stats,
-  &__selected-grid {
+  &__stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    grid-template-columns: repeat(1, minmax(0, 1fr));
     gap: size(1);
     padding: size(1.5) size(2) 0;
 
     @include sm {
-      padding-right: size(3);
-      padding-left: size(3);
+      padding: size(1.5) size(3) 0;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @include lg {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      padding: size(2) size(4) 0;
+    }
+  }
+
+  &__stat {
+    border: 1px solid theme-color('border-primary');
+    border-radius: size(1);
+    padding: size(1.5);
+    background: theme-color('surface-variant');
+    display: grid;
+    gap: size(0.5);
+
+    .label {
+      color: theme-color('content-tertiary');
+      @include tpg-s4;
+    }
+
+    .value {
+      color: theme-color('content-primary');
+      @include tpg-s2;
     }
   }
 
   &__table {
     .content-row {
       display: grid;
-      grid-template-columns: minmax(0, 1.7fr) repeat(6, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 2.4fr) repeat(5, minmax(0, 0.8fr));
       align-items: center;
       gap: size(1);
       min-height: 60px;
@@ -368,6 +418,10 @@ async function loadSummary() {
 
       @include sm {
         padding: 0 size(3);
+      }
+
+      @include md {
+        padding: 0 size(2);
       }
     }
   }
@@ -377,28 +431,29 @@ async function loadSummary() {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-
     &--header {
       color: theme-color('content-quaternary');
       @include tpg-s4;
     }
+    &--numeric {
+      text-align: right;
+    }
   }
 
   &__mobile-card {
+    padding: size(2) size(4);
     display: grid;
     gap: size(1);
-    padding: size(2) size(4);
   }
 
-  &__lane-links {
+  &__mobile-row {
     display: flex;
-    flex-wrap: wrap;
-    gap: size(1);
-    padding: size(2);
+    justify-content: space-between;
+    gap: size(2);
 
-    @include sm {
-      padding-right: size(3);
-      padding-left: size(3);
+    .label {
+      color: theme-color('content-quaternary');
+      @include tpg-s4;
     }
   }
 }

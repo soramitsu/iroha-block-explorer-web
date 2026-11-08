@@ -1,225 +1,126 @@
 import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleLoaded, i18n } from '@/shared/lib/localization';
 import TransactionEvidencePanel from './TransactionEvidencePanel.vue';
 import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
-import { i18n } from '@/shared/lib/localization';
 
-const api = vi.hoisted(() => ({
-  fetchLedgerBlockProof: vi.fn(),
-  fetchBlock: vi.fn(),
-  fetchLedgerStateRoot: vi.fn(),
-  fetchLedgerStateProof: vi.fn(),
-}));
-
+const api = vi.hoisted(() => ({ fetchTransactionProof: vi.fn() }));
 vi.mock('@/shared/api', () => api);
-
-const TRANSACTION_HASH = '11'.repeat(32);
-const ENTRY_ROOT = '33'.repeat(32);
-
+vi.mock('@/shared/runtime-config', () => ({ getRuntimeConfig: () => ({ networkId: 'network-a' }) }));
+const hash = '11'.repeat(32);
 const proof = {
-  proof: {
-    block_height: '42',
-    block_hash: '22'.repeat(32),
-    executed_block_wire_hash: '44'.repeat(32),
-    entry_hash: TRANSACTION_HASH,
-    entry_commitment: { root: ENTRY_ROOT, leaf_count: '1' },
-    entry_proof: { leaf: TRANSACTION_HASH, proof: { leaf_index: 0, audit_path: [] } },
-    result_commitment: { root: '55'.repeat(32), leaf_count: '1' },
-    result_proof: { leaf: '66'.repeat(32), proof: { leaf_index: 0, audit_path: [] } },
-    fastpq_transcripts: {},
+  version: 1,
+  network_id: 'network-a',
+  block_height: '42',
+  block_header: { height: '42' },
+  transaction: {
+    block_hash: '33'.repeat(32),
+    entrypoint_hash: hash,
+    output_hash: '55'.repeat(32),
+    entrypoint_proof: { leaf_index: 0, audit_path: [] },
+    output_proof: { leaf_index: 0, audit_path: [] },
   },
-  pathVerification: {
-    valid: true,
-    entry_hash_matches: true,
-    entry_proof_valid: true,
-    result_proof_valid: true,
-  },
+  certificate: { consensus_header: 'aGVhZGVy', commit_qc: 'cWM=', result_preimage: 'cmVzdWx0' },
 };
-
-const qc = {
-  phase: 'Commit',
-  subject_block_hash: 'hash:block',
-  parent_state_root: 'hash:parent',
-  post_state_root: 'hash:state',
-  height: 42,
-  view: 7,
-  epoch: 3,
-  mode_tag: 'sumeragi-v2',
-  highest_qc: null,
-  validator_set_hash: 'hash:validators',
-  validator_set_hash_version: 1,
-  validator_set: ['peer-a', 'peer-b'],
-  aggregate: {
-    signers_bitmap: '03',
-    bls_aggregate_signature: 'cafe',
-  },
-};
-
 function mountPanel() {
   return mount(TransactionEvidencePanel, {
-    props: { blockHeight: 42, transactionHash: TRANSACTION_HASH },
+    props: { blockHeight: 42, transactionHash: hash },
     global: {
       plugins: [i18n],
       stubs: {
-        BaseContentBlock: {
-          template: '<section><slot name="header-action"/><slot /></section>',
-        },
-        BaseResourceState: {
-          props: ['snapshot'],
-          emits: ['retry'],
-          template: '<div><slot /></div>',
-        },
-        DataField: {
-          props: ['title', 'value', 'hash'],
-          template: '<div class="field">{{ title }}: {{ value ?? hash }}</div>',
-        },
-        BaseButton: {
-          emits: ['click'],
-          template: '<button @click="$emit(\'click\')"><slot /></button>',
-        },
+        BaseContentBlock: { template: '<section><slot name="header-action"/><slot /></section>' },
+        BaseLoading: true,
+        BaseButton: { emits: ['click'], template: '<button @click="$emit(\'click\')"><slot /></button>' },
+        DataField: { props: ['title', 'value', 'hash'], template: '<div>{{ title }}: {{ value ?? hash }}</div>' },
       },
     },
   });
 }
+beforeEach(() => {
+  i18n.global.locale.value = 'en';
+  vi.clearAllMocks();
+  api.fetchTransactionProof.mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: proof });
+});
+
+afterEach(() => {
+  i18n.global.locale.value = 'en';
+});
 
 describe('TransactionEvidencePanel', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    api.fetchLedgerBlockProof.mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: proof });
-    api.fetchBlock.mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: {
-        hash: 'hash:block',
-        height: 42,
-        created_at: new Date('2026-07-23T00:00:00Z'),
-        prev_block_hash: 'hash:previous',
-        transactions_hash: ENTRY_ROOT,
-        transactions_rejected: 0,
-        transactions_total: 1,
-      },
-    });
-    api.fetchLedgerStateRoot.mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: {
-        height: 42,
-        block_hash: 'hash:block',
-        state_root: 'hash:state',
-        source: 'commit_qc',
-        commit_qc: qc,
-      },
-    });
-    api.fetchLedgerStateProof.mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: { height: 42, block_hash: 'hash:block', state_root: 'hash:state', commit_qc: qc },
-    });
-  });
-
-  it('distinguishes locally verified Merkle evidence from node-provided state and QC claims', async () => {
+  it('shows selective paths and certificate with accurate identity-only claims', async () => {
     const wrapper = mountPanel();
     await flushPromises();
-
-    expect(wrapper.get('[data-test="block-proof-available"]').text()).toContain(
-      'Internally valid against proof entry root'
+    expect(api.fetchTransactionProof).toHaveBeenCalledWith(hash);
+    expect(wrapper.get('[data-test="transaction-proof-claim"]').text()).toBe(
+      'Node-provided · not cryptographically verified here'
     );
-    expect(wrapper.get('[data-test="block-proof-claim"]').text()).toBe('Transaction entry locally verified');
-    expect(wrapper.text()).toContain('result root supplied in the same proof');
-    expect(wrapper.text()).toContain('that root is not independently anchored here');
-    expect(wrapper.get('[data-test="reference-block-available"]').text()).toContain('Reference transactions root');
-    expect(wrapper.text()).toContain('Node-provided · not cryptographically verified here');
-    expect(wrapper.text()).toContain('Node-provided · BLS not verified here');
-    expect(wrapper.text()).toContain('identify the requested block');
-    expect(wrapper.text()).toContain('Canonical decoded proof');
+    expect(wrapper.text()).toContain('Merkle paths and validator signatures are not verified here');
+    expect(JSON.parse(wrapper.get('[data-test="transaction-proof-raw"] pre').text())).toEqual(proof);
+    expect(wrapper.text()).not.toContain('Block proof request failed');
   });
 
-  it('keeps unavailable and failed evidence explicit and retries only on user action', async () => {
-    api.fetchLedgerBlockProof.mockResolvedValue({ status: NOT_FOUND });
-    api.fetchBlock.mockRejectedValue(new TypeError('reference route failed'));
-    api.fetchLedgerStateRoot.mockResolvedValue({
-      status: UNKNOWN_ERROR,
-      error: new Error('state route failed'),
-    });
-    api.fetchLedgerStateProof.mockResolvedValue({ status: NOT_FOUND });
-
+  it.each([
+    ['transaction', { ...proof, transaction: { ...proof.transaction, entrypoint_hash: '77'.repeat(32) } }],
+    ['network', { ...proof, network_id: 'network-b' }],
+    ['height', { ...proof, block_height: '43' }],
+  ])('reports a mismatched %s without claiming verification', async (_label, invalid) => {
+    api.fetchTransactionProof.mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: invalid });
     const wrapper = mountPanel();
     await flushPromises();
+    expect(wrapper.get('[data-test="transaction-proof-claim"]').text()).toBe('Does not match proof entry');
+  });
 
-    expect(wrapper.get('[data-test="block-proof-unavailable"]').text()).toContain('no block proof');
-    expect(wrapper.get('[data-test="reference-block-error"]').text()).toContain('reference-block request failed');
-    expect(wrapper.get('[data-test="state-proof-unavailable"]').text()).toContain('No persisted');
-    expect(wrapper.text()).toContain('state-root request failed');
-    expect(api.fetchLedgerBlockProof).toHaveBeenCalledTimes(1);
+  it('renders exact native integers above 2^53 without rounding or throwing', async () => {
+    api.fetchTransactionProof.mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        ...proof,
+        transaction: { ...proof.transaction, output: { dataspace_id: 8648377547929788715n } },
+      },
+    });
+    const wrapper = mountPanel();
+    await flushPromises();
+    expect(wrapper.get('[data-test="transaction-proof-raw"] pre').text()).toContain(
+      '"dataspace_id": 8648377547929788715'
+    );
+  });
 
+  it('explains unavailable private proofs and retries explicitly', async () => {
+    api.fetchTransactionProof.mockResolvedValue({ status: NOT_FOUND });
+    const wrapper = mountPanel();
+    await flushPromises();
+    expect(wrapper.get('[data-test="transaction-proof-unavailable"]').text()).toContain('connect an authorized wallet');
+    expect(wrapper.find('[data-test="transaction-proof-claim"]').exists()).toBe(false);
     await wrapper.get('[data-test="evidence-retry"]').trigger('click');
-    await flushPromises();
-    expect(api.fetchLedgerBlockProof).toHaveBeenCalledTimes(2);
+    expect(api.fetchTransactionProof).toHaveBeenCalledTimes(2);
   });
 
-  it('does not claim local verification for an internally valid proof bound to another transaction', async () => {
-    api.fetchLedgerBlockProof.mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: {
-        ...proof,
-        proof: { ...proof.proof, entry_hash: '55'.repeat(32) },
-      },
-    });
-
+  it('keeps a failed request explicit and retryable', async () => {
+    api.fetchTransactionProof.mockResolvedValue({ status: UNKNOWN_ERROR, error: new Error('access denied') });
     const wrapper = mountPanel();
     await flushPromises();
-
-    expect(wrapper.get('[data-test="block-proof-claim"]').text()).toBe('Local verification failed');
-    expect(wrapper.get('[data-test="block-proof-available"]').text()).toContain('Does not match proof entry');
+    expect(wrapper.get('[role="alert"]').text()).toContain('Ledger evidence could not be loaded');
+    expect(wrapper.find('[data-test="transaction-proof-available"]').exists()).toBe(false);
+    await wrapper.get('[data-test="resource-retry"]').trigger('click');
+    expect(api.fetchTransactionProof).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps a proof visible but marks verification incomplete without a reference block', async () => {
-    api.fetchBlock.mockResolvedValue({ status: NOT_FOUND });
-
+  it('localizes identity-only evidence without making a Merkle verification claim', async () => {
+    await ensureLocaleLoaded('jp');
+    i18n.global.locale.value = 'jp';
     const wrapper = mountPanel();
     await flushPromises();
-
-    expect(wrapper.get('[data-test="block-proof-available"]').text()).toContain('Could not be checked');
-    expect(wrapper.get('[data-test="block-proof-claim"]').text()).toBe('Local verification incomplete');
-    expect(wrapper.get('[data-test="reference-block-unavailable"]').text()).toContain('cannot be bound');
+    expect(wrapper.text()).toContain('メルクルパスやバリデータ署名はここでは検証しません');
+    expect(wrapper.get('[data-test="transaction-proof-claim"]').text()).toBe('ノード提供 · ここでは暗号学的に未検証');
+    expect(wrapper.text()).not.toContain('Refresh evidence');
+    wrapper.unmount();
   });
 
-  it('reports a conclusive transaction mismatch as failed even without a reference block', async () => {
-    api.fetchLedgerBlockProof.mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: {
-        ...proof,
-        proof: { ...proof.proof, entry_hash: '55'.repeat(32) },
-      },
-    });
-    api.fetchBlock.mockResolvedValue({ status: NOT_FOUND });
-
+  it('reloads for a different routed transaction', async () => {
     const wrapper = mountPanel();
     await flushPromises();
-
-    expect(wrapper.get('[data-test="block-proof-claim"]').text()).toBe('Local verification failed');
-    expect(wrapper.get('[data-test="block-proof-available"]').text()).toContain('Does not match proof entry');
-  });
-
-  it('warns when state responses share a root but identify different blocks', async () => {
-    api.fetchLedgerStateProof.mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: { height: 43, block_hash: 'hash:other-block', state_root: 'hash:state', commit_qc: qc },
-    });
-
-    const wrapper = mountPanel();
-    await flushPromises();
-
-    expect(wrapper.text()).toContain('do not identify the same requested block and state root');
-  });
-
-  it('reloads evidence when the routed transaction identity changes', async () => {
-    const wrapper = mountPanel();
-    await flushPromises();
-    const nextTransactionHash = '55'.repeat(32);
-    await wrapper.setProps({ blockHeight: 43, transactionHash: nextTransactionHash });
-    await flushPromises();
-
-    expect(api.fetchLedgerBlockProof).toHaveBeenLastCalledWith(43, nextTransactionHash);
-    expect(api.fetchBlock).toHaveBeenLastCalledWith(43);
-    expect(api.fetchLedgerStateRoot).toHaveBeenLastCalledWith(43);
-    expect(api.fetchLedgerStateProof).toHaveBeenLastCalledWith(43);
+    const nextHash = '77'.repeat(32);
+    await wrapper.setProps({ blockHeight: 43, transactionHash: nextHash });
+    expect(api.fetchTransactionProof).toHaveBeenLastCalledWith(nextHash);
   });
 });

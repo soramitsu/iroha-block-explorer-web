@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { getRuntimeNetworkPrefix } from '@/shared/runtime-config';
 import { defaultFormat } from '@/shared/lib/time';
 import BaseHash from '@/shared/ui/components/BaseHash.vue';
 import TransactionStatus from '@/entities/transaction/TransactionStatus.vue';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
-import BaseCollectionState from '@/shared/ui/components/BaseCollectionState.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
 import ContractCodeViewPanel from '@/shared/ui/components/ContractCodeViewPanel.vue';
 import type { Instruction, InstructionsSearchParams } from '@/shared/api/schemas';
@@ -21,17 +22,18 @@ import {
 } from '@/features/filter/transactions/adaptive-options';
 import { computed, reactive, ref, watch } from 'vue';
 import * as http from '@/shared/api';
+import { objectOmit } from '@vueuse/shared';
 import BaseJson from '@/shared/ui/components/BaseJson.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
+import { explorerReadAccountId } from '@/shared/lib/explorer-read-auth';
 import type { HashType } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING, NOT_FOUND } from '@/shared/api/consts';
 import { useClipboard, useThrottleFn, useWindowScroll } from '@vueuse/core';
 import { useNotifications } from '@/shared/ui/composables/notifications';
-import { useCurrentExplorerScope } from '@/shared/ui/composables/useExplorerScopeNavigation';
-import { applyExplorerScopeToLocation } from '@/shared/lib/explorer-scope';
 import { Instruction as InstructionSchema } from '@/shared/api/schemas';
 import { resolveContractViewInstructionKind } from '@/shared/lib/contract-view';
+import { fetchAllTransactionInstructions } from '@/shared/lib/transaction-instructions';
 import { useExplorerInstructionsEvents } from '@/shared/ui/composables/useExplorerInstructionsEvents';
 import InstructionSemanticCard from '@/shared/ui/components/InstructionSemanticCard.vue';
 import {
@@ -41,6 +43,7 @@ import {
 } from '@/shared/lib/instruction-presentation';
 
 const { t } = useI18n();
+const networkPrefix = getRuntimeNetworkPrefix();
 const props = defineProps<{
   showValue?: boolean
   hashType: HashType
@@ -51,21 +54,21 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'details-opened', payload: { transactionHash: string, index: number }): void
   (e: 'details-closed'): void
-  (e: 'list-state', payload: { isLoading: boolean, itemsCount: number, hasMore: boolean }): void
+  (e: 'list-state', payload: { isLoading: boolean, hasMore: boolean, itemsCount: number, hasError: boolean }): void
 }>();
 
 const presentationCache = new WeakMap<Instruction, InstructionPresentation | null>();
 
 function getInstructionPresentation(item: Instruction): InstructionPresentation | null {
   if (presentationCache.has(item)) return presentationCache.get(item) ?? null;
-  const result = buildInstructionPresentation(item);
+  const result = buildInstructionPresentation(item, networkPrefix);
   presentationCache.set(item, result);
   return result;
 }
 
 function getInstructionKindLabel(item: Instruction): string {
-  const message = getInstructionPresentation(item)?.kindLabel;
-  return message ? t(message.key, message.params ?? {}) : item.kind;
+  const label = getInstructionPresentation(item)?.kindLabel;
+  return label ? t(label.key, label.params ?? {}) : item.kind;
 }
 
 function getInstructionPrimaryEntity(item: Instruction): InstructionPresentationField | null {
@@ -85,35 +88,24 @@ const listState = reactive({
 });
 
 const searchParams = computed<InstructionsSearchParams>(() => {
-  const selectedKind = listState.kind === 'All' ? null : listState.kind;
-  const shared = {
-    cursor: listState.cursor,
-    limit: listState.limit,
-    ...(selectedKind === null ? {} : { kind: selectedKind }),
-  };
   if (isOnAccountPage.value) {
     return {
-      ...shared,
-      authority: props.filterBy.value,
-      ...(listState.transaction_status === null ? {} : { transaction_status: listState.transaction_status }),
+      ...objectOmit(listState, shouldShowKind.value ? ['kind', 'transaction_hash'] : ['transaction_hash']),
+      transaction_status: listState.transaction_status ?? undefined,
     };
   }
 
   return {
-    ...shared,
-    transaction_hash: props.filterBy.value,
+    ...objectOmit(
+      listState,
+      shouldShowKind.value ? ['kind', 'transaction_status', 'authority'] : ['transaction_status', 'authority']
+    ),
   };
 });
 
 watch([() => listState.kind, () => listState.transaction_status, () => listState.limit], () => {
   listState.cursor = null;
 });
-watch(
-  () => `${props.filterBy.kind}:${props.filterBy.value}`,
-  () => {
-    listState.cursor = null;
-  }
-);
 
 const scope = useParamScope(
   () => {
@@ -122,16 +114,23 @@ const scope = useParamScope(
       payload: searchParams.value,
     };
   },
-  ({ payload }) => setupAsyncData(() => http.fetchInstructions(payload))
+  ({ payload }) => setupAsyncData(() => http.fetchInstructions(payload), {
+    interval: 5000,
+    pollWhen: () => explorerReadAccountId.value !== null,
+  })
 );
 
 const isLoading = computed(() => scope.value?.expose.isLoading);
+const listSnapshot = computed(() => scope.value.expose.snapshot);
+const hasError = computed(() => Boolean(scope.value.expose.error));
+const payloadPagination = computed(() =>
+  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data : undefined
+);
+
 const fetchedItems = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value?.expose.data.data.items : []
 );
-const payloadPagination = computed(() =>
-  scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.pagination : undefined
-);
+const hasMore = computed(() => Boolean(payloadPagination.value?.nextCursor));
 const items = computed(() => fetchedItems.value);
 
 const instructionRowKey = (item: Instruction) => `${item.transaction_hash}:${item.index}`;
@@ -145,13 +144,16 @@ const detailState = reactive({
   error: '',
   data: null as Instruction | null,
 });
+const detailRelatedInstructionsState = reactive({
+  isLoading: false,
+  transactionHash: '',
+  items: [] as Instruction[],
+});
 
 const autoInstructionIndex = ref<number | null>(null);
 const lastSelection = ref<{ transactionHash: string, index: number } | null>(null);
 const clipboard = useClipboard();
 const notifications = useNotifications();
-const currentScope = useCurrentExplorerScope();
-let detailRequestGeneration = 0;
 
 const instructionsStream = useExplorerInstructionsEvents();
 
@@ -176,7 +178,6 @@ function applyPendingRefresh() {
 }
 
 async function loadInstructionDetail(target: { transactionHash: string, index: number }) {
-  const requestGeneration = ++detailRequestGeneration;
   detailState.isOpen = true;
   detailState.isLoading = true;
   detailState.error = '';
@@ -184,7 +185,6 @@ async function loadInstructionDetail(target: { transactionHash: string, index: n
   emit('details-opened', target);
   try {
     const response = await http.fetchInstructionDetail(target.transactionHash, target.index);
-    if (requestGeneration !== detailRequestGeneration) return;
     if (response.status === SUCCESSFUL_FETCHING) {
       detailState.data = response.data;
     } else if (response.status === NOT_FOUND) {
@@ -193,9 +193,50 @@ async function loadInstructionDetail(target: { transactionHash: string, index: n
       detailState.error = t('transactions.unknownError');
     }
   } catch (error) {
-    if (requestGeneration === detailRequestGeneration) detailState.error = t('transactions.unknownError');
+    detailState.error = t('transactions.unknownError');
   } finally {
-    if (requestGeneration === detailRequestGeneration) detailState.isLoading = false;
+    detailState.isLoading = false;
+  }
+}
+
+async function loadRelatedContractInstructions(instruction: Instruction) {
+  if (props.filterBy.kind !== 'transaction') {
+    detailRelatedInstructionsState.transactionHash = '';
+    detailRelatedInstructionsState.items = [];
+    detailRelatedInstructionsState.isLoading = false;
+    return;
+  }
+
+  if (!resolveContractViewInstructionKind(instruction)) {
+    detailRelatedInstructionsState.transactionHash = '';
+    detailRelatedInstructionsState.items = [];
+    detailRelatedInstructionsState.isLoading = false;
+    return;
+  }
+
+  if (
+    detailRelatedInstructionsState.transactionHash === instruction.transaction_hash
+    && detailRelatedInstructionsState.items.length > 0
+  ) {
+    return;
+  }
+
+  detailRelatedInstructionsState.isLoading = true;
+  try {
+    const instructions = await fetchAllTransactionInstructions({
+      transactionHash: instruction.transaction_hash,
+      fetchInstructions: http.fetchInstructions,
+      limit: 100,
+    });
+
+    detailRelatedInstructionsState.transactionHash = instruction.transaction_hash;
+    detailRelatedInstructionsState.items = instructions;
+  } catch (error) {
+    console.warn('[InstructionsTable] Failed to load related contract instructions', error);
+    detailRelatedInstructionsState.transactionHash = instruction.transaction_hash;
+    detailRelatedInstructionsState.items = items.value;
+  } finally {
+    detailRelatedInstructionsState.isLoading = false;
   }
 }
 
@@ -205,11 +246,12 @@ async function openInstructionDetails(item: Instruction) {
 }
 
 function closeInstructionDetails() {
-  detailRequestGeneration++;
   detailState.isOpen = false;
-  detailState.isLoading = false;
   detailState.error = '';
   detailState.data = null;
+  detailRelatedInstructionsState.transactionHash = '';
+  detailRelatedInstructionsState.items = [];
+  detailRelatedInstructionsState.isLoading = false;
   emit('details-closed');
   lastSelection.value = null;
 }
@@ -217,8 +259,18 @@ function closeInstructionDetails() {
 const selectedInstructionJson = computed(() => {
   const instruction = detailState.data;
   if (!instruction) return null;
-  return instruction.box.json;
+  return instructionPayloadView(instruction);
 });
+
+/** Render the exact native envelope when this browser has no semantic decoder. */
+function instructionPayloadView(instruction: Instruction) {
+  if (instruction.box.json) return instruction.box.json;
+  return {
+    wire_id: instruction.box.wire_id,
+    instruction: instruction.box.encoded,
+    framed_sha256: instruction.box.framed_sha256.slice(2),
+  };
+}
 
 const selectedInstructionPresentation = computed(() => {
   const instruction = detailState.data;
@@ -238,12 +290,23 @@ const selectedContractInstructionKind = computed(() => {
   return resolveContractViewInstructionKind(instruction);
 });
 
+const relatedContractInstructions = computed(() => {
+  if (!detailState.data) return items.value;
+  if (!selectedContractInstructionKind.value) return items.value;
+  if (detailRelatedInstructionsState.transactionHash !== detailState.data.transaction_hash) {
+    return items.value;
+  }
+  return detailRelatedInstructionsState.items.length > 0 ? detailRelatedInstructionsState.items : items.value;
+});
+
 const shareLink = computed(() => {
   if (!lastSelection.value) return null;
   if (typeof window === 'undefined') return null;
-  const path = `/transactions/${lastSelection.value.transactionHash}?instruction=${lastSelection.value.index}`;
-  const scopedPath = applyExplorerScopeToLocation(path, currentScope.value) as string;
-  return new URL(scopedPath, window.location.origin).toString();
+  const url = new URL(window.location.href);
+  url.hash = '';
+  url.pathname = `/transactions/${encodeURIComponent(lastSelection.value.transactionHash)}`;
+  url.searchParams.set('instruction', String(lastSelection.value.index));
+  return url.toString();
 });
 
 watch(
@@ -283,6 +346,15 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => detailState.data,
+  (instruction) => {
+    if (!instruction) return;
+    if (!resolveContractViewInstructionKind(instruction)) return;
+    loadRelatedContractInstructions(instruction).catch(() => undefined);
+  }
+);
+
 async function retryInstructionDetail() {
   if (!lastSelection.value) return;
   await loadInstructionDetail(lastSelection.value);
@@ -294,12 +366,8 @@ async function copyEncodedPayload() {
     notifications.error(t('clipboard.error'));
     return;
   }
-  try {
-    await clipboard.copy(detailState.data.box.encoded);
-    notifications.success(t('clipboard.success'));
-  } catch {
-    notifications.error(t('clipboard.error'));
-  }
+  await clipboard.copy(detailState.data.box.encoded);
+  notifications.success(t('clipboard.success'));
 }
 
 async function copyInstructionLink() {
@@ -308,12 +376,8 @@ async function copyInstructionLink() {
     notifications.error(t('clipboard.error'));
     return;
   }
-  try {
-    await clipboard.copy(shareLink.value);
-    notifications.success(t('transactions.instructionLinkCopied'));
-  } catch {
-    notifications.error(t('clipboard.error'));
-  }
+  await clipboard.copy(shareLink.value);
+  notifications.success(t('transactions.instructionLinkCopied'));
 }
 
 watch(
@@ -328,14 +392,17 @@ watch(
     }
 
     const instructionKindMatches =
-      listState.kind === 'All' || instruction.kind === listState.kind || instruction.box.json.kind === listState.kind;
+      listState.kind === 'All' ||
+      instruction.kind === listState.kind ||
+      instruction.box.json?.kind === listState.kind;
     if (!instructionKindMatches) return;
     if (listState.transaction_status && instruction.transaction_status !== listState.transaction_status) return;
 
-    // Avoid shifting historical cursor windows under the user's cursor.
-    if (listState.cursor !== null) return;
+    // Avoid shifting paginated views under the user's cursor.
+    // Only auto-refresh when the table is on the first page.
+    if (listState.cursor) return;
 
-    // Avoid shifting the latest cursor window while the user is scrolled down.
+    // Avoid shifting the page while the user is scrolled down.
     if (windowScrollY.value > 80) {
       pendingRefresh.value = true;
       return;
@@ -346,12 +413,13 @@ watch(
 );
 
 watch(
-  () => [isLoading.value, items.value.length, payloadPagination.value?.has_more === true] as const,
-  ([tableLoading, currentItemsCount, hasMore]) => {
+  () => [isLoading.value, hasMore.value, items.value.length, hasError.value] as const,
+  ([tableLoading, currentHasMore, currentItemsCount, currentHasError]) => {
     emit('list-state', {
       isLoading: Boolean(tableLoading),
+      hasMore: currentHasMore,
       itemsCount: currentItemsCount,
-      hasMore,
+      hasError: currentHasError,
     });
   },
   { immediate: true }
@@ -389,23 +457,13 @@ watch(
       </BaseButton>
     </div>
 
-    <BaseCollectionState
-      v-if="scope"
-      v-slot="{ emptyLabel }"
-      table
-      :snapshot="scope.expose.snapshot"
-      :count="items.length"
-      :filtered="listState.kind !== 'All' || listState.transaction_status !== null"
-      @retry="scope.expose.refetch()"
-      @reset="listState.kind = 'All'; listState.transaction_status = null"
-    >
+    <BaseResourceState :snapshot="listSnapshot" @retry="scope.expose.refetch()">
       <BaseTable
         v-model:cursor="listState.cursor"
         v-model:page-size="listState.limit"
-        :empty-label
         :loading="isLoading"
-        :cursor-pagination="payloadPagination"
         pagination-mode="cursor"
+        :cursor-pagination="payloadPagination"
         :items
         :row-key="instructionRowKey"
         container-class="instructions-table__container"
@@ -435,7 +493,7 @@ watch(
               <BaseHash
                 :hash="item.transaction_hash"
                 :type="hashType"
-                :link="`/transactions/${item.transaction_hash}`"
+                :link="`/transactions/${encodeURIComponent(item.transaction_hash)}`"
                 copy
               />
 
@@ -463,9 +521,7 @@ watch(
                 <span
                   class="row-text instructions-table__kind-badge"
                   data-test="instruction-kind-label"
-                >{{
-                  getInstructionKindLabel(item)
-                }}</span>
+                >{{ getInstructionKindLabel(item) }}</span>
               </div>
 
               <div
@@ -528,7 +584,7 @@ watch(
                   <summary>{{ $t('studio.instructionPresentation.card.rawJson') }}</summary>
                   <BaseJson
                     class="instructions-table__value-json"
-                    :value="item.box.json"
+                    :value="instructionPayloadView(item)"
                   />
                 </details>
               </div>
@@ -548,19 +604,8 @@ watch(
             </div>
           </div>
         </template>
-        <template #empty>
-          <span>{{ emptyLabel }}</span>
-          <BaseButton
-            v-if="listState.kind !== 'All' || listState.transaction_status !== null"
-            bordered
-            data-test="collection-reset"
-            @click="listState.kind = 'All'; listState.transaction_status = null"
-          >
-            {{ $t('ux.collection.resetFilters') }}
-          </BaseButton>
-        </template>
       </BaseTable>
-    </BaseCollectionState>
+    </BaseResourceState>
 
     <section
       v-if="detailState.isOpen"
@@ -627,7 +672,7 @@ watch(
             <BaseHash
               :hash="detailState.data.transaction_hash"
               type="short"
-              :link="`/transactions/${detailState.data.transaction_hash}`"
+              :link="`/transactions/${encodeURIComponent(detailState.data.transaction_hash)}`"
             />
           </DataField>
           <DataField :title="$t('transactions.block')">
@@ -672,7 +717,7 @@ watch(
           <BaseJson
             class="instructions-detail__json-tree"
             full
-            :value="selectedInstructionJson ?? detailState.data.box.json"
+            :value="selectedInstructionJson ?? instructionPayloadView(detailState.data)"
           />
         </div>
 
@@ -701,7 +746,10 @@ watch(
           <div class="instructions-table__label">
             {{ $t('transactions.contractView.title') }}
           </div>
-          <ContractCodeViewPanel :instruction="detailState.data" />
+          <ContractCodeViewPanel
+            :instruction="detailState.data"
+            :related-instructions="relatedContractInstructions"
+          />
         </div>
       </div>
     </section>
@@ -717,11 +765,11 @@ watch(
       height: auto;
 
       @include xxs {
-        width: 100%;
+        width: 90vw;
       }
 
       @include lg {
-        width: 100%;
+        width: 46vw;
         height: size(12) !important;
       }
 
@@ -959,23 +1007,23 @@ watch(
       }
 
       @include xxs {
-        width: 100%;
+        width: 75vw;
       }
 
       @include sm {
-        width: 100%;
+        width: 82vw;
       }
 
       @include md {
-        width: 100%;
+        width: 85vw;
       }
 
       @include lg {
-        width: 100%;
+        width: 80vw;
       }
 
       @include xl {
-        width: 100%;
+        width: 75vw;
       }
     }
   }
@@ -1028,27 +1076,26 @@ watch(
     }
   }
 
-  &__actions {
-    margin-left: auto;
-    display: flex;
-    justify-content: flex-end;
-    min-width: max-content;
+&__actions {
+  margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
+  min-width: max-content;
+}
+
+&__action-button {
+  border: 1px solid theme-color('primary');
+  background: transparent;
+  color: theme-color('primary');
+  font-weight: 600;
+  padding: size(1) size(3);
+  border-radius: size(1);
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: color-mix(in srgb, theme-color('primary') 10%, transparent);
   }
-
-  &__action-button {
-    min-height: 44px;
-    border: 1px solid theme-color('primary');
-    background: transparent;
-    color: theme-color('primary');
-    font-weight: 600;
-    padding: size(1) size(3);
-    border-radius: size(1);
-    cursor: pointer;
-    white-space: nowrap;
-
-    &:hover {
-      background: color-mix(in srgb, theme-color('primary') 10%, transparent);
-    }
 
     &:active {
       transform: translateY(1px);
@@ -1059,7 +1106,7 @@ watch(
 .instructions-detail {
   margin-top: size(4);
   padding: size(4);
-  border-radius: 12px;
+  border-radius: size(2);
   border: 1px solid theme-color('border-primary');
   background: theme-color('surface');
   display: flex;
@@ -1068,7 +1115,6 @@ watch(
 
   &__header {
     display: flex;
-    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
     gap: size(2);
@@ -1080,8 +1126,6 @@ watch(
   }
 
   &__title {
-    min-width: 0;
-    overflow-wrap: anywhere;
     display: flex;
     flex-direction: column;
     gap: size(1);
@@ -1113,26 +1157,23 @@ watch(
 
   &__header-actions {
     display: flex;
-    flex-wrap: wrap;
-    max-width: 100%;
     gap: size(2);
   }
 
-  &__share,
-  &__close {
-    min-height: 44px;
-    border: 1px solid theme-color('border-secondary');
-    background: theme-color('border-primary');
-    color: theme-color('content-primary');
-    padding: size(1) size(3);
-    border-radius: size(1);
-    font-weight: 600;
-    cursor: pointer;
+&__share,
+&__close {
+  border: 1px solid theme-color('border-secondary');
+  background: theme-color('border-primary');
+  color: theme-color('content-primary');
+  padding: size(1) size(3);
+  border-radius: size(1);
+  font-weight: 600;
+  cursor: pointer;
 
-    &:hover {
-      background: color-mix(in srgb, theme-color('border-secondary') 70%, theme-color('surface'));
-    }
+  &:hover {
+    background: color-mix(in srgb, theme-color('border-secondary') 70%, theme-color('surface'));
   }
+}
 
   &__share {
     border: 1px solid theme-color('primary');
@@ -1157,7 +1198,6 @@ watch(
   }
 
   &__retry {
-    min-height: 44px;
     border: 1px solid theme-color('error');
     background: transparent;
     color: theme-color('error');
@@ -1251,7 +1291,6 @@ watch(
   }
 
   &__copy {
-    min-height: 44px;
     border: 1px solid theme-color('primary');
     background: transparent;
     color: theme-color('primary');

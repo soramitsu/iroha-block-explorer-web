@@ -57,11 +57,8 @@ system's sticky temporary root; the cache itself must be a real current-account-
 directory. Filesystem roots, home/temp roots, immediate root children, repository paths, symlinks,
 and permissive existing caches are rejected. Only rehash-verified archives are trusted from this
 cache; Node, Corepack, and pnpm executables are freshly materialized per run. The bootstrap and gate children
-also discard `NODE_OPTIONS` and `NODE_PATH`. Playwright payloads use the persistent owner-only
-`ms-playwright` directory inside that exact-toolchain cache (or an explicit normalized
-`PLAYWRIGHT_BROWSERS_PATH`, such as the digest-pinned Jenkins image's `/ms-playwright`). Local
-machines without the matching Chromium payload can install it once through the exact toolchain
-before running the gates:
+also discard `NODE_OPTIONS` and `NODE_PATH`. Local machines without the Playwright Chromium payload can install
+the matching browser through the same exact toolchain before running the gates:
 
 ```bash
 sh scripts/bootstrap-exact-toolchain.sh pnpm playwright:install
@@ -69,59 +66,101 @@ sh scripts/bootstrap-exact-toolchain.sh pnpm playwright:install
 
 Build artifacts will be located at `dist` dir.
 
+The SDK dependency is the current browser consumer archive built in the canonical
+`../iroha/javascript/iroha_js` checkout at HEAD `b7c167b282a78b1c832f8c27049e819cf2d16d64`,
+including the pending contract-call draft-intent API correction.
+Its SHA-256 is `24041ddb8c7d46f2fffc5dee587c2ebf47d830a2bb265fa64b99930c681d28f6`.
+Two canonical `npm pack` runs under Node 24.19.0 produced identical archives;
+`prepack` ran the upstream engine check and atomic `build:dist` owner. The 243-file
+inventory records exact package bytes, actual source hashes and build tools in
+`vendor/iroha-iroha-js-0.0.3-24041ddb8c7d.files.json`; it does not claim a clean source tree.
+
+Install, `pnpm check:sdk`, and normal build verify the archive and every installed
+package file. The checker is read-only: missing distribution files fail
+verification. CI checks the archive before dependency installation; postinstall
+checks the installed package. The browser HTTP client uses JavaScript; canonical
+account and instruction codecs require native Rust and are unavailable in browsers.
+Retired Wasm artifacts are absent and the bundle gate rejects emitted Wasm. All
+startup assets remain subject to the 540,000-byte gzip entry and total budgets.
+The lazy `iroha-compiler` chunk has an 18,000-byte gzip cap: this SDK adds embedded
+call-schema/Norito validation and expands compiler response validation. The measured
+current chunk is 17,970 bytes. The lazy KotodamaStudio route is 115,966 gzip
+bytes with the current SDK’s locked-package and diagnostic contracts; its cap is
+118,000 bytes. The 540,000-byte startup cap and all other chunk/route caps remain
+unchanged. The app consumes only `compileKotodamaProgram` plus erased type imports;
+no new broad browser import contributes to this increase.
+Package integrity identifies this consumer build; it does not establish signed
+SDK or application release qualification.
+
 ### Docker
 
 `Dockerfile` is also provided.
 
 ## Development
 
-Frontend talks directly to Torii. By default it uses `window.location.origin` as the Torii origin and appends the
-current `/v1/explorer/*` or `/v1/*` route itself, matching the upstream `../iroha` contract.
+Frontend talks directly to Torii. By default it targets `${window.location.origin}/v1/explorer`, matching the current
+routes exposed by the upstream `../iroha` repo.
 
-Set `VITE_API_URL` to an exact Torii origin (for example `http://127.0.0.1:8080`) when
-developing against a remote node. Vite’s dev server proxies the public `/v1` surface to
-`http://127.0.0.1:29080` by default (override with `VITE_TORII_PROXY_TARGET`), so running Torii locally on that port
-works without extra flags. Diagnostic namespaces such as `/status` and `/metrics` are deliberately not proxied into
-the browser; Torii may limit their availability through its global API-token/admitted-CIDR policy.
+Set `VITE_API_URL` to point at a different Torii instance (for example `http://127.0.0.1:8080/v1/explorer`) when
+developing against a remote node. Vite’s dev server proxies `/v1` plus Torii root endpoints used by the app (`/status`,
+`/metrics`, `/peers`) to `http://127.0.0.1:29080` by default (override with `VITE_TORII_PROXY_TARGET`), so running Torii
+locally on that port works without extra flags. Adjust the proxy rules in `vite.config.mts` if your setup differs.
 The production `Caddyfile` now only serves the built Explorer; there is no `/api` reverse proxy because all data is
-fetched directly from Torii’s public `/v1/explorer/*` and `/v1/*` app API endpoints.
+fetched directly from Torii’s `/v1/explorer/*`, `/v1/*` app API endpoints, and root `/status`/`/metrics`/`/peers`
+endpoints.
 
 ## Runtime config (`config.json`)
 
-The explorer loads runtime configuration before mounting the app. Production builds fail closed when the file is
-missing, non-JSON, structurally invalid, or does not contain both the exact `networkId` and exact `toriiBaseUrl`.
-Development builds may omit the file so the Vite proxy and build-time defaults remain usable locally. This supports
-subpath deployments and binds a reviewed release to its NetworkId and Torii origin without rebuilding the frontend.
+The Explorer requires runtime configuration before mounting the app. The file is fetched only from
+`${BASE_URL}config.json` (for example `/explorer-iroha2/config.json`). Missing files, invalid profiles, transport
+errors, and missing network prefixes reject startup with an explicit retry; no other config location or default
+network is selected.
 
-The file is fetched from:
+On `taira-explorer.sora.org` and `explorer-bpng.soramitsu.io`, configuration contains exactly
+`toriiBaseUrl: "https://taira.sora.org"`, `toriiForceBaseUrl: true`, the authenticated deployment's canonical checked
+`networkId`, and `networkPrefix: 369`. These production hosts reject proxy endpoints, absent or different prefixes,
+and extra settings. Unpinned development hosts must explicitly configure their selected network's integer prefix from 0 through
+65535; all instruction decoding receives that same value without inferring it from addresses or payloads.
 
-- `${BASE_URL}config.json` (for example `/explorer-iroha2/config.json`)
+On `bokolo-explorer.soramitsu.io`, the only accepted four-field configuration binds
+`toriiBaseUrl: "https://bokolo.soramitsu.io"` and `toriiForceBaseUrl: true`.
+`networkId` must be the canonical checked identity and `networkPrefix` must be the
+integer prefix from authenticated CBSI deployment metadata; neither value is copied
+from Taira or selected by the browser. The separate Bokolo website remains at the
+Torii origin's `/` route. Publish this Explorer config only after the Bokolo
+`/v1/*` routes, CORS for the Explorer origin, native revision, signed SDK and
+application artifact have been verified together. The Taira-only release tool in
+`ops/taira` does not authorize a CBSI Explorer release.
 
 Supported keys:
 
-- `networkId` (string, required in production): the exact canonical checksummed `NetworkId` derived from the selected
-  node's genesis header. It is application-pinned and required for canonical-auth and Connect-backed reads;
-  human-readable chain labels are not accepted.
-- `toriiBaseUrl` (string, required in production): exact Torii origin used by the node selector when no user override
-  is stored. Credentials, paths, queries, and fragments are rejected.
-- `toriiForceBaseUrl` (boolean): ignore a previously stored node choice and apply `toriiBaseUrl` at startup. Release
-  profiles use this to bind the Explorer to their reviewed Torii origin.
+- `toriiBaseUrl` (string): default Torii base URL used by the node selector when no user override is stored.
+- `toriiForceBaseUrl` (boolean): binds every request to the configured endpoint and disables manual, scoped-route, and peer failover overrides.
+- `networkPrefix` (integer, required): selected network prefix supplied from authenticated deployment metadata. Taira and
+  BPNG require `369`; other profiles accept integers from `0` through `65535`. No string coercion or default is applied.
+- `networkId` (string): exact Iroha NetworkId for Connect session identity binding. The production Taira and BPNG hosts require
+  the checksum-valid Norito JSON spelling `hash:<64 uppercase hex>#<4 uppercase CRC16>` and preserves it losslessly.
+  Raw hexadecimal NetworkIds are rejected. Connect remains disabled when
+  this value is absent or invalid; the Explorer never infers it from a Torii URL or substitutes a generic/test
+  NetworkId. Production deployments should project it from authenticated ledger metadata.
 - `kotodamaCompilerUrl` (string): explicit base URL of a trusted canonical Rust Kotodama compiler service. The Studio
   sends `POST /v1/kotodama/compile` beneath this base URL and sends the complete generated source. This service is
   separate from Torii; the Explorer does not infer or default it from `toriiBaseUrl`. Production URLs must use HTTPS
   (the upstream SDK permits HTTP only for loopback development). Studio compilation remains disabled when this key is
   absent. A build can instead provide the same explicit value through `VITE_KOTODAMA_COMPILER_URL`.
-- `toriiFailoverEnabled`, `toriiFailoverPersistSwitch` (boolean): enable configured-node failover and optionally
-  persist a successful switch.
-- `toriiFailoverNodes` (string array): exact absolute Torii origins eligible for failover.
-- `toriiFailoverFailureThreshold`, `toriiFailoverWindowMs`, `toriiFailoverProbeTimeoutMs` (positive integers):
-  failure-window and health-probe policy.
-- `toriiRequestTimeoutMs` (positive integer), `toriiRequestRetryCount` and `toriiRequestRetryBaseDelayMs`
-  (non-negative integers): bounded public API request retry policy.
+- `sorafsPublicBaseUrl` (string): optional public gateway origin used to build `/sorafs/cid/<cid>/...` links on
+  `/sorafs/registry`. When omitted, the explorer falls back to the active Torii base URL and then
+  `window.location.origin`.
 
-Example file: `public/config.json.example` (copy to `public/config.json` for local development; it is gitignored). Production builds
-exclude root `config.json`; release packaging must install a reviewed runtime file before recording its digest. Absence is a startup error rather than an implicit same-origin
-or build-time fallback.
+Example file: `public/config.json.example` (copy to `public/config.json` for local development; it is gitignored).
+Production builds intentionally exclude that root file: the deployment server must inject its independently signed and
+verified `config.json` instead of accepting developer-local bytes from `dist/`.
+
+History lists use the current native `cursor`/`limit` protocol. Blocks, transactions,
+instructions, and deployment history do not synthesize numbered pages or totals. Reads use
+Torii responses and validated stream events directly; there is no persisted history cache.
+Econometrics uses the authoritative snapshot routes. RWA domain identifiers accept the native
+ASCII wire form (`domain.dataspace`), including validated punycode labels.
 
 ### Local run
 
@@ -133,8 +172,9 @@ pnpm dev --host 0.0.0.0 --port 5173
 
 ### Deterministic Mochi integration chain
 
-The Explorer pins its local integration network in `tests/mochi/explorer-profile.json`. That one
-revision governs the sibling Torii/Mochi runtime and sibling `@iroha/iroha-js` browser SDK.
+The Explorer pins its accepted local integration network in `tests/mochi/explorer-profile.json`.
+This local runtime profile is separate from signed Taira release admission. Its integration
+evidence must be refreshed for the admitted SDK before supporting new release claims.
 The wrapper uses the literal sibling unless `IROHA_REPO_ROOT` names an explicit checkout. At the
 Mochi consumer boundary it requires that path to be absolute, normalized, existing, and a canonical
 real directory (not a symlink). It also refuses to execute a different revision or a checkout with
@@ -205,3 +245,18 @@ release. Complete the one-time baseline initialization in `ops/taira/README.md` 
 
 This frontend tracks the current upstream `../iroha` Torii route surface. There is no `/v2` compatibility layer in the
 Explorer routing code; update this repo when Torii routes move.
+
+### Ledger hash routes
+
+Explorer responses contain checksum-bound `hash:<HEX>#<CRC>` identifiers. Keep
+that complete identifier when displaying or linking it, and percent-encode each
+route segment so `#` is not interpreted as a URL fragment. Before calling Torii
+transaction, block, instruction, pipeline, or proof selectors, the API adapter
+uses `requireIrohaHash32` to validate the checksum and Iroha marker bit and then
+sends raw lowercase hexadecimal. Malformed identifiers fail before a request;
+there is no alternate endpoint or unchecked checksum stripping. Instruction
+share links retain the current query scope and select the requested instruction.
+
+### Prepared Taira reset candidate (2026-10-09)
+
+The Sogeri candidate uses the current canonical browser SDK identified by the exact archive and source inventory above. Contract events expose committed native emissions, with `emitted` provenance, execution hashes and output/emission indices; the retired derived-event shape and module/alias event filters are rejected. The fresh NetworkId must come from the signed genesis before runtime configuration and publication. Local build and fixture tests do not establish live readiness.

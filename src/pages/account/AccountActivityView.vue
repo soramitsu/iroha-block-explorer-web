@@ -2,7 +2,7 @@
 import { computed, watch } from 'vue';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import * as http from '@/shared/api';
-import { PINNED_TORII_DEFAULT_MAX_FETCH_SIZE, type AccountHistoryItem } from '@/shared/api/schemas';
+import type { AccountHistoryItem } from '@/shared/api/schemas';
 import { firstRouteQueryValue } from '@/shared/lib/route-query';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
@@ -10,15 +10,15 @@ import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
-import { useListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
+import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
 
 const props = defineProps<{
   accountId: string;
 }>();
 
-const { route, page, pageSize, pagination, resetPagination, updateListQuery } = useListRouteQuery({
-  pageKey: 'activity_page',
-  pageSizeKey: 'activity_per_page',
+const { route, cursor, limit, pagination, resetPagination, updateListQuery } = useCursorListRouteQuery({
+  cursorKey: 'activity_cursor',
+  limitKey: 'activity_limit',
 });
 
 const assetFilter = computed({
@@ -31,8 +31,8 @@ const assetFilter = computed({
 const historyResource = setupAsyncData(
   () =>
     http.fetchAccountHistory(props.accountId, {
-      page: page.value,
-      per_page: pageSize.value,
+      cursor: cursor.value,
+      limit: limit.value,
       asset_id: assetFilter.value || undefined,
     }),
   { immediate: pagination.value.ok }
@@ -46,7 +46,6 @@ const apiResult = computed(() => historyResource.data);
 const history = computed(() => (apiResult.value?.status === SUCCESSFUL_FETCHING ? apiResult.value.data : null));
 const permissionDenied = computed(() => apiResult.value?.status === 'permission-denied');
 const historyItems = computed(() => history.value?.items ?? []);
-const totalItems = computed(() => history.value?.total ?? 0);
 const rowKey = (item: AccountHistoryItem) => item.id;
 </script>
 
@@ -58,7 +57,7 @@ const rowKey = (item: AccountHistoryItem) => item.id;
       </p>
 
       <div v-if="!pagination.ok" class="account-activity__state" role="alert" data-test="activity-invalid-pagination">
-        <span>{{ $t('table.invalidPagination', { maxFetchSize: pagination.maxFetchSize }) }}</span>
+        <span>{{ $t('table.invalidCursorPagination') }}</span>
         <BaseButton bordered @click="resetPagination">
           {{ $t('table.resetPagination') }}
         </BaseButton>
@@ -93,31 +92,6 @@ const rowKey = (item: AccountHistoryItem) => item.id;
       </div>
 
       <template v-else-if="history">
-        <div
-          v-if="history.query_source === 'account_history_index'"
-          class="account-activity__provenance row-text"
-          data-test="activity-index-evidence"
-        >
-          <span>{{ $t('accounts.activity.singleSource', { source: history.query_source }) }}</span>
-          <span>
-            {{ $t('accounts.activity.indexedHeight') }}
-            <BaseLink :to="`/blocks/${history.indexed_height}`" monospace>
-              {{ history.indexed_height }}
-            </BaseLink>
-          </span>
-          <span>
-            {{
-              $t('accounts.activity.indexedBlockHash', {
-                hash: history.indexed_block_hash ?? $t('accounts.activity.indexedBlockMissing'),
-              })
-            }}
-          </span>
-        </div>
-        <div v-else class="account-activity__provenance row-text" data-test="activity-fanout-provenance">
-          <span>{{ $t('accounts.activity.multipleSource', { source: history.query_source }) }}</span>
-          <span>{{ $t('accounts.activity.mergedRoutes') }}</span>
-        </div>
-
         <label class="account-activity__filter">
           <span>{{ $t('accounts.activity.assetFilter') }}</span>
           <input
@@ -129,7 +103,7 @@ const rowKey = (item: AccountHistoryItem) => item.id;
         </label>
 
         <div
-          v-if="historyItems.length === 0 && totalItems === 0"
+          v-if="historyItems.length === 0"
           class="account-activity__state row-text"
           role="status"
           data-test="activity-empty"
@@ -138,13 +112,13 @@ const rowKey = (item: AccountHistoryItem) => item.id;
         </div>
 
         <BaseTable
-          v-if="totalItems > 0"
-          v-model:page="page"
-          v-model:page-size="pageSize"
+          v-if="history"
+          v-model:cursor="cursor"
+          v-model:page-size="limit"
           :loading="historyResource.isLoading"
-          :total="totalItems"
+          pagination-mode="cursor"
+          :cursor-pagination="history"
           :items="historyItems"
-          :max-fetch-size="PINNED_TORII_DEFAULT_MAX_FETCH_SIZE"
           :row-key
           container-class="account-activity__rows"
           :breakpoint="1180"

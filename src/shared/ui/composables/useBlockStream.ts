@@ -1,22 +1,25 @@
-import { computed, onScopeDispose, readonly, ref, watch } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
 import { useEventSource } from '@vueuse/core';
 import { buildToriiUrl } from '@/shared/api';
-import { Block as BlockSchema } from '@/shared/api/schemas';
-import type { Block } from '@/shared/api/schemas';
+import { explorerReadIsPublic } from '@/shared/lib/explorer-read-auth';
 
 interface UseBlockStreamOptions {
-  reconnectDelayMs?: number;
+  reconnectDelayMs?: number
 }
 
-export function useBlockStream(onBlock: (block: Block) => void, options?: UseBlockStreamOptions) {
+export function useBlockStream(
+  onBlock: () => void,
+  options?: UseBlockStreamOptions
+) {
   const reconnectDelay = options?.reconnectDelayMs ?? 3000;
 
-  const isSupported = typeof window !== 'undefined' && typeof EventSource !== 'undefined';
+  const isSupported =
+    typeof window !== 'undefined' &&
+    typeof EventSource !== 'undefined';
   const fromHeight = ref<number | null>(null);
-  const error = ref<Error | null>(null);
 
   const streamUrl = computed(() => {
-    if (!isSupported) return undefined;
+    if (!isSupported || !explorerReadIsPublic.value) return undefined;
     if (fromHeight.value === null) return undefined;
     return buildToriiUrl('/v1/explorer/blocks/stream');
   });
@@ -27,37 +30,40 @@ export function useBlockStream(onBlock: (block: Block) => void, options?: UseBlo
     autoReconnect: { retries: -1, delay: reconnectDelay },
   });
 
-  const isStreaming = computed(() => status.value === 'OPEN');
+  const isStreaming = computed(() => explorerReadIsPublic.value && status.value === 'OPEN');
 
   watch(
     () => streamUrl.value,
     (url) => {
       if (!url) {
         close();
+        data.value = null;
         return;
       }
       open();
-    }
+    },
+    { flush: 'sync' }
   );
 
   watch(
     () => data.value,
     (payload) => {
-      if (payload === null) return;
-      try {
-        const block = BlockSchema.parse(JSON.parse(payload));
-        error.value = null;
-        const min = fromHeight.value;
-        if (min !== null && block.height < min) return;
-        onBlock(block);
-      } catch (cause) {
-        error.value = cause instanceof Error ? cause : new Error('Invalid block stream payload', { cause });
+      if (!payload || !explorerReadIsPublic.value) return;
+      const min = fromHeight.value;
+      if (min) {
+        try {
+          const parsed = JSON.parse(payload);
+          const heightValue = typeof parsed?.height === 'number' ? parsed.height : null;
+          if (heightValue !== null && heightValue < min) return;
+        } catch {
+          // If payload is not JSON, treat it as a signal and refresh.
+        }
       }
+      onBlock();
     }
   );
 
   function connectFrom(height: number) {
-    error.value = null;
     fromHeight.value = height;
   }
 
@@ -71,7 +77,6 @@ export function useBlockStream(onBlock: (block: Block) => void, options?: UseBlo
   return {
     isSupported,
     isStreaming,
-    error: readonly(error),
     connectFrom,
     disconnect,
   };

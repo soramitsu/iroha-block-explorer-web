@@ -21,6 +21,7 @@
     <div class="app-header__buttons">
       <ScopedExplorerControl v-if="currentScope" />
       <NodeSettings v-else />
+      <ExplorerReadAccess />
       <ThemeSwitcher /><LangDropdown />
     </div>
     <div
@@ -37,6 +38,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import ExplorerReadAccess from '@/shared/ui/components/ExplorerReadAccess.vue';
 import { useRoute } from 'vue-router';
 import HeaderLogo from './HeaderLogo.vue';
 import { NavigationMenu } from '@/features/navigation';

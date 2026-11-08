@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { reactive } from 'vue';
 import DataspaceDetails from './DataspaceDetails.vue';
 import { i18n } from '@/shared/lib/localization';
+import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 
 const routeState = reactive({
   params: {
@@ -28,28 +29,42 @@ vi.mock('@/shared/ui/composables/useExplorerScopeNavigation', () => ({
 }));
 
 vi.mock('@/shared/api', () => ({
+  fetchNexusPublicStatus: vi.fn(),
   getConfiguredToriiBaseUrl: vi.fn(() => 'https://registry.example:8080'),
-  normalizeToriiBaseUrl: vi.fn((raw: string) => {
+  normalizeToriiBaseUrl: vi.fn((raw: string, fallback: string | null = null) => {
     const trimmed = raw.trim();
-    if (!trimmed) return null;
+    if (!trimmed) return fallback;
     try {
-      const parsed = new URL(trimmed);
-      if (
-        (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
-        parsed.username ||
-        parsed.password ||
-        parsed.pathname !== '/' ||
-        parsed.search ||
-        parsed.hash
-      ) {
-        return null;
-      }
-      return parsed.origin;
+      const parsed = new URL(trimmed.replace(/\/v[12]\/explorer$/i, '').replace(/\/+$/, ''));
+      return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '');
     } catch {
-      return null;
+      return fallback;
     }
   }),
 }));
+
+import * as api from '@/shared/api';
+
+const nexusStatusPayload = {
+  blocks: 12,
+  txs_approved: 20,
+  txs_rejected: 1,
+  queue_size: 3,
+  dataspace_catalog: [{ lane_id: 7, dataspace_id: '42', alias: 'lane-seven', visibility: 'restricted', manifest_required: true, manifest_ready: true, manifest_path: '/manifests/lane7.json' }],
+  teu_dataspace_backlog: [
+    {
+      lane_id: 7,
+      dataspace_id: '42',
+      fault_tolerance: 2,
+      backlog: 9,
+      age_slots: 6,
+      virtual_finish: 11,
+      tx_served: 88,
+      alias: 'lane-seven',
+      description: 'Lane seven dataspace',
+    },
+  ],
+};
 
 const BaseContentBlockStub = {
   props: ['title'],
@@ -63,6 +78,10 @@ const BaseButtonStub = {
     '<button :type="nativeType || \'button\'" :disabled="disabled" @click="$emit(\'click\', $event)"><slot /></button>',
 };
 
+const BaseLoadingStub = {
+  template: '<div>loading...</div>',
+};
+
 const DataFieldStub = {
   props: ['title', 'value'],
   template:
@@ -71,14 +90,20 @@ const DataFieldStub = {
 
 describe('Dataspace details page', () => {
   beforeEach(() => {
+    routeState.params.laneId = '7';
+    routeState.params.dataspaceId = '42';
     vi.clearAllMocks();
     pushSpy.mockReset();
     pushSpy.mockReturnValue(Promise.resolve());
-    routeState.params.laneId = '7';
-    routeState.params.dataspaceId = '42';
     if (typeof localStorage !== 'undefined' && typeof localStorage.clear === 'function') {
       localStorage.clear();
     }
+
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: nexusStatusPayload,
+    });
+
   });
 
   const factory = () =>
@@ -88,46 +113,105 @@ describe('Dataspace details page', () => {
         stubs: {
           BaseContentBlock: BaseContentBlockStub,
           BaseButton: BaseButtonStub,
+          BaseLoading: BaseLoadingStub,
           DataField: DataFieldStub,
         },
       },
     });
 
-  it('renders exact route identity while refusing to expose untyped diagnostics', () => {
+  it('renders exact public catalog policy without operator telemetry', async () => {
     const wrapper = factory();
+    await flushPromises();
 
-    expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain('42');
-    expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain('7');
-    expect(wrapper.get('[data-test="dataspace-details-core"]').text()).not.toContain('Dataspace type');
-    expect(wrapper.get('[data-test="dataspace-details-diagnostic-protected"]').text()).toContain('/status');
-    expect(wrapper.get('[data-test="dataspace-details-governance-protected"]').text()).toContain(
-      'OperatorSigningContext'
-    );
+    expect(api.fetchNexusPublicStatus).toHaveBeenCalledTimes(1);
+    expect('fetchSumeragiStatus' in api).toBe(false);
+    expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain('lane-seven (#42)');
+    expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain('restricted');
+    expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.quorum'));
+    expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.validators'));
+    expect(wrapper.find('[data-test="dataspace-details-governance-error"]').exists()).toBe(false);
+    expect(wrapper.get('[data-test="dataspace-details-governance"]').text()).toContain('/manifests/lane7.json');
   });
 
   it.each([
-    ['-1', '42'],
-    ['7.5', '42'],
-    ['7', 'not-a-dataspace'],
-  ])('rejects invalid route ids (%s, %s)', async (laneId, dataspaceId) => {
-    routeState.params.laneId = laneId;
-    routeState.params.dataspaceId = dataspaceId;
+    [3, '9884542487407331249', 'dpn', 'restricted', true],
+    [4, '9700280040122529948', 'is2', 'restricted', true],
+    [5, '8648377547929788715', 'bpng', 'public', false],
+    [6, '6983892400042691068', 'cbsi', 'restricted', true],
+    [7, '6647857470246403404', 'is', 'restricted', true],
+  ] as const)('shows exact public policy for lane%s without inventing operator fields', async (lane, id, alias, visibility, required) => {
+    routeState.params.laneId = String(lane);
+    routeState.params.dataspaceId = id;
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        ...nexusStatusPayload,
+        dataspace_catalog: [{ lane_id: lane, dataspace_id: id, alias, visibility, manifest_required: required, manifest_ready: required }],
+        teu_dataspace_backlog: [{ ...nexusStatusPayload.teu_dataspace_backlog[0], lane_id: lane, dataspace_id: id, alias }],
+      },
+    });
     const wrapper = factory();
     await flushPromises();
-
-    expect(wrapper.get('[data-test="dataspace-details-error"]').text()).toContain('Invalid dataspace route parameters');
-    expect(wrapper.find('form').exists()).toBe(false);
+    expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain(visibility);
+    const values = wrapper.get('[data-test="dataspace-details-governance"]').findAll('.data-field__value');
+    expect(values.map((field) => field.text())).toEqual([required ? 'Yes' : 'No', required ? 'Yes' : 'No', i18n.global.t('none')]);
+    expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.quorum'));
+    expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.validators'));
+    expect('fetchSumeragiStatus' in api).toBe(false);
   });
 
-  it('adds and removes a saved public node without seeded deployment assumptions', async () => {
+  it('keeps absent public manifest observations unknown instead of turning them into No', async () => {
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: { ...nexusStatusPayload, dataspace_catalog: [{ lane_id: 7, dataspace_id: '42', alias: 'lane-seven' }] },
+    });
     const wrapper = factory();
     await flushPromises();
+    const values = wrapper.get('[data-test="dataspace-details-governance"]').findAll('.data-field__value');
+    expect(values.map((field) => field.text())).toEqual(['-', '-', i18n.global.t('none')]);
+  });
 
-    expect(wrapper.get('[data-test="dataspace-details-public-nodes-empty"]').text()).toContain('No public nodes saved');
+  it('retains the real BPNG ID and lane8 in the saved public-node scope', async () => {
+    const id = '8648377547929788715';
+    routeState.params.laneId = '8';
+    routeState.params.dataspaceId = id;
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        ...nexusStatusPayload,
+        dataspace_catalog: [{ lane_id: 8, dataspace_id: id, alias: 'bpng' }],
+        teu_dataspace_backlog: [{ ...nexusStatusPayload.teu_dataspace_backlog[0], lane_id: 8, dataspace_id: id, alias: 'bpng' }],
+      },
+    });
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain(`bpng (#${id})`);
+    const inputs = wrapper.findAll('input');
+    await inputs[0].setValue('BPNG public node');
+    await inputs[1].setValue('https://taira.sora.org');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    await wrapper.get('[data-test="dataspace-details-open-scoped"]').trigger('click');
+    expect(pushSpy).toHaveBeenCalledWith({ path: '/blocks', query: { torii: 'https://taira.sora.org', dataspaceLaneId: '8', dataspaceId: id } });
+  });
+
+  it('refuses an unregistered lane even when its backlog row exists', async () => {
+    (api.fetchNexusPublicStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: { ...nexusStatusPayload, dataspace_catalog: [{ lane_id: 8, dataspace_id: '42', alias: 'lane-eight' }] },
+    });
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.find('[data-test="dataspace-details-core"]').exists()).toBe(false);
+  });
+
+  it('adds and removes a saved public node', async () => {
+    const wrapper = factory();
+    await flushPromises();
 
     const inputs = wrapper.findAll('input');
     await inputs[0].setValue('Public node A');
-    await inputs[1].setValue('https://public-node-a.example:18080');
+    await inputs[1].setValue('https://public-node-a.example:18080/v1/explorer');
     await wrapper.get('form').trigger('submit');
     await flushPromises();
 
@@ -141,7 +225,7 @@ describe('Dataspace details page', () => {
     expect(wrapper.get('[data-test="dataspace-details-public-nodes-empty"]').text()).toContain('No public nodes saved');
   });
 
-  it('opens the scoped explorer with the selected public node', async () => {
+  it('opens scoped explorer with selected public node', async () => {
     const wrapper = factory();
     await flushPromises();
 

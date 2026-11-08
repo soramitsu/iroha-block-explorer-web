@@ -177,5 +177,5 @@ describe('Blocks data smoke', () => {
     expect(rowsText).toContain(mockBlocks[0].hash);
 
     expect(connectStreamMock).toHaveBeenCalledWith(mockBlocks[0].height + 1);
-  }, 20000);
+  });
 });

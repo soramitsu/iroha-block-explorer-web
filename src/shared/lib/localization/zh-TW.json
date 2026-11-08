@@ -22,9 +22,9 @@
   "table": {
     "rowsPerPage": "每頁筆數",
     "pageOf": "{0}–{1}，共 {2} 筆",
-    "cursorPage": "本頁 {0} 筆；無法取得確切總數",
+    "cursorPage": "本頁顯示 {0} 筆；無法取得確切總數",
     "scanSample": "已掃描 {0} 筆記錄；無法取得確切總數",
-    "cursorRepeated": "因 Torii 重複傳回相同遊標，分頁已停止",
+    "cursorRepeated": "Torii 重複回傳了相同的游標，因此已停止分頁",
     "invalidPagination": "頁碼與每頁列數必須是規範的正整數，使用 10、20、50 或 100 列，且不得超出 Torii 前 {maxFetchSize} 列相符資料。",
     "invalidCursorPagination": "游標與每頁列數必須使用規範的 Torii 值：不含填補字元的 base64url 游標，以及 10、20、50 或 100 列。",
     "resetPagination": "重設分頁",
@@ -181,12 +181,12 @@
     "timestamp": "時間戳",
     "status": "狀態",
     "rejectedReason": "拒絕原因",
-    "nonce": "隨機數",
+    "nonce": "一次性數值",
     "metadata": "中繼資料",
     "signature": "簽章",
     "authority": "簽署者帳戶",
     "executable": "可執行內容",
-    "smartContract": "智能合約",
+    "smartContract": "智慧合約",
     "displayingIsntSupported": "不支援顯示",
     "instructionDetails": "指令詳細資料",
     "viewInstruction": "查看詳情",
@@ -255,7 +255,7 @@
       "loading": "正在載入帳本證據",
       "loadError": "帳本證據無法載入",
       "retry": "重試載入證據",
-      "scope": "交易項目是否包含在內，以及它相對於所要求交易與參照區塊的身分，會在本機檢查。執行結果路徑只會針對同一份證明中提供的結果根進行檢查；該根在此並未獨立錨定。狀態根與法定人數憑證會依此節點提供的原樣顯示；此瀏覽器不驗證其 BLS 聚合簽章。",
+      "scope": "此瀏覽器僅核對交易、網路識別碼與區塊高度。包含路徑與共識憑證由節點提供；此處不驗證 Merkle 路徑或驗證者簽章。",
       "blockProof": "區塊 Merkle 證明",
       "entryVerified": "已在本機驗證交易項目",
       "verificationFailed": "本機驗證失敗",
@@ -303,7 +303,10 @@
       "quorumUnavailable": "此節點沒有可用的持久提交法定人數憑證。",
       "quorumRequestFailed": "法定人數憑證要求失敗。",
       "stateAgreement": "節點提供的狀態根和狀態證明包裹識別了請求的區塊,並且具有相同的區塊雜湊和狀態根.",
-      "stateMismatch": "警告：節點提供的狀態根與狀態證明封套未識別相同的所要求區塊與狀態根。"
+      "stateMismatch": "警告：節點提供的狀態根與狀態證明封套未識別相同的所要求區塊與狀態根。",
+      "proofUnavailable": "目前的讀取者無法取得此證明。如需存取私人資料空間，請透過讀取存取權連接已獲授權的錢包。",
+      "transactionEntryHash": "交易項目雜湊",
+      "executionOutputHash": "執行輸出雜湊"
     },
     "filters": {
       "authorityLabel": "帳戶篩選條件",
@@ -777,7 +780,7 @@
     "allowlist": "允許清單",
     "recentRuns": "最近執行",
     "runtimeRecentRuns": "執行階段最近執行記錄",
-    "yes": "是的",
+    "yes": "是",
     "no": "否",
     "unknownAction": "未知",
     "validation": {
@@ -856,8 +859,8 @@
     }
   },
   "contracts": {
-    "nav": "智能合約",
-    "title": "智能合約",
+    "nav": "智慧合約",
+    "title": "智慧合約",
     "explorerHint": "檢查已提交的合約呼叫、已索引的事件歷程，以及即時合約事件。",
     "tabs": {
       "activity": "活動",
@@ -1009,7 +1012,7 @@
       "snapshotNote": "所選 Torii 節點所公開之證明記錄的嚴格快照。計數與資料列採用相同的目前篩選條件。",
       "filteredCount": "相符證明",
       "currentPage": "目前頁面",
-      "visibleRows": "可見行",
+      "visibleRows": "可見列",
       "detailTitle": "證明細節",
       "vkCommitment": "驗證金鑰承諾值",
       "bridgeDetail": "橋接證明中繼資料"
@@ -1179,27 +1182,27 @@
   "assets": {
     "assets": "資產",
     "assetsAndNFT": "資產和 NFT",
-    "assetsAndNFTAndRWA": "資產，NFTs & RWAs",
+    "assetsAndNFTAndRWA": "資產、NFT 和 RWA",
     "asset": "資產{0}",
-    "rwa": "RWA{0}",
+    "rwa": "RWA {0}",
     "assetTransactions": "資產交易",
     "ownedBy": "擁有者",
     "assetHolders": "資產持有者",
     "assetDoesntContainAnyInstances": "資產不包含任何執行個體",
     "nfts": "NFT",
-    "rwas": "RWAs",
+    "rwas": "RWA",
     "numerics": "資產",
-    "heldQuantity": "持有數量",
+    "heldQuantity": "保留數量",
     "availableQuantity": "可用數量",
     "primaryReference": "主要參照",
-    "provenanceGraph": "出處圖",
-    "provenanceNoParents": "此批次未記錄任何來源上游批次。",
-    "provenanceIncomplete": "無法載入某些祖先批次，因此該圖是部分的。",
-    "provenanceTruncated": "來源沿革圖已達安全擷取上限，因此可能遭到截斷。",
-    "provenanceUnavailableParent": "上游批次不可用",
-    "provenanceContribution": "上游批次貢獻",
+    "provenanceGraph": "溯源圖",
+    "provenanceNoParents": "此批次沒有上游批次的來源記錄。",
+    "provenanceIncomplete": "部分上游批次無法載入，因此此圖並不完整。",
+    "provenanceTruncated": "溯源圖已達安全擷取上限，可能已被截斷。",
+    "provenanceUnavailableParent": "無法取得的上游批次",
+    "provenanceContribution": "上游批次貢獻量",
     "frozen": "已凍結",
-    "frozenYes": "是的",
+    "frozenYes": "是",
     "frozenNo": "否",
     "definitionFields": {
       "name": "名稱",
@@ -1441,8 +1444,8 @@
     "noRbcEvictions": "近期沒有淘汰項目",
     "epoch": "紀元",
     "finalized": "最終確定",
-    "finalizedYes": "是的",
-    "finalizedNo": "不",
+    "finalizedYes": "是",
+    "finalizedNo": "否",
     "seed": "種子",
     "participants": "參加者",
     "commitments": "承諾值",
@@ -1472,8 +1475,8 @@
     "settlementLegs": "交易分支",
     "deliveryPaymentLegs": "交貨：{0} · 付款：{1}",
     "primaryCounterLegs": "主要：{0}・對手：{1}",
-    "committedYes": "是的",
-    "committedNo": "不",
+    "committedYes": "是",
+    "committedNo": "否",
     "fxWindowMs": "FX 視窗",
     "noSettlementEvents": "尚未有結算事件",
     "nexusFee": "Nexus 費用快照",
@@ -1761,7 +1764,7 @@
       "description": "描述",
       "nodeTitle": "步驟標題",
       "nodeCaption": "步驟說明",
-      "contractAction": "合約行動",
+      "contractAction": "合約動作",
       "contractActionCall": "呼叫入口點",
       "contractActionDeploy": "僅部署",
       "binding": "入口點綁定",
@@ -2255,7 +2258,7 @@
           },
           "trigger_monthly": {
             "title": "每個月的觸發器",
-            "detail": "運行收費進入點"
+            "detail": "執行計費進入點"
           }
         },
         "threshold_escrow": {
@@ -2615,7 +2618,7 @@
         "state": "狀態",
         "entrypoints": "入口點",
         "triggers": "觸發器",
-        "actions": "行動",
+        "actions": "動作",
         "logic": "邏輯",
         "values": "值"
       },
@@ -2770,5 +2773,252 @@
       "technicalDetails": "技術詳細資訊",
       "ttl": "有效時間（毫秒）"
     }
+  },
+  "dashboards": {
+    "nav": "儀表板",
+    "tabs": {
+      "label": "儀表板",
+      "network": "網路脈動",
+      "activity": "活動",
+      "ledger": "帳本"
+    },
+    "titles": {
+      "network": "網路脈動",
+      "activity": "交易活動",
+      "ledger": "帳本組成"
+    },
+    "subtitles": {
+      "network": "從已連線的 Torii 對等節點讀取的即時出塊、提交延遲與容量。",
+      "activity": "網路何時繁忙，以及承載哪些類型的交易。",
+      "ledger": "帳戶、領域與資產在帳本中的分布情況。"
+    },
+    "window": {
+      "label": "歷史範圍",
+      "blocks": "{count} 個區塊"
+    },
+    "live": {
+      "streaming": "即時",
+      "polling": "每 10 秒更新"
+    },
+    "coverage": {
+      "scanning": "正在讀取歷史：{loaded} / {target} 個區塊",
+      "complete": "最新 {loaded} 個區塊",
+      "genesis": "自創世以來的全部 {loaded} 個區塊",
+      "incomplete": "已讀取 {loaded} / {target} 個區塊（不完整）"
+    },
+    "errors": {
+      "history": "無法讀取區塊歷史。",
+      "status": "無法取得對等節點狀態。",
+      "retry": "重試"
+    },
+    "chart": {
+      "showTable": "表格",
+      "showChart": "圖表",
+      "unknown": "無法取得區塊內容：數量未知",
+      "partial": "僅部分觀測：為下限值",
+      "noData": "未掃描",
+      "total": "總計",
+      "empty": "區塊數量尚不足。",
+      "height": "高度",
+      "time": "時間",
+      "blockTitle": "區塊 {height}",
+      "from": "起",
+      "to": "迄"
+    },
+    "peerScope": "依已連線的 Torii 對等節點回報",
+    "state": {
+      "producing": "正在出塊",
+      "pending": "交易等待中",
+      "idle": "閒置：無待處理項目",
+      "delayed": "疑似此對等節點延遲",
+      "stale": "對等節點狀態已過時",
+      "unknown": "狀態未知"
+    },
+    "instruments": {
+      "title": "儀表組",
+      "height": "區塊高度",
+      "lastBlock": "上一個區塊於 {age} 前",
+      "commit": "提交延遲",
+      "commitHint": "最新區塊從建立到在此對等節點提交的時間",
+      "queue": "交易隊列",
+      "queueHint": "處理中 {inflight}；最久等待 {age}",
+      "queueSaturated": "隊列已飽和",
+      "rejections": "被拒絕的交易",
+      "rejectionsValue": "{rejected} / {total}",
+      "rejectionsHint": "最近 5 分鐘內 {recent}",
+      "peers": "已連線的對等節點",
+      "peersHint": "不含回報的對等節點",
+      "viewChanges": "本輪視圖變更",
+      "sinceGenesis": "自創世以來",
+      "queueReadout": "{depth}/{capacity}",
+      "lastHour": "最近一小時",
+      "lastHourUnit": "筆交易",
+      "lastHourRate": "每分鐘 {rate}",
+      "lastHourPartial": "僅觀測 {minutes} 分鐘；為下限值",
+      "busiestMinute": "範圍內最繁忙的一分鐘：{time} 共 {count} 筆"
+    },
+    "charts": {
+      "distribution": {
+        "title": "區塊間隔時間",
+        "caption": "最新 {count} 個區塊中相鄰區塊之間的等待時間。Iroha 只有在交易到達時才會提交區塊，因此等待時間長代表網路閒置，而非共識緩慢。",
+        "series": "區塊",
+        "range": "等待時間",
+        "median": "等待時間中位數 {value}"
+      },
+      "perBlock": {
+        "title": "每個區塊的交易",
+        "caption": "最新 {count} 個區塊中各自已提交與被拒絕的交易。",
+        "committed": "已提交",
+        "rejected": "已拒絕",
+        "subset": "顯示已讀取 {count} 個區塊中最新的 {shown} 個（#{from}–#{to}）。"
+      },
+      "throughput": {
+        "title": "吞吐量趨勢",
+        "caption": "每 {bucket} 的交易數，區塊之間補零。空心標記表示僅部分觀測的區間。",
+        "committed": "已提交",
+        "rejected": "已拒絕"
+      },
+      "lanes": {
+        "title": "通道容量",
+        "caption": "各通道最新時槽封套內已提交的 TEU 與容量對比。",
+        "lane": "通道 {id}",
+        "value": "{committed} / {capacity} TEU",
+        "empty": "此對等節點未回報任何通道。"
+      },
+      "blockFill": {
+        "title": "區塊填充",
+        "caption": "依您可見的交易數量分組的區塊。區塊也可能包含來自私有資料空間的交易。",
+        "series": "區塊",
+        "bucket": "交易"
+      }
+    },
+    "stats": {
+      "transactions": "交易",
+      "rejectionRate": "拒絕率",
+      "meanPerBlock": "每區塊平均",
+      "busiest": "最繁忙區塊",
+      "span": "時間跨度",
+      "blocks": "個區塊已讀取",
+      "unreadable": "無法讀取的區塊",
+      "unreadableHint": "數量未知；不計入總數",
+      "medianPerBlock": "中位數 {value}"
+    },
+    "activity": {
+      "heatmap": {
+        "title": "每小時活動",
+        "caption": "以您的當地時間顯示每個日曆日每小時的交易數。斜線標示的時段不在已讀取的歷史範圍內。",
+        "value": "交易",
+        "blocks": "區塊"
+      },
+      "byHour": {
+        "title": "一日時段分布",
+        "caption": "已讀取各日的交易數，依當地時間按小時彙整。",
+        "series": "交易"
+      },
+      "sample": {
+        "caption": "最新 {count} 筆可見交易",
+        "size": "{count} 筆交易"
+      },
+      "executables": {
+        "title": "可執行內容組成",
+        "caption": "樣本交易依可執行內容類型的占比。",
+        "Instructions": "指令",
+        "ContractCall": "合約呼叫",
+        "Ivm": "IVM 位元組碼",
+        "IvmProved": "已證明的 IVM",
+        "Batch": "批次",
+        "other": "其他"
+      },
+      "outcomes": {
+        "title": "結果",
+        "committed": "已提交",
+        "rejected": "已拒絕"
+      },
+      "authorities": {
+        "title": "最活躍的簽署者",
+        "caption": "簽署最多樣本交易的帳戶。",
+        "empty": "樣本中沒有交易。"
+      },
+      "authoritiesCount": "不重複簽署者",
+      "latency": {
+        "title": "納入延遲",
+        "caption": "從每筆樣本交易建立到納入該交易之區塊的時間。建立時間來自簽署者自己的時鐘。",
+        "series": "交易",
+        "median": "納入延遲中位數",
+        "p95": "第 95 百分位數 {value}",
+        "clockAhead": "有 {count} 筆交易回報的建立時間晚於其所在區塊（簽署者時鐘超前），已排除。",
+        "unmatched": "有 {count} 筆樣本交易落在區塊範圍之外。",
+        "empty": "目前尚無樣本交易落在區塊範圍內。"
+      }
+    },
+    "ledger": {
+      "accounts": "帳戶",
+      "domains": "領域",
+      "assets": "資產與 NFT",
+      "nodes": "節點",
+      "domainsByAccounts": {
+        "title": "依帳戶數排列的領域",
+        "caption": "各領域中註冊的帳戶數；顯示前 {count} 名。"
+      },
+      "mintability": {
+        "title": "鑄造性",
+        "caption": "依鑄造政策分類的資產定義。",
+        "Infinitely": "可鑄造",
+        "Once": "僅鑄造一次",
+        "Not": "固定供應",
+        "Limited": "有限鑄造",
+        "other": "其他"
+      },
+      "homes": {
+        "title": "資產註冊位置",
+        "caption": "資產定義註冊的位置。",
+        "domain": "領域",
+        "dataspace": "資料空間",
+        "global": "全域"
+      },
+      "holdings": {
+        "title": "每個帳戶的持有量",
+        "caption": "依持有資產數量分組的帳戶。",
+        "series": "帳戶",
+        "bucket": "持有資產數"
+      },
+      "scan": "已讀取 {loaded} 個{kind}",
+      "scanIncomplete": "已讀取前 {loaded} 個{kind}；尚有更多",
+      "kinds": {
+        "domains": "領域",
+        "definitions": "資產定義",
+        "accounts": "帳戶"
+      },
+      "countsLive": "來自遙測串流的即時總數",
+      "countsStale": "來自遙測串流的最後總數；正在重新連線",
+      "countsUnavailable": "遙測串流無法使用",
+      "definitionsByBalances": {
+        "title": "各資產定義的餘額記錄",
+        "caption": "依餘額記錄數排名前 {count} 項。"
+      }
+    }
+  },
+  "navigation": {
+    "menu": "選單",
+    "groups": {
+      "explore": "探索",
+      "analytics": "分析",
+      "network": "網路",
+      "build": "開發",
+      "services": "服務"
+    },
+    "hints": {
+      "explore": "瀏覽帳本紀錄",
+      "analytics": "儀表板與經濟指標",
+      "network": "對等節點、共識與網路服務",
+      "build": "撰寫、檢查與追蹤合約",
+      "services": "SORA Nexus 上的儲存與運算"
+    }
+  },
+  "readAccess": {
+    "title": "讀取存取權",
+    "description": "連接錢包以讀取您帳戶權限允許的記錄。",
+    "disconnect": "中斷連線",
+    "public": "以公開存取繼續"
   }
 }

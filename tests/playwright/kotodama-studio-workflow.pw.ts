@@ -1,5 +1,17 @@
 import { expect, test } from '@playwright/test';
 
+// Select the test network explicitly before application startup.
+test.beforeEach(async ({ page }) => {
+  await page.route('**/config.json', route => route.fulfill({
+    json: {
+      toriiBaseUrl: 'https://taira.sora.org',
+      toriiForceBaseUrl: true,
+      networkId: `hash:${'AB'.repeat(32)}#B99E`,
+      networkPrefix: 369,
+    },
+  }));
+});
+
 const GRAPH_STORAGE_KEY = 'kotodama_studio_graph_document_v2';
 
 function dataTest(name: string): string {

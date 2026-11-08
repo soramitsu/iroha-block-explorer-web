@@ -3,21 +3,25 @@ import { expect, test, type Page } from '@playwright/test';
 const HASH = '0301b76be6d3dead32484180986523173082d770bc4fd954760d0a74a434624f';
 
 async function installOverviewApi(page: Page, telemetry = false) {
+  await page.route('**/config.json', (route) => route.fulfill({ json: {
+    toriiBaseUrl: 'https://taira.sora.org', networkPrefix: 369,
+  } }));
   await page.route('**/v1/**', async (route) => {
     const url = new URL(route.request().url());
+    const headers = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
+    if (route.request().method() === 'OPTIONS') return await route.fulfill({ status: 204, headers });
     if (url.pathname.endsWith('/stream') || url.pathname === '/v1/telemetry/live') {
       const data = telemetry && url.pathname === '/v1/telemetry/live'
         ? `data: ${JSON.stringify({ kind: 'network_status', peers: 5, domains: 3, accounts: 42, assets: 17, transactions_accepted: 11, transactions_rejected: 2, block: 99, block_created_at: null, finalized_block: 95, avg_commit_time: null, avg_block_time: null })}\n\n`
         : ': keepalive\n\n';
-      await route.fulfill({ status: 200, contentType: 'text/event-stream', body: data });
+      await route.fulfill({ status: 200, headers, contentType: 'text/event-stream', body: data });
       return;
     }
-    if (!['/v1/explorer/blocks', '/v1/explorer/transactions/latest', '/v1/explorer/accounts'].includes(url.pathname)) {
+    if (!['/v1/explorer/blocks/query', '/v1/explorer/transactions/latest/query', '/v1/explorer/accounts/query'].includes(url.pathname)) {
       throw new Error(`Unexpected overview request: ${url.pathname}`);
     }
-    const pagination = { limit: Number(url.searchParams.get('limit') ?? 10), snapshot_height: 42, snapshot_hash: HASH, next_cursor: null, has_more: false };
-    const items = url.pathname.endsWith('/blocks') ? [{ hash: HASH, height: 42, created_at: '2026-07-21T12:00:00.000Z', prev_block_hash: null, transactions_hash: null, transactions_rejected: 0, transactions_total: 1 }] : [];
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ pagination, items, ...(url.pathname.endsWith('/latest') ? { sampled_at: '2026-07-21T12:00:00.000Z' } : {}) }) });
+    const items = url.pathname.endsWith('/blocks/query') ? [{ hash: HASH, height: 42, created_at: '2026-07-21T12:00:00.000Z', prev_block_hash: null, transactions_hash: null, transactions_rejected: 0, transactions_total: 1 }] : [];
+    await route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ next_cursor: null, items }) });
   });
 }
 
@@ -69,7 +73,7 @@ test('restored landing layout keeps centered branding, open navigation, usable c
       await expect(page.locator('.app-header--home')).toBeVisible();
       await expect(page.locator('.app-header__search, .explorer-sidebar, .explorer-mobile-navigation, .app-header__menu')).toHaveCount(0);
       const links = page.locator('.home-page__menu').getByRole('link');
-      await expect(links).toHaveCount(20);
+      await expect(links).toHaveCount(21);
       for (const link of await links.all()) {
         await expect(link).toBeVisible();
       }
@@ -95,7 +99,7 @@ test('all navigation links stay open and keyboard accessible while scoped URLs a
     await expect(page.locator('.explorer-mobile-navigation')).toBeVisible({ visible: width < 1200 });
     const navigation = page.locator(width >= 1200 ? '.explorer-sidebar .navigation-menu' : '.explorer-mobile-navigation');
     const links = navigation.getByRole('link');
-    await expect(links).toHaveCount(20);
+    await expect(links).toHaveCount(21);
     for (const link of await links.all()) {
       await expect(link).toBeVisible();
     }
@@ -162,7 +166,7 @@ test('RTL and long labels keep landing and open mobile navigation within their v
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       const navigation = page.locator(route === '/' ? '.home-page__menu' : '.explorer-mobile-navigation');
       const links = navigation.getByRole('link');
-      await expect(links).toHaveCount(20);
+      await expect(links).toHaveCount(21);
       for (const link of await links.all()) {
         await expect(link).toBeVisible();
       }
