@@ -6,9 +6,19 @@
       "runtimeExecutable": "./node_modules/.bin/vite",
       "runtimeArgs": [
         "--config",
-        "output/dashboard-takeover-20261025/vite.taira.mts"
+        "output/closeout-20261115/merge/vite.taira.mts"
       ],
       "port": 5199
+    },
+    {
+      "name": "explorer-dist-taira",
+      "runtimeExecutable": "./node_modules/.bin/vite",
+      "runtimeArgs": [
+        "preview",
+        "--config",
+        "output/closeout-20261115/merge/vite.preview-dist.mts"
+      ],
+      "port": 5200
     }
   ]
 }
