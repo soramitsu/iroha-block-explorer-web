@@ -77,6 +77,10 @@ release build and the live checks above. Independent parallel history starts
 remain deferred under EX-326 because the API lacks a shared snapshot/visibility
 selector. No further deployment action is pending.
 
+Later state: on 2026-11-14 the public Explorer was found serving a different
+build, published 2026-11-08, so the release above is no longer live. See the
+[2026-11-15 closeout](dashboard-closeout-2026-11-15.md) (EX-331).
+
 The sections below retain the chronological preparation and recovery history.
 This record follows the [local implementation report](dashboard-performance-2026-10-25.md).
 

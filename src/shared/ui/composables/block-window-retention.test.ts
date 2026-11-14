@@ -53,11 +53,13 @@ afterEach(() => {
 });
 
 describe('blockWindowRetention', () => {
-  it('hands the same session its window with the continuation, and a reload the rows alone', () => {
+  it('hands the same session its window with the continuation and size, and a reload the rows alone', () => {
     const cursor = { nextCursor: 'c40', visitedCursors: ['c40'] };
     const name = nextKind();
-    blockWindowRetention(name, () => T0).save({ samples: samples(41, 43), reachedGenesis: false, readAt: T0, acquiredAt: T0, cursor });
-    expect(blockWindowRetention(name, () => T0).load()?.cursor).toBe(cursor);
+    blockWindowRetention(name, () => T0).save({ samples: samples(41, 43), reachedGenesis: false, readAt: T0, acquiredAt: T0, cursor, target: 1000 });
+    const session = blockWindowRetention(name, () => T0).load();
+    expect(session?.cursor).toBe(cursor);
+    expect(session?.target).toBe(1000);
 
     // A reload keeps localStorage but not memory: rows come back without a continuation.
     const stored = Object.entries(window.localStorage).find(([key]) => key.includes(name));
@@ -69,19 +71,20 @@ describe('blockWindowRetention', () => {
       reachedGenesis: false,
       readAt: T0, acquiredAt: T0,
       cursor: null,
+      target: 0,
     });
   });
 
   it('serves nothing once the window is too old to reconnect', () => {
     const name = nextKind();
-    blockWindowRetention(name, () => T0).save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null });
+    blockWindowRetention(name, () => T0).save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null, target: 2 });
     expect(blockWindowRetention(name, () => T0 + RETAINED_WINDOW_MAX_AGE_MS).load()).not.toBeNull();
     expect(blockWindowRetention(name, () => T0 + RETAINED_WINDOW_MAX_AGE_MS + 1).load()).toBeNull();
   });
 
   it('expires by acquisition age even after repeated successful head reads', () => {
     const name = nextKind();
-    const original = { samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null };
+    const original = { samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null, target: 2 };
     blockWindowRetention(name, () => T0).save(original);
     blockWindowRetention(name, () => T0 + 20 * 60_000).save({ ...original, readAt: T0 + 20 * 60_000 });
     expect(blockWindowRetention(name, () => T0 + RETAINED_WINDOW_MAX_AGE_MS + 1).load()).toBeNull();
@@ -94,13 +97,13 @@ describe('blockWindowRetention', () => {
 
   it('does not accept windows acquired in the future after a clock rollback', () => {
     const name = nextKind();
-    blockWindowRetention(name, () => T0).save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null });
+    blockWindowRetention(name, () => T0).save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null, target: 2 });
     expect(blockWindowRetention(name, () => T0 - 1).load()).toBeNull();
   });
 
   it('rejects a future head-read time even when acquisition is in the past', () => {
     const name = nextKind();
-    blockWindowRetention(name, () => T0).save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0 + 60_000, acquiredAt: T0, cursor: null });
+    blockWindowRetention(name, () => T0).save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0 + 60_000, acquiredAt: T0, cursor: null, target: 2 });
     expect(blockWindowRetention(name, () => T0 + 30_000).load()).toBeNull();
 
     const stored = Object.entries(window.localStorage).find(([key]) => key.includes(name))!;
@@ -112,13 +115,13 @@ describe('blockWindowRetention', () => {
   it('keeps nothing for a signed-in reader or after the reader identity changes', () => {
     const name = nextKind();
     reader.isPublic = false;
-    blockWindowRetention(name, () => T0).save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null });
+    blockWindowRetention(name, () => T0).save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null, target: 2 });
     expect(window.localStorage.length).toBe(0);
 
     reader.isPublic = true;
     const retention = blockWindowRetention(name, () => T0);
     reader.revision = 1;
-    retention.save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null });
+    retention.save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null, target: 2 });
     expect(window.localStorage.length).toBe(0);
     expect(retention.load()).toBeNull();
   });

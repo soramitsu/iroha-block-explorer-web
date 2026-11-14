@@ -100,13 +100,14 @@ function memoryRetention(initial: RetainedBlockWindow | null = null) {
   };
 }
 
-function keptWindow(from: number, to: number, nextCursor: string | null): RetainedBlockWindow {
+function keptWindow(from: number, to: number, nextCursor: string | null, target = 0): RetainedBlockWindow {
   return {
     samples: Array.from({ length: to - from + 1 }, (_, index) => block(from + index)),
     reachedGenesis: false,
     readAt: T0,
     acquiredAt: T0,
     cursor: nextCursor === null ? null : { nextCursor, visitedCursors: [] },
+    target,
   };
 }
 
@@ -625,7 +626,8 @@ describe('useBlockSampleWindow: retention', () => {
     await settle();
     expect(network.samples.value).toHaveLength(250);
     scope.stop();
-    expect(state.kept?.samples).toHaveLength(1000);
+    expect(state.kept?.samples).toHaveLength(1000 + growth);
+    expect(state.kept?.target).toBe(1000);
 
     const callsBeforeReturn = source.fetchPage.mock.calls.length;
     scope = effectScope();
@@ -637,6 +639,53 @@ describe('useBlockSampleWindow: retention', () => {
     expect(returnedActivity.coverage.value.complete).toBe(true);
     expect(contiguous(returnedActivity.samples.value)).toBe(true);
     expect(returnedActivity.error.value).toBeNull();
+  });
+
+  it('keeps an unfinished larger window and its continuation through a smaller dashboard that sees new blocks', async () => {
+    const source = chain(2000);
+    // Activity had read 800 of its 1,000 blocks when the reader opened Network.
+    const { retention, state } = memoryRetention(keptWindow(1201, 2000, 'c1200', 1000));
+    source.grow(2001);
+    const network = scope.run(() => useBlockSampleWindow(ref(250), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+    expect(network.samples.value.at(-1)?.height).toBe(2001);
+    expect(network.samples.value).toHaveLength(250);
+    scope.stop();
+    expect(state.kept?.samples).toHaveLength(801);
+    expect(state.kept?.cursor?.nextCursor).toBe('c1200');
+    expect(state.kept?.target).toBe(1000);
+
+    const callsBeforeReturn = source.fetchPage.mock.calls.length;
+    scope = effectScope();
+    const activity = scope.run(() => useBlockSampleWindow(ref(1000), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+    // One head re-read, then only the pages below the kept rows: no rescan from the head.
+    expect(source.fetchPage.mock.calls.slice(callsBeforeReturn).map((call) => call[0].cursor)).toEqual([null, 'c1200', 'c1100']);
+    expect(activity.samples.value).toHaveLength(1000);
+    expect(activity.samples.value[0]?.height).toBe(1002);
+    expect(contiguous(activity.samples.value)).toBe(true);
+    expect(activity.coverage.value.complete).toBe(true);
+    expect(activity.error.value).toBeNull();
+  });
+
+  it('bounds the rows a smaller dashboard keeps for a larger one at that window plus its headroom', async () => {
+    const source = chain(2000);
+    const { retention, state } = memoryRetention(keptWindow(1001, 2000, 'c1000', 1000));
+    const network = scope.run(() => useBlockSampleWindow(ref(250), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+    for (const head of [2400, 2800]) {
+      source.grow(head);
+      await network.refresh();
+      await settle();
+    }
+    scope.stop();
+
+    // 1,800 heights were read; the 1,000-block window keeps 512 more and drops the oldest.
+    expect(state.kept?.samples).toHaveLength(1512);
+    expect(state.kept?.samples.at(-1)?.height).toBe(2800);
+    expect(contiguous(state.kept!.samples)).toBe(true);
+    // The trimmed range no longer reaches the old continuation.
+    expect(state.kept?.cursor).toBeNull();
   });
 
   it('keeps the window, with its continuation, for the next dashboard', async () => {

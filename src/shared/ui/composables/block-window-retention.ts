@@ -15,6 +15,11 @@ export interface RetainedBlockWindow {
   acquiredAt: number
   /** Continuation below the oldest sample; valid only within this page session. */
   cursor: HistoryScanCursor | null
+  /**
+   * Largest window size the rows are read for, so a smaller dashboard keeps
+   * their continuation. 0 after a reload, which keeps no continuation.
+   */
+  target: number
 }
 
 export interface BlockWindowRetention {
@@ -34,7 +39,7 @@ function storedWindow(key: string): RetainedBlockWindow | null {
   if (typeof window === 'undefined') return null;
   try {
     const stored = parseBlockWindow(window.localStorage.getItem(key));
-    return stored ? { ...stored, cursor: null } : null;
+    return stored ? { ...stored, cursor: null, target: 0 } : null;
   } catch {
     return null;
   }

@@ -75,6 +75,8 @@ export function useBlockSampleWindow(windowSize: Ref<number>, options: BlockSamp
   let refreshQueued = false;
   let disposed = false;
   let acquiredAt: number | null = null;
+  /** Largest window size these rows are read for, by this dashboard or the one that kept them. */
+  let target = windowSize.value;
 
   const samples = computed(() => {
     const all = fetched.value;
@@ -95,9 +97,11 @@ export function useBlockSampleWindow(windowSize: Ref<number>, options: BlockSamp
   /** Publish a reconnected head atomically, dropping heights far below the window. */
   function commitHead(items: readonly CanonicalBlockSample[]) {
     const merged = mergeBlockSamples(fetched.value, items, Math.max(1, fetched.value.length + items.length));
-    // A smaller dashboard must keep the shared history already read by a larger
-    // one, so returning to that dashboard still needs only a head refresh.
-    const limit = Math.max(fetched.value.length, windowSize.value + RETAINED_HEADROOM);
+    // A smaller dashboard must keep the shared history a larger one has read, or
+    // is still reading, with its continuation, so returning to that dashboard
+    // needs only a head refresh and the missing older pages. The window sizes
+    // are bounded, so this cap is too.
+    const limit = Math.max(fetched.value.length, Math.max(target, windowSize.value) + RETAINED_HEADROOM);
     if (merged.length > limit) {
       fetched.value = merged.slice(merged.length - limit);
       // Older heights exist again below the trimmed range; the old continuation does not reach them.
@@ -184,6 +188,8 @@ export function useBlockSampleWindow(windowSize: Ref<number>, options: BlockSamp
     isScanning.value = false;
     lastUpdatedAt.value = null;
     acquiredAt = null;
+    // A rebuilt window is read for this dashboard alone.
+    target = windowSize.value;
     // The rebuild reads the head itself.
     headPending.value = false;
     return extend();
@@ -259,7 +265,14 @@ export function useBlockSampleWindow(windowSize: Ref<number>, options: BlockSamp
   /** The window as it stands, for the next dashboard or visit. */
   function kept(): RetainedBlockWindow | null {
     if (fetched.value.length === 0 || lastUpdatedAt.value === null || acquiredAt === null) return null;
-    return { samples: fetched.value, reachedGenesis: reachedGenesis.value, readAt: lastUpdatedAt.value, acquiredAt, cursor };
+    return {
+      samples: fetched.value,
+      reachedGenesis: reachedGenesis.value,
+      readAt: lastUpdatedAt.value,
+      acquiredAt,
+      cursor,
+      target: Math.max(target, windowSize.value),
+    };
   }
 
   let retainTimer: ReturnType<typeof setTimeout> | null = null;
@@ -285,6 +298,7 @@ export function useBlockSampleWindow(windowSize: Ref<number>, options: BlockSamp
     isScanning.value = false;
     lastUpdatedAt.value = snapshot.readAt;
     acquiredAt = snapshot.acquiredAt;
+    target = Math.max(snapshot.target, windowSize.value);
     headPending.value = true;
     refresh();
     // Without its continuation (a reload) a short window is read afresh, from the head.
@@ -292,6 +306,7 @@ export function useBlockSampleWindow(windowSize: Ref<number>, options: BlockSamp
   }
 
   watch(windowSize, (size, previous) => {
+    target = Math.max(target, size);
     if (previous !== undefined && size > previous && !reachedGenesis.value) extend();
   });
 
