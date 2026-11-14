@@ -111,11 +111,22 @@ const nativeFetch = global.fetch;
 beforeEach(() => {
   eventSourceStore.instances.length = 0;
   runtimeConfigState.value = {};
-  if (typeof localStorage !== 'undefined' && typeof localStorage.clear === 'function') localStorage.clear();
+  // Node's native storage file is shared by concurrent workers. Keep endpoint
+  // fixtures local to this test so another suite cannot switch the API's node.
+  const entries = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    get length() { return entries.size; },
+    clear: () => entries.clear(),
+    getItem: (key: string) => entries.get(key) ?? null,
+    key: (index: number) => [...entries.keys()][index] ?? null,
+    removeItem: (key: string) => { entries.delete(key); },
+    setItem: (key: string, value: string) => { entries.set(key, value); },
+  } satisfies Storage);
 });
 
 afterEach(() => {
   global.fetch = nativeFetch;
+  vi.unstubAllGlobals();
 });
 
 describe('appendSearchParams', () => {
@@ -154,7 +165,7 @@ describe('appendSearchParams', () => {
 describe('API url builders', () => {
   it('keeps actual requests on forced Taira after manual, scoped and reset attempts', async () => {
     runtimeConfigState.value = { toriiBaseUrl: 'https://taira.sora.org', toriiForceBaseUrl: true };
-    localStorage.setItem('torii_base_url', 'https://saved-node.example');
+    window.localStorage.setItem('torii_base_url', 'https://saved-node.example');
     const requests: string[] = [];
     global.fetch = vi.fn(async (input: unknown) => {
       requests.push(String(input));

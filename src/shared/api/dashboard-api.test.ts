@@ -1,3 +1,4 @@
+import { requireIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { ref } from 'vue';
 import { jsonResponse } from '../../../tests/fixtures/http-response';
@@ -71,13 +72,15 @@ afterEach(() => {
   global.fetch = nativeFetch;
 });
 
+const BLOCK_HASH = requireIrohaHashLiteral32('ab'.repeat(32));
+
 describe('fetchBlockSamples', () => {
   it('requests the dashboard projection and maps rows to samples', async () => {
     const spy = vi.fn().mockImplementation(() =>
       jsonResponse({
         items: [
-          { height: 1102, created_at: '2026-10-24T07:48:01.266Z', transactions_total: 3, transactions_rejected: 1 },
-          { height: 1101, created_at: '', transactions_total: 0, transactions_rejected: 0 },
+          { height: 1102, hash: BLOCK_HASH, created_at: '2026-10-24T07:48:01.266Z', transactions_total: 3, transactions_rejected: 1 },
+          { height: 1101, hash: BLOCK_HASH, created_at: '', transactions_total: 0, transactions_rejected: 0 },
         ],
         next_cursor: 'next-page',
       })
@@ -87,16 +90,16 @@ describe('fetchBlockSamples', () => {
     const result = await api.fetchBlockSamples({ limit: 100, cursor: 'previous' });
 
     const query = sentQuery(spy);
-    expect(query.select).toEqual(['height', 'created_at', 'transactions_total', 'transactions_rejected']);
+    expect(query.select).toEqual(['height', 'hash', 'created_at', 'transactions_total', 'transactions_rejected']);
     expect(query.limit).toBe(100);
     expect(query.cursor).toBe('previous');
     expect(result.status).toBe(SUCCESSFUL_FETCHING);
     if (result.status !== SUCCESSFUL_FETCHING) return;
     expect(result.data.nextCursor).toBe('next-page');
     expect(result.data.items).toEqual([
-      { height: 1102, createdAtMs: Date.parse('2026-10-24T07:48:01.266Z'), transactionsTotal: 3, transactionsRejected: 1 },
+      { height: 1102, hash: BLOCK_HASH, createdAtMs: Date.parse('2026-10-24T07:48:01.266Z'), transactionsTotal: 3, transactionsRejected: 1 },
       // An unreadable body keeps unknown counts instead of measured zeros.
-      { height: 1101, createdAtMs: null, transactionsTotal: 0, transactionsRejected: 0 },
+      { height: 1101, hash: BLOCK_HASH, createdAtMs: null, transactionsTotal: 0, transactionsRejected: 0 },
     ]);
   });
 
@@ -106,7 +109,8 @@ describe('fetchBlockSamples', () => {
         items: [
           {
             height: 5,
-            hash: 'hash:00',
+            hash: BLOCK_HASH,
+            prev_block_hash: null,
             created_at: '2026-10-24T07:48:01.266Z',
             transactions_total: 1,
             transactions_rejected: 0,
@@ -119,10 +123,21 @@ describe('fetchBlockSamples', () => {
     await expect(api.fetchBlockSamples({ limit: 1 })).rejects.toThrow();
   });
 
+  it('requires a canonical checked block hash for retained-window anchors', async () => {
+    for (const hash of [undefined, 'hash:00', BLOCK_HASH.toLowerCase()]) {
+      global.fetch = vi.fn().mockImplementation(() => jsonResponse({
+        items: [{ height: 5, hash, created_at: '2026-10-24T07:48:01Z', transactions_total: 1, transactions_rejected: 0 }],
+        next_cursor: null,
+      })) as any;
+      const api = await importApi();
+      await expect(api.fetchBlockSamples({ limit: 1 })).rejects.toThrow();
+    }
+  });
+
   it('rejects impossible counters and malformed times', async () => {
     for (const row of [
-      { height: 5, created_at: '2026-10-24T07:48:01Z', transactions_total: 1, transactions_rejected: 2 },
-      { height: 5, created_at: 'yesterday', transactions_total: 1, transactions_rejected: 0 },
+      { height: 5, hash: BLOCK_HASH, created_at: '2026-10-24T07:48:01Z', transactions_total: 1, transactions_rejected: 2 },
+      { height: 5, hash: BLOCK_HASH, created_at: 'yesterday', transactions_total: 1, transactions_rejected: 0 },
     ]) {
       global.fetch = vi.fn().mockImplementation(() => jsonResponse({ items: [row], next_cursor: null })) as any;
       const api = await importApi();
@@ -212,7 +227,8 @@ describe('fetchTransactionSamples', () => {
 
   it('rejects rows that ignored the projection or carry an unknown status', async () => {
     for (const row of [
-      { authority: SAMPLE_AUTHORITY, hash: 'hash:00', block: 3, created_at: '2026-10-24T07:47:59Z', executable: 'Instructions', status: 'Committed' },
+      { authority: SAMPLE_AUTHORITY, hash: BLOCK_HASH,
+            prev_block_hash: null, block: 3, created_at: '2026-10-24T07:47:59Z', executable: 'Instructions', status: 'Committed' },
       { authority: SAMPLE_AUTHORITY, block: 3, created_at: '2026-10-24T07:47:59Z', executable: 'Instructions', status: 'Pending' },
     ]) {
       global.fetch = vi.fn().mockImplementation(() => jsonResponse({ items: [row], next_cursor: null })) as any;

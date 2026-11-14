@@ -19,19 +19,24 @@ export interface BlockSample {
   transactionsRejected: number
 }
 
+/** A feed sample bound to its authoritative committed block identity. */
+export interface CanonicalBlockSample extends BlockSample {
+  hash: string
+}
+
 /** A sample whose body was readable, so its counts and time are authoritative. */
 export function isTimedSample(sample: BlockSample): sample is BlockSample & { createdAtMs: number } {
   return sample.createdAtMs !== null && Number.isFinite(sample.createdAtMs);
 }
 
 /** Merge feed pages by height (incoming wins), oldest first, keeping the `limit` newest heights. */
-export function mergeBlockSamples(
-  current: readonly BlockSample[],
-  incoming: readonly BlockSample[],
+export function mergeBlockSamples<T extends BlockSample>(
+  current: readonly T[],
+  incoming: readonly T[],
   limit: number
-): BlockSample[] {
+): T[] {
   if (!Number.isInteger(limit) || limit < 1) throw new RangeError('Sample limit must be a positive integer');
-  const byHeight = new Map<number, BlockSample>();
+  const byHeight = new Map<number, T>();
   for (const sample of current) byHeight.set(sample.height, sample);
   for (const sample of incoming) byHeight.set(sample.height, sample);
   const merged = [...byHeight.values()].sort((a, b) => a.height - b.height);

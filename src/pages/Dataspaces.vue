@@ -222,9 +222,7 @@ const dataspaces = computed<DataspaceOverviewRow[]>(() => {
     .sort(([left], [right]) => BigInt(left) < BigInt(right) ? -1 : BigInt(left) > BigInt(right) ? 1 : 0)
     .flatMap(([id, rows]) => {
       const sortedRows = [...rows].sort((left, right) => left.lane_id - right.lane_id);
-      const primary = sortedRows.find((item) => catalog.some(
-        (entry) => entry.dataspace_id === id && entry.lane_id === item.lane_id
-      ));
+      const primary = sortedRows[0];
       if (!primary) return [];
       const representativeLane = primary.lane_id;
       const laneIds = sortedRows.map((item) => item.lane_id);

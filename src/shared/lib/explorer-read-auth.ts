@@ -54,7 +54,7 @@ export function activateExplorerReadSession(options: {
     cancelSigning = () => reject(new Error('The Explorer read session has ended.'));
   });
   // A session can end before any reads have subscribed to its cancellation.
-  void cancelled.catch(() => {});
+  cancelled.catch(() => {});
   const active: ReadSession = {
     baseUrl: options.baseUrl,
     networkId: options.networkId,

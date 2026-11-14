@@ -50,6 +50,15 @@ beforeEach(() => {
 afterEach(() => scope.stop());
 
 describe('useBoundedScan', () => {
+  it('reads the 500-transaction dashboard sample in five full collection pages', async () => {
+    const fetchPage = feed(1000);
+    const scan = scope.run(() => useBoundedScan(fetchPage, 500))!;
+    await settle();
+    expect(fetchPage.mock.calls.map(([params]) => params.limit)).toEqual([100, 100, 100, 100, 100]);
+    expect(scan.items.value).toHaveLength(500);
+    expect(scan.truncated.value).toBe(true);
+  });
+
   it('reads every page of a small collection and reports completeness', async () => {
     const fetchPage = feed(150);
     const scan = scope.run(() => useBoundedScan(fetchPage, 1000))!;

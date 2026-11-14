@@ -123,7 +123,7 @@ import { getRuntimeConfig } from '@/shared/runtime-config';
 import { normalizeAccountIdLiteral, normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
 import { requireIrohaHash32, requireIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
 import { getExplorerReadAuth } from '@/shared/lib/explorer-read-auth';
-import type { BlockSample } from '@/shared/lib/chain-analytics';
+import type { CanonicalBlockSample } from '@/shared/lib/chain-analytics';
 import { ToriiBrowserClient, ToriiHttpError, ToriiStreamGapError, field, type Filter, type ListQueryInput } from '@iroha/iroha-js/torii-browser';
 import { NetworkId } from '@iroha/iroha-js/connect-browser';
 import type {
@@ -1133,7 +1133,7 @@ export async function fetchBlocks(params?: CursorPaginationParams): Promise<Resu
 }
 
 /** One newest-first page of projected block summaries; counts follow the caller's visibility. */
-export async function fetchBlockSamples(params: CursorPaginationParams): Promise<ResultWithStatus<CollectionPage<BlockSample>>> {
+export async function fetchBlockSamples(params: CursorPaginationParams): Promise<ResultWithStatus<CollectionPage<CanonicalBlockSample>>> {
   return await fetchCollectionPage(params, BlockSampleRow, (client) =>
     client.explorerBlocks.list({ ...collectionQuery(params), select: [...BLOCK_SAMPLE_FIELDS] })
   );

@@ -178,6 +178,7 @@ import RankedBars from '@/shared/ui/dashboard/RankedBars.vue';
 import ShareBar from '@/shared/ui/dashboard/ShareBar.vue';
 import { CHART_COLORS, type ChartTable, type RankedItem, type ShareSegment } from '@/shared/ui/dashboard/types';
 import { useBlockSampleWindow } from '@/shared/ui/composables/useBlockSampleWindow';
+import { DASHBOARD_BLOCK_WINDOW, blockWindowRetention } from '@/shared/ui/composables/block-window-retention';
 import { useBoundedScan } from '@/shared/ui/composables/useBoundedScan';
 import { useRouteQueryState } from '@/shared/ui/composables/useRouteQueryState';
 import { fetchTransactionSamples } from '@/shared/api';
@@ -224,7 +225,8 @@ const windowOptions = computed(() =>
   WINDOW_SIZES.map((value) => ({ value, label: t('dashboards.window.blocks', { count: value }) }))
 );
 
-const blocks = useBlockSampleWindow(windowSize);
+// Network and Activity share one window, kept between them and across visits.
+const blocks = useBlockSampleWindow(windowSize, { retention: blockWindowRetention(DASHBOARD_BLOCK_WINDOW) });
 const sample = useBoundedScan(fetchTransactionSamples, TRANSACTION_SAMPLE);
 
 function retry() {

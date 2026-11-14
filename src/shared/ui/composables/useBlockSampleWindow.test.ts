@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { effectScope, nextTick, ref } from 'vue';
 import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
-import type { BlockSample } from '@/shared/lib/chain-analytics';
+import type { BlockSample, CanonicalBlockSample } from '@/shared/lib/chain-analytics';
+import { requireIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
+import type { RetainedBlockWindow } from './block-window-retention';
 
 const streamState = vi.hoisted(() => ({
   connectFrom: vi.fn(),
@@ -44,18 +46,18 @@ interface PageArgs {
   cursor?: string | null
 }
 
-function block(height: number): BlockSample {
-  return { height, createdAtMs: T0 + height * 1000, transactionsTotal: height % 3, transactionsRejected: 0 };
+function block(height: number): CanonicalBlockSample {
+  return { height, hash: requireIrohaHashLiteral32((height * 2 + 1).toString(16).padStart(64, '0')), createdAtMs: T0 + height * 1000, transactionsTotal: height % 3, transactionsRejected: 0 };
 }
 
 /** A chain served newest-first with opaque cursors; `failRequest(n)` fails the n-th next request once. */
-function chain(initialHead: number) {
+function chain(initialHead: number, hashOffset = 0) {
   const state = { head: initialHead, failAt: null as number | null, calls: 0 };
   const fetchPage = vi.fn(async ({ limit, cursor }: PageArgs) => {
     state.calls += 1;
     if (state.failAt === state.calls) return { status: UNKNOWN_ERROR, error: new Error('busy') } as const;
     const top = cursor ? Number(cursor.slice(1)) : state.head;
-    const items = Array.from({ length: Math.min(limit ?? PAGE, top) }, (_, index) => block(top - index));
+    const items = Array.from({ length: Math.min(limit ?? PAGE, top) }, (_, index) => ({ ...block(top - index), hash: block(top - index + hashOffset).hash }));
     const bottom = top - items.length;
     return {
       status: SUCCESSFUL_FETCHING,
@@ -81,6 +83,31 @@ function deferredPages(fetchPage: ReturnType<typeof chain>['fetchPage']) {
       })
   );
   return { deferred, releases };
+}
+
+/** A retention that keeps windows in memory and records every save. */
+function memoryRetention(initial: RetainedBlockWindow | null = null) {
+  const state = { kept: initial, saves: [] as RetainedBlockWindow[] };
+  return {
+    state,
+    retention: {
+      load: () => state.kept,
+      save: (window: RetainedBlockWindow) => {
+        state.saves.push(window);
+        state.kept = window;
+      },
+    },
+  };
+}
+
+function keptWindow(from: number, to: number, nextCursor: string | null): RetainedBlockWindow {
+  return {
+    samples: Array.from({ length: to - from + 1 }, (_, index) => block(from + index)),
+    reachedGenesis: false,
+    readAt: T0,
+    acquiredAt: T0,
+    cursor: nextCursor === null ? null : { nextCursor, visitedCursors: [] },
+  };
 }
 
 async function settle() {
@@ -121,6 +148,37 @@ describe('useBlockSampleWindow: initial scan', () => {
     expect(window.coverage.value).toEqual({ loaded: 150, target: 150, complete: true });
     expect(window.lastUpdatedAt.value).not.toBeNull();
     expect(streamState.connectFrom).toHaveBeenLastCalledWith(1103);
+  });
+
+  it('requests 100 rows and follows every budget-shortened page in the same cursor chain', async () => {
+    const source = chain(1102);
+    const fetchPage = vi.fn((args: PageArgs) => source.fetchPage({ ...args, limit: Math.min(args.limit ?? PAGE, 3) }));
+    const window = scope.run(() => useBlockSampleWindow(ref(200), { fetchPage }))!;
+    for (let pass = 0; pass < 8; pass += 1) await settle();
+
+    expect(fetchPage.mock.calls[0]?.[0]).toEqual({ limit: 100, cursor: null });
+    expect(fetchPage).toHaveBeenCalledTimes(67);
+    expect(fetchPage.mock.calls.slice(1).every((call) => call[0].cursor !== null)).toBe(true);
+    expect(window.samples.value).toHaveLength(200);
+    expect(contiguous(window.samples.value)).toBe(true);
+    expect(window.coverage.value.complete).toBe(true);
+    expect(window.error.value).toBeNull();
+  });
+
+  it('bounds advancing continuations that never yield any new rows', async () => {
+    let request = 0;
+    const fetchPage = vi.fn(async () => {
+      request += 1;
+      const items: CanonicalBlockSample[] = [];
+      return { status: SUCCESSFUL_FETCHING, data: { items, nextCursor: `empty-${request}` } } as const;
+    });
+    const window = scope.run(() => useBlockSampleWindow(ref(200), { fetchPage }))!;
+    await settle();
+
+    expect(fetchPage).toHaveBeenCalledTimes(5);
+    expect(window.error.value?.message).toBe('Block history scan did not fill the window');
+    expect(window.samples.value).toEqual([]);
+    expect(window.isScanning.value).toBe(false);
   });
 
   it('requests only the rows still missing, so large windows never overshoot', async () => {
@@ -340,5 +398,257 @@ describe('useBlockSampleWindow: live head', () => {
     expect(heights[heights.length - 1]).toBe(1102 + 10 * PAGE);
     expect(heights).toHaveLength(100);
     expect(contiguous(window.samples.value)).toBe(true);
+  });
+});
+
+describe('useBlockSampleWindow: retention', () => {
+  it('discards retained heights when the same-genesis endpoint resets to a shorter chain', async () => {
+    const source = chain(50);
+    const { retention } = memoryRetention(keptWindow(1003, 1102, 'c1002'));
+    const window = scope.run(() => useBlockSampleWindow(ref(100), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+
+    expect(window.samples.value.map((sample) => sample.height)).toEqual(Array.from({ length: 50 }, (_, index) => index + 1));
+    expect(window.reachedGenesis.value).toBe(true);
+    expect(window.error.value).toBeNull();
+    expect(window.isReconciled.value).toBe(true);
+  });
+
+  it.each([1102, 1102 + PAGE])('discards a regrown chain at tip %i when the retained hash anchor differs', async (tip) => {
+    const source = chain(tip, 10_000);
+    const { retention } = memoryRetention(keptWindow(1003, 1102, 'c1002'));
+    const window = scope.run(() => useBlockSampleWindow(ref(100), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+
+    expect(window.samples.value).toHaveLength(100);
+    expect(window.samples.value.at(-1)?.height).toBe(tip);
+    expect(window.samples.value.every((sample) => sample.hash === block(sample.height + 10_000).hash)).toBe(true);
+    expect(window.error.value).toBeNull();
+    expect(contiguous(window.samples.value)).toBe(true);
+  });
+
+  it('reads an overlapping anchor before accepting an adjacent page as the same chain', async () => {
+    const { deferred, releases } = deferredPages(chain(1102 + PAGE).fetchPage);
+    const { retention } = memoryRetention(keptWindow(1003, 1102, 'c1002'));
+    const window = scope.run(() => useBlockSampleWindow(ref(100), { fetchPage: deferred as never, retention }))!;
+
+    releases.shift()!();
+    await settle();
+    expect(window.samples.value.at(-1)?.height).toBe(1102);
+    expect(window.isReconciled.value).toBe(false);
+    expect(deferred).toHaveBeenCalledTimes(2);
+
+    releases.shift()!();
+    await settle();
+    expect(window.samples.value.at(-1)?.height).toBe(1102 + PAGE);
+    expect(window.isReconciled.value).toBe(true);
+  });
+
+  it('keeps an older-page failure visible after concurrent and later head refreshes succeed', async () => {
+    const source = chain(1102);
+    const { deferred, releases } = deferredPages(source.fetchPage);
+    const { retention } = memoryRetention(keptWindow(1003, 1102, 'c1002'));
+    const window = scope.run(() => useBlockSampleWindow(ref(250), { fetchPage: deferred as never, retention }))!;
+    expect(releases).toHaveLength(2);
+
+    source.failRequest(1);
+    releases.pop()!(); // The extension fails before the head response arrives.
+    await settle();
+    expect(window.error.value?.message).toBe('busy');
+    releases.shift()!();
+    await settle();
+    expect(window.error.value?.message).toBe('busy');
+    expect(window.coverage.value.complete).toBe(false);
+    expect(window.isScanning.value).toBe(false);
+
+    const refreshed = window.refresh();
+    releases.shift()!();
+    await refreshed;
+    expect(window.error.value?.message).toBe('busy');
+
+    const retried = window.retry();
+    while (releases.length > 0) {
+      releases.shift()!();
+      await settle();
+    }
+    await retried;
+    expect(window.error.value).toBeNull();
+    expect(window.coverage.value.complete).toBe(true);
+  });
+
+  it('does not renew old unavailable-body rows when only the head is read again', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(T0 + 10 * 60_000);
+    const initial = keptWindow(103, 1102, 'c102');
+    initial.samples[0] = { ...initial.samples[0]!, createdAtMs: null };
+    const { retention, state } = memoryRetention(initial);
+    const source = chain(1102);
+    const window = scope.run(() => useBlockSampleWindow(ref(1000), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+    vi.setSystemTime(T0 + 20 * 60_000);
+    await window.refresh();
+    scope.stop();
+
+    expect(state.kept?.samples[0]?.createdAtMs).toBeNull();
+    expect(state.kept?.readAt).toBe(T0 + 20 * 60_000);
+    expect(state.kept?.acquiredAt).toBe(T0);
+  });
+
+  it('subscribes immediately from a retained head even when the head read is unchanged', async () => {
+    const source = chain(1102);
+    const { retention } = memoryRetention(keptWindow(953, 1102, 'c952'));
+    const window = scope.run(() => useBlockSampleWindow(ref(100), { fetchPage: source.fetchPage, retention }))!;
+
+    expect(streamState.connectFrom).toHaveBeenCalledExactlyOnceWith(1103);
+    await settle();
+    expect(streamState.connectFrom).toHaveBeenCalledExactlyOnceWith(1103);
+    expect(window.samples.value.at(-1)?.height).toBe(1102);
+
+    streamState.streaming!.value = true;
+    await settle();
+    expect(window.isLive.value).toBe(true);
+    expect(window.observedUntil(T0 + 60_000)).toBe(T0 + 60_000);
+  });
+
+  it('starts the retained-head stream after a failed read without marking stale rows reconciled', async () => {
+    const source = chain(1102);
+    source.failRequest(1);
+    const { retention } = memoryRetention(keptWindow(953, 1102, 'c952'));
+    const window = scope.run(() => useBlockSampleWindow(ref(100), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+
+    expect(streamState.connectFrom).toHaveBeenCalledExactlyOnceWith(1103);
+    expect(window.error.value?.message).toBe('busy');
+    expect(window.isReconciled.value).toBe(false);
+    expect(window.observedUntil(T0 + 60_000)).toBe(T0);
+
+    // Opening the subscription retries the read and closes the observation gap.
+    streamState.streaming!.value = true;
+    await settle();
+    expect(window.error.value).toBeNull();
+    expect(window.isReconciled.value).toBe(true);
+    expect(window.observedUntil(T0 + 60_000)).toBe(T0 + 60_000);
+  });
+
+  it('does not subscribe from a retained head when live updates are disabled', async () => {
+    const source = chain(1102);
+    const { retention } = memoryRetention(keptWindow(953, 1102, 'c952'));
+    scope.run(() => useBlockSampleWindow(ref(100), { fetchPage: source.fetchPage, retention, live: false }));
+    await settle();
+
+    expect(streamState.connectFrom).not.toHaveBeenCalled();
+  });
+
+  it('shows a kept window at once and re-reads only its head before counting the present', async () => {
+    const source = chain(1105);
+    const { retention } = memoryRetention(keptWindow(953, 1102, 'c952'));
+    const window = scope.run(() => useBlockSampleWindow(ref(100), { fetchPage: source.fetchPage, retention }))!;
+
+    expect(window.samples.value[window.samples.value.length - 1]?.height).toBe(1102);
+    expect(window.isLoading.value).toBe(false);
+    expect(window.isReconciled.value).toBe(false);
+    expect(window.observedUntil(T0 + 60_000)).toBe(T0);
+
+    await settle();
+    expect(source.fetchPage).toHaveBeenCalledTimes(1);
+    expect(source.fetchPage.mock.calls[0]?.[0]).toEqual({ limit: PAGE, cursor: null });
+    expect(window.samples.value[window.samples.value.length - 1]?.height).toBe(1105);
+    expect(window.samples.value).toHaveLength(100);
+    expect(window.isReconciled.value).toBe(true);
+    expect(contiguous(window.samples.value)).toBe(true);
+  });
+
+  it('extends a kept window from its continuation when the next dashboard needs more', async () => {
+    const source = chain(1102);
+    const { retention } = memoryRetention(keptWindow(1003, 1102, 'c1002'));
+    const window = scope.run(() => useBlockSampleWindow(ref(250), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+
+    const cursors = source.fetchPage.mock.calls.map((call) => call[0].cursor);
+    expect(cursors).toContain('c1002');
+    // One head re-read and the pages below the kept rows: no second read of the kept heights.
+    expect(cursors.filter((cursor) => cursor === null)).toHaveLength(1);
+    expect(window.samples.value).toHaveLength(250);
+    expect(contiguous(window.samples.value)).toBe(true);
+  });
+
+  it('reads a short kept window afresh when its continuation did not survive a reload', async () => {
+    const source = chain(1102);
+    const { retention } = memoryRetention(keptWindow(1003, 1102, null));
+    const window = scope.run(() => useBlockSampleWindow(ref(250), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+
+    expect(window.samples.value).toHaveLength(250);
+    expect(window.samples.value[0]?.height).toBe(853);
+    expect(contiguous(window.samples.value)).toBe(true);
+  });
+
+  it('keeps the rebuilt scan serialized when a persisted short window grows before its first page arrives', async () => {
+    const { deferred, releases } = deferredPages(chain(1102).fetchPage);
+    const { retention } = memoryRetention(keptWindow(1003, 1102, null));
+    const size = ref(250);
+    const window = scope.run(() => useBlockSampleWindow(size, { fetchPage: deferred as never, retention }))!;
+    expect(deferred).toHaveBeenCalledTimes(2); // Resume refresh, then the fresh scan without a saved cursor.
+
+    releases.shift()!(); // The old-generation refresh is ignored; the rebuild remains pending.
+    await settle();
+    expect(releases).toHaveLength(1);
+    size.value = 300;
+    await settle();
+    expect(deferred).toHaveBeenCalledTimes(2);
+    expect(releases).toHaveLength(1);
+
+    while (releases.length > 0) {
+      releases.shift()!();
+      await settle();
+      expect(releases.length).toBeLessThanOrEqual(1);
+    }
+    const scanCursors = deferred.mock.calls.slice(1).map((call) => call[0].cursor);
+    expect(new Set(scanCursors).size).toBe(scanCursors.length);
+    expect(window.samples.value).toHaveLength(300);
+    expect(contiguous(window.samples.value)).toBe(true);
+    expect(window.coverage.value.complete).toBe(true);
+    expect(window.error.value).toBeNull();
+  });
+
+  it.each([0, 1])('reuses the full shared window after visiting a smaller dashboard with %i new blocks', async (growth) => {
+    const source = chain(2000);
+    const { retention, state } = memoryRetention(keptWindow(1001, 2000, 'c1000'));
+    const activity = scope.run(() => useBlockSampleWindow(ref(1000), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+    expect(activity.samples.value).toHaveLength(1000);
+    scope.stop();
+
+    source.grow(2000 + growth);
+    scope = effectScope();
+    const network = scope.run(() => useBlockSampleWindow(ref(250), { fetchPage: source.fetchPage, retention }))!;
+    await settle();
+    expect(network.samples.value).toHaveLength(250);
+    scope.stop();
+    expect(state.kept?.samples).toHaveLength(1000);
+
+    const callsBeforeReturn = source.fetchPage.mock.calls.length;
+    scope = effectScope();
+    const returnedActivity = scope.run(() => useBlockSampleWindow(ref(1000), { fetchPage: source.fetchPage, retention }))!;
+    expect(returnedActivity.samples.value).toHaveLength(1000);
+    await settle();
+    expect(source.fetchPage.mock.calls.length - callsBeforeReturn).toBe(1);
+    expect(returnedActivity.samples.value.at(-1)?.height).toBe(2000 + growth);
+    expect(returnedActivity.coverage.value.complete).toBe(true);
+    expect(contiguous(returnedActivity.samples.value)).toBe(true);
+    expect(returnedActivity.error.value).toBeNull();
+  });
+
+  it('keeps the window, with its continuation, for the next dashboard', async () => {
+    const source = chain(1102);
+    const { state, retention } = memoryRetention();
+    scope.run(() => useBlockSampleWindow(ref(100), { fetchPage: source.fetchPage, retention }));
+    await settle();
+    scope.stop();
+
+    const saved = state.saves[state.saves.length - 1];
+    expect(saved?.samples).toHaveLength(100);
+    expect(saved?.cursor?.nextCursor).toBe(`c${1102 - 100}`);
+    expect(saved?.readAt).not.toBeNull();
   });
 });

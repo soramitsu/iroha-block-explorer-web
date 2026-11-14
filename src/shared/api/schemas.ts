@@ -13,6 +13,7 @@ import {
 } from '@/shared/lib/asset-definition-literal';
 import { normalizeDomainIdLiteral, normalizeRwaIdLiteral } from '@/shared/lib/rwa-id';
 import { NativeInstructionEnvelope } from './instruction-envelope';
+import { isCanonicalIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
 
 const Pagination = z.object({
   page: z.number(),
@@ -1816,7 +1817,7 @@ export const TransactionSampleRow = z
 export type TransactionSampleRow = z.infer<typeof TransactionSampleRow>;
 
 /** Dashboard projection of the blocks feed. */
-export const BLOCK_SAMPLE_FIELDS = ['height', 'created_at', 'transactions_total', 'transactions_rejected'] as const;
+export const BLOCK_SAMPLE_FIELDS = ['height', 'hash', 'created_at', 'transactions_total', 'transactions_rejected'] as const;
 
 /**
  * One projected block row. An empty `created_at` marks a block whose body the
@@ -1826,6 +1827,7 @@ export const BLOCK_SAMPLE_FIELDS = ['height', 'created_at', 'transactions_total'
 export const BlockSampleRow = z
   .object({
     height: z.number().int().positive(),
+    hash: z.string().refine(isCanonicalIrohaHashLiteral32, { message: 'Expected a canonical block hash' }),
     created_at: z.union([z.literal(''), z.iso.datetime({ offset: true })]),
     transactions_total: StatusCount,
     transactions_rejected: StatusCount,
@@ -1836,6 +1838,7 @@ export const BlockSampleRow = z
   })
   .transform((row) => ({
     height: row.height,
+    hash: row.hash,
     createdAtMs: row.created_at === '' ? null : Date.parse(row.created_at),
     transactionsTotal: row.transactions_total,
     transactionsRejected: row.transactions_rejected,

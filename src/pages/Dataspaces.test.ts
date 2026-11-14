@@ -229,8 +229,9 @@ describe('Dataspaces overview page', () => {
       { lane_id: 7, dataspace_id: '6647857470246403404', alias: 'is' },
     ];
     const dataspaces = [...new Map(catalog.map((entry) => [entry.dataspace_id, entry])).values()];
+    const registeredPairs = new Set(catalog.map((entry) => `${entry.dataspace_id}:${entry.lane_id}`));
     const backlog = dataspaces.flatMap((entry) => Array.from({ length: 8 }, (_, lane_id) => {
-      const registered = catalog.some((row) => row.dataspace_id === entry.dataspace_id && row.lane_id === lane_id);
+      const registered = registeredPairs.has(`${entry.dataspace_id}:${lane_id}`);
       return {
         ...statusPayload.teu_dataspace_backlog[0],
         ...entry,

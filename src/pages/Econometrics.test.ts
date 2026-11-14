@@ -130,9 +130,23 @@ function historyPage(nextCursor: string | null) {
 }
 
 describe('Econometrics', () => {
-  afterEach(() => { disconnectExplorerReadSession(); vi.restoreAllMocks(); });
+  afterEach(() => {
+    disconnectExplorerReadSession();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
   beforeEach(() => {
     disconnectExplorerReadSession();
+    // Keep holder snapshots separate from other workers' native storage file.
+    const entries = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      get length() { return entries.size; },
+      clear: () => entries.clear(),
+      getItem: (key: string) => entries.get(key) ?? null,
+      key: (index: number) => [...entries.keys()][index] ?? null,
+      removeItem: (key: string) => { entries.delete(key); },
+      setItem: (key: string, value: string) => { entries.set(key, value); },
+    } satisfies Storage);
     routerMocks.replace.mockReset();
     routerMocks.push.mockReset();
     apiMocks.fetchAssetDefinition.mockReset();
@@ -185,7 +199,7 @@ describe('Econometrics', () => {
       auth: { authAccountId: 'reader@bank', sign: async () => new Uint8Array(64) }, close: vi.fn() });
     let resolveHolders!: (value: unknown) => void;
     apiMocks.fetchAssets.mockReturnValue(new Promise((resolve) => { resolveHolders = resolve; }));
-    const write = vi.spyOn(Storage.prototype, 'setItem');
+    const write = vi.spyOn(window.localStorage, 'setItem');
     const wrapper = mountHistoryScan();
     await vi.waitFor(() => expect(apiMocks.fetchAssets).toHaveBeenCalled());
     if (reader === 'private after logout') disconnectExplorerReadSession();

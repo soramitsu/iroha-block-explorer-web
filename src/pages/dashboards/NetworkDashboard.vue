@@ -301,6 +301,7 @@ import ColumnChart from '@/shared/ui/dashboard/ColumnChart.vue';
 import TimeSeriesChart from '@/shared/ui/dashboard/TimeSeriesChart.vue';
 import { CHART_COLORS, type ChartTable } from '@/shared/ui/dashboard/types';
 import { useBlockSampleWindow } from '@/shared/ui/composables/useBlockSampleWindow';
+import { DASHBOARD_BLOCK_WINDOW, blockWindowRetention } from '@/shared/ui/composables/block-window-retention';
 import { useNodeStatusPoll } from '@/shared/ui/composables/useNodeStatusPoll';
 import { useRouteQueryState } from '@/shared/ui/composables/useRouteQueryState';
 import {
@@ -360,7 +361,8 @@ const windowOptions = computed(() =>
   WINDOW_SIZES.map((value) => ({ value, label: t('dashboards.window.blocks', { count: value }) }))
 );
 
-const blocks = useBlockSampleWindow(windowSize);
+// Network and Activity share one window, kept between them and across visits.
+const blocks = useBlockSampleWindow(windowSize, { retention: blockWindowRetention(DASHBOARD_BLOCK_WINDOW) });
 const node = useNodeStatusPoll();
 const now = useNow({ interval: 1000 });
 

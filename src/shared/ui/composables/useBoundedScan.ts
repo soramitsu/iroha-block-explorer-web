@@ -7,11 +7,11 @@ import { advanceHistoryScanCursor, createHistoryScanCursor } from '@/shared/lib/
 type PageResult<T> = { status: typeof SUCCESSFUL_FETCHING; data: CollectionPage<T> } | ErrorResponse;
 
 /**
- * Rows per page. The feeds accept up to 100, but on Taira Torii refuses the
- * continuation of a 100-row accounts page: decoding that query exceeds its
- * 256 KiB decode limit (HTTP 400 `invalid_query`). 64 rows stay within it.
+ * Rows per page: the feeds' maximum. Torii decodes a 100-row continuation
+ * within its query decode limit again since the 2026-10-25 validator rollout
+ * (EX-329), so every bounded scan reads full pages.
  */
-export const BOUNDED_SCAN_PAGE_LIMIT = 64;
+export const BOUNDED_SCAN_PAGE_LIMIT = 100;
 /** Empty continuation pages followed per requested page. */
 const EMPTY_PAGE_ALLOWANCE = 4;
 

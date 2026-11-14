@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
 vi.mock('@/shared/api', () => ({
   ...api,
   buildExplorerUrl: (path: string) => `https://torii.example/v1/explorer${path}`,
+  getToriiBaseUrl: () => 'https://torii.example',
   streamTelemetryMetrics: () => ({ data: ref(null), status: ref('CLOSED') }),
 }));
 

@@ -1,5 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig, loadEnv, defaultClientConditions, defaultClientMainFields, type Plugin } from 'vite';
+import { Agent as HttpAgent } from 'node:http';
+import { Agent as HttpsAgent } from 'node:https';
 import { configDefaults } from 'vitest/config';
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -73,6 +75,11 @@ function copyBuildPublicAssets(publicRoot: string): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
   const toriiProxyTarget = (env.VITE_TORII_PROXY_TARGET || 'http://127.0.0.1:29080').replace(/\/+$/, '');
+  // Reuse upstream connections: a fresh TCP and TLS handshake for every proxied
+  // request adds about half a second per read against a remote Torii.
+  const toriiProxyAgent = toriiProxyTarget.startsWith('https:')
+    ? new HttpsAgent({ keepAlive: true })
+    : new HttpAgent({ keepAlive: true });
   const rawAppBasePath = (env.VITE_APP_BASE_PATH || '/').trim();
   const appBasePath =
     rawAppBasePath === '' || rawAppBasePath === '/'
@@ -97,11 +104,13 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/v1': {
           target: toriiProxyTarget,
+          agent: toriiProxyAgent,
           changeOrigin: true,
           ws: true,
         },
         '/status': {
           target: toriiProxyTarget,
+          agent: toriiProxyAgent,
           changeOrigin: true,
           headers: {
             Accept: 'application/json',
@@ -109,10 +118,12 @@ export default defineConfig(({ mode }) => {
         },
         '/metrics': {
           target: toriiProxyTarget,
+          agent: toriiProxyAgent,
           changeOrigin: true,
         },
         '/peers': {
           target: toriiProxyTarget,
+          agent: toriiProxyAgent,
           changeOrigin: true,
         },
       },
