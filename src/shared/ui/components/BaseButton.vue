@@ -66,124 +66,23 @@ const scopedTo = computed(() => {
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
-
 .base-button {
-  display: flex;
-  cursor: pointer;
-  user-select: none;
-  text-decoration: none;
-  padding: size(1.5) size(2);
-  border: 1px solid transparent;
-  border-radius: size(3);
-  transition:
-    color 300ms ease-in-out,
-    box-shadow 300ms ease-in-out,
-    background-color 300ms ease-in-out,
-    border-color 300ms ease-in-out;
-  color: theme-color('content-secondary-bright');
-  background: transparent;
-
-  @include tpg-ch1;
-
-  &_active {
-    background: theme-color('background');
-    @include shadow-elevated-active;
-  }
-
-  &:hover {
-    color: theme-color('content-primary');
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-    box-shadow: none;
-  }
-
-  &[data-type='line'] {
-    padding: size(1.5) 0;
-  }
-
-  &[data-type='default'] {
-    &:hover {
-      background: theme-color('background');
-      @include shadow-elevated-active;
-    }
-  }
-
-  &[data-type='bordered'] {
-    background: theme-color('background');
-    @include shadow-elevated;
-
-    &[data-pressed] {
-      @include shadow-lowered;
-      color: theme-color('content-primary');
-    }
-
-    &:hover {
-      @include shadow-elevated-active;
-
-      &[data-pressed] {
-        @include shadow-lowered-active;
-      }
-    }
-
-    &:disabled {
-      @include shadow-elevated;
-    }
-  }
-
-  &[data-rounded] {
-    padding: size(1.5);
-  }
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px;
+  padding: 10px 14px; border: 1px solid transparent; border-radius: 8px;
+  color: theme-color('content-secondary'); background: transparent; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 600; line-height: 1.4; text-decoration: none;
+  transition: background-color 120ms ease, color 120ms ease;
+  &:hover { background: theme-color('background-hover'); color: theme-color('content-primary'); }
+  &_active, &[data-pressed] { background: theme-color('primary-background'); color: theme-color('primary'); }
+  &[data-type='bordered'] { border-color: theme-color('border-secondary'); }
+  &[data-rounded] { padding: 10px; }
+  &:disabled { cursor: not-allowed; color: theme-color('content-tertiary'); opacity: .65; }
 }
-
-html:not(.dark) .base-button {
-  color: theme-color('content-secondary');
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.38);
-
-  &_active,
-  &[data-type='default']:hover {
-    border-color: color-mix(in srgb, theme-color('border-primary') 76%, white);
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, theme-color('surface') 98%, white),
-      color-mix(in srgb, theme-color('surface-variant') 94%, white)
-    );
-    box-shadow:
-      theme-shadow('elevated-1'),
-      theme-shadow('elevated-2'),
-      theme-shadow('elevated-3');
-  }
-
-  &[data-type='bordered'] {
-    border-color: color-mix(in srgb, theme-color('border-primary') 78%, white);
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, theme-color('surface') 98%, white),
-      color-mix(in srgb, theme-color('surface-variant') 93%, white)
-    );
-    box-shadow:
-      theme-shadow('elevated-1'),
-      theme-shadow('elevated-2'),
-      theme-shadow('elevated-3');
-
-    &:hover {
-      border-color: color-mix(in srgb, theme-color('primary') 18%, theme-color('border-primary'));
-    }
-
-    &[data-pressed] {
-      background: linear-gradient(
-        145deg,
-        color-mix(in srgb, theme-color('surface-variant') 96%, white),
-        color-mix(in srgb, theme-color('background') 90%, white)
-      );
-    }
-  }
-
-  &[data-type='line'] {
-    border-color: transparent;
-    background: transparent;
-  }
+.icon-button {
+  display: inline-grid; place-items: center; min-width: 44px; min-height: 44px;
+  border: 0; border-radius: 8px; background: transparent; color: theme-color('content-secondary');
+  font: inherit; font-size: 20px; cursor: pointer;
+  &:hover { color: theme-color('content-primary'); background: theme-color('background-hover'); }
 }
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid theme-color('primary'); outline-offset: 3px; }
 </style>

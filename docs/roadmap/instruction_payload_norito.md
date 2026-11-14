@@ -1,65 +1,36 @@
-# Explorer Instruction Payload Requirements
+# Explorer Instruction Norito Contract
 
-This note documents the expectations for EX-006 (“Wire Torii explorer detail endpoints … Norito SSE feeds and
-richer instruction payload JSON”). Frontend work is blocked until the Torii handlers emit the data described here.
+This is the current first-release instruction contract. It supersedes the historical proposal that treated wire IDs or
+encoded bytes as presentation fallbacks.
 
-## Current State
+## Required response evidence
 
-- `../iroha/crates/iroha_torii/src/explorer.rs` creates `ExplorerInstructionBoxDto` with:
-  - `encoded`: a Norito-encoded hex string (via `instruction.dyn_encode()`).
-  - `json`: a fallback map `{ kind: { wire_id, encoded } }`, i.e. it does **not** represent the actual Norito payload.
-- The Explorer UI (`src/shared/ui/components/InstructionsTable.vue`, `src/pages/TransactionDetails.vue`) currently reads the
-  `wire_id` + encoded bytes and renders opaque data. We can’t inspect or format instructions meaningfully.
-- SSE feeds still stream through the legacy backend. Torii exposes REST detail endpoints only.
+Every instruction row/detail returned by current Torii includes:
 
-## Desired Torii Payload
+- the top-level canonical display `kind`;
+- `box.encoded`, a `0x`-prefixed lowercase Norito instruction encoding;
+- `box.framed_sha256`, the `0x`-prefixed lowercase SHA-256 digest of the canonical framed instruction;
+- `box.json.kind`, `box.json.wire_id`, `box.json.encoded`, and `box.json.payload`;
+- canonical transaction hash/status, authority, block, index, and creation time.
 
-Every `ExplorerInstructionBoxDto` should expose a Norito-friendly JSON tree so we can render specific instruction
-arguments without extra byte decoding in the UI. The format can mirror the Norito schema you already use for other payloads:
+All fields are required and the frontend schema is strict. The Explorer does not accept `r#box`, alternate boxes,
+missing evidence, a JSON map keyed by instruction kind, or a payload inferred from the first object key. Encoded evidence
+is preserved for verification; presentation is derived from the canonical structured payload and wire identity.
 
-```json
-{
-  "encoded": "0x...",
-  "json": {
-    "kind": "Register",
-    "payload": {
-      "object": {
-        "type": "Domain",
-        "id": "wonderland"
-      },
-      "owner": "alice@test",
-      "metadata": { "label": "Wonderland" }
-    }
-  }
-}
-```
+## Lists, details, and streams
 
-Suggested structure:
+| Operation                         | Current route                                                            |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| Snapshot-bound history            | `GET /v1/explorer/instructions?limit=...&cursor=...`                     |
+| Exact instruction detail          | `GET /v1/explorer/instructions/{transaction_hash}/{index}`               |
+| Contract view for one instruction | `GET /v1/explorer/instructions/{transaction_hash}/{index}/contract-view` |
+| Live invalidation/event feed      | `GET /v1/explorer/instructions/stream`                                   |
 
-| Field        | Type     | Notes                                                                                         |
-| ------------ | -------- | ---------------------------------------------------------------------------------------------- |
-| `kind`       | string   | One of the existing `ExplorerInstructionKind` strings (“Register”, “Mint”, …).                 |
-| `payload`    | object   | Instruction-specific JSON. Mirrors the Norito schema (e.g. `Transfer` exposes `source`, etc.). |
-| `wire_id`    | string   | (Optional) keep for debugging.                                                                 |
-| `encoded`    | string   | (Optional) keep the Norito bytes for debugging/tooling.                                         |
+The history cursor must advance and remain bound to its returned snapshot. SSE is opened directly to Torii and shares
+the same current route family; there is no backend relay or polling compatibility path.
 
-The frontend will prioritize `payload`. `wire_id` + `encoded` remain fallbacks for unknown instructions.
+## Change rule
 
-## SSE Feed Requirements
-
-To fully close EX-006 we also need Torii SSE endpoints:
-
-| Feed                    | Path suggestion                  | Notes                                                                         |
-| ----------------------- | -------------------------------- | ----------------------------------------------------------------------------- |
-| Transactions timeline   | `/v1/explorer/transactions/stream` | Emits `Committed`/`Rejected` transactions with hashes + summarized payloads.  |
-| Instructions timeline   | `/v1/explorer/instructions/stream` | Emits instruction events (kind + payload) tied to transaction hash + block.   |
-
-The payload schema can mirror the REST DTOs so the UI reuses the same zod types.
-
-## Next Actions
-
-1. Torii team: implement the JSON payload serialization + SSE feeds described above.
-2. Explorer team: once Torii exposes them, update `src/shared/api/schemas.ts` + consuming components to render the
-   richer data (and migrate the SSE consumers away from the backend proxy).
-
-Tracking reference: EX-006 in `ROADMAP.md`.
+When upstream adds an instruction variant, update the authoritative Torii projection and the strict frontend semantic
+presentation together. Add positive evidence tests and rejection tests for incomplete, ambiguous, or non-canonical
+shapes. Do not add a client-only decoder or payload guess to mask an incomplete server contract.

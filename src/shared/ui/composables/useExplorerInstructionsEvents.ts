@@ -2,7 +2,7 @@ import { computed, effectScope, getCurrentScope, onScopeDispose, ref, watch } fr
 import type { Ref } from 'vue';
 import type { EffectScope } from 'vue';
 import { useEventSource } from '@vueuse/core';
-import { buildExplorerUrl } from '@/shared/api';
+import { buildToriiUrl } from '@/shared/api';
 import { explorerReadIsPublic, explorerReadAuthRevision } from '@/shared/lib/explorer-read-auth';
 
 interface ExplorerInstructionsEventSource {
@@ -28,7 +28,7 @@ function createEventSource(): ExplorerInstructionsEventSource {
     };
   }
 
-  const streamUrl = computed(() => buildExplorerUrl('/instructions/stream'));
+  const streamUrl = computed(() => buildToriiUrl('/v1/explorer/instructions/stream'));
   const { data, status, close } = useEventSource(streamUrl, [], { autoReconnect: true });
   // Native EventSource cannot sign canonical account headers. Authenticated
   // views refresh through their signed SDK snapshots instead.

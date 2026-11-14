@@ -42,7 +42,7 @@ const timeAgo = computed(() => t(i18nKey.value, [res.value]));
 </script>
 
 <template>
-  <div>
+  <div class="time-stamp">
     <time
       class="time-ago row-text-monospace"
       :datetime="props.value.toISOString()"
@@ -52,3 +52,8 @@ const timeAgo = computed(() => t(i18nKey.value, [res.value]));
     <ContextTooltip :message="props.inverted ? timeAgo : dateTime" />
   </div>
 </template>
+
+<style lang="scss">
+.time-stamp { display: inline-flex; align-items: center; max-width: 100%; min-width: 0; gap: 4px; }
+.time-stamp time { overflow-wrap: anywhere; }
+</style>

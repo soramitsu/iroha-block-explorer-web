@@ -5,7 +5,7 @@ import { activateExplorerReadSession, disconnectExplorerReadSession } from '@/sh
 
 const streams = vi.hoisted(() => ({ create: vi.fn() }));
 vi.mock('@vueuse/core', () => ({ useEventSource: (...args: unknown[]) => streams.create(...args) }));
-vi.mock('@/shared/api', () => ({ buildExplorerUrl: (path: string) => `https://taira.sora.org/v1/explorer${path}` }));
+vi.mock('@/shared/api', () => ({ buildToriiUrl: (path: string) => `https://taira.sora.org${path}` }));
 let stream: { data: ReturnType<typeof ref<string | null>>, status: ReturnType<typeof ref<string>>, close: ReturnType<typeof vi.fn>, open: ReturnType<typeof vi.fn> };
 
 beforeEach(() => {

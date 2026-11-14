@@ -164,7 +164,8 @@ async function mountAppAt(path: string) {
 describe('Assets data smoke', () => {
   const mountedWrappers: Array<ReturnType<typeof mount>> = [];
 
-  const definition = AssetDefinitionId.parse('PKR#sbp');
+  const definitionSelector = AssetDefinitionId.parse('PKR#sbp');
+  const definitionId = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
   const holderAccount = '34mSYmm1zH85ddQ3noMyFzsBr5gYjSAywdR2FUShctqGxeFfwDUVgTpiknnwCpQsFbjNqtfpn';
 
   beforeEach(() => {
@@ -174,12 +175,19 @@ describe('Assets data smoke', () => {
     fetchAssetDefinitionMock.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        id: definition,
+        id: definitionId,
+        owning_domain: 'sbp',
+        name: 'PKR',
+        description: null,
+        alias: definitionSelector.toString(),
+        balance_scope_policy: 'Global',
+        confidential_policy: { mode: 'transparent' },
         mintable: 'Infinitely',
         logo: null,
         metadata: {},
         owned_by: holderAccount,
-        assets: 15,
+        spec: { scale: 2 },
+        total_quantity: new BigNumber('1080'),
       },
     });
 
@@ -189,8 +197,8 @@ describe('Assets data smoke', () => {
         nextCursor: params?.cursor ? null : 'aG9sZGVycy1jdXJzb3ItMg',
         items: [
           {
-            id: `PKR#sbp#${holderAccount}`,
-            definition_id: definition,
+            id: `${definitionId}#${holderAccount}`,
+            definition_id: definitionId,
             account_id: holderAccount,
             value: new BigNumber('1080'),
           },
@@ -215,7 +223,7 @@ describe('Assets data smoke', () => {
     const fetchArgs = fetchAssetsMock.mock.calls[0]?.[0];
     expect(fetchArgs?.cursor).toBeNull();
     expect(fetchArgs?.limit).toBe(10);
-    expect(fetchArgs?.definition.toString()).toBe(definition.toString());
+    expect(fetchArgs?.definition.toString()).toBe(definitionId);
     expect(fetchArgs).not.toHaveProperty('page');
     expect(fetchArgs).not.toHaveProperty('per_page');
 
@@ -230,5 +238,5 @@ describe('Assets data smoke', () => {
     });
     const cursorCall = assetRequestForCursor('aG9sZGVycy1jdXJzb3ItMg');
     expect(cursorCall?.limit).toBe(10);
-  }, 20000);
+  });
 });

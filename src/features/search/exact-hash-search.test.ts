@@ -21,7 +21,6 @@ const transaction = {
   executable: 'Instructions',
   status: 'Committed',
   rejection_reason: null,
-  executable_payload: { instruction_count: 1 },
   metadata: {},
   nonce: null,
   signature: 'signature',
@@ -40,16 +39,12 @@ describe('resolveExactHashSearch', () => {
     const api = dependencies();
     let releaseBlock!: () => void;
     let releaseTransaction!: () => void;
-    api.fetchBlock.mockReturnValue(
-      new Promise((resolve) => {
-        releaseBlock = () => resolve({ status: SUCCESSFUL_FETCHING, data: block });
-      })
-    );
-    api.fetchTransaction.mockReturnValue(
-      new Promise((resolve) => {
-        releaseTransaction = () => resolve({ status: SUCCESSFUL_FETCHING, data: transaction });
-      })
-    );
+    api.fetchBlock.mockReturnValue(new Promise(resolve => {
+      releaseBlock = () => resolve({ status: SUCCESSFUL_FETCHING, data: block });
+    }));
+    api.fetchTransaction.mockReturnValue(new Promise(resolve => {
+      releaseTransaction = () => resolve({ status: SUCCESSFUL_FETCHING, data: transaction });
+    }));
 
     const pending = resolveExactHashSearch(`0x${HASH.toUpperCase()}`, api);
     expect(api.fetchBlock).toHaveBeenCalledWith(HASH);

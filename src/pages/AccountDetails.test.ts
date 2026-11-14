@@ -3,16 +3,14 @@ import { config, flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, ref } from 'vue';
 import BigNumber from 'bignumber.js';
 import { i18n } from '@/shared/lib/localization';
-import QRCode from 'qrcode';
 import AccountDetails from './AccountDetails.vue';
 import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 import { ExplorerAsset } from '@/shared/api/schemas';
 
-const validAccountId =
-  'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
+const validAccountId = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
 const modernCanonicalAccountId = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
 const modernTestnetAccountId = 'testuﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-const toriiBaseUrlState = vi.hoisted(() => ({ value: 'https://nexus.mof3.sora.org:18080' }));
+const fetchAccountQrMock = vi.hoisted(() => vi.fn());
 
 config.global.stubs = {
   ...config.global.stubs,
@@ -80,13 +78,7 @@ vi.mock('@/shared/ui/composables/useExplorerScopeNavigation', () => ({
 }));
 
 vi.mock('@/shared/api', () => ({
-  getToriiBaseUrl: () => toriiBaseUrlState.value,
-}));
-
-vi.mock('qrcode', () => ({
-  default: {
-    toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,AAA'),
-  },
+  fetchAccountQr: fetchAccountQrMock,
 }));
 
 vi.mock('@vueuse/core', () => ({
@@ -157,7 +149,7 @@ const BaseLinkStub = defineComponent({
   props: {
     to: { type: [String, Object], required: true },
   },
-  template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>',
+  template: "<a :href=\"typeof to === 'string' ? to : '#'\"><slot /></a>",
 });
 
 const DataFieldProbeStub = defineComponent({
@@ -177,14 +169,22 @@ const DataFieldProbeStub = defineComponent({
   `,
 });
 
-const qrToDataUrlMock = vi.mocked(QRCode.toDataURL as unknown as (...args: any[]) => Promise<string>);
-
 describe('AccountDetails', () => {
   beforeEach(() => {
     pushSpy.mockClear();
-    qrToDataUrlMock.mockReset();
-    qrToDataUrlMock.mockResolvedValue('data:image/png;base64,AAA');
-    toriiBaseUrlState.value = 'https://nexus.mof3.sora.org:18080';
+    fetchAccountQrMock.mockReset();
+    fetchAccountQrMock.mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        canonicalId: validAccountId,
+        literal: validAccountId,
+        networkPrefix: 753,
+        errorCorrection: 'M',
+        modules: 192,
+        qrVersion: 8,
+        svg: '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>',
+      },
+    });
     scopeExposeQueue = [];
     scopeExposeIndex = 0;
     scopeExpose.value = {
@@ -291,14 +291,13 @@ describe('AccountDetails', () => {
     expect(pushSpy).toHaveBeenCalledWith({ query: { tab: 'multisig' } });
   });
 
-  it('hides the standalone account id field when the same i105 address is already shown', async () => {
+  it('renders the canonical id field as the single account address without a duplicate field', async () => {
     scopeExpose.value = {
       isLoading: false,
       data: {
         status: SUCCESSFUL_FETCHING,
         data: {
           id: validAccountId,
-          i105_address: validAccountId,
           network_prefix: 753,
           metadata: {},
           owned_domains: 0,
@@ -365,6 +364,72 @@ describe('AccountDetails', () => {
     expect(wrapper.find('.base-table-stub').exists()).toBe(false);
   });
 
+  it('labels owned assets with definition_id instead of the asset instance id', async () => {
+    const definitionId = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
+    const instanceId = `${definitionId}#${validAccountId}`;
+    const emptyPage = {
+      isLoading: false,
+      data: {
+        status: SUCCESSFUL_FETCHING,
+        data: { pagination: { limit: 10, next_cursor: null, has_more: false }, items: [] },
+      },
+      refetch: vi.fn(),
+    };
+    scopeExposeQueue = [
+      {
+        isLoading: false,
+        data: {
+          status: SUCCESSFUL_FETCHING,
+          data: {
+            id: validAccountId,
+            network_prefix: 753,
+            metadata: {},
+            owned_domains: 0,
+            owned_assets: 1,
+            owned_nfts: 0,
+          },
+        },
+        refetch: vi.fn(),
+      },
+      emptyPage,
+      {
+        isLoading: false,
+        data: {
+          status: SUCCESSFUL_FETCHING,
+          data: {
+            pagination: { limit: 10, next_cursor: null, has_more: false },
+            items: [{ id: instanceId, definition_id: definitionId, account_id: validAccountId, value: '7' }],
+          },
+        },
+        refetch: vi.fn(),
+      },
+      emptyPage,
+      emptyPage,
+    ];
+
+    const wrapper = mount(AccountDetails, {
+      global: {
+        plugins: [i18n],
+        stubs: {
+          BaseContentBlock: BaseContentBlockStub,
+          BaseTabs: BaseTabsStub,
+          BaseTable: BaseTableStub,
+          BaseLink: BaseLinkStub,
+          BaseLoading: true,
+          DataField: true,
+          TransactionsTable: true,
+          InstructionsTable: true,
+          CopyIcon: true,
+        },
+      },
+    });
+    await flushPromises();
+
+    const definitionLink = wrapper.get(`a[href="/assets/${definitionId}"]`);
+    expect(definitionLink.text()).toBe(definitionId);
+    expect(definitionLink.text()).not.toBe(instanceId);
+  });
+
   it('keeps a terminal account error visible until retry is requested', async () => {
     const refetch = vi.fn();
     scopeExpose.value = {
@@ -398,49 +463,8 @@ describe('AccountDetails', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('renders account id field in full mode when no i105 address block is available', async () => {
-    scopeExpose.value = {
-      isLoading: false,
-      data: {
-        status: SUCCESSFUL_FETCHING,
-        data: {
-          id: validAccountId,
-          metadata: {},
-          owned_domains: 0,
-          owned_assets: 0,
-          owned_nfts: 0,
-        },
-      },
-      refetch: vi.fn(),
-    };
-
-    const wrapper = mount(AccountDetails, {
-      global: {
-        plugins: [i18n],
-        stubs: {
-          BaseContentBlock: BaseContentBlockStub,
-          BaseTabs: BaseTabsStub,
-          BaseTable: BaseTableStub,
-          BaseLink: BaseLinkStub,
-          BaseLoading: true,
-          DataField: DataFieldProbeStub,
-          TransactionsTable: true,
-          InstructionsTable: true,
-          CopyIcon: true,
-        },
-      },
-    });
-
-    await flushPromises();
-
-    const accountField = wrapper.find(`.data-field-probe[data-hash="${validAccountId}"]`);
-    expect(accountField.exists()).toBe(true);
-    expect(accountField.attributes('data-type')).toBe('full');
-    expect(accountField.attributes('data-hash')).not.toContain('...');
-  });
-
   it('shows the qr caption only once while the qr image is still pending', () => {
-    qrToDataUrlMock.mockImplementationOnce(() => new Promise<string>(() => {}));
+    fetchAccountQrMock.mockImplementationOnce(() => new Promise(() => {}));
 
     scopeExpose.value = {
       isLoading: false,
@@ -448,7 +472,6 @@ describe('AccountDetails', () => {
         status: SUCCESSFUL_FETCHING,
         data: {
           id: validAccountId,
-          i105_address: validAccountId,
           network_prefix: 753,
           metadata: {},
           owned_domains: 0,
@@ -482,60 +505,25 @@ describe('AccountDetails', () => {
     expect(captionCount).toBe(1);
   });
 
-  it('does not surface compressed sora-only address as the primary account address', async () => {
-    const compressedI105 = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
-    scopeExpose.value = {
-      isLoading: false,
+  it("requests and renders Torii's authoritative QR for the routed account selector", async () => {
+    fetchAccountQrMock.mockResolvedValueOnce({
+      status: SUCCESSFUL_FETCHING,
       data: {
-        status: SUCCESSFUL_FETCHING,
-        data: {
-          id: validAccountId,
-          i105_address: validAccountId,
-          compressed_address: compressedI105,
-          network_prefix: 753,
-          metadata: {},
-          owned_domains: 0,
-          owned_assets: 0,
-          owned_nfts: 0,
-        },
-      },
-      refetch: vi.fn(),
-    };
-    mockRoute.value = { params: { id: validAccountId }, query: {} };
-
-    const wrapper = mount(AccountDetails, {
-      global: {
-        plugins: [i18n],
-        stubs: {
-          BaseContentBlock: BaseContentBlockStub,
-          BaseTabs: BaseTabsStub,
-          BaseTable: BaseTableStub,
-          BaseLink: BaseLinkStub,
-          BaseLoading: true,
-          DataField: true,
-          TransactionsTable: true,
-          InstructionsTable: true,
-          CopyIcon: true,
-        },
+        canonicalId: modernTestnetAccountId,
+        literal: modernTestnetAccountId,
+        networkPrefix: 753,
+        errorCorrection: 'M',
+        modules: 192,
+        qrVersion: 8,
+        svg: '<svg xmlns="http://www.w3.org/2000/svg"><path d="M1 1"/></svg>',
       },
     });
-
-    await flushPromises();
-
-    expect(wrapper.text()).toContain(validAccountId);
-    expect(wrapper.text()).not.toContain(compressedI105);
-    expect(wrapper.text()).not.toContain('Compressed Sora-only address');
-  });
-
-  it('renders the displayed testnet account literal in the address card and QR payload', async () => {
-    toriiBaseUrlState.value = 'https://taira.sora.org';
     scopeExpose.value = {
       isLoading: false,
       data: {
         status: SUCCESSFUL_FETCHING,
         data: {
           id: modernCanonicalAccountId,
-          i105_address: modernCanonicalAccountId,
           network_prefix: 753,
           metadata: {},
           owned_domains: 0,
@@ -568,14 +556,50 @@ describe('AccountDetails', () => {
 
     expect(wrapper.text()).toContain(modernTestnetAccountId);
     expect(wrapper.text()).not.toContain(modernCanonicalAccountId);
-    expect(qrToDataUrlMock).toHaveBeenCalledWith(
-      modernTestnetAccountId,
-      expect.objectContaining({
-        errorCorrectionLevel: 'M',
-        margin: 1,
-        width: 256,
-      })
+    expect(fetchAccountQrMock).toHaveBeenCalledWith(modernTestnetAccountId, expect.any(AbortSignal));
+    expect(wrapper.get('.account-details__address-qr img').attributes('src')).toContain(
+      'data:image/svg+xml;charset=utf-8,'
     );
+  });
+
+  it('fails closed when Torii cannot provide an authoritative QR', async () => {
+    fetchAccountQrMock.mockResolvedValueOnce({ status: NOT_FOUND });
+    scopeExpose.value = {
+      isLoading: false,
+      data: {
+        status: SUCCESSFUL_FETCHING,
+        data: {
+          id: validAccountId,
+          network_prefix: 753,
+          metadata: {},
+          owned_domains: 0,
+          owned_assets: 0,
+          owned_nfts: 0,
+        },
+      },
+      refetch: vi.fn(),
+    };
+
+    const wrapper = mount(AccountDetails, {
+      global: {
+        plugins: [i18n],
+        stubs: {
+          BaseContentBlock: BaseContentBlockStub,
+          BaseTabs: BaseTabsStub,
+          BaseTable: BaseTableStub,
+          BaseLink: BaseLinkStub,
+          BaseLoading: true,
+          DataField: true,
+          TransactionsTable: true,
+          InstructionsTable: true,
+          CopyIcon: true,
+        },
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('.account-details__address-qr img').exists()).toBe(false);
+    expect(wrapper.text()).toContain(i18n.global.t('accounts.accountAddressQrError'));
   });
 
   it('renders account-owned RWAs behind a dedicated tab and routes to rwa details', async () => {
@@ -587,7 +611,6 @@ describe('AccountDetails', () => {
           status: SUCCESSFUL_FETCHING,
           data: {
             id: validAccountId,
-            i105_address: validAccountId,
             network_prefix: 753,
             metadata: {},
             owned_domains: 0,

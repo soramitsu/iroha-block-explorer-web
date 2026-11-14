@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ContractStudioBuilder from './ContractStudioBuilder.vue';
+import { i18n } from '@/shared/lib/localization';
 
 const blocklyMocks = vi.hoisted(() => ({
   inject: vi.fn(),
@@ -119,13 +120,14 @@ describe('ContractStudioBuilder', () => {
         templateId: 'reward',
         templateNonce: 0,
       },
+      global: { plugins: [i18n] },
     });
 
     await wrapper.vm.$nextTick();
 
     expect(blocklyMocks.inject).toHaveBeenCalledTimes(1);
     expect(blocklyMocks.svgResize).toHaveBeenCalledTimes(1);
-    expect(studioMocks.reconcileStudioWorkspaceReferences).toHaveBeenCalledWith(mockWorkspace);
+    expect(studioMocks.reconcileStudioWorkspaceReferences).toHaveBeenCalledWith(mockWorkspace, expect.any(Function));
     expect(resizeObservers).toHaveLength(1);
 
     resizeObservers[0]?.trigger();
@@ -141,6 +143,7 @@ describe('ContractStudioBuilder', () => {
         templateId: 'reward',
         templateNonce: 0,
       },
+      global: { plugins: [i18n] },
     });
 
     await wrapper.setProps({ toolboxMode: 'advanced' });

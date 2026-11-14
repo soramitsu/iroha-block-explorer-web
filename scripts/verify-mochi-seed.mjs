@@ -43,6 +43,13 @@ export async function verifyExplorerMochiSeed({ profile, session, fetchImpl = fe
   if (session.chain_id !== profile.chain_id) {
     throw new Error(`Mochi chain id mismatch: expected ${profile.chain_id}, found ${String(session.chain_id)}`);
   }
+  if (
+    !Number.isSafeInteger(profile.seed.minimum_transactions)
+    || profile.seed.minimum_transactions < 1
+    || profile.seed.minimum_transactions > 100
+  ) {
+    throw new Error('Mochi minimum transaction seed must be between 1 and 100');
+  }
   const baseUrl = localToriiBaseUrl(session.torii_url);
   const headers = {
     Accept: 'application/json',
@@ -51,7 +58,7 @@ export async function verifyExplorerMochiSeed({ profile, session, fetchImpl = fe
   const [healthResponse, domainResponse, transactionsResponse] = await Promise.all([
     request('/v1/explorer/health'),
     request(`/v1/explorer/domains/${encodeURIComponent(profile.seed.domain_id)}`),
-    request(`/v1/explorer/transactions?page=1&per_page=${profile.seed.minimum_transactions}`),
+    request(`/v1/explorer/transactions?limit=${profile.seed.minimum_transactions}`),
   ]);
   const [health, domain, transactions] = await Promise.all([
     requiredJson(healthResponse, 'Explorer health'),
@@ -64,15 +71,15 @@ export async function verifyExplorerMochiSeed({ profile, session, fetchImpl = fe
   if (domain.id !== profile.seed.domain_id) {
     throw new Error(`Seed domain mismatch: expected ${profile.seed.domain_id}, found ${String(domain.id)}`);
   }
-  const totalTransactions = transactions?.pagination?.total_items;
-  if (!Number.isSafeInteger(totalTransactions) || totalTransactions < profile.seed.minimum_transactions) {
-    throw new Error(`Explorer transaction count ${String(totalTransactions)} is below the deterministic seed floor`);
+  const observedTransactions = Array.isArray(transactions?.items) ? transactions.items.length : null;
+  if (observedTransactions === null || observedTransactions < profile.seed.minimum_transactions) {
+    throw new Error(`Explorer transaction sample ${String(observedTransactions)} is below the deterministic seed floor`);
   }
   return {
     chainId: session.chain_id,
     headHeight: health.head_height,
     domainId: domain.id,
-    transactionCount: totalTransactions,
+    transactionCount: observedTransactions,
   };
 }
 

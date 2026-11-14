@@ -11,24 +11,30 @@ const { width } = useWindowSize();
 
 const props = withDefaults(
   defineProps<{
-    totalItems?: number
-    reversed?: boolean
-    payloadPagination?: Pagination | null
-    paginationBreakpoint?: number
-    items: number
+    totalItems?: number;
+    reversed?: boolean;
+    payloadPagination?: Pagination | null;
+    paginationBreakpoint?: number;
+    maxFetchSize?: number | null;
+    items: number;
   }>(),
   {
     reversed: false,
     paginationBreakpoint: 960,
     payloadPagination: null,
     totalItems: 0,
+    maxFetchSize: null,
   }
 );
 
 const isLengthBiggerThanPerPage = computed(() => props.totalItems % pageSize.value > 0);
 
 const totalPages = computed(() => {
-  if (!props.reversed) return Math.ceil(props.totalItems / pageSize.value);
+  if (!props.reversed) {
+    const exactPages = Math.ceil(props.totalItems / pageSize.value);
+    if (props.maxFetchSize === null) return exactPages;
+    return Math.min(exactPages, Math.floor(props.maxFetchSize / pageSize.value));
+  }
 
   if (!props.payloadPagination) return 0;
 
@@ -74,12 +80,8 @@ const { displayRange, numbers } = usePagination({
 });
 
 const segmentInfo = computed(() => {
-  const from = props.reversed
-    ? Math.min(displayRange.value.start, displayRange.value.end)
-    : displayRange.value.start;
-  const to = props.reversed
-    ? Math.max(displayRange.value.start, displayRange.value.end)
-    : displayRange.value.end;
+  const from = props.reversed ? Math.min(displayRange.value.start, displayRange.value.end) : displayRange.value.start;
+  const to = props.reversed ? Math.max(displayRange.value.start, displayRange.value.end) : displayRange.value.end;
 
   return t('table.pageOf', [from, to, displayRange.value.total]);
 });
@@ -119,6 +121,8 @@ const currentPageNumber = computed(() => {
 
 const canGoPrev = computed(() => currentPageNumber.value > 1);
 const canGoNext = computed(() => currentPageNumber.value < totalPages.value);
+const shouldShowPageControls = computed(() => numbers.value.length > 1 || currentPageNumber.value > totalPages.value);
+const fetchWindowLimited = computed(() => props.maxFetchSize !== null && props.totalItems > props.maxFetchSize);
 
 function goPrev() {
   if (!canGoPrev.value) return;
@@ -142,14 +146,11 @@ const shouldShowDropdown = computed(
 </script>
 
 <template>
-  <nav
-    class="base-pagination"
-    aria-label="Pagination"
-  >
-    <div
-      v-if="props.totalItems"
-      class="base-pagination__item"
-    >
+  <nav class="base-pagination" :aria-label="$t('accessibility.pagination')">
+    <p v-if="fetchWindowLimited" class="base-pagination__limit" data-test="fetch-window-limit">
+      {{ $t('table.fetchWindowLimit', { maxFetchSize: props.maxFetchSize }) }}
+    </p>
+    <div v-if="props.totalItems" class="base-pagination__item">
       <div class="base-pagination__segment-info">
         {{ segmentInfo }}
       </div>
@@ -164,32 +165,21 @@ const shouldShowDropdown = computed(
       />
     </div>
 
-    <div
-      v-if="numbers.length > 1"
-      class="base-pagination__item"
-    >
+    <div v-if="shouldShowPageControls" class="base-pagination__item">
       <div class="base-pagination__item-numbers">
-        <template
-          v-for="(item, i) in displayNumbers"
-          :key="`${i}-${item}`"
-        >
+        <template v-for="(item, i) in displayNumbers" :key="`${i}-${item}`">
           <button
             v-if="Number.isInteger(item)"
             type="button"
             class="base-pagination__item-numbers-number"
             :data-active="isPageActive(item)"
             :aria-current="isPageActive(item) ? 'page' : undefined"
-            :aria-label="`Page ${item}`"
+            :aria-label="$t('accessibility.pageNumber', { page: item })"
             @click="setPage(Number(item))"
           >
             {{ item }}
           </button>
-          <span
-            v-else
-            class="base-pagination__item-numbers-number"
-            data-ellipsis
-            aria-hidden="true"
-          >
+          <span v-else class="base-pagination__item-numbers-number" data-ellipsis aria-hidden="true">
             {{ item }}
           </span>
         </template>
@@ -199,7 +189,7 @@ const shouldShowDropdown = computed(
         <button
           type="button"
           data-testid="prev"
-          aria-label="Previous page"
+          :aria-label="$t('accessibility.previousPage')"
           :aria-disabled="!canGoPrev"
           :disabled="!canGoPrev"
           @click="goPrev"
@@ -209,7 +199,7 @@ const shouldShowDropdown = computed(
         <button
           type="button"
           data-testid="next"
-          aria-label="Next page"
+          :aria-label="$t('accessibility.nextPage')"
           :aria-disabled="!canGoNext"
           :disabled="!canGoNext"
           @click="goNext"
@@ -234,6 +224,13 @@ const shouldShowDropdown = computed(
   grid-gap: size(2);
   align-self: end;
   border-top: 1px solid theme-color('border-primary');
+
+  &__limit {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: theme-color('content-secondary');
+    @include tpg-s5;
+  }
 
   @include sm {
     grid-template-columns: auto auto;

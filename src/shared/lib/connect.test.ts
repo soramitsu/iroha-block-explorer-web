@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NetworkId } from '@iroha/iroha-js/connect-browser';
 
 const runtimeConfigState = vi.hoisted(() => ({ value: {} as { networkId?: string } }));
 const identityMocks = vi.hoisted(() => ({ create: vi.fn(), inspect: vi.fn() }));
@@ -31,12 +32,8 @@ import {
 
 const NETWORK_ID_LITERAL = `hash:${'AB'.repeat(32)}#B99E`;
 
-function candidateSdkFixture() {
-  const networkId: ConnectNetworkId = {
-    literal: NETWORK_ID_LITERAL,
-    toBytes: () => new Uint8Array(32).fill(0xab),
-    toString: () => NETWORK_ID_LITERAL,
-  };
+function connectSdkFixture() {
+  const networkId: ConnectNetworkId = NetworkId.parse(NETWORK_ID_LITERAL);
   const preview: ConnectSessionPreview = {
     networkId,
     node: 'https://taira.example',
@@ -101,8 +98,8 @@ describe('connect helpers', () => {
     expect(preview.sidBytes).toHaveLength(32);
   });
 
-  it('parses the exact configured literal through the candidate NetworkId API', () => {
-    const fixture = candidateSdkFixture();
+  it('parses the exact configured literal through the canonical NetworkId API', () => {
+    const fixture = connectSdkFixture();
 
     expect(parseConnectNetworkId(NETWORK_ID_LITERAL, fixture.sdk)).toBe(fixture.networkId);
     expect(fixture.parse).toHaveBeenCalledWith(NETWORK_ID_LITERAL);
@@ -110,7 +107,7 @@ describe('connect helpers', () => {
   });
 
   it('fails closed when runtime config is missing or invalid', () => {
-    const fixture = candidateSdkFixture();
+    const fixture = connectSdkFixture();
     expect(getConnectConfiguration(fixture.sdk)).toMatchObject({ available: false });
 
     runtimeConfigState.value = { networkId: '00'.repeat(32) };
@@ -120,7 +117,7 @@ describe('connect helpers', () => {
   });
 
   it('delegates preview construction with NetworkId and no legacy chainId field', () => {
-    const fixture = candidateSdkFixture();
+    const fixture = connectSdkFixture();
     const result = createConnectSessionPreview({
       networkId: fixture.networkId,
       node: 'https://taira.example',
@@ -138,7 +135,7 @@ describe('connect helpers', () => {
   });
 
   it('registers the complete preview instead of posting a caller-provided SID', async () => {
-    const fixture = candidateSdkFixture();
+    const fixture = connectSdkFixture();
     const result = await registerConnectSession(
       'https://taira.example',
       fixture.preview,
@@ -155,7 +152,7 @@ describe('connect helpers', () => {
   });
 
   it('binds wallet approval inspection to an unsigned SDK client at the exact session origin and network', async () => {
-    const fixture = candidateSdkFixture();
+    const fixture = connectSdkFixture();
     const nativeIdentity = Object.freeze({ accountId: 'approved-account' });
     identityMocks.inspect.mockResolvedValue(nativeIdentity);
     createConnectAppSession({ baseUrl: 'https://taira.example', preview: fixture.preview, session: fixture.session }, fixture.sdk);
@@ -170,7 +167,7 @@ describe('connect helpers', () => {
   });
 
   it('propagates native identity inspection rejection without synthesizing an identity', async () => {
-    const fixture = candidateSdkFixture();
+    const fixture = connectSdkFixture();
     identityMocks.inspect.mockRejectedValue(new Error('Account identity is invalid'));
     createConnectAppSession({ baseUrl: 'https://taira.example', preview: fixture.preview, session: fixture.session }, fixture.sdk);
     const create = fixture.sdk.createConnectAppSession as ReturnType<typeof vi.fn>;

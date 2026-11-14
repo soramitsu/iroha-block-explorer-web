@@ -1,68 +1,61 @@
-import { describe, it, expect, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
-import { ref, type Ref } from 'vue';
-import type { ExplorerRouteScope } from '@/shared/lib/explorer-scope';
-
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mount, flushPromises } from '@vue/test-utils';
+import { ref } from 'vue';
+import { createRouter, createMemoryHistory } from 'vue-router';
 import TheHeader from './TheHeader.vue';
+import { i18n } from '@/shared/lib/localization';
 
-const HeaderLogoStub = { template: '<div data-test="header-logo" />' };
-const SearchFieldStub = { template: '<div data-test="search-field" />' };
-const GroupedNavigationStub = { template: '<nav data-test="grouped-navigation" />' };
-const NodeSettingsStub = { template: '<button data-test="node-settings" />' };
-const ScopedExplorerControlStub = { template: '<button data-test="scoped-explorer-control" />' };
-const ThemeSwitcherStub = { template: '<button data-test="theme-switcher" />' };
-const LangDropdownStub = { template: '<button data-test="lang-dropdown" />' };
+const scope = ref<unknown>(null);
+vi.mock('@/shared/ui/composables/useExplorerScopeNavigation', () => ({ useCurrentExplorerScope: () => scope }));
+const stubs = {
+  HeaderLogo: { template: '<a href="/">Iroha</a>' }, NavigationMenu: { template: '<nav />' },
+  SearchField: { template: '<form role="search" />' }, NodeSettings: { template: '<button data-test="node">Node</button>' },
+  ScopedExplorerControl: { template: '<button data-test="scope">Scope</button>' },
+  ThemeSwitcher: { template: '<button data-test="theme">Theme</button>' }, LangDropdown: { template: '<button>Language</button>' },
+};
+async function factory(path = '/accounts') {
+  const router = createRouter({ history: createMemoryHistory(), routes: [
+    { path: '/', name: 'home', component: { template: '<div />' } },
+    { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
+  ] });
+  await router.push(path);
+  await router.isReady();
+  return { router, wrapper: mount(TheHeader, { global: { plugins: [router, i18n], mocks: { $t: (key: string) => key }, stubs } }) };
+}
+beforeEach(() => { scope.value = null; });
 
-const scopeState = ref<ExplorerRouteScope | null>(null) as Ref<ExplorerRouteScope | null>;
-
-vi.mock('@/shared/ui/composables/useExplorerScopeNavigation', () => ({
-  useCurrentExplorerScope: () => scopeState,
-}));
-
-describe('TheHeader', () => {
-  function factory() {
-    return mount(TheHeader, {
-      global: {
-        mocks: {
-          $t: (key: string) => key,
-        },
-        stubs: {
-          HeaderLogo: HeaderLogoStub,
-          SearchField: SearchFieldStub,
-          GroupedNavigation: GroupedNavigationStub,
-          NodeSettings: NodeSettingsStub,
-          ScopedExplorerControl: ScopedExplorerControlStub,
-          ThemeSwitcher: ThemeSwitcherStub,
-          LangDropdown: LangDropdownStub,
-          ExplorerReadAccess: { template: '<button data-test="read-access" />' },
-        },
-      },
-    });
-  }
-
-  it('renders the primary controls without conditional hiding', () => {
-    scopeState.value = null;
-    const wrapper = factory();
-
-    expect(wrapper.find('[data-test="grouped-navigation"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="search-field"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="node-settings"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="scoped-explorer-control"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="theme-switcher"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="lang-dropdown"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="read-access"]').exists()).toBe(true);
+describe('Explorer shell', () => {
+  it('provides search, desktop and inline mobile navigation without a hidden drawer on inner pages', async () => {
+    const { wrapper } = await factory();
+    expect(wrapper.find('[role=search]').exists()).toBe(true);
+    expect(wrapper.find('.explorer-sidebar nav').exists()).toBe(true);
+    expect(wrapper.find('.explorer-mobile-navigation').exists()).toBe(true);
+    expect(wrapper.find('.explorer-sidebar dialog, .explorer-sidebar [aria-expanded]').exists()).toBe(false);
+    expect(wrapper.find('[data-test=theme]').exists()).toBe(true);
   });
 
-  it('replaces global node settings with scoped explorer control when scope is active', () => {
-    scopeState.value = {
-      torii: 'https://public-node.example:8080',
-      dataspaceLaneId: '7',
-      dataspaceId: '42',
-    };
+  it('keeps the landing toolbar minimal and restores the inner-page shell after navigation', async () => {
+    const { wrapper, router } = await factory('/');
+    expect(wrapper.find('.app-header--home').exists()).toBe(true);
+    expect(wrapper.find('[role=search], .explorer-sidebar, .explorer-mobile-navigation').exists()).toBe(false);
+    expect(wrapper.find('[data-test=theme]').exists()).toBe(true);
+    expect(wrapper.find('[data-test=node]').exists()).toBe(true);
+    await router.push('/accounts');
+    await flushPromises();
+    expect(wrapper.find('.app-header--home').exists()).toBe(false);
+    expect(wrapper.find('[role=search]').exists()).toBe(true);
+    expect(wrapper.find('.explorer-mobile-navigation').exists()).toBe(true);
+    await router.push('/');
+    await flushPromises();
+    expect(wrapper.find('.explorer-sidebar').exists()).toBe(false);
+  });
 
-    const wrapper = factory();
-
-    expect(wrapper.find('[data-test="scoped-explorer-control"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="node-settings"]').exists()).toBe(false);
+  it.each(['/', '/accounts'])('uses scope-specific node controls on %s', async (path) => {
+    const { wrapper } = await factory(path);
+    expect(wrapper.find('[data-test=node]').exists()).toBe(true);
+    scope.value = { torii: 'https://node.example' };
+    await flushPromises();
+    expect(wrapper.find('[data-test=scope]').exists()).toBe(true);
+    expect(wrapper.find('[data-test=node]').exists()).toBe(false);
   });
 });

@@ -34,5 +34,9 @@ describe('resource result helpers', () => {
       kind: 'network',
       message: 'offline',
     });
+    expect(resourceResultProblem({ status: 'unknown-error' })).toEqual({
+      kind: 'invalid-response',
+      message: '',
+    });
   });
 });

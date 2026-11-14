@@ -67,18 +67,14 @@ const model = useVModel(props, 'modelValue', emit);
   position: relative;
   z-index: 1;
   isolation: isolate;
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, theme-color('surface') 96%, white),
-    color-mix(in srgb, theme-color('surface-variant') 92%, white)
-  );
+  background: theme-color('surface');
   color: theme-color('content-primary');
   fill: theme-color('content-primary');
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, theme-color('border-primary') 74%, white);
+  border: 1px solid theme-color('border-secondary');
 
   @include tpg-s4;
-  @include shadow-input;
+
 
   &[data-size='md'] {
     border-radius: size(2);
@@ -95,6 +91,9 @@ const model = useVModel(props, 'modelValue', emit);
 
   &__item {
     list-style: none;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
     user-select: none;
     cursor: pointer;
 
@@ -116,17 +115,4 @@ const model = useVModel(props, 'modelValue', emit);
   }
 }
 
-html:not(.dark) .base-dropdown-window {
-  box-shadow:
-    theme-shadow('notification-1'),
-    theme-shadow('notification-2'),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.92);
-
-  &__item {
-    &:hover,
-    &[data-active] {
-      background: color-mix(in srgb, theme-color('surface-variant') 82%, white);
-    }
-  }
-}
 </style>

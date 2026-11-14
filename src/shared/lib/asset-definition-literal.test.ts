@@ -36,7 +36,8 @@ describe('asset definition literal helpers', () => {
 
   it('validates response aliases without rewriting their stored spelling', () => {
     expect(isAssetDefinitionAliasLiteral('CBDC.v1#Issuer.Main')).toBe(true);
-    expect(isAssetDefinitionAliasLiteral('cafe\u0301#issuer.main')).toBe(true);
+    expect(isAssetDefinitionAliasLiteral('café#issuer.main')).toBe(true);
+    expect(isAssetDefinitionAliasLiteral('cafe\u0301#issuer.main')).toBe(false);
     expect(isAssetDefinitionAliasLiteral('usd#issuer.main.extra')).toBe(false);
     expect(isAssetDefinitionAliasLiteral(' usd#issuer.main')).toBe(false);
     expect(isAssetDefinitionAliasLiteral('usd#issuer.\u202emain')).toBe(false);
@@ -44,10 +45,9 @@ describe('asset definition literal helpers', () => {
 
   it('accepts base58 ids or aliases as asset-definition selectors', () => {
     expect(normalizeAssetDefinitionSelectorLiteral(SAMPLE_ASSET_DEFINITION_ID)).toBe(SAMPLE_ASSET_DEFINITION_ID);
-    expect(normalizeAssetDefinitionSelectorLiteral('Usd#Issuer.Main')).toBe('usd#issuer.main');
-    expect(normalizeAssetDefinitionSelectorLiteral('Treasury_Bond#Issuer.Main')).toBe(
-      'treasury_bond#issuer.main'
-    );
+    expect(normalizeAssetDefinitionSelectorLiteral('Usd#Issuer.Main')).toBe('Usd#Issuer.Main');
+    expect(normalizeAssetDefinitionSelectorLiteral('Treasury_Bond#Issuer.Main')).toBe('Treasury_Bond#Issuer.Main');
+    expect(normalizeAssetDefinitionSelectorLiteral('cafe\u0301#issuer.main')).toBeNull();
     expect(normalizeAssetDefinitionSelectorLiteral('??')).toBeNull();
   });
 

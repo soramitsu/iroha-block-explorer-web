@@ -1,255 +1,61 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
-import { nextTick, ref } from 'vue';
+import { nextTick } from 'vue';
+import type { Ref } from 'vue';
 import NodesTelemetry from './NodesTelemetry.vue';
 import { i18n } from '@/shared/lib/localization';
-import type { PeerInfo, PeerStatus } from '@/shared/api/schemas';
+import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 
-const SAMPLE_I105 = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-
-const routerReplaceMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-const routeState = vi.hoisted((): { query: Record<string, unknown> } => ({ query: {} }));
-const clipboardCopyMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-
-vi.mock('vue-router', () => ({
-  useRoute: () => routeState,
+const api = vi.hoisted(() => ({
+  fetchExplorerHealth: vi.fn(),
+  fetchNetworkMetrics: vi.fn(),
+  fetchToriiMetricsText: vi.fn(),
+  fetchSumeragiStatus: vi.fn(),
+  streamSumeragiStatus: vi.fn(),
+  fetchSumeragiTelemetry: vi.fn(),
+  fetchOnlinePeers: vi.fn(),
+  fetchTelemetryPropagation: vi.fn(),
 }));
 
-vi.mock('@/shared/ui/composables/useExplorerScopeNavigation', () => ({
-  useScopedExplorerNavigation: () => ({
-    replace: routerReplaceMock,
-  }),
+const protectedDiagnosticRequests = [
+  api.fetchNetworkMetrics,
+  api.fetchToriiMetricsText,
+  api.fetchSumeragiStatus,
+  api.streamSumeragiStatus,
+  api.fetchSumeragiTelemetry,
+  api.fetchOnlinePeers,
+  api.fetchTelemetryPropagation,
+] as const;
+
+const telemetry = vi.hoisted(() => ({
+  metrics: null as unknown as Ref<any>,
+  streamStatus: null as unknown as Ref<'CONNECTING' | 'OPEN' | 'CLOSED'>,
+  peers: null as unknown as Ref<any[]>,
+  propagation: null as unknown as Ref<any[]>,
+  isPeersLoading: null as unknown as Ref<boolean>,
 }));
 
-vi.mock('@vueuse/core', () => ({
-  useClipboard: () => ({
-    isSupported: true,
-    copy: clipboardCopyMock,
-  }),
-}));
+vi.mock('@/shared/api', () => ({ ...api }));
 
-const sumeragiStatus = {
-  leader_index: 1,
-  view_change_index: 3,
-  highest_qc: { height: 10, view: 2, subject_block_hash: '0xaaa' },
-  locked_qc: { height: 9, view: 1, subject_block_hash: '0xbbb' },
-  tx_queue: { depth: 1, capacity: 5, saturated: false },
-  epoch: { length_blocks: 0, commit_deadline_offset: 0, reveal_deadline_offset: 0 },
-  membership: { height: 10, view: 2, epoch: 0, view_hash: 'viewhash001' },
-  prf: { height: 10, view: 2, epoch_seed: 'deadbeef' },
-  gossip_fallback_total: 2,
-  bg_post_inline_post_total: 4,
-  bg_post_inline_broadcast_total: 6,
-  block_created_dropped_by_lock_total: 0,
-  block_created_hint_mismatch_total: 0,
-  block_created_proposal_mismatch_total: 0,
-  settlement: {
-    dvp: {
-      success_total: 1,
-      failure_total: 0,
-      final_state_totals: { both: 1 },
-      failure_reasons: {},
-      last_event: {
-        observed_at_ms: 10,
-        settlement_id: 'dvp-1',
-        plan: { order: 'process_delivery_first', atomicity: 'commit_first_leg' },
-        outcome: 'Success',
-        failure_reason: null,
-        final_state: 'delivery_and_payment',
-        legs: { delivery_committed: true, payment_committed: false },
-      },
-    },
-    pvp: {
-      success_total: 0,
-      failure_total: 1,
-      final_state_totals: { none: 1 },
-      failure_reasons: { timeout: 1 },
-      last_event: {
-        observed_at_ms: 11,
-        settlement_id: 'pvp-1',
-        plan: { order: 'process_payment_first', atomicity: 'commit_second_leg' },
-        outcome: 'Failure',
-        failure_reason: 'timeout',
-        final_state: 'none',
-        legs: { primary_committed: false, counter_committed: false },
-        fx_window_ms: 500,
-      },
-    },
-  },
-  pacemaker_backpressure_deferrals_total: 1,
-  rbc_retry_attempts_total: 2,
-  rbc_retry_abort_total: 1,
-  da_reschedule_total: 0,
-  rbc_store: {
-    sessions: 3,
-    bytes: 2048,
-    pressure_level: 1,
-    backpressure_deferrals_total: 2,
-    evictions_total: 1,
-    recent_evictions: [{ block_hash: '0xabc', height: 10, view: 2 }],
-  },
-  view_change_proof_accepted_total: 1,
-  view_change_proof_stale_total: 0,
-  view_change_proof_rejected_total: 0,
-  view_change_suggest_total: 1,
-  view_change_install_total: 1,
-  collectors_targeted_current: 1,
-  collectors_targeted_last_per_block: 2,
-  redundant_sends_total: 0,
-  vrf_penalty_epoch: 1,
-  vrf_committed_no_reveal_total: 0,
-  vrf_no_participation_total: 0,
-  vrf_late_reveals_total: 0,
-  consensus_penalties_applied_total: 1,
-  consensus_penalties_pending: 0,
-  vrf_penalties_applied_total: 1,
-  vrf_penalties_pending: 0,
-  lane_governance_sealed_total: 1,
-  lane_governance_sealed_aliases: ['lane-a'],
-  lane_governance: [
-    {
-      lane_id: 1,
-      alias: 'alpha',
-      governance: 'manual',
-      manifest_required: true,
-      manifest_ready: false,
-      manifest_path: null,
-      validator_ids: [],
-      quorum: null,
-      protected_namespaces: [],
-      runtime_upgrade: { allow: true, require_metadata: false, metadata_key: null, allowed_ids: [] },
-      privacy_commitments: [],
-    },
-  ],
-  nexus_fee: {
-    charged_total: 3,
-    charged_via_payer_total: 2,
-    charged_via_sponsor_total: 1,
-    sponsor_disabled_total: 0,
-    sponsor_cap_exceeded_total: 0,
-    config_errors_total: 0,
-    transfer_failures_total: 1,
-    last_amount: '10',
-    last_asset_id: 'xor#sora',
-    last_payer: 'payer',
-    last_payer_id: SAMPLE_I105,
-    last_error: null,
-  },
-  nexus_staking: { lanes: [{ lane_id: 1, bonded: '10', pending_unbond: '2', slash_total: 0 }] },
-  npos_election: {
-    epoch: 7,
-    snapshot_height: 20,
-    seed: 'deadbeef',
-    candidates_total: 5,
-    validator_set_hash: '0xhash',
-    validator_set: ['ed0120...'],
-    params: {
-      max_validators: 7,
-      min_self_bond: 1,
-      min_nomination_bond: 1,
-      max_nominator_concentration_pct: 30,
-      seat_band_pct: 5,
-      max_entity_correlation_pct: 10,
-      finality_margin_blocks: 8,
-    },
-    rejection_reason: null,
-    tie_break: [{ peer_id: 'ed0120...', score: '00ff' }],
-  },
-};
-
-const sumeragiTelemetry = {
-  availability: {
-    total_votes_ingested: 12,
-    collectors: [
-      { collector_idx: 0, peer_id: 'ed0120...', votes_ingested: 5 },
-      { collector_idx: 1, peer_id: 'ed0999...', votes_ingested: 7 },
-    ],
-  },
-  qc_latency_ms: [
-    { kind: 'availability', last_ms: 120 },
-    { kind: 'commit', last_ms: 95 },
-  ],
-  rbc_backlog: { pending_sessions: 1, total_missing_chunks: 3, max_missing_chunks: 2 },
-  vrf: {
-    found: true,
-    epoch: 42,
-    finalized: true,
-    seed_hex: 'cafebabe',
-    epoch_length: 3600,
-    commit_deadline_offset: 120,
-    reveal_deadline_offset: 160,
-    roster_len: 7,
-    updated_at_height: 999,
-    participants_total: 7,
-    commitments_total: 7,
-    reveals_total: 7,
-    late_reveals_total: 0,
-    committed_no_reveal: [],
-    no_participation: [],
-    late_reveals: [],
-  },
-};
-
-interface PeerRow {
-  info: PeerInfo | null
-  status: PeerStatus | null
-}
-
-const createDefaultMetrics = () => ({
-  peers: 0,
-  domains: 0,
-  accounts: 0,
-  assets: 0,
-  transactions_accepted: 0,
-  transactions_rejected: 0,
-  block: 10,
-  block_created_at: new Date().toISOString(),
-  finalized_block: 9,
-  avg_block_time: { ms: 5000 },
-  avg_commit_time: { ms: 1000 },
+vi.mock('@/shared/ui/composables/usePeersTelemetry', async () => {
+  const { ref } = await vi.importActual<typeof import('vue')>('vue');
+  telemetry.metrics = ref(null);
+  telemetry.streamStatus = ref('OPEN');
+  telemetry.peers = ref([]);
+  telemetry.propagation = ref([]);
+  telemetry.isPeersLoading = ref(false);
+  return {
+    usePeersTelemetry: () => telemetry,
+  };
 });
-
-const peersTelemetry = {
-  metrics: ref(createDefaultMetrics()),
-  streamStatus: ref('OPEN'),
-  peers: ref<PeerRow[]>([]),
-  propagation: ref([]),
-  recentEvents: ref<any[]>([]),
-  peerDataSource: ref<'LIVE_SSE' | 'SNAPSHOT' | 'FALLBACK' | 'MIXED' | 'NONE'>('LIVE_SSE'),
-  lastPeerSampleAtMs: ref<number | null>(Date.now()),
-  fallbackPeersCount: ref(0),
-  isMetricsLoading: false,
-  isPeersLoading: false,
-};
-
-vi.mock('@/shared/ui/composables/usePeersTelemetry', () => ({
-  usePeersTelemetry: () => peersTelemetry,
-}));
-
-vi.mock('@/shared/ui/composables/useSumeragiStatus', () => ({
-  useSumeragiStatus: () => ({
-    status: ref(sumeragiStatus),
-    lastUpdatedAtMs: ref(Date.now()),
-    isLoading: false,
-    streamStatus: ref('OPEN'),
-  }),
-}));
-
-vi.mock('@/shared/ui/composables/useSumeragiTelemetry', () => ({
-  useSumeragiTelemetry: () => ({
-    telemetry: ref(sumeragiTelemetry),
-    isLoading: false,
-    refresh: vi.fn(),
-  }),
-}));
-
-vi.mock('@/shared/ui/composables/useAdaptiveHash', () => ({
-  useAdaptiveHash: () => 'short',
-}));
 
 const BaseContentBlockStub = {
   props: ['title'],
-  template: '<div><div class="block-title">{{ title }}</div><slot /><slot name="header-action" /></div>',
+  template: '<section><h2>{{ title }}</h2><slot name="header-action" /><slot /></section>',
+};
+
+const BaseLoadingStub = {
+  template: '<div data-test="loading" />',
 };
 
 const BaseTableStub = {
@@ -257,570 +63,286 @@ const BaseTableStub = {
   template: '<div><slot name="header" /><slot v-for="item in items" name="row" :item="item" /></div>',
 };
 
-const SimpleStub = {
-  template: '<div><slot /></div>',
+const DataFieldStub = {
+  props: ['title', 'value'],
+  template: '<div class="data-field"><span>{{ title }}</span><span>{{ value }}</span></div>',
 };
 
-const BaseLinkStub = {
-  props: ['to'],
-  template: '<a :href="to"><slot /></a>',
-};
-
-const BaseHashStub = {
-  props: ['hash'],
-  template: '<span>{{ hash }}</span>',
-};
-
-const BaseLoadingStub = {
-  template: '<div class="loading-stub" />',
-};
-
-const LatestBlockStub = {
-  props: ['date'],
-  template: '<span>{{ date }}</span>',
-};
+function factory() {
+  return mount(NodesTelemetry, {
+    global: {
+      plugins: [i18n],
+      stubs: {
+        BaseContentBlock: BaseContentBlockStub,
+        BaseLoading: BaseLoadingStub,
+        BaseTable: BaseTableStub,
+        DataField: DataFieldStub,
+      },
+    },
+  });
+}
 
 describe('NodesTelemetry', () => {
-  const mountedWrappers: Array<ReturnType<typeof mount>> = [];
-
   beforeEach(() => {
     vi.clearAllMocks();
-    routeState.query = {};
-    routerReplaceMock.mockClear();
-    clipboardCopyMock.mockClear();
-    const storage = (window as unknown as { localStorage?: { removeItem?: (key: string) => void } }).localStorage;
-    if (storage && typeof storage.removeItem === 'function') {
-      storage.removeItem('iroha.telemetry.ops.v2');
-    }
-    peersTelemetry.metrics.value = createDefaultMetrics();
-    peersTelemetry.peers.value = [];
-    peersTelemetry.propagation.value = [];
-    peersTelemetry.recentEvents.value = [];
-    peersTelemetry.peerDataSource.value = 'LIVE_SSE';
-    peersTelemetry.lastPeerSampleAtMs.value = Date.now();
-    peersTelemetry.fallbackPeersCount.value = 0;
-  });
-
-  afterEach(() => {
-    while (mountedWrappers.length > 0) {
-      mountedWrappers.pop()?.unmount();
-    }
-  });
-
-  const factory = () => {
-    const wrapper = mount(NodesTelemetry, {
-      global: {
-        plugins: [i18n],
-        stubs: {
-          BaseContentBlock: BaseContentBlockStub,
-          BaseButton: SimpleStub,
-          BaseTable: BaseTableStub,
-          BaseHash: BaseHashStub,
-          BaseLink: BaseLinkStub,
-          BaseLoading: BaseLoadingStub,
-          LatestBlock: LatestBlockStub,
-          ContextTooltip: SimpleStub,
-        },
+    telemetry.metrics.value = null;
+    telemetry.streamStatus.value = 'OPEN';
+    telemetry.propagation.value = [];
+    telemetry.isPeersLoading.value = false;
+    api.fetchExplorerHealth.mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        head_height: 42,
+        head_created_at: new Date('2026-08-30T01:00:00Z'),
+        sampled_at: new Date('2026-08-30T01:00:01Z'),
       },
     });
-    mountedWrappers.push(wrapper);
-    return wrapper;
-  };
-
-  it('renders consensus and view-change metrics from the Sumeragi status snapshot', async () => {
-    const wrapper = factory();
-    await flushPromises();
-    expect(wrapper.text()).toContain('Live network pulse');
-    expect(wrapper.text()).toContain('View-change index');
-    expect(wrapper.text()).toContain('v3');
-    expect(wrapper.text()).toContain('Inline posts');
-    expect(wrapper.text()).toContain('4 / 6');
-    expect(wrapper.text()).toContain('Consensus penalties applied');
-  });
-
-  it('renders settlement, nexus, election, and governance snapshots', async () => {
-    const wrapper = factory();
-    await flushPromises();
-    expect(wrapper.text()).toContain('Settlement ID');
-    expect(wrapper.text()).toContain('Nexus fee snapshot');
-    expect(wrapper.text()).toContain('NPoS election');
-    expect(wrapper.text()).toContain('Lane governance');
-    expect(wrapper.text()).toContain('alpha (#1)');
-  });
-
-  it('renders sumeragi chain and block producer details', async () => {
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(wrapper.text()).toContain('Sumeragi chain');
-    expect(wrapper.text()).toContain('Membership view hash');
-    expect(wrapper.text()).toContain('viewhash001');
-    expect(wrapper.text()).toContain('Block producers');
-    expect(wrapper.text()).toContain('Current producer');
-    expect(wrapper.text()).toContain('Leader index: #1');
-
-    const leaderRows = wrapper.findAll('.nodes-telemetry-page__npos-producers-row[data-leader="true"]');
-    expect(leaderRows).toHaveLength(1);
-  });
-
-  it('renders additional node stats (connected peers, block delta, queue capacity)', async () => {
-    peersTelemetry.peers.value = [
+    telemetry.peers.value = [
       {
         info: {
-          url: 'https://node-a',
+          url: 'https://peer-a.example',
           connected: true,
           telemetry_unsupported: false,
-          config: {
-            public_key: 'ed0120...',
-            queue_capacity: 10,
-            network_block_gossip_size: 10,
-            network_block_gossip_period: { ms: 1000 },
-            network_tx_gossip_size: 10,
-            network_tx_gossip_period: { ms: 1000 },
-          },
-          location: { lat: 0, lon: 0, country: 'United States', city: 'New York' },
-          connected_peers: ['peer-1', 'peer-2', 'peer-3'],
-        },
-        status: {
-          url: 'https://node-a',
-          block: 8,
-          commit_time: { ms: 500 },
-          avg_commit_time: { ms: 600 },
-          queue_size: 3,
-          uptime: { ms: 1000 },
-        },
-      },
-    ];
-
-    const wrapper = factory();
-    await flushPromises();
-    expect(wrapper.text()).toContain('Graphs');
-    expect(wrapper.text()).toContain('Map');
-    expect(wrapper.text()).toContain('Ping (status RTT)');
-    expect(wrapper.text()).toContain('Observed propagation');
-    expect(wrapper.text()).toContain('Connected peers');
-    expect(wrapper.text()).toContain('3 / 10');
-    expect(wrapper.text()).toContain('(-2)');
-    expect(wrapper.text()).toContain('10.00 s');
-    expect(wrapper.text()).toContain('30%');
-    expect(wrapper.text()).toContain('United States');
-    expect(wrapper.text()).toContain('New York');
-
-    const kpiValues = wrapper.findAll('.nodes-telemetry-page__ethstats-kpi-value');
-    expect(kpiValues[0]?.text()).toBe('4 / 4');
-    expect(kpiValues[1]?.text()).toBe('1');
-  });
-
-  it('exposes twelve peer columns and spans unsupported rows across the full table', async () => {
-    peersTelemetry.peers.value = [
-      {
-        info: {
-          url: 'https://node-a',
-          connected: true,
-          telemetry_unsupported: false,
-          config: {
-            public_key: 'ed0120...',
-            queue_capacity: 10,
-            network_block_gossip_size: 10,
-            network_block_gossip_period: { ms: 1000 },
-            network_tx_gossip_size: 10,
-            network_tx_gossip_period: { ms: 1000 },
-          },
-          location: { lat: 0, lon: 0, country: 'United States', city: 'New York' },
-          connected_peers: [],
-        },
-        status: {
-          url: 'https://node-a',
-          block: 8,
-          commit_time: { ms: 500 },
-          avg_commit_time: { ms: 600 },
-          queue_size: 3,
-          uptime: { ms: 1000 },
-        },
-      },
-      {
-        info: {
-          url: 'https://node-b',
-          connected: false,
-          telemetry_unsupported: true,
-          config: null,
-          location: null,
-          connected_peers: null,
+          location: { city: 'Tokyo', country: 'Japan', lat: 35.7, lon: 139.7 },
+          connected_peers: ['peer-b'],
         },
         status: null,
       },
     ];
-
-    const wrapper = factory();
-    await flushPromises();
-
-    const headers = wrapper.findAll('[role="columnheader"]');
-    expect(headers).toHaveLength(12);
-    expect(headers[0].attributes('aria-label')).toBe('Connection status');
-
-    const supportedRow = wrapper
-      .findAll('.nodes-telemetry-page__list-row[role="presentation"]')
-      .find((row) => row.find('[role="cell"]').exists());
-    expect(supportedRow?.findAll('[role="cell"]')).toHaveLength(12);
-
-    const unsupportedCell = wrapper.get('.nodes-telemetry-page__list-row_unsupported[role="cell"]');
-    expect(unsupportedCell.attributes('aria-colspan')).toBe('12');
-    expect(unsupportedCell.get('a').text()).toBe('https://node-b');
   });
 
-  it('supports interactive map mode with node selection and tooltip', async () => {
-    peersTelemetry.peers.value = [
-      {
-        info: {
-          url: 'https://node-a',
-          connected: true,
-          telemetry_unsupported: false,
-          config: null,
-          location: { lat: 35.68, lon: 139.76, country: 'Japan', city: 'Tokyo' },
-          connected_peers: null,
-        },
-        status: {
-          url: 'https://node-a',
-          block: 10,
-          commit_time: { ms: 120 },
-          avg_commit_time: { ms: 140 },
-          status_rtt: { ms: 20 },
-          status_rtt_avg: { ms: 25 },
-          status_rtt_p95: { ms: 34 },
-          queue_size: 1,
-          uptime: { ms: 10_000 },
-          propagation_time: { ms: 40 },
-          observed_at_ms: 1_000,
-        },
-      },
-    ];
-
+  it('renders the public explorer health and authoritative peer state', async () => {
     const wrapper = factory();
     await flushPromises();
 
-    const mapToggle = wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Map');
-    expect(mapToggle).toBeTruthy();
-    await mapToggle!.trigger('click');
-    await nextTick();
-
-    const marker = wrapper.find('.nodes-telemetry-page__ethstats-map-point');
-    expect(marker.exists()).toBe(true);
-
-    await marker.trigger('mouseenter');
-    await nextTick();
-    expect(wrapper.find('.nodes-telemetry-page__ethstats-map-tooltip').exists()).toBe(true);
-
-    await marker.trigger('click');
-    await nextTick();
-    expect(wrapper.find('.nodes-telemetry-page__ethstats-node[data-selected=\"true\"]').exists()).toBe(true);
+    expect(api.fetchExplorerHealth).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('[data-test="explorer-health"]').text()).toContain('42');
+    expect(wrapper.get('[data-test="public-peer-row"]').text()).toContain('https://peer-a.example');
+    expect(wrapper.get('[data-test="public-peer-row"]').text()).toContain('Tokyo, Japan');
+    expect(wrapper.get('[data-test="peer-public-key"]').text()).toContain('—');
+    expect(wrapper.get('[data-test="peer-commit-time"]').text()).toContain('—');
+    expect(wrapper.get('[data-test="peer-observed-at"]').text()).toContain('—');
   });
 
-  it('falls back to network peer count when peer details are unavailable', async () => {
-    peersTelemetry.metrics.value = {
-      ...createDefaultMetrics(),
-      peers: 4,
-    };
-    peersTelemetry.peers.value = [];
-
-    const wrapper = factory();
+  it('never requests protected diagnostic endpoints from the public page', async () => {
+    factory();
     await flushPromises();
 
-    const kpiValues = wrapper.findAll('.nodes-telemetry-page__ethstats-kpi-value');
-    expect(kpiValues[0]?.text()).toBe('4 / 4');
-    expect(kpiValues[1]?.text()).toBe('4');
-  });
-
-  it('shows fallback source and stale sample-age trust badges when peer telemetry is degraded', async () => {
-    peersTelemetry.peerDataSource.value = 'FALLBACK';
-    peersTelemetry.fallbackPeersCount.value = 4;
-    peersTelemetry.lastPeerSampleAtMs.value = Date.now() - 120_000;
-
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(wrapper.text()).toContain('Source: Fallback /peers');
-    expect(wrapper.text()).toContain('Sample age');
-    expect(wrapper.text()).toContain('(stale)');
-    expect(wrapper.text()).toContain('(4)');
-    expect(wrapper.text()).toContain('Fresh <= 15s · Delayed <= 60s');
-    expect(wrapper.text()).toContain('Detailed peer telemetry is incomplete.');
-  });
-
-  it('supports pulse filters, pin+compare panel, and raw event drawer', async () => {
-    peersTelemetry.peers.value = [
-      {
-        info: {
-          url: 'https://node-a',
-          connected: true,
-          telemetry_unsupported: false,
-          config: { public_key: 'ed0120-a', queue_capacity: 10, network_block_gossip_size: 1, network_block_gossip_period: { ms: 1 }, network_tx_gossip_size: 1, network_tx_gossip_period: { ms: 1 } },
-          location: { lat: 0, lon: 0, country: 'United States', city: 'NY' },
-          connected_peers: [],
-        },
-        status: {
-          url: 'https://node-a',
-          block: 10,
-          commit_time: { ms: 100 },
-          avg_commit_time: { ms: 110 },
-          queue_size: 1,
-          uptime: { ms: 1000 },
-          status_rtt_p95: { ms: 120 },
-        },
-      },
-      {
-        info: {
-          url: 'https://node-b',
-          connected: false,
-          telemetry_unsupported: false,
-          config: { public_key: 'ed0120-b', queue_capacity: 10, network_block_gossip_size: 1, network_block_gossip_period: { ms: 1 }, network_tx_gossip_size: 1, network_tx_gossip_period: { ms: 1 } },
-          location: { lat: 0, lon: 0, country: 'Japan', city: 'Tokyo' },
-          connected_peers: [],
-        },
-        status: {
-          url: 'https://node-b',
-          block: 8,
-          commit_time: { ms: 220 },
-          avg_commit_time: { ms: 230 },
-          queue_size: 4,
-          uptime: { ms: 1000 },
-          status_rtt_p95: { ms: 260 },
-        },
-      },
-      {
-        info: {
-          url: 'https://node-c',
-          connected: true,
-          telemetry_unsupported: true,
-          config: null,
-          location: null,
-          connected_peers: [],
-        },
-        status: null,
-      },
-    ];
-    peersTelemetry.recentEvents.value = [
-      {
-        id: 101,
-        kind: 'sse_peer_status',
-        receivedAtMs: Date.now() - 1_000,
-        payload: { url: 'https://node-a', block: 10 },
-      },
-      {
-        id: 102,
-        kind: 'sse_peer_info',
-        receivedAtMs: Date.now() - 800,
-        payload: { url: 'https://node-b', connected: false },
-      },
-    ];
-
-    const wrapper = factory();
-    await flushPromises();
-
-    await wrapper.get('[data-test="pulse-filter-unsupported"]').trigger('click');
-    await nextTick();
-    expect(wrapper.findAll('.nodes-telemetry-page__ethstats-node')).toHaveLength(1);
-    expect(wrapper.text()).toContain('Unsupported');
-
-    await wrapper.get('[data-test="pulse-filter-all"]').trigger('click');
-    await nextTick();
-
-    const pinButtons = wrapper.findAll('[data-test^="pulse-pin-node-"]');
-    const compareButtons = wrapper.findAll('[data-test^="pulse-compare-node-"]');
-    await pinButtons[0]!.trigger('click');
-    await compareButtons[1]!.trigger('click');
-    await nextTick();
-
-    expect(wrapper.find('[data-test="pulse-compare-panel"]').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Pinned node compare');
-
-    const getElementByIdSpy = vi.spyOn(document, 'getElementById');
-    await wrapper.get('[data-test="pulse-toggle-events"]').trigger('click');
-    await nextTick();
-    await nextTick();
-
-    const eventToggle = wrapper.get('[data-test="pulse-toggle-events"]');
-    expect(eventToggle.attributes('aria-expanded')).toBe('true');
-    expect(eventToggle.attributes('aria-controls')).toBe('telemetry-pulse-events-drawer');
-    expect(wrapper.find('[data-test="pulse-events-drawer"]').exists()).toBe(true);
-    expect(getElementByIdSpy).toHaveBeenCalledWith('telemetry-pulse-events-search');
-    getElementByIdSpy.mockRestore();
-    expect(wrapper.text()).toContain('SSE peer status');
-    expect(wrapper.text()).toContain('"block": 10');
-    expect(wrapper.find('.nodes-telemetry-page__ethstats-events-absolute-time').attributes('datetime')).toContain('T');
-    expect(wrapper.get('[data-test="pulse-events-count"]').text()).toBe('2 / 2');
-    await wrapper.get('[data-test="pulse-copy-link"]').trigger('click');
-    expect(clipboardCopyMock).toHaveBeenCalledWith(window.location.href);
-    clipboardCopyMock.mockClear();
-    const eventsList = wrapper.get('.nodes-telemetry-page__ethstats-events-list');
-    expect(eventsList.attributes('aria-activedescendant')).toBe('telemetry-event-option-101');
-
-    await eventsList.trigger('keydown', { key: 'ArrowDown' });
-    await nextTick();
-    expect(wrapper.get('[data-test="pulse-event-102"]').attributes('aria-selected')).toBe('true');
-    expect(eventsList.attributes('aria-activedescendant')).toBe('telemetry-event-option-102');
-
-    await eventsList.trigger('keydown', { key: 'End' });
-    await nextTick();
-    expect(wrapper.get('[data-test="pulse-event-102"]').attributes('aria-selected')).toBe('true');
-
-    await eventsList.trigger('keydown', { key: 'Home' });
-    await nextTick();
-    expect(wrapper.get('[data-test="pulse-event-101"]').attributes('aria-selected')).toBe('true');
-
-    const searchInput = wrapper.get('#telemetry-pulse-events-search');
-    await searchInput.setValue('node-a');
-    await nextTick();
-    expect(wrapper.get('[data-test="pulse-events-count"]').text()).toBe('1 / 2');
-    expect(wrapper.text()).toContain('https://node-a');
-
-    await searchInput.setValue('not-present');
-    await nextTick();
-    expect(wrapper.get('[data-test="pulse-events-count"]').text()).toBe('0 / 2');
-    expect(wrapper.text()).toContain('No events captured yet');
-
-    await searchInput.trigger('keydown', { key: 'Escape' });
-    await nextTick();
-    expect((searchInput.element as HTMLInputElement).value).toBe('');
-    expect(wrapper.get('[data-test="pulse-events-count"]').text()).toBe('2 / 2');
-    expect(wrapper.text()).toContain('https://node-a');
-  });
-
-  it('restores ops state from query and persists updates to router/localStorage', async () => {
-    routeState.query = {
-      pf: 'online',
-      pd: '1',
-      ps: 'node-a',
-    };
-    peersTelemetry.peers.value = [
-      {
-        info: {
-          url: 'https://node-a',
-          connected: true,
-          telemetry_unsupported: false,
-          config: null,
-          location: null,
-          connected_peers: null,
-        },
-        status: {
-          url: 'https://node-a',
-          block: 10,
-          commit_time: { ms: 100 },
-          avg_commit_time: { ms: 120 },
-          queue_size: 1,
-          uptime: { ms: 1_000 },
-        },
-      },
-      {
-        info: {
-          url: 'https://node-b',
-          connected: false,
-          telemetry_unsupported: false,
-          config: null,
-          location: null,
-          connected_peers: null,
-        },
-        status: {
-          url: 'https://node-b',
-          block: 8,
-          commit_time: { ms: 220 },
-          avg_commit_time: { ms: 230 },
-          queue_size: 2,
-          uptime: { ms: 1_000 },
-        },
-      },
-    ];
-    peersTelemetry.recentEvents.value = [
-      {
-        id: 201,
-        kind: 'sse_peer_status',
-        receivedAtMs: Date.now() - 2000,
-        payload: { url: 'https://node-a', block: 10 },
-      },
-    ];
-
-    const storage = (window as unknown as { localStorage?: Partial<Storage> }).localStorage;
-
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(wrapper.get('[data-test="pulse-filter-online"]').attributes('data-active')).toBe('true');
-    expect(wrapper.find('[data-test="pulse-events-drawer"]').exists()).toBe(true);
-    expect((wrapper.get('#telemetry-pulse-events-search').element as HTMLInputElement).value).toBe('node-a');
-
-    await wrapper.get('[data-test="pulse-filter-lagging"]').trigger('click');
-    await nextTick();
-    await flushPromises();
-
-    expect(routerReplaceMock).toHaveBeenCalled();
-    const lastCall = routerReplaceMock.mock.calls.at(-1)?.[0] as { query: Record<string, unknown> } | undefined;
-    expect(lastCall?.query?.pf).toBe('lagging');
-
-    if (storage && typeof storage.getItem === 'function') {
-      const persistedValue = storage.getItem('iroha.telemetry.ops.v2');
-      expect(String(persistedValue ?? '')).toContain('"filter":"LAGGING"');
-      expect(String(persistedValue ?? '')).toContain('"search":"node-a"');
+    expect(api.fetchExplorerHealth).toHaveBeenCalledTimes(1);
+    for (const request of protectedDiagnosticRequests) {
+      expect(request).not.toHaveBeenCalled();
     }
   });
 
-  it('preserves scoped explorer query keys while telemetry ops query state updates', async () => {
-    routeState.query = {
-      torii: 'https://public-node.example:18080',
-      dataspaceLaneId: '7',
-      dataspaceId: '42',
-      pf: 'online',
-    };
-    peersTelemetry.peers.value = [
-      {
-        info: {
-          url: 'https://node-a',
-          connected: true,
-          telemetry_unsupported: false,
-          config: null,
-          location: null,
-          connected_peers: null,
-        },
-        status: {
-          url: 'https://node-a',
-          block: 10,
-          commit_time: { ms: 100 },
-          avg_commit_time: { ms: 120 },
-          queue_size: 1,
-          uptime: { ms: 1_000 },
-        },
-      },
-      {
-        info: {
-          url: 'https://node-b',
-          connected: false,
-          telemetry_unsupported: false,
-          config: null,
-          location: null,
-          connected_peers: null,
-        },
-        status: {
-          url: 'https://node-b',
-          block: 8,
-          commit_time: { ms: 220 },
-          avg_commit_time: { ms: 230 },
-          queue_size: 2,
-          uptime: { ms: 1_000 },
-        },
-      },
-    ];
+  it('shows telemetry as unavailable when public health returns a non-success response', async () => {
+    telemetry.peers.value = [];
+    api.fetchExplorerHealth.mockResolvedValueOnce({
+      status: UNKNOWN_ERROR,
+      error: new Error('health unavailable'),
+    });
 
     const wrapper = factory();
     await flushPromises();
 
-    await wrapper.get('[data-test="pulse-filter-lagging"]').trigger('click');
-    await nextTick();
+    expect(wrapper.find('[data-test="explorer-health"]').exists()).toBe(false);
+    expect(wrapper.get('[data-test="public-telemetry-error"]').text()).toContain('Telemetry data is unavailable');
+  });
+
+  it('shows telemetry as unavailable when public health cannot be reached', async () => {
+    telemetry.peers.value = [];
+    api.fetchExplorerHealth.mockRejectedValueOnce(new Error('network unavailable'));
+
+    const wrapper = factory();
     await flushPromises();
 
-    const lastCall = routerReplaceMock.mock.calls.at(-1)?.[0] as { query: Record<string, unknown> } | undefined;
-    expect(lastCall?.query?.pf).toBe('lagging');
-    expect(lastCall?.query?.torii).toBe('https://public-node.example:18080');
-    expect(lastCall?.query?.dataspaceLaneId).toBe('7');
-    expect(lastCall?.query?.dataspaceId).toBe('42');
+    expect(wrapper.find('[data-test="explorer-health"]').exists()).toBe(false);
+    expect(wrapper.get('[data-test="public-telemetry-error"]').text()).toContain('Telemetry data is unavailable');
+  });
+
+  it('renders every authoritative live, peer-config, peer-status, and propagation field', async () => {
+    const wrapper = factory();
+    await flushPromises();
+
+    const blockCreatedAt = new Date('2026-08-30T01:00:02Z');
+    const firstSeenAtMs = Date.parse('2026-08-30T01:00:02.100Z');
+    const lastSeenAtMs = Date.parse('2026-08-30T01:00:02.180Z');
+    const observedAtMs = Date.parse('2026-08-30T01:00:02.200Z');
+    telemetry.metrics.value = {
+      peers: 3,
+      domains: 4,
+      accounts: 5,
+      assets: 6,
+      transactions_accepted: 7,
+      transactions_rejected: 8,
+      block: 43,
+      block_created_at: blockCreatedAt,
+      finalized_block: 42,
+      avg_commit_time: { ms: 12 },
+      avg_block_time: { ms: 13 },
+    };
+    telemetry.peers.value = [
+      {
+        info: {
+          ...telemetry.peers.value[0].info,
+          config: {
+            public_key: 'ed0120-authoritative-key',
+            queue_capacity: 16,
+            network_block_gossip_size: 20,
+            network_block_gossip_period: { ms: 21 },
+            network_tx_gossip_size: 22,
+            network_tx_gossip_period: { ms: 23 },
+          },
+        },
+        status: {
+          url: 'https://peer-a.example',
+          block: 43,
+          commit_time: { ms: 10 },
+          avg_commit_time: { ms: 11 },
+          status_rtt: { ms: 14 },
+          status_rtt_avg: { ms: 15 },
+          status_rtt_p95: { ms: 16 },
+          queue_size: 0,
+          uptime: { ms: 1_000 },
+          propagation_time: { ms: 17 },
+          observed_at_ms: observedAtMs,
+        },
+      },
+    ];
+    telemetry.propagation.value = [
+      {
+        block: 43,
+        first_seen_at_ms: firstSeenAtMs,
+        last_seen_at_ms: lastSeenAtMs,
+        spread_ms: 80,
+        peers_reported: 3,
+      },
+    ];
+    await nextTick();
+
+    expect(wrapper.get('[data-test="public-live-metrics"]').text()).toContain('Peers3');
+    expect(wrapper.get('[data-test="live-block"]').text()).toBe('Block43');
+    expect(wrapper.get('[data-test="live-block-created-at"]').text()).toContain(blockCreatedAt.toLocaleString());
+    expect(wrapper.get('[data-test="live-average-commit-time"]').text()).toBe(
+      'Average block commit time12 milliseconds'
+    );
+    expect(wrapper.get('[data-test="live-average-block-time"]').text()).toBe('Average block time13 milliseconds');
+    expect(wrapper.get('[data-test="public-peer-row"]').text()).toContain('43');
+    const peerDetails = wrapper.get('[data-test="public-peer-details"]');
+    expect(peerDetails.get('[data-test="peer-public-key"]').text()).toContain('ed0120-authoritative-key');
+    expect(peerDetails.get('[data-test="peer-queue-capacity"]').text()).toBe('Queue capacity16');
+    expect(peerDetails.get('[data-test="peer-block-gossip"]').text()).toContain('size: 20');
+    expect(peerDetails.get('[data-test="peer-block-gossip"]').text()).toContain('period: 21ms');
+    expect(peerDetails.get('[data-test="peer-transaction-gossip"]').text()).toContain('size: 22');
+    expect(peerDetails.get('[data-test="peer-transaction-gossip"]').text()).toContain('period: 23ms');
+    expect(peerDetails.get('[data-test="peer-commit-time"]').text()).toBe('Commit time10 milliseconds');
+    expect(peerDetails.get('[data-test="peer-average-commit-time"]').text()).toBe('Average commit time11 milliseconds');
+    expect(peerDetails.get('[data-test="peer-status-rtt"]').text()).toBe('Status RTT14 milliseconds');
+    expect(peerDetails.get('[data-test="peer-status-rtt-average"]').text()).toBe('Average status RTT15 milliseconds');
+    expect(peerDetails.get('[data-test="peer-status-rtt-p95"]').text()).toBe('P95 status RTT16 milliseconds');
+    expect(peerDetails.get('[data-test="peer-queue-size"]').text()).toBe('Queue0');
+    expect(peerDetails.get('[data-test="peer-uptime"]').text()).toBe('Uptime1,000 milliseconds');
+    expect(peerDetails.get('[data-test="peer-propagation-time"]').text()).toBe('Propagation time17 milliseconds');
+    expect(peerDetails.get('[data-test="peer-observed-at"]').text()).toContain(new Date(observedAtMs).toLocaleString());
+    const propagationRow = wrapper.get('[data-test="public-propagation-row"]').text();
+    expect(propagationRow).toContain('43');
+    expect(propagationRow).toContain('80 milliseconds');
+    expect(propagationRow).toContain('3');
+    expect(wrapper.get('[data-test="propagation-first-seen-at"]').text()).toBe(
+      new Date(firstSeenAtMs).toLocaleString()
+    );
+    expect(wrapper.get('[data-test="propagation-last-seen-at"]').text()).toBe(new Date(lastSeenAtMs).toLocaleString());
+  });
+
+  it('preserves authoritative zeroes while keeping absent telemetry distinct', async () => {
+    const wrapper = factory();
+    await flushPromises();
+
+    telemetry.metrics.value = {
+      peers: 0,
+      domains: 0,
+      accounts: 0,
+      assets: 0,
+      transactions_accepted: 0,
+      transactions_rejected: 0,
+      block: 0,
+      block_created_at: null,
+      finalized_block: 0,
+      avg_commit_time: { ms: 0 },
+      avg_block_time: null,
+    };
+    telemetry.peers.value = [
+      {
+        info: {
+          ...telemetry.peers.value[0].info,
+          connected_peers: [],
+          config: {
+            queue_capacity: 0,
+            network_block_gossip_size: 0,
+          },
+        },
+        status: {
+          url: 'https://peer-a.example',
+          block: 0,
+          commit_time: { ms: 0 },
+          avg_commit_time: { ms: 0 },
+          status_rtt: { ms: 0 },
+          queue_size: 0,
+          uptime: { ms: 0 },
+          propagation_time: { ms: 0 },
+          observed_at_ms: 0,
+        },
+      },
+    ];
+    telemetry.propagation.value = [
+      {
+        block: 0,
+        first_seen_at_ms: 0,
+        last_seen_at_ms: 0,
+        spread_ms: 0,
+        peers_reported: 0,
+      },
+    ];
+    await nextTick();
+
+    expect(wrapper.get('[data-test="live-block"]').text()).toBe('Block0');
+    expect(wrapper.get('[data-test="live-block-created-at"]').text()).toBe('Last block—');
+    expect(wrapper.get('[data-test="live-average-commit-time"]').text()).toBe(
+      'Average block commit time0 milliseconds'
+    );
+    expect(wrapper.get('[data-test="live-average-block-time"]').text()).toBe('Average block time—');
+
+    const peerRow = wrapper.get('[data-test="public-peer-row"]');
+    expect(peerRow.findAll('[role="cell"]')[3]?.text()).toBe('0');
+    expect(peerRow.findAll('[role="cell"]')[4]?.text()).toBe('0');
+    const peerDetails = peerRow.get('[data-test="public-peer-details"]');
+    expect(peerDetails.get('[data-test="peer-public-key"]').text()).toBe('Public key—');
+    expect(peerDetails.get('[data-test="peer-queue-capacity"]').text()).toBe('Queue capacity0');
+    expect(peerDetails.get('[data-test="peer-block-gossip"]').text()).toContain('size: 0');
+    expect(peerDetails.get('[data-test="peer-block-gossip"]').text()).toContain('period: —ms');
+    expect(peerDetails.get('[data-test="peer-transaction-gossip"]').text()).toContain('size: —');
+    expect(peerDetails.get('[data-test="peer-commit-time"]').text()).toBe('Commit time0 milliseconds');
+    expect(peerDetails.get('[data-test="peer-average-commit-time"]').text()).toBe('Average commit time0 milliseconds');
+    expect(peerDetails.get('[data-test="peer-status-rtt"]').text()).toBe('Status RTT0 milliseconds');
+    expect(peerDetails.get('[data-test="peer-status-rtt-average"]').text()).toBe('Average status RTT—');
+    expect(peerDetails.get('[data-test="peer-status-rtt-p95"]').text()).toBe('P95 status RTT—');
+    expect(peerDetails.get('[data-test="peer-queue-size"]').text()).toBe('Queue0');
+    expect(peerDetails.get('[data-test="peer-uptime"]').text()).toBe('Uptime0 milliseconds');
+    expect(peerDetails.get('[data-test="peer-propagation-time"]').text()).toBe('Propagation time0 milliseconds');
+    expect(peerDetails.get('[data-test="peer-observed-at"]').text()).toContain(new Date(0).toLocaleString());
+
+    expect(wrapper.get('[data-test="propagation-first-seen-at"]').text()).toBe(new Date(0).toLocaleString());
+    expect(wrapper.get('[data-test="propagation-last-seen-at"]').text()).toBe(new Date(0).toLocaleString());
+    const propagationRow = wrapper.get('[data-test="public-propagation-row"]').text();
+    expect(propagationRow).toContain('0 milliseconds');
+  });
+
+  it('states the signed operator boundary without anonymously exposing consensus diagnostics', async () => {
+    const wrapper = factory();
+    await flushPromises();
+
+    const boundary = wrapper.get('[data-test="operator-telemetry-boundary"]').text();
+    expect(boundary).toContain('OperatorSigningContext');
+    expect(boundary).toContain('no anonymous fallback');
+    expect(wrapper.text()).not.toContain('View-change index');
   });
 });

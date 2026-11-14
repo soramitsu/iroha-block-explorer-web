@@ -1,7 +1,4 @@
-import { z } from 'zod/v4';
-import BigNumber from 'bignumber.js';
-import { NetworkId } from '@iroha/iroha-js/connect-browser';
-import { normalizeAccountIdLiteral, normalizeAccountSelectorLiteral } from '@/shared/lib/account-literal';
+import { normalizeAccountIdLiteral, normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
 import {
   isAssetDefinitionAliasLiteral,
   normalizeAssetDefinitionAliasLiteral,
@@ -11,7 +8,15 @@ import {
   parseAssetDefinitionAliasLiteral,
   parseAssetIdLiteral,
 } from '@/shared/lib/asset-definition-literal';
+import { normalizeIrohaHash32 } from '@/shared/lib/iroha-hash';
 import { normalizeDomainIdLiteral, normalizeRwaIdLiteral } from '@/shared/lib/rwa-id';
+import { deriveDefiOracleAttestationHash } from '@/shared/lib/soracle-attestation-hash';
+import { parseStrictLosslessJsonForValidation } from '@/shared/lib/strict-lossless-integer-json';
+import { AccountAddress } from '@iroha/iroha-js/browser';
+import { NetworkId } from '@iroha/iroha-js/connect-browser';
+import { verifyEd25519 } from '@iroha/iroha-js/crypto';
+import BigNumber from 'bignumber.js';
+import { z } from 'zod/v4';
 import { NativeInstructionEnvelope } from './instruction-envelope';
 import { isCanonicalIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
 
@@ -46,7 +51,8 @@ export type CollectionContinuation = z.infer<typeof CollectionContinuation>;
 
 /** SDK collection model. Explorer feeds are bounded and do not return totals. */
 export const CollectionPage = <T extends z.ZodType>(item: T) =>
-  CollectionContinuation.extend({ items: item.array(), total: z.undefined().optional() }).strict()
+  CollectionContinuation.extend({ items: item.array(), total: z.undefined().optional() })
+    .strict()
     .transform(({ items, nextCursor }) => ({ items, nextCursor }));
 
 export interface CollectionPage<T> extends CollectionContinuation {
@@ -59,7 +65,6 @@ export interface CursorPaginationParams {
 }
 
 const Metadata = z.record(z.string(), z.json());
-const BigIntCoerce = z.union([z.string(), z.number(), z.bigint()]).transform((value) => BigInt(value));
 const U16 = z.number().int().min(0).max(0xffff);
 const U32 = z.number().int().min(0).max(0xffff_ffff);
 const MAX_NUMERIC_SCALE = 28;
@@ -147,10 +152,12 @@ const CanonicalDomainId = exactNormalizedStringSchema(
   'expected a canonical fully-qualified domain.dataspace ID'
 );
 /** Exact nonzero direct-home DataSpaceId text; never round a u64 through a JSON number. */
-export const CanonicalDataspaceId = z.string().refine(
-  (value) => /^[1-9][0-9]{0,19}$/u.test(value) && BigInt(value) <= (1n << 64n) - 1n,
-  'expected a canonical nonzero u64 decimal dataspace ID'
-);
+export const CanonicalDataspaceId = z
+  .string()
+  .refine(
+    (value) => /^[1-9][0-9]{0,19}$/u.test(value) && BigInt(value) <= (1n << 64n) - 1n,
+    'expected a canonical nonzero u64 decimal dataspace ID'
+  );
 const CanonicalAssetId = exactNormalizedStringSchema(
   normalizeAssetIdLiteral,
   'Asset ID response must use an exact canonical asset literal'
@@ -201,7 +208,7 @@ export const AccountIdSchema = normalizedStringSchema(
   'Account ID must use exact I105 account selector text'
 );
 export const AccountSelectorSchema = normalizedStringSchema(
-  normalizeAccountSelectorLiteral,
+  normalizeToriiAccountSelectorLiteral,
   'Account selector must use a canonical halfwidth i105 account ID or alias'
 );
 export const AssetDefinitionIdSchema = normalizedStringSchema(
@@ -385,11 +392,20 @@ export type MultisigSpecResponse = z.infer<typeof MultisigSpecResponse>;
 export const MultisigProposalPayload = z
   .object({
     network_id: z.string().refine((value) => {
-      try { return NetworkId.parse(value).literal === value; }
-      catch { return false; }
+      try {
+        return NetworkId.parse(value).literal === value;
+      } catch {
+        return false;
+      }
     }, 'expected a canonical network ID'),
-    proposal_nonce: z.string().regex(/^[0-9a-f]{64}$/u).refine((value) => value !== '0'.repeat(64)),
-    proposal_id: z.string().regex(/^[0-9a-f]{64}$/u).refine((value) => value !== '0'.repeat(64)),
+    proposal_nonce: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/u)
+      .refine((value) => value !== '0'.repeat(64)),
+    proposal_id: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/u)
+      .refine((value) => value !== '0'.repeat(64)),
     transaction_ttl_ms: z.number().int().safe().positive().nullable(),
     instructions: z.array(z.record(z.string(), z.json())),
     proposed_at_ms: z.number().int().safe().nonnegative(),
@@ -567,7 +583,7 @@ export const ExplorerAssetDefinition = z
   .object({
     id: AssetDefinitionIdSchema,
     owning_domain: CanonicalDomainId.nullable(),
-    owning_dataspace: CanonicalDataspaceId.nullish(),
+    owning_dataspace: CanonicalDataspaceId.nullable(),
     mintable: AssetDefinitionMintable,
     logo: z.string().nullable(),
     metadata: Metadata,
@@ -579,8 +595,12 @@ export const ExplorerAssetDefinition = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.owning_domain !== null && value.owning_dataspace !== null && value.owning_dataspace !== undefined) {
-      ctx.addIssue({ code: 'custom', message: 'asset definition cannot have both domain and dataspace homes', path: ['owning_dataspace'] });
+    if (value.owning_domain !== null && value.owning_dataspace !== null) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'asset definition cannot have both domain and dataspace homes',
+        path: ['owning_dataspace'],
+      });
     }
   })
   .transform((value) => ({
@@ -598,26 +618,31 @@ export type ExplorerAssetDefinition = z.infer<typeof ExplorerAssetDefinition>;
 const ConfidentialPolicyMode = z.enum(['TransparentOnly', 'ShieldedOnly', 'Convertible']);
 const ConfidentialPolicyHeight = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const ConfidentialPolicyHash = z.string().regex(/^[0-9a-fA-F]{64}$/u);
-const AssetConfidentialPolicy = z.object({
-  mode: ConfidentialPolicyMode,
-  vk_set_hash: ConfidentialPolicyHash.nullable(),
-  poseidon_params_id: U32.nullable(),
-  pedersen_params_id: U32.nullable(),
-  pending_transition: z.object({
-    new_mode: ConfidentialPolicyMode,
-    effective_height: ConfidentialPolicyHeight,
-    previous_mode: ConfidentialPolicyMode,
-    transition_id: ConfidentialPolicyHash,
-    conversion_window: ConfidentialPolicyHeight.nullable(),
-  }).strict().nullable(),
-}).strict();
+const AssetConfidentialPolicy = z
+  .object({
+    mode: ConfidentialPolicyMode,
+    vk_set_hash: ConfidentialPolicyHash.nullable(),
+    poseidon_params_id: U32.nullable(),
+    pedersen_params_id: U32.nullable(),
+    pending_transition: z
+      .object({
+        new_mode: ConfidentialPolicyMode,
+        effective_height: ConfidentialPolicyHeight,
+        previous_mode: ConfidentialPolicyMode,
+        transition_id: ConfidentialPolicyHash,
+        conversion_window: ConfidentialPolicyHeight.nullable(),
+      })
+      .strict()
+      .nullable(),
+  })
+  .strict();
 
 /** Full asset-definition record from `/v1/assets/definitions/:id`, including alias bindings. */
 export const AssetDefinition = z
   .object({
     id: AssetDefinitionIdSchema,
     owning_domain: CanonicalDomainId.nullable(),
-    owning_dataspace: CanonicalDataspaceId.nullish(),
+    owning_dataspace: CanonicalDataspaceId.nullable(),
     spec: z.object({ scale: z.number().int().min(0).max(MAX_NUMERIC_SCALE).nullable() }).strict(),
     balance_scope_policy: z.enum(['Global', 'DataspaceRestricted']),
     confidential_policy: AssetConfidentialPolicy,
@@ -633,8 +658,12 @@ export const AssetDefinition = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.owning_domain !== null && value.owning_dataspace !== null && value.owning_dataspace !== undefined) {
-      ctx.addIssue({ code: 'custom', message: 'asset definition cannot have both domain and dataspace homes', path: ['owning_dataspace'] });
+    if (value.owning_domain !== null && value.owning_dataspace !== null) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'asset definition cannot have both domain and dataspace homes',
+        path: ['owning_dataspace'],
+      });
     }
     if (!aliasMatchesAssetName(value.alias, value.name)) {
       ctx.addIssue({
@@ -818,12 +847,17 @@ export interface TransactionSearchParams extends CursorPaginationParams {
   asset_id?: AssetId;
 }
 
+/** Torii Explorer executable labels from `explorer_history.rs::executable_label`. */
+export const TRANSACTION_EXECUTABLES = ['Instructions', 'ContractCall', 'Ivm', 'IvmProved', 'Batch'] as const;
+export const TransactionExecutable = z.enum(TRANSACTION_EXECUTABLES);
+export type TransactionExecutable = z.infer<typeof TransactionExecutable>;
+
 export const Transaction = z.object({
   authority: AccountIdSchema,
   hash: z.string(),
   block: z.number(),
   created_at: z.coerce.date(),
-  executable: z.enum(['Instructions', 'Ivm', 'IvmProved', 'ContractCall']),
+  executable: TransactionExecutable,
   status: TransactionStatus,
 });
 
@@ -870,42 +904,55 @@ export const Block = z.object({
 export type Block = z.infer<typeof Block>;
 
 const LedgerEvidenceBytes = z.number().int().min(0).max(255).array();
-const LedgerHeader = z.object({
-  height: z.number().int().positive(),
-  prev_block_hash: z.string().nullable(),
-  merkle_root: z.string().nullable(),
-  da_proof_policies_hash: z.string().nullable(),
-  da_commitments_hash: z.string().nullable(),
-  da_pin_intents_hash: z.string().nullable(),
-  npos_effects_hash: z.string().nullable(),
-  creation_time_ms: z.number().int().nonnegative(),
-  view_change_index: z.number().int().nonnegative(),
-  confidential_features: z.object({
-    vk_set_hash: LedgerEvidenceBytes.length(32),
-    poseidon_params_id: U32.nullable(),
-    pedersen_params_id: U32.nullable(),
-    conf_rules_version: U32,
-    zk_policy_hash: LedgerEvidenceBytes.length(32),
-  }).strict().nullable(),
-  execution_context_hash: z.string().nullable(),
-  global_beacon_pulse_hash: z.string().nullable(),
-}).strict();
+const LedgerHeader = z
+  .object({
+    height: z.number().int().positive(),
+    prev_block_hash: z.string().nullable(),
+    merkle_root: z.string().nullable(),
+    da_proof_policies_hash: z.string().nullable(),
+    da_commitments_hash: z.string().nullable(),
+    da_pin_intents_hash: z.string().nullable(),
+    npos_effects_hash: z.string().nullable(),
+    creation_time_ms: z.number().int().nonnegative(),
+    view_change_index: z.number().int().nonnegative(),
+    confidential_features: z
+      .object({
+        vk_set_hash: LedgerEvidenceBytes.length(32),
+        poseidon_params_id: U32.nullable(),
+        pedersen_params_id: U32.nullable(),
+        conf_rules_version: U32,
+        zk_policy_hash: LedgerEvidenceBytes.length(32),
+      })
+      .strict()
+      .nullable(),
+    execution_context_hash: z.string().nullable(),
+    global_beacon_pulse_hash: z.string().nullable(),
+  })
+  .strict();
 
 /** Node-supplied state-finality evidence; parsing does not authenticate its committee or signatures. */
-export const StateFinalityResponse = z.object({
-  height: z.number().int().min(2),
-  block_hash: z.string(),
-  witnessed_post_state_root: z.string(),
-  block_header: LedgerHeader,
-  finality_proof: z.object({
+export const StateFinalityResponse = z
+  .object({
+    height: z.number().int().min(2),
+    block_hash: z.string(),
+    witnessed_post_state_root: z.string(),
     block_header: LedgerHeader,
-    block_wire: LedgerEvidenceBytes.min(1),
-    committee: z.object({
-      public_key: z.string().min(1),
-      proof_of_possession: LedgerEvidenceBytes.min(1),
-    }).strict().array().min(1),
-  }).strict(),
-}).strict();
+    finality_proof: z
+      .object({
+        block_header: LedgerHeader,
+        block_wire: LedgerEvidenceBytes.min(1),
+        committee: z
+          .object({
+            public_key: z.string().min(1),
+            proof_of_possession: LedgerEvidenceBytes.min(1),
+          })
+          .strict()
+          .array()
+          .min(1),
+      })
+      .strict(),
+  })
+  .strict();
 
 export type StateFinalityResponse = z.infer<typeof StateFinalityResponse>;
 
@@ -1039,324 +1086,6 @@ export const PeerMetrics = z.discriminatedUnion('kind', [
   }),
 ]);
 export type PeerMetrics = z.infer<typeof PeerMetrics>;
-
-const SumeragiQcSnapshot = z.object({
-  height: z.number(),
-  view: z.number(),
-  subject_block_hash: z.string().nullable(),
-});
-
-const SumeragiTxQueueSnapshot = z.object({
-  depth: z.number(),
-  capacity: z.number(),
-  saturated: z.boolean(),
-});
-
-const SettlementCounts = z.record(z.string(), z.number());
-
-const SettlementPlan = z.object({
-  order: z.string(),
-  atomicity: z.string(),
-});
-
-const SettlementLastEventBase = z.object({
-  observed_at_ms: z.number(),
-  settlement_id: z.string().nullable(),
-  plan: SettlementPlan,
-  outcome: z.string(),
-  failure_reason: z.string().nullable(),
-  final_state: z.string(),
-});
-
-const DvpSettlementLastEvent = SettlementLastEventBase.extend({
-  legs: z.object({
-    delivery_committed: z.boolean(),
-    payment_committed: z.boolean(),
-  }),
-});
-
-const PvpSettlementLastEvent = SettlementLastEventBase.extend({
-  legs: z.object({
-    primary_committed: z.boolean(),
-    counter_committed: z.boolean(),
-  }),
-  fx_window_ms: z.number().nullable(),
-});
-
-const DvpSettlementSnapshot = z.object({
-  success_total: z.number(),
-  failure_total: z.number(),
-  final_state_totals: SettlementCounts,
-  failure_reasons: SettlementCounts,
-  last_event: DvpSettlementLastEvent.nullable(),
-});
-
-const PvpSettlementSnapshot = z.object({
-  success_total: z.number(),
-  failure_total: z.number(),
-  final_state_totals: SettlementCounts,
-  failure_reasons: SettlementCounts,
-  last_event: PvpSettlementLastEvent.nullable(),
-});
-
-const SettlementSnapshot = z.object({
-  dvp: DvpSettlementSnapshot,
-  pvp: PvpSettlementSnapshot,
-});
-
-const SumeragiRbcEviction = z.object({
-  block_hash: z.string(),
-  height: z.number(),
-  view: z.number(),
-});
-
-const SumeragiRbcStoreSnapshot = z.object({
-  sessions: z.number(),
-  bytes: z.number(),
-  pressure_level: z.number(),
-  backpressure_deferrals_total: z.number(),
-  evictions_total: z.number(),
-  recent_evictions: SumeragiRbcEviction.array(),
-});
-
-const SumeragiLaneRuntimeUpgrade = z.object({
-  allow: z.boolean(),
-  require_metadata: z.boolean(),
-  metadata_key: z.string().nullable(),
-  allowed_ids: z.string().array(),
-});
-
-const SumeragiLanePrivacyMerkle = z.object({
-  root: z.string(),
-  max_depth: z.number(),
-});
-
-const SumeragiLanePrivacySnark = z.object({
-  circuit_id: z.number(),
-  verifying_key_digest: z.string(),
-  statement_hash: z.string(),
-  proof_hash: z.string(),
-});
-
-const SumeragiLanePrivacyCommitment = z.object({
-  id: z.number(),
-  scheme: z.enum(['merkle', 'snark']),
-  merkle: SumeragiLanePrivacyMerkle.nullable(),
-  snark: SumeragiLanePrivacySnark.nullable(),
-});
-
-const SumeragiLaneGovernanceEntry = z.object({
-  lane_id: z.number(),
-  alias: z.string(),
-  governance: z.string().nullable(),
-  manifest_required: z.boolean(),
-  manifest_ready: z.boolean(),
-  manifest_path: z.string().nullable(),
-  validator_ids: z.string().array(),
-  quorum: z.number().nullable(),
-  protected_namespaces: z.string().array(),
-  runtime_upgrade: SumeragiLaneRuntimeUpgrade.nullable(),
-  privacy_commitments: SumeragiLanePrivacyCommitment.array().default([]),
-});
-
-const SumeragiNexusFeeSnapshot = z.object({
-  charged_total: z.number().default(0),
-  charged_via_payer_total: z.number().default(0),
-  charged_via_sponsor_total: z.number().default(0),
-  sponsor_disabled_total: z.number().default(0),
-  sponsor_cap_exceeded_total: z.number().default(0),
-  config_errors_total: z.number().default(0),
-  transfer_failures_total: z.number().default(0),
-  last_amount: z.string().nullable(),
-  last_asset_id: z.string().nullable(),
-  last_payer: z.enum(['payer', 'sponsor']).nullable(),
-  last_payer_id: z.string().nullable(),
-  last_error: z.string().nullable(),
-});
-
-const SumeragiNexusStakingLane = z.object({
-  lane_id: z.number(),
-  bonded: z.string(),
-  pending_unbond: z.string(),
-  slash_total: z.number().default(0),
-});
-
-const SumeragiNexusStakingSnapshot = z.object({
-  lanes: SumeragiNexusStakingLane.array().default([]),
-});
-
-const SumeragiNposElectionParams = z.object({
-  max_validators: z.number(),
-  min_self_bond: z.number(),
-  min_nomination_bond: z.number(),
-  max_nominator_concentration_pct: z.number(),
-  seat_band_pct: z.number(),
-  max_entity_correlation_pct: z.number(),
-  finality_margin_blocks: z.number(),
-});
-
-const SumeragiNposTieBreak = z.object({
-  peer_id: z.string(),
-  score: z.string(),
-});
-
-const SumeragiNposElectionSnapshot = z.object({
-  epoch: z.number(),
-  snapshot_height: z.number(),
-  seed: z.string(),
-  candidates_total: z.number(),
-  validator_set_hash: z.string(),
-  validator_set: z.string().array(),
-  params: SumeragiNposElectionParams,
-  rejection_reason: z.string().nullable(),
-  tie_break: SumeragiNposTieBreak.array(),
-});
-
-const defaultNexusFeeSnapshot: z.infer<typeof SumeragiNexusFeeSnapshot> = {
-  charged_total: 0,
-  charged_via_payer_total: 0,
-  charged_via_sponsor_total: 0,
-  sponsor_disabled_total: 0,
-  sponsor_cap_exceeded_total: 0,
-  config_errors_total: 0,
-  transfer_failures_total: 0,
-  last_amount: null,
-  last_asset_id: null,
-  last_payer: null,
-  last_payer_id: null,
-  last_error: null,
-};
-
-const defaultNexusStakingSnapshot: z.infer<typeof SumeragiNexusStakingSnapshot> = {
-  lanes: [],
-};
-
-const SumeragiStatusSchema = z
-  .object({
-    leader_index: z.number(),
-    view_change_index: z.number(),
-    highest_qc: SumeragiQcSnapshot,
-    locked_qc: SumeragiQcSnapshot,
-    tx_queue: SumeragiTxQueueSnapshot,
-    epoch: z
-      .object({
-        length_blocks: z.number(),
-        commit_deadline_offset: z.number(),
-        reveal_deadline_offset: z.number(),
-      })
-      .passthrough(),
-    membership: z.object({
-      height: z.number(),
-      view: z.number(),
-      epoch: z.number(),
-      view_hash: z.string().nullable(),
-    }),
-    prf: z.object({
-      height: z.number(),
-      view: z.number(),
-      epoch_seed: z.string().nullable(),
-    }),
-    gossip_fallback_total: z.number(),
-    bg_post_inline_post_total: z.number().default(0),
-    bg_post_inline_broadcast_total: z.number().default(0),
-    block_created_dropped_by_lock_total: z.number(),
-    block_created_hint_mismatch_total: z.number(),
-    block_created_proposal_mismatch_total: z.number(),
-    settlement: SettlementSnapshot,
-    pacemaker_backpressure_deferrals_total: z.number(),
-    rbc_retry_attempts_total: z.number().default(0),
-    rbc_retry_abort_total: z.number().default(0),
-    da_reschedule_total: z.number(),
-    rbc_store: SumeragiRbcStoreSnapshot,
-    view_change_proof_accepted_total: z.number(),
-    view_change_proof_stale_total: z.number(),
-    view_change_proof_rejected_total: z.number(),
-    view_change_suggest_total: z.number(),
-    view_change_install_total: z.number(),
-    collectors_targeted_current: z.number().nullable().optional(),
-    collectors_targeted_last_per_block: z.number().nullable().optional(),
-    redundant_sends_total: z.number().optional(),
-    vrf_penalty_epoch: z.number(),
-    vrf_committed_no_reveal_total: z.number(),
-    vrf_no_participation_total: z.number(),
-    vrf_late_reveals_total: z.number(),
-    consensus_penalties_applied_total: z.number().default(0),
-    consensus_penalties_pending: z.number().default(0),
-    vrf_penalties_applied_total: z.number().default(0),
-    vrf_penalties_pending: z.number().default(0),
-    lane_governance_sealed_total: z.number().default(0),
-    lane_governance_sealed_aliases: z.string().array().default([]),
-    lane_governance: SumeragiLaneGovernanceEntry.array().default([]),
-    nexus_fee: SumeragiNexusFeeSnapshot.default(defaultNexusFeeSnapshot),
-    nexus_staking: SumeragiNexusStakingSnapshot.default(defaultNexusStakingSnapshot),
-    npos_election: SumeragiNposElectionSnapshot.nullable(),
-  })
-  .passthrough();
-
-export const SumeragiStatus = z.preprocess((input) => {
-  if (!input || typeof input !== 'object') return input;
-
-  const payload = { ...(input as Record<string, unknown>) };
-  if (payload.bg_post_inline_post_total === undefined && payload.bg_post_drop_post_total !== undefined) {
-    payload.bg_post_inline_post_total = payload.bg_post_drop_post_total;
-  }
-  if (payload.bg_post_inline_broadcast_total === undefined && payload.bg_post_drop_broadcast_total !== undefined) {
-    payload.bg_post_inline_broadcast_total = payload.bg_post_drop_broadcast_total;
-  }
-
-  return payload;
-}, SumeragiStatusSchema);
-export type SumeragiStatus = z.infer<typeof SumeragiStatus>;
-
-const SumeragiAvailabilityCollector = z.object({
-  collector_idx: z.number(),
-  peer_id: z.string(),
-  votes_ingested: z.number(),
-});
-
-const SumeragiQcLatency = z.object({
-  kind: z.string(),
-  last_ms: z.number(),
-});
-
-const SumeragiVrfSummary = z.object({
-  found: z.boolean(),
-  epoch: z.number(),
-  finalized: z.boolean(),
-  seed_hex: z.string().nullable(),
-  epoch_length: z.number(),
-  commit_deadline_offset: z.number(),
-  reveal_deadline_offset: z.number(),
-  roster_len: z.number(),
-  updated_at_height: z.number(),
-  participants_total: z.number(),
-  commitments_total: z.number(),
-  reveals_total: z.number(),
-  late_reveals_total: z.number(),
-  committed_no_reveal: z.number().array(),
-  no_participation: z.number().array(),
-  late_reveals: z
-    .object({
-      signer: z.number(),
-      noted_at_height: z.number(),
-    })
-    .array(),
-});
-
-export const SumeragiTelemetry = z.object({
-  availability: z.object({
-    total_votes_ingested: z.number(),
-    collectors: SumeragiAvailabilityCollector.array(),
-  }),
-  qc_latency_ms: SumeragiQcLatency.array(),
-  rbc_backlog: z.object({
-    pending_sessions: z.number(),
-    total_missing_chunks: z.number(),
-    max_missing_chunks: z.number(),
-  }),
-  vrf: SumeragiVrfSummary,
-});
-export type SumeragiTelemetry = z.infer<typeof SumeragiTelemetry>;
 
 export interface InstructionsSearchParams extends CursorPaginationParams {
   /** Committed upper bound shared across independently filtered scans. */
@@ -1535,43 +1264,6 @@ export const ContractCodeView = z.object({
 });
 export type ContractCodeView = z.infer<typeof ContractCodeView>;
 
-export const SubmitVerifiedContractSource = z.object({
-  language: z.string(),
-  source_name: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((value) => value ?? null),
-  source_text: z.string(),
-});
-export type SubmitVerifiedContractSource = z.infer<typeof SubmitVerifiedContractSource>;
-
-export const ContractVerifiedSourceJobResponse = z.object({
-  job_id: z.string(),
-  code_hash: z.string(),
-  status: z.string(),
-  submitted_at: z.string(),
-  completed_at: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((value) => value ?? null),
-  message: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((value) => value ?? null),
-  actual_code_hash: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((value) => value ?? null),
-  verified_source_ref: ContractVerifiedSourceRef.nullable()
-    .optional()
-    .transform((value) => value ?? null),
-});
-export type ContractVerifiedSourceJobResponse = z.infer<typeof ContractVerifiedSourceJobResponse>;
-
 export const KaigiRelayStatus = z.enum(['Healthy', 'Degraded', 'Unavailable']);
 export type KaigiRelayStatus = z.infer<typeof KaigiRelayStatus>;
 
@@ -1704,22 +1396,29 @@ export type NexusDataspacesAccountSummary = z.infer<typeof NexusDataspacesAccoun
 
 // Public status includes the universal dataspace (zero) and full-width u64 IDs.
 // Unsafe numbers have already lost identity and must never be converted to text.
-export const DataspaceId = z.union([z.string(), z.bigint(), z.number().int().safe()])
+export const DataspaceId = z
+  .union([z.string(), z.bigint(), z.number().int().safe()])
   .transform(String)
-  .pipe(z.string().refine(
-    (value) => /^(0|[1-9][0-9]{0,19})$/u.test(value) && BigInt(value) <= (1n << 64n) - 1n,
-    'expected an exact canonical u64 decimal dataspace ID'
-  ));
+  .pipe(
+    z
+      .string()
+      .refine(
+        (value) => /^(0|[1-9][0-9]{0,19})$/u.test(value) && BigInt(value) <= (1n << 64n) - 1n,
+        'expected an exact canonical u64 decimal dataspace ID'
+      )
+  );
 
-export const NexusDataspaceCatalogEntry = z.object({
-  lane_id: z.number().int().nonnegative(),
-  dataspace_id: DataspaceId,
-  alias: z.string().nullable(),
-  visibility: z.enum(['public', 'restricted']).optional(),
-  manifest_required: z.boolean().optional(),
-  manifest_ready: z.boolean().optional(),
-  manifest_path: z.string().nullable().optional(),
-}).passthrough();
+export const NexusDataspaceCatalogEntry = z
+  .object({
+    lane_id: z.number().int().nonnegative(),
+    dataspace_id: DataspaceId,
+    alias: z.string().nullable(),
+    visibility: z.enum(['public', 'restricted']).optional(),
+    manifest_required: z.boolean().optional(),
+    manifest_ready: z.boolean().optional(),
+    manifest_path: z.string().nullable().optional(),
+  })
+  .passthrough();
 
 export const NexusStatusDataspaceBacklog = z.object({
   lane_id: z.number(),
@@ -1851,1045 +1550,1342 @@ export const SorafsAttestation = z.object({
 });
 export type SorafsAttestation = z.infer<typeof SorafsAttestation>;
 
-export const SorafsManifestState = z.enum(['pending', 'approved', 'retired']);
-export type SorafsManifestState = z.infer<typeof SorafsManifestState>;
+const SafeU64 = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+const MAX_U64_VALUE = (1n << 64n) - 1n;
+const LosslessU64 = z
+  .union([z.number().int().min(0).max(Number.MAX_SAFE_INTEGER), z.bigint().min(0n).max(MAX_U64_VALUE)])
+  .transform((value) => value.toString(10));
+const PositiveLosslessU64 = LosslessU64.refine((value) => value !== '0', 'expected a non-zero u64');
+const CanonicalU64Decimal = z
+  .string()
+  .regex(/^(?:0|[1-9]\d*)$/u, 'expected a canonical unsigned decimal integer')
+  .refine((value) => BigInt(value) <= MAX_U64_VALUE, 'integer exceeds the unsigned 64-bit domain');
+const LowerHex32 = z.string().regex(/^[0-9a-f]{64}$/u, 'expected lowercase 32-byte hex');
+const ExactNonEmptyString = z
+  .string()
+  .min(1)
+  .refine((value) => value.trim() === value, 'expected an exact non-empty string');
 
-export const SorafsManifestStatus = z.object({
-  state: SorafsManifestState,
-  epoch: z.number().nullable().optional(),
-});
-export type SorafsManifestStatus = z.infer<typeof SorafsManifestStatus>;
+const CONTRACT_ADDRESS_HRP = 'irohac';
+const CONTRACT_ADDRESS_VERSION_V1 = 1;
+const CONTRACT_ADDRESS_PAYLOAD_BYTES_V1 = 29;
+const BECH32M_CONSTANT = 0x2bc8_30a3;
+const BECH32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+const BECH32_GENERATORS = [0x3b6a_57b2, 0x2650_8e6d, 0x1ea1_19fa, 0x3d42_33dd, 0x2a14_62b3] as const;
 
-const SorafsLineageSuccessor = z.object({
-  digest_hex: z.string(),
-  status: SorafsManifestStatus,
-  approved_epoch: z.number().nullable(),
-  approved_at: z.string().nullable(),
-  status_timestamp_unix: z.number().nullable(),
-});
-
-const SorafsLineage = z.object({
-  successor_of_hex: z.string().nullable(),
-  head_hex: z.string(),
-  depth_to_head: z.number().nullable(),
-  is_head: z.boolean(),
-  superseded_by: SorafsLineageSuccessor.nullable(),
-  immediate_successor: SorafsLineageSuccessor.nullable(),
-  anomalies: z.string().array(),
-});
-
-const SorafsChunkerHandle = z.object({
-  profile_id: z.number(),
-  namespace: z.string(),
-  name: z.string(),
-  semver: z.string(),
-  multihash_code: z.number(),
-});
-
-const SorafsAliasBinding = z.object({
-  namespace: z.string(),
-  name: z.string(),
-  proof_b64: z.string(),
-});
-
-const SorafsGovernanceRef = z.object({
-  cid: z.string().nullable(),
-  kind: z.string(),
-  effective_at: z.string().nullable(),
-  effective_at_unix: z.number().nullable(),
-  targets: z
-    .object({
-      alias: z.string().optional(),
-      pin_digest_hex: z.string().optional(),
-    })
-    .optional(),
-  signers: z.string().array(),
-});
-
-export const SorafsManifest = z.object({
-  digest_hex: z.string(),
-  chunker: SorafsChunkerHandle,
-  chunk_digest_sha3_256_hex: z.string(),
-  pin_policy: Metadata,
-  submitted_by: z.string(),
-  submitted_epoch: z.number(),
-  status: SorafsManifestStatus,
-  metadata: Metadata,
-  alias: SorafsAliasBinding.nullable(),
-  successor_of_hex: z.string().nullable(),
-  status_timestamp_unix: z.number().nullable(),
-  governance_refs: SorafsGovernanceRef.array(),
-  council_envelope_digest_hex: z.string().nullable(),
-  lineage: SorafsLineage.optional(),
-});
-export type SorafsManifest = z.infer<typeof SorafsManifest>;
-
-export const SorafsAliasRecord = z.object({
-  alias: z.string(),
-  namespace: z.string(),
-  name: z.string(),
-  manifest_digest_hex: z.string(),
-  bound_by: z.string(),
-  bound_epoch: z.number(),
-  expiry_epoch: z.number(),
-  proof_b64: z.string(),
-});
-export type SorafsAliasRecord = z.infer<typeof SorafsAliasRecord>;
-
-export const SorafsReplicationStatus = z.object({
-  state: z.enum(['pending', 'completed', 'expired']),
-  epoch: z.number().nullable().optional(),
-});
-export type SorafsReplicationStatus = z.infer<typeof SorafsReplicationStatus>;
-
-const SorafsReplicationReceipt = z.object({
-  provider_hex: z.string(),
-  status: z.string(),
-  timestamp: z.number(),
-  por_sample_digest_hex: z.string().nullable(),
-});
-
-export const SorafsReplicationOrder = z.object({
-  order_id_hex: z.string(),
-  manifest_digest_hex: z.string(),
-  issued_by: z.string(),
-  issued_epoch: z.number(),
-  deadline_epoch: z.number(),
-  status: SorafsReplicationStatus,
-  canonical_order_b64: z.string(),
-  order: z.record(z.string(), z.any()),
-  receipts: SorafsReplicationReceipt.array(),
-  providers: z.string().array(),
-});
-export type SorafsReplicationOrder = z.infer<typeof SorafsReplicationOrder>;
-
-export const SorafsPinRegistryResponse = z.object({
-  attestation: SorafsAttestation,
-  total_count: z.number(),
-  returned_count: z.number(),
-  offset: z.number(),
-  limit: z.number(),
-  manifests: SorafsManifest.array(),
-});
-export type SorafsPinRegistryResponse = z.infer<typeof SorafsPinRegistryResponse>;
-
-export const SorafsAliasResponse = z.object({
-  attestation: SorafsAttestation,
-  total_count: z.number(),
-  returned_count: z.number(),
-  offset: z.number(),
-  limit: z.number(),
-  aliases: SorafsAliasRecord.array(),
-});
-export type SorafsAliasResponse = z.infer<typeof SorafsAliasResponse>;
-
-export const SorafsReplicationResponse = z.object({
-  attestation: SorafsAttestation,
-  total_count: z.number(),
-  returned_count: z.number(),
-  offset: z.number(),
-  limit: z.number(),
-  replication_orders: SorafsReplicationOrder.array(),
-});
-export type SorafsReplicationResponse = z.infer<typeof SorafsReplicationResponse>;
-
-export const SorafsStorageManifestFile = z.object({
-  path: z.string().array(),
-  offset: z.number(),
-  size: z.number(),
-  first_chunk: z.number(),
-  chunk_count: z.number(),
-});
-export type SorafsStorageManifestFile = z.infer<typeof SorafsStorageManifestFile>;
-
-export const SorafsStorageManifestResponse = z.object({
-  manifest_id_hex: z.string(),
-  manifest_b64: z.string(),
-  manifest_digest_hex: z.string(),
-  payload_digest_hex: z.string(),
-  content_length: z.number(),
-  chunk_count: z.number(),
-  chunk_profile_handle: z.string(),
-  stored_at_unix_secs: z.number(),
-  files: SorafsStorageManifestFile.array(),
-});
-export type SorafsStorageManifestResponse = z.infer<typeof SorafsStorageManifestResponse>;
-
-export const SorafsCidLookupModerationStatus = z.enum(['clear', 'local_blocked', 'global_blocked', 'mixed_blocked']);
-export type SorafsCidLookupModerationStatus = z.infer<typeof SorafsCidLookupModerationStatus>;
-
-export const SorafsCidLookupModerationScope = z.enum(['local', 'global']);
-export type SorafsCidLookupModerationScope = z.infer<typeof SorafsCidLookupModerationScope>;
-
-export const SorafsCidLookupModerationMatchKind = z.enum(['cid', 'manifest_digest']);
-export type SorafsCidLookupModerationMatchKind = z.infer<typeof SorafsCidLookupModerationMatchKind>;
-
-export const SorafsCidLookupModerationPolicyTier = z.enum(['standard', 'emergency', 'permanent']);
-export type SorafsCidLookupModerationPolicyTier = z.infer<typeof SorafsCidLookupModerationPolicyTier>;
-
-export const SorafsCidLookupModerationMatch = z.object({
-  scope: SorafsCidLookupModerationScope,
-  match_kind: SorafsCidLookupModerationMatchKind,
-  pack_id: NullableString,
-  policy_tier: SorafsCidLookupModerationPolicyTier,
-  reason: NullableString,
-  jurisdiction: NullableString,
-  issued_at: NullableString,
-  expires_at: NullableString,
-  review_due_at: NullableString,
-  issued_by_proposal_id: NullableString,
-  review_reference: NullableString,
-  governance_reference: NullableString,
-  pack_manifest_cid: NullableString,
-  merkle_root: NullableString,
-});
-export type SorafsCidLookupModerationMatch = z.infer<typeof SorafsCidLookupModerationMatch>;
-
-export const SorafsCidLookupModeration = z.object({
-  status: SorafsCidLookupModerationStatus,
-  public_links_enabled: z.boolean(),
-  matches: SorafsCidLookupModerationMatch.array(),
-});
-export type SorafsCidLookupModeration = z.infer<typeof SorafsCidLookupModeration>;
-
-export const SorafsCidLookupResponse = z.object({
-  content_cid: z.string(),
-  manifest_digest_hex: z.string(),
-  manifest_id_hex: z.string(),
-  index_document: NullableString,
-  files: SorafsStorageManifestFile.array(),
-  moderation: SorafsCidLookupModeration.nullish().transform((value) => value ?? null),
-});
-export type SorafsCidLookupResponse = z.infer<typeof SorafsCidLookupResponse>;
-
-function normalizeHashLike32(value: string, name: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) throw new Error(`${name} must not be empty`);
-
-  const hashLiteralMatch = /^hash:([0-9a-fA-F]{64})#[0-9a-fA-F]{4}$/u.exec(trimmed);
-  if (hashLiteralMatch?.[1]) return hashLiteralMatch[1].toLowerCase();
-
-  const hexValue = trimmed.startsWith('0x') ? trimmed.slice(2) : trimmed;
-  if (/^[0-9a-fA-F]{64}$/u.test(hexValue)) return hexValue.toLowerCase();
-
-  throw new Error(`${name} must be a 32-byte hex string or canonical hash literal`);
+function bech32Polymod(values: readonly number[]): number {
+  let checksum = 1;
+  for (const value of values) {
+    const top = checksum >>> 25;
+    checksum = ((checksum & 0x1ff_ffff) << 5) ^ value;
+    for (let index = 0; index < BECH32_GENERATORS.length; index += 1) {
+      if (((top >>> index) & 1) !== 0) checksum ^= BECH32_GENERATORS[index]!;
+    }
+  }
+  return checksum >>> 0;
 }
 
-const HashLike32String = z.string().transform((value, ctx) => {
+function decodeBech32Payload(values: readonly number[]): number[] | null {
+  const output: number[] = [];
+  let accumulator = 0;
+  let bits = 0;
+  for (const value of values) {
+    accumulator = (accumulator << 5) | value;
+    bits += 5;
+    while (bits >= 8) {
+      bits -= 8;
+      output.push((accumulator >>> bits) & 0xff);
+    }
+    accumulator &= bits === 0 ? 0 : (1 << bits) - 1;
+  }
+  if (bits >= 5 || (bits > 0 && accumulator !== 0)) return null;
+  return output;
+}
+
+function isCanonicalContractAddress(value: string): boolean {
+  if (value.length === 0 || value.length > 90 || value !== value.toLowerCase()) return false;
+  const separator = value.lastIndexOf('1');
+  if (separator <= 0 || separator > 83 || separator + 7 > value.length) return false;
+
+  const hrp = value.slice(0, separator);
+  if (hrp !== CONTRACT_ADDRESS_HRP) return false;
+  if (
+    ![...hrp].every((character) => {
+      const codePoint = character.codePointAt(0)!;
+      return codePoint >= 33 && codePoint <= 126;
+    })
+  ) {
+    return false;
+  }
+
+  const values: number[] = [];
+  for (const character of value.slice(separator + 1)) {
+    const index = BECH32_CHARSET.indexOf(character);
+    if (index < 0) return false;
+    values.push(index);
+  }
+  const expandedHrp = [
+    ...Array.from(hrp, (character) => character.codePointAt(0)! >>> 5),
+    0,
+    ...Array.from(hrp, (character) => character.codePointAt(0)! & 0x1f),
+  ];
+  if (bech32Polymod([...expandedHrp, ...values]) !== BECH32M_CONSTANT) return false;
+
+  const payload = decodeBech32Payload(values.slice(0, -6));
+  return payload?.length === CONTRACT_ADDRESS_PAYLOAD_BYTES_V1 && payload[0] === CONTRACT_ADDRESS_VERSION_V1;
+}
+
+function isCanonicalContractAlias(value: string): boolean {
+  if (value.trim() !== value || value.includes('@') || value.includes('#') || value.includes('$')) return false;
+  const separator = value.indexOf('::');
+  if (separator <= 0 || separator !== value.lastIndexOf('::') || separator + 2 >= value.length) return false;
+
+  const name = value.slice(0, separator);
+  const scope = value.slice(separator + 2).split('.');
+  if (scope.length < 1 || scope.length > 2) return false;
+  return [name, ...scope].every(
+    (segment) => !segment.includes(':') && !segment.includes('.') && isCanonicalName(segment)
+  );
+}
+export const ContractAddressSchema = z
+  .string()
+  .refine(isCanonicalContractAddress, 'expected a canonical lowercase V1 irohac Bech32m address');
+export const ContractAliasSchema = z.string().refine(isCanonicalContractAlias, 'expected a canonical contract alias');
+
+export const AccountQrSnapshot = z
+  .object({
+    canonicalId: CanonicalAccountId,
+    literal: CanonicalAccountId,
+    networkPrefix: U16,
+    errorCorrection: z.literal('M'),
+    modules: z.literal(192),
+    qrVersion: z.number().int().min(1).max(40),
+    svg: z.string().min(1).startsWith('<svg'),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.canonicalId !== value.literal) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['literal'],
+        message: 'QR literal must match the canonical account id',
+      });
+    }
+  });
+export type AccountQrSnapshot = z.infer<typeof AccountQrSnapshot>;
+
+export const AccountQrResponse = z
+  .object({
+    canonical_id: CanonicalAccountId,
+    literal: CanonicalAccountId,
+    network_prefix: U16,
+    error_correction: z.string(),
+    modules: U32,
+    qr_version: z.number().int().min(1).max(255),
+    svg: z.string(),
+  })
+  .strict()
+  .transform((value) => ({
+    canonicalId: value.canonical_id,
+    literal: value.literal,
+    networkPrefix: value.network_prefix,
+    errorCorrection: value.error_correction,
+    modules: value.modules,
+    qrVersion: value.qr_version,
+    svg: value.svg,
+  }))
+  .pipe(AccountQrSnapshot);
+
+const UpperHex32 = z
+  .string()
+  .regex(/^[0-9A-F]{64}$/u, 'expected uppercase 32-byte hex')
+  .refine((value) => normalizeIrohaHash32(value) !== null, 'expected a marked Iroha Hash');
+
+export const ConfidentialPolicyTransition = z
+  .object({
+    transition_id: UpperHex32,
+    previous_mode: ConfidentialPolicyMode,
+    new_mode: ConfidentialPolicyMode,
+    effective_height: PositiveLosslessU64,
+    conversion_window: LosslessU64.nullable(),
+    window_open_height: LosslessU64.nullable(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if ((value.conversion_window === null) !== (value.window_open_height === null)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'conversion_window and window_open_height must both be null or both be present',
+        path: ['window_open_height'],
+      });
+      return;
+    }
+
+    if (value.conversion_window !== null && value.window_open_height !== null) {
+      const effectiveHeight = BigInt(value.effective_height);
+      const conversionWindow = BigInt(value.conversion_window);
+      const expectedWindowOpen = effectiveHeight > conversionWindow ? effectiveHeight - conversionWindow : 0n;
+      if (value.window_open_height !== expectedWindowOpen.toString(10)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'window_open_height must equal the saturating effective-height minus conversion-window value',
+          path: ['window_open_height'],
+        });
+      }
+    }
+  });
+
+export type ConfidentialPolicyTransition = z.infer<typeof ConfidentialPolicyTransition>;
+
+/** Exact DTO emitted by `/v1/confidential/assets/{definition_id}/transitions`. */
+export const ConfidentialAssetPolicy = z
+  .object({
+    asset_id: AssetDefinitionIdSchema,
+    block_height: LosslessU64,
+    current_mode: ConfidentialPolicyMode,
+    effective_mode: ConfidentialPolicyMode,
+    vk_set_hash: UpperHex32.nullable(),
+    poseidon_params_id: U32.nullable(),
+    pedersen_params_id: U32.nullable(),
+    pending_transition: ConfidentialPolicyTransition.nullable(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const transition = value.pending_transition;
+    if (transition === null) {
+      if (value.effective_mode !== value.current_mode) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'effective_mode must equal current_mode when no transition is pending',
+          path: ['effective_mode'],
+        });
+      }
+      return;
+    }
+
+    if (transition.previous_mode !== value.current_mode) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'pending transition previous_mode must equal current_mode',
+        path: ['pending_transition', 'previous_mode'],
+      });
+    }
+
+    const schedulesShieldedOnly = value.current_mode === 'Convertible' && transition.new_mode === 'ShieldedOnly';
+    const schedulesConvertible = value.current_mode === 'ShieldedOnly' && transition.new_mode === 'Convertible';
+    if (!schedulesShieldedOnly && !schedulesConvertible) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'pending transition must follow the confidential-policy ABI V1 state machine',
+        path: ['pending_transition', 'new_mode'],
+      });
+    }
+
+    if (schedulesShieldedOnly) {
+      if (
+        transition.conversion_window === null ||
+        transition.conversion_window === '0' ||
+        BigInt(transition.conversion_window) > BigInt(transition.effective_height)
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'a ShieldedOnly transition requires a positive conversion window no greater than its height',
+          path: ['pending_transition', 'conversion_window'],
+        });
+      }
+    } else if (schedulesConvertible && transition.conversion_window !== null) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'a Convertible transition must not include a conversion window',
+        path: ['pending_transition', 'conversion_window'],
+      });
+    }
+
+    const expectedEffectiveMode =
+      BigInt(value.block_height) >= BigInt(transition.effective_height) ? transition.new_mode : value.current_mode;
+    if (value.effective_mode !== expectedEffectiveMode) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'effective_mode must match the mode effective at block_height',
+        path: ['effective_mode'],
+      });
+    }
+  });
+
+export type ConfidentialAssetPolicy = z.infer<typeof ConfidentialAssetPolicy>;
+
+const VpnExitClass = z.enum(['standard', 'low-latency', 'high-security']);
+
+function isCanonicalEd25519PublicKeyHex(value: string): boolean {
+  if (!/^[0-9a-f]{64}$/u.test(value)) return false;
   try {
-    return normalizeHashLike32(value, 'hash');
-  } catch (error) {
-    ctx.addIssue({
-      code: 'custom',
-      message: error instanceof Error ? error.message : 'invalid hash',
-    });
-    return z.NEVER;
+    const publicKey = Uint8Array.from({ length: 32 }, (_, index) =>
+      Number.parseInt(value.slice(index * 2, index * 2 + 2), 16)
+    );
+    AccountAddress.fromAccount({ publicKey, algorithm: 'ed25519' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isCanonicalVpnDnsName(value: string): boolean {
+  if (value.length === 0 || value.length > 253 || value !== value.toLowerCase()) return false;
+  return value
+    .split('.')
+    .every((label) => label.length > 0 && label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/u.test(label));
+}
+
+function isCanonicalVpnRelayEndpoint(value: string): boolean {
+  const match = /^\/(ip4|ip6|dns|dns4|dns6)\/([^/]+)\/udp\/([1-9][0-9]{0,4})\/quic$/u.exec(value);
+  if (!match) return false;
+
+  const [, protocol, host, portLiteral] = match;
+  const port = Number(portLiteral);
+  if (!Number.isSafeInteger(port) || port > 65_535) return false;
+
+  if (protocol === 'ip4') {
+    const octets = host.split('.');
+    return (
+      octets.length === 4 && octets.every((octet) => /^(?:0|[1-9][0-9]{0,2})$/u.test(octet) && Number(octet) <= 255)
+    );
+  }
+  if (protocol === 'ip6') {
+    try {
+      return host === host.toLowerCase() && new URL(`https://[${host}]/`).hostname === `[${host}]`;
+    } catch {
+      return false;
+    }
+  }
+  return isCanonicalVpnDnsName(host);
+}
+
+const VpnRelayEndpoint = z.union([
+  z.literal(''),
+  z.string().refine(isCanonicalVpnRelayEndpoint, 'expected a canonical VPN QUIC multiaddress'),
+]);
+const VpnRelayIdHex = z.union([
+  z.literal(''),
+  z.string().refine(isCanonicalEd25519PublicKeyHex, 'expected a canonical Ed25519 relay public key'),
+]);
+const VpnMldsa65PublicKeyHex = z
+  .string()
+  .refine(
+    (value) => value === '' || (/^[0-9a-f]{3904}$/u.test(value) && !/^0+$/u.test(value)),
+    'expected an empty value or a nonzero lowercase ML-DSA-65 public key'
+  );
+const VpnTrustDigestHex = z.union([
+  z.literal(''),
+  LowerHex32.refine((value) => !/^0+$/u.test(value), 'VPN trust digests must not be all zero'),
+]);
+const VpnTlsServerName = z.union([
+  z.literal(''),
+  z.string().refine(isCanonicalVpnDnsName, 'expected a canonical lowercase DNS name'),
+]);
+
+/** Exact Norito JSON response emitted by public `GET /v1/vpn/profile`. */
+export const VpnProfile = z
+  .object({
+    available: z.boolean(),
+    relay_endpoint: VpnRelayEndpoint,
+    supported_exit_classes: VpnExitClass.array()
+      .length(3)
+      .refine((items) => new Set(items).size === 3),
+    default_exit_class: VpnExitClass,
+    lease_secs: U32.positive(),
+    dns_push_interval_secs: SafeU64.min(30),
+    meter_family: ExactNonEmptyString,
+    route_pushes: z.string().array(),
+    excluded_routes: z.string().array(),
+    dns_servers: z.string().array(),
+    tunnel_addresses: z.string().array(),
+    mtu_bytes: z.literal(1280),
+    display_billing_label: ExactNonEmptyString,
+    operator_account_id: CanonicalAccountId,
+    lease_fee: QuantityValue,
+    settlement_grace_secs: SafeU64.positive(),
+    flow_label_bits: z.literal(24),
+    padding_budget_ms: U16.positive(),
+    relay_id_hex: VpnRelayIdHex,
+    relay_mldsa65_public_key_hex: VpnMldsa65PublicKeyHex,
+    descriptor_commit_hex: VpnTrustDigestHex,
+    tls_server_name: VpnTlsServerName,
+    relay_tls_spki_sha256_hex: VpnTrustDigestHex,
+    relay_certificate_sha256_hex: VpnTrustDigestHex,
+    directory_snapshot_digest_hex: VpnTrustDigestHex,
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const trustFields: Array<keyof typeof value> = [
+      'relay_endpoint',
+      'relay_id_hex',
+      'relay_mldsa65_public_key_hex',
+      'descriptor_commit_hex',
+      'tls_server_name',
+      'relay_tls_spki_sha256_hex',
+      'relay_certificate_sha256_hex',
+      'directory_snapshot_digest_hex',
+    ];
+    for (const field of trustFields) {
+      const isEmpty = value[field] === '';
+      if (isEmpty === value.available) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [field],
+          message: value.available
+            ? 'available VPN profiles require the complete relay trust tuple'
+            : 'unavailable VPN profiles must not publish a partial relay trust tuple',
+        });
+      }
+    }
+  });
+export type VpnProfile = z.infer<typeof VpnProfile>;
+
+const SystemParameterAlgorithm = z.enum([
+  'ed25519',
+  'secp256k1',
+  'bls_normal',
+  'bls_small',
+  'ml-dsa',
+  'gost3410-2012-256-paramset-a',
+  'gost3410-2012-256-paramset-b',
+  'gost3410-2012-256-paramset-c',
+  'gost3410-2012-512-paramset-a',
+  'gost3410-2012-512-paramset-b',
+  'sm2',
+]);
+
+const PositiveSafeInteger = z.number().int().min(1).max(Number.MAX_SAFE_INTEGER);
+const NonNegativeSafeInteger = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+const SmartContractParameters = z
+  .object({
+    fuel: PositiveSafeInteger,
+    memory: PositiveSafeInteger,
+    execution_depth: z.number().int().min(0).max(0xff),
+    max_output_items: PositiveSafeInteger,
+    max_output_bytes: PositiveSafeInteger,
+  })
+  .strict();
+const CustomSystemParameter = z
+  .object({
+    id: CanonicalName,
+    payload: z.json(),
+  })
+  .strict();
+const CustomSystemParameters = z.record(CanonicalName, CustomSystemParameter).superRefine((parameters, ctx) => {
+  for (const [id, parameter] of Object.entries(parameters)) {
+    if (parameter.id !== id) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [id, 'id'],
+        message: 'custom parameter id must match its map key',
+      });
+    }
   }
 });
 
-const JsonRecord = z.record(z.string(), z.unknown());
-const JsonArray = z.array(z.unknown());
+/** Exact JSON snapshot returned by the signed `/v1/parameters` route. */
+export const SystemParameters = z
+  .object({
+    sumeragi: z
+      .object({
+        block_cadence_ms: PositiveSafeInteger,
+        max_clock_drift_ms: NonNegativeSafeInteger,
+        key_activation_lead_blocks: NonNegativeSafeInteger,
+        key_overlap_grace_blocks: NonNegativeSafeInteger,
+        key_expiry_grace_blocks: NonNegativeSafeInteger,
+        key_require_hsm: z.boolean(),
+        key_allowed_algorithms: SystemParameterAlgorithm.array(),
+        key_allowed_hsm_providers: z.string().array(),
+      })
+      .strict(),
+    block: z
+      .object({
+        max_transactions: PositiveSafeInteger,
+      })
+      .strict(),
+    transaction: z
+      .object({
+        max_signatures: PositiveSafeInteger,
+        max_instructions: PositiveSafeInteger,
+        ivm_bytecode_size: PositiveSafeInteger,
+        max_tx_bytes: PositiveSafeInteger,
+        max_decompressed_bytes: PositiveSafeInteger,
+        max_metadata_depth: z.number().int().min(1).max(0xffff),
+        max_time_to_live_ms: PositiveSafeInteger,
+        require_height_ttl: z.boolean(),
+        require_sequence: z.boolean(),
+      })
+      .strict(),
+    executor: SmartContractParameters,
+    smart_contract: SmartContractParameters,
+    custom: CustomSystemParameters.optional(),
+  })
+  .strict();
+export type SystemParameters = z.infer<typeof SystemParameters>;
 
-export const MinistryAgendaProposalDraftRequest = z.object({
-  proposal: JsonRecord,
-  authority: AccountIdSchema,
-});
-export type MinistryAgendaProposalDraftRequest = z.infer<typeof MinistryAgendaProposalDraftRequest>;
-
-export const MinistryAgendaProposalRecord = z.object({
-  proposal: JsonRecord,
-  authority: AccountIdSchema,
-  submitted_tx_hash_hex: HashLike32String,
-  submitted_height: z.number().int().nonnegative(),
-});
-export type MinistryAgendaProposalRecord = z.infer<typeof MinistryAgendaProposalRecord>;
-
-export const MinistryAgendaProposalDraftResponse = z.object({
-  ok: z.literal(true),
-  agenda_proposal_id: z.string(),
-  authority: AccountIdSchema,
-  tx_instructions: JsonArray,
-  signable_transaction_b64: z.string(),
-});
-export type MinistryAgendaProposalDraftResponse = z.infer<typeof MinistryAgendaProposalDraftResponse>;
-
-export const MinistryAgendaProposalGetResponse = z.object({
-  found: z.boolean(),
-  record: MinistryAgendaProposalRecord.nullable(),
-});
-export type MinistryAgendaProposalGetResponse = z.infer<typeof MinistryAgendaProposalGetResponse>;
-
-export const TransactionSubmissionReceiptResponse = z.object({
-  payload: z.object({
-    tx_hash: HashLike32String,
-    submitted_at_ms: z.number().int().nonnegative(),
-    submitted_at_height: z.number().int().nonnegative(),
-    signer: z.string(),
-  }),
-  signature: z.string(),
-});
-export type TransactionSubmissionReceiptResponse = z.infer<typeof TransactionSubmissionReceiptResponse>;
-
-export const PipelineTransactionStatusResponse = z.object({
-  hash: HashLike32String,
-  status: z.object({
-    kind: z.string(),
-    block_height: z
-      .number()
-      .int()
-      .nonnegative()
-      .nullable()
-      .optional()
-      .transform((value) => value ?? null),
-    rejection_reason: z
-      .unknown()
-      .nullable()
-      .optional()
-      .transform((value) => value ?? null),
-  }),
-  scope: z.string(),
-  resolved_from: z.string(),
-});
-export type PipelineTransactionStatusResponse = z.infer<typeof PipelineTransactionStatusResponse>;
-
-const SoracloudNullableString = z
+export const SoracleFeedIdSchema = CanonicalName;
+const SoracleFeedId = z.tuple([SoracleFeedIdSchema]);
+const SoracleFeedConfigVersion = z.tuple([U32]);
+const SoracleHash = z
   .string()
-  .nullish()
-  .transform((value) => value?.trim() || null);
-const SoracloudJsonRecord = z.record(z.string(), z.unknown());
-const SoracloudJsonRecordArray = SoracloudJsonRecord.array();
+  .regex(/^hash:[0-9A-F]{64}#[0-9A-F]{4}$/u, 'expected canonical Norito Hash text')
+  .refine((value) => normalizeIrohaHash32(value) !== null, 'expected a checksum-valid marked Iroha Hash');
+const CanonicalI128String = z
+  .string()
+  .regex(/^(?:0|-?[1-9]\d*)$/u, 'expected a canonical signed decimal integer')
+  .superRefine((value, ctx) => {
+    const integer = BigInt(value);
+    if (integer < -(1n << 127n) || integer > (1n << 127n) - 1n) {
+      ctx.addIssue({ code: 'custom', message: 'integer exceeds the signed 128-bit domain' });
+    }
+  });
+const SoracleObservationValue = z
+  .object({
+    mantissa: CanonicalI128String,
+    scale: U32,
+  })
+  .strict();
+const SoracleRiskClass = z
+  .object({
+    risk_class: z.enum(['Low', 'Medium', 'High']),
+    value: z.null(),
+  })
+  .strict();
+const SoracleAggregationRule = z.discriminatedUnion('aggregation_rule', [
+  z.object({ aggregation_rule: z.literal('MedianMad'), value: U16 }).strict(),
+  z.object({ aggregation_rule: z.literal('Percentile'), value: U16 }).strict(),
+]);
+const SoracleOutlierPolicy = z.discriminatedUnion('outlier_policy', [
+  z.object({ outlier_policy: z.literal('Mad'), value: U16 }).strict(),
+  z
+    .object({
+      outlier_policy: z.literal('Absolute'),
+      value: z.object({ max_delta: CanonicalI128String }).strict(),
+    })
+    .strict(),
+]);
 
-export interface SoracloudServiceConfigStatusQuery {
-  service_name: string;
-  config_name?: string;
+/** Exact Norito JSON returned by the signed `/v1/soracles/feeds` route. */
+export const SoracleFeedConfig = z
+  .object({
+    feed_id: SoracleFeedId,
+    feed_config_version: SoracleFeedConfigVersion,
+    providers: CanonicalAccountId.array(),
+    connector_id: z.string(),
+    connector_version: U32,
+    cadence_slots: PositiveLosslessU64,
+    aggregation: SoracleAggregationRule,
+    outlier_policy: SoracleOutlierPolicy,
+    min_signers: U16,
+    committee_size: U16,
+    risk_class: SoracleRiskClass,
+    max_observers: U16,
+    max_value_len: U16,
+    max_error_rate_bps: U16,
+    dispute_window_slots: PositiveLosslessU64,
+    replay_window_slots: PositiveLosslessU64,
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const uniqueProviders = new Set(value.providers);
+    if (value.providers.length === 0) {
+      ctx.addIssue({ code: 'custom', message: 'feed must list at least one provider', path: ['providers'] });
+    } else if (uniqueProviders.size !== value.providers.length) {
+      ctx.addIssue({ code: 'custom', message: 'feed providers must be unique', path: ['providers'] });
+    }
+    if (value.min_signers === 0) {
+      ctx.addIssue({ code: 'custom', message: 'min_signers must be non-zero', path: ['min_signers'] });
+    }
+    if (value.committee_size === 0) {
+      ctx.addIssue({ code: 'custom', message: 'committee_size must be non-zero', path: ['committee_size'] });
+    }
+    if (value.providers.length > value.max_observers) {
+      ctx.addIssue({ code: 'custom', message: 'providers must not exceed max_observers', path: ['providers'] });
+    }
+    if (value.committee_size > value.max_observers) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'committee_size must not exceed max_observers',
+        path: ['committee_size'],
+      });
+    }
+    if (value.committee_size > value.providers.length) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'committee_size must not exceed the provider count',
+        path: ['committee_size'],
+      });
+    }
+    if (value.min_signers > value.committee_size) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'min_signers must not exceed committee_size',
+        path: ['min_signers'],
+      });
+    }
+    if (value.max_error_rate_bps > 10_000) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'max_error_rate_bps must not exceed 10000',
+        path: ['max_error_rate_bps'],
+      });
+    }
+  });
+export type SoracleFeedConfig = z.infer<typeof SoracleFeedConfig>;
+
+export const SoracleFeedRegistry = SoracleFeedConfig.array().superRefine((feeds, ctx) => {
+  const seen = new Set<string>();
+  for (const [index, feed] of feeds.entries()) {
+    const id = feed.feed_id[0];
+    if (seen.has(id)) {
+      ctx.addIssue({ code: 'custom', path: [index, 'feed_id'], message: 'feed ids must be unique' });
+    }
+    seen.add(id);
+  }
+});
+export type SoracleFeedRegistry = z.infer<typeof SoracleFeedRegistry>;
+
+const SoracleObservationErrorCode = z.discriminatedUnion('error_code', [
+  z.object({ error_code: z.literal('ResourceUnavailable'), value: z.null() }).strict(),
+  z.object({ error_code: z.literal('AuthFailed'), value: z.null() }).strict(),
+  z.object({ error_code: z.literal('Timeout'), value: z.null() }).strict(),
+  z.object({ error_code: z.literal('Missing'), value: z.null() }).strict(),
+  z.object({ error_code: z.literal('Other'), value: U16 }).strict(),
+]);
+const SoracleReportEntry = z
+  .object({
+    oracle_id: CanonicalAccountId,
+    observation_hash: SoracleHash,
+    value: SoracleObservationValue,
+    outlier: z.boolean(),
+  })
+  .strict();
+const SoracleFeedEventOutcome = z
+  .discriminatedUnion('result', [
+    z
+      .object({
+        result: z.literal('Success'),
+        detail: z
+          .object({
+            value: SoracleObservationValue,
+            entries: SoracleReportEntry.array(),
+          })
+          .strict(),
+      })
+      .strict(),
+    z
+      .object({
+        result: z.literal('Error'),
+        detail: z.object({ code: SoracleObservationErrorCode }).strict(),
+      })
+      .strict(),
+    z.object({ result: z.literal('Missing'), detail: z.null() }).strict(),
+  ])
+  .superRefine((outcome, ctx) => {
+    if (outcome.result !== 'Success') return;
+
+    const { entries, value } = outcome.detail;
+    if (entries.length === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'successful feed events must contain entries',
+        path: ['detail', 'entries'],
+      });
+      return;
+    }
+    const seen = new Set<string>();
+    let hasInlier = false;
+    for (const [index, entry] of entries.entries()) {
+      if (seen.has(entry.oracle_id)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'successful feed-event providers must be unique',
+          path: ['detail', 'entries', index, 'oracle_id'],
+        });
+      }
+      seen.add(entry.oracle_id);
+      if (entry.value.scale !== value.scale) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'successful feed-event entries must share the aggregate scale',
+          path: ['detail', 'entries', index, 'value', 'scale'],
+        });
+      }
+      hasInlier ||= !entry.outlier;
+    }
+    if (!hasInlier) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'successful feed events must contain an inlier',
+        path: ['detail', 'entries'],
+      });
+    }
+  });
+
+/** Exact Norito JSON returned by the signed Soracles feed-history route. */
+export const SoracleFeedEvent = z
+  .object({
+    feed_id: SoracleFeedId,
+    feed_config_version: SoracleFeedConfigVersion,
+    slot: LosslessU64,
+    request_hash: SoracleHash,
+    outcome: SoracleFeedEventOutcome,
+  })
+  .strict();
+export type SoracleFeedEvent = z.infer<typeof SoracleFeedEvent>;
+
+/** Exact retained record returned by the signed Soracles feed-history route. */
+export const SoracleFeedEventRecord = z
+  .object({
+    event: SoracleFeedEvent,
+    recorded_at_ms: LosslessU64,
+    evidence_hashes: SoracleHash.array(),
+  })
+  .strict();
+export type SoracleFeedEventRecord = z.infer<typeof SoracleFeedEventRecord>;
+
+const DefiOracleDomain = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
+
+/** Exact query accepted by `/v1/soracles/defi/attestations/latest`. */
+export const DefiOracleAttestationLatestParamsSchema = z
+  .object({
+    domain: DefiOracleDomain,
+    subject_id: CanonicalU64Decimal,
+    status: U32.optional(),
+  })
+  .strict();
+export type DefiOracleAttestationLatestParams = z.infer<typeof DefiOracleAttestationLatestParamsSchema>;
+
+const DefiOracleAttestationSource = z
+  .object({
+    feed_id: SoracleFeedId,
+    slot: LosslessU64,
+    request_hash: SoracleHash,
+    field: z.string().min(1),
+  })
+  .strict();
+const Byte = z.number().int().min(0).max(0xff);
+const NonEmptyByteArray = Byte.array().min(1);
+const Ed25519SignatureBytes = Byte.array()
+  .length(64)
+  .refine((bytes) => bytes.some((byte) => byte !== 0), 'Ed25519 signature must not be all zero');
+const Ed25519PublicKeyBytes = Byte.array()
+  .length(32)
+  .refine((bytes) => bytes.some((byte) => byte !== 0), 'Ed25519 public key must not be all zero');
+const DefiOracleSubjectField = {
+  1: 'market_id',
+  2: 'series_id',
+  3: 'position_id',
+  4: 'policy_id',
+} as const;
+const DefiOracleDomainFields = {
+  1: ['mark_price_bps', 'index_price_bps', 'confidence_bps'],
+  2: ['final_mark', 'final_quote_mark'],
+  3: ['mark_price_bps'],
+  4: ['observed_price'],
+} as const;
+
+function readPayloadU64(payload: Record<string, unknown>, field: string): string | null {
+  const parsed = LosslessU64.safeParse(payload[field]);
+  return parsed.success ? parsed.data : null;
 }
 
-export interface SoracloudServiceSecretStatusQuery {
-  service_name: string;
-  secret_name?: string;
-}
-
-export interface SoracloudTrainingJobStatusQuery {
-  service_name: string;
-  job_id: string;
-}
-
-export interface SoracloudModelWeightStatusQuery {
-  service_name: string;
-  model_name: string;
-}
-
-export interface SoracloudModelArtifactStatusQuery {
-  service_name: string;
-  model_name?: string;
-  artifact_id?: string;
-  training_job_id?: string;
-  weight_version?: string;
-}
-
-export interface SoracloudUploadedModelStatusQuery {
-  service_name: string;
-  weight_version: string;
-  model_id?: string;
-  model_name?: string;
-  bundle_root?: string;
-  compile_profile_hash?: string;
-}
-
-export interface SoracloudPrivateInferenceStatusQuery {
-  session_id: string;
-}
-
-export interface SoracloudHfSharedLeaseStatusQuery {
-  repo_id: string;
-  revision?: string;
-  storage_class: string;
-  lease_term_ms: number;
-  account_id?: string;
-}
-
-export interface SoracloudModelHostStatusQuery {
-  account_id?: string;
-}
-
-export interface SoracloudAgentStatusQuery {
-  apartment_name?: string;
-}
-
-export interface SoracloudAgentMailboxStatusQuery {
-  apartment_name: string;
-}
-
-export interface SoracloudAgentAutonomyStatusQuery {
-  apartment_name: string;
-}
-
-export const SoracloudServiceHealth = z
+/** Exact Norito JSON returned by the signed latest-DeFi-attestation route. */
+export const DefiOracleAttestation = z
   .object({
-    mode: z.string(),
-    status: z.string(),
-    message: z.string(),
-    observed_height: z
-      .number()
-      .nullish()
-      .transform((value) => value ?? null),
-    observed_block_hash: SoracloudNullableString,
-    state_dir: SoracloudNullableString,
-    service_revisions: z.number().optional().default(0),
-    healthy_service_revisions: z.number().optional().default(0),
-    hydrating_service_revisions: z.number().optional().default(0),
-    degraded_service_revisions: z.number().optional().default(0),
-    unavailable_service_revisions: z.number().optional().default(0),
-    apartments: z.number().optional().default(0),
-    running_apartments: z.number().optional().default(0),
-    expired_apartments: z.number().optional().default(0),
+    key: z
+      .object({
+        domain: DefiOracleDomain,
+        subject_id: LosslessU64,
+      })
+      .strict(),
+    provider: CanonicalAccountId,
+    oracle_slot: LosslessU64,
+    status_flags: U32,
+    attestation_hash: PositiveLosslessU64,
+    oracle_payload: NonEmptyByteArray,
+    oracle_signature: Ed25519SignatureBytes,
+    signer_public_key: Ed25519PublicKeyBytes,
+    oracle_scheme: z.literal(1),
+    source_events: DefiOracleAttestationSource.array(),
   })
-  .passthrough();
-export type SoracloudServiceHealth = z.infer<typeof SoracloudServiceHealth>;
+  .strict()
+  .superRefine((value, ctx) => {
+    try {
+      const providerAddress = AccountAddress.fromAccountId(value.provider);
+      const signerAddress = AccountAddress.fromAccount({
+        publicKey: value.signer_public_key,
+        algorithm: 'ed25519',
+      });
+      if (providerAddress.canonicalHex() !== signerAddress.canonicalHex()) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'signer_public_key must be the provider single-signature controller',
+          path: ['signer_public_key'],
+        });
+      }
+    } catch {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'signer_public_key must be a canonical Ed25519 provider controller',
+        path: ['signer_public_key'],
+      });
+    }
 
-export const SoracloudRouting = z
-  .object({
-    nexus_enabled: z.boolean().optional().default(false),
-    lane_count: z.number().optional().default(0),
-    dataspace_count: z.number().optional().default(0),
-    routing_rules: z.number().optional().default(0),
-    default_lane_id: z.number().optional().default(0),
-    default_dataspace_id: z.number().optional().default(0),
-  })
-  .passthrough();
-export type SoracloudRouting = z.infer<typeof SoracloudRouting>;
+    try {
+      if (
+        !verifyEd25519(
+          Uint8Array.from(value.oracle_payload),
+          Uint8Array.from(value.oracle_signature),
+          Uint8Array.from(value.signer_public_key)
+        )
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'oracle_signature must verify over oracle_payload',
+          path: ['oracle_signature'],
+        });
+      }
+    } catch {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'oracle_signature must be a valid Ed25519 signature over oracle_payload',
+        path: ['oracle_signature'],
+      });
+    }
 
-export const SoracloudRuntimePressure = z
-  .object({
-    enabled: z.boolean().optional().default(false),
-    state_dir: SoracloudNullableString,
-    observed_height: z.number().optional().default(0),
-    service_revisions: z.number().optional().default(0),
-    apartments: z.number().optional().default(0),
-    max_load_factor_bps: z.number().optional().default(0),
-    reported_pending_mailbox_messages: z.number().optional().default(0),
-    authoritative_pending_mailbox_messages: z.number().optional().default(0),
-    bundle_cache_misses: z.number().optional().default(0),
-    artifact_cache_misses: z.number().optional().default(0),
-  })
-  .passthrough();
-export type SoracloudRuntimePressure = z.infer<typeof SoracloudRuntimePressure>;
+    if (value.source_events.length > 0) {
+      try {
+        const deterministicHash = deriveDefiOracleAttestationHash({
+          domain: value.key.domain,
+          subjectId: value.key.subject_id,
+          oracleSlot: value.oracle_slot,
+          statusFlags: value.status_flags,
+          sourceEvents: value.source_events.map((source) => ({
+            feedId: source.feed_id[0],
+            slot: source.slot,
+            requestHash: source.request_hash,
+            field: source.field,
+          })),
+        });
+        if (value.attestation_hash !== deterministicHash) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'source-backed attestation_hash must match the deterministic BLAKE3 derivation',
+            path: ['attestation_hash'],
+          });
+        }
+      } catch {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'source-backed attestation_hash inputs must be canonical',
+          path: ['attestation_hash'],
+        });
+      }
+    }
 
-export const SoracloudResourcePressure = z
-  .object({
-    queue_active: z.number().optional().default(0),
-    queue_queued: z.number().optional().default(0),
-    queue_capacity: z.number().optional().default(0),
-    queue_saturated: z.boolean().optional().default(false),
-    high_load_threshold: z.number().optional().default(0),
-    high_load: z.boolean().optional().default(false),
-    runtime: SoracloudRuntimePressure,
-  })
-  .passthrough();
-export type SoracloudResourcePressure = z.infer<typeof SoracloudResourcePressure>;
+    let decoded: unknown;
+    try {
+      const payloadText = new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(value.oracle_payload));
+      decoded = parseStrictLosslessJsonForValidation(payloadText, 'DeFi oracle payload');
+    } catch {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'oracle_payload must be valid integer-only compact JSON',
+        path: ['oracle_payload'],
+      });
+      return;
+    }
+    if (decoded === null || typeof decoded !== 'object' || Array.isArray(decoded)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'oracle_payload must decode to a JSON object',
+        path: ['oracle_payload'],
+      });
+      return;
+    }
 
-export const SoracloudFailedAdmissions = z
-  .object({
-    available: z.boolean().optional().default(false),
-    total: z.number().optional().default(0),
-    governance_manifest_rejected: z.number().optional().default(0),
-    sorafs_provider_rejected: z.number().optional().default(0),
-  })
-  .passthrough();
-export type SoracloudFailedAdmissions = z.infer<typeof SoracloudFailedAdmissions>;
+    const payload = decoded as Record<string, unknown>;
+    const subjectField = DefiOracleSubjectField[value.key.domain];
+    const expectedFields = [
+      ['domain', value.key.domain.toString(10)],
+      [subjectField, value.key.subject_id],
+      ['oracle_slot', value.oracle_slot],
+      ['status_flags', value.status_flags.toString(10)],
+      ['attestation_hash', value.attestation_hash],
+    ] as const;
+    for (const [field, expected] of expectedFields) {
+      if (readPayloadU64(payload, field) !== expected) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `oracle_payload ${field} must match the retained attestation`,
+          path: ['oracle_payload'],
+        });
+      }
+    }
+    for (const field of DefiOracleDomainFields[value.key.domain]) {
+      if (readPayloadU64(payload, field) === null) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `oracle_payload ${field} must be a u64 integer token`,
+          path: ['oracle_payload'],
+        });
+      }
+    }
+    for (const source of value.source_events) {
+      if (readPayloadU64(payload, source.field) === null) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `oracle_payload ${source.field} must be a u64 integer token`,
+          path: ['source_events'],
+        });
+      }
+    }
+  });
+export type DefiOracleAttestation = z.infer<typeof DefiOracleAttestation>;
 
-export const SoracloudControlPlaneServiceRevision = z
-  .object({
-    sequence: z.number(),
-    action: z.unknown(),
-    service_version: z.string(),
-    replicas: z.number().optional().default(0),
-    route_host: SoracloudNullableString,
-    route_path_prefix: SoracloudNullableString,
-    state_binding_count: z.number().optional().default(0),
-    signed_by: SoracloudNullableString,
-  })
-  .passthrough();
-export type SoracloudControlPlaneServiceRevision = z.infer<typeof SoracloudControlPlaneServiceRevision>;
+export const SorafsManifestState = z.enum(['pending', 'approved', 'retired']);
+export type SorafsManifestState = z.infer<typeof SorafsManifestState>;
 
-export const SoracloudControlPlaneService = z
-  .object({
-    service_name: z.string(),
-    current_version: z.string(),
-    revision_count: z.number(),
-    config_generation: z.number().optional().default(0),
-    secret_generation: z.number().optional().default(0),
-    config_entry_count: z.number().optional().default(0),
-    secret_entry_count: z.number().optional().default(0),
-    latest_revision: SoracloudControlPlaneServiceRevision.nullish().transform((value) => value ?? null),
-    active_rollout: z
-      .unknown()
-      .nullish()
-      .transform((value) => value ?? null),
-    last_rollout: z
-      .unknown()
-      .nullish()
-      .transform((value) => value ?? null),
-  })
-  .passthrough();
-export type SoracloudControlPlaneService = z.infer<typeof SoracloudControlPlaneService>;
+const FixedBytes32Hex = z
+  .array(z.number().int().min(0).max(255))
+  .length(32)
+  .transform((bytes) => bytes.map((byte) => byte.toString(16).padStart(2, '0')).join(''));
 
-export const SoracloudControlPlaneAuditEvent = z
-  .object({
-    sequence: z.number(),
-    action: z.unknown(),
-    service_name: z.string(),
-    from_version: SoracloudNullableString,
-    to_version: z.string(),
-    governance_tx_hash: SoracloudNullableString,
+const ManifestRootCidHex = z
+  .array(z.number().int().min(0).max(255))
+  .length(36)
+  .superRefine((bytes, ctx) => {
+    if (bytes[0] !== 1 || bytes[1] !== 0x71 || bytes[2] !== 0x1f || bytes[3] !== 32) {
+      ctx.addIssue({ code: 'custom', message: 'expected the canonical first-release SoraFS root CID layout' });
+    } else if (bytes.slice(4).every((byte) => byte === 0)) {
+      ctx.addIssue({ code: 'custom', message: 'SoraFS root CID digest must be non-zero' });
+    }
   })
-  .passthrough();
-export type SoracloudControlPlaneAuditEvent = z.infer<typeof SoracloudControlPlaneAuditEvent>;
+  .transform((bytes) => bytes.map((byte) => byte.toString(16).padStart(2, '0')).join(''));
 
-export const SoracloudControlPlane = z
-  .object({
-    schema_version: z.number(),
-    service_count: z.number(),
-    audit_event_count: z.number(),
-    services: SoracloudControlPlaneService.array().optional().default([]),
-    recent_audit_events: SoracloudControlPlaneAuditEvent.array().optional().default([]),
-  })
-  .passthrough();
-export type SoracloudControlPlane = z.infer<typeof SoracloudControlPlane>;
+export const SorafsPinStatus = z
+  .discriminatedUnion('status', [
+    z.object({ status: z.literal('Pending'), value: z.null() }).strict(),
+    z.object({ status: z.literal('Approved'), value: z.number().int().nonnegative() }).strict(),
+    z.object({ status: z.literal('Retired'), value: z.number().int().nonnegative() }).strict(),
+  ])
+  .transform((value) => ({
+    state: value.status.toLowerCase() as SorafsManifestState,
+    epoch: 'value' in value ? value.value : null,
+  }));
+export type SorafsPinStatus = z.infer<typeof SorafsPinStatus>;
 
-export const SoracloudRuntimeManager = z
+export const SorafsPinFinalizedCursor = z
   .object({
-    available: z.boolean().optional().default(false),
-    state_dir: SoracloudNullableString,
-    snapshot: z.unknown().optional(),
+    height: z.number().int().positive(),
+    block_hash: FixedBytes32Hex.refine((value) => !/^0+$/u.test(value), 'finalized block hash must be non-zero'),
   })
-  .passthrough();
-export type SoracloudRuntimeManager = z.infer<typeof SoracloudRuntimeManager>;
+  .strict();
+export type SorafsPinFinalizedCursor = z.infer<typeof SorafsPinFinalizedCursor>;
 
-export const SoracloudStatus = z
+export const SorafsPinResourceUsage = z
   .object({
-    schema_version: z.number(),
-    service_health: SoracloudServiceHealth,
-    routing: SoracloudRouting,
-    resource_pressure: SoracloudResourcePressure,
-    failed_admissions: SoracloudFailedAdmissions,
-    runtime_manager: SoracloudRuntimeManager,
-    control_plane: SoracloudControlPlane,
+    manifest_count: z.number().int().nonnegative(),
+    content_bytes: z.number().int().nonnegative(),
   })
-  .passthrough();
-export type SoracloudStatus = z.infer<typeof SoracloudStatus>;
+  .strict();
+export type SorafsPinResourceUsage = z.infer<typeof SorafsPinResourceUsage>;
 
-export const SoracloudServiceConfigStatusEntry = z
+export const SorafsPinManifestSummary = z
   .object({
-    config_name: z.string(),
-    value_hash: z.string(),
-    value_json: z.unknown(),
-    last_update_sequence: z.number(),
+    digest: FixedBytes32Hex,
+    submitted_by: CanonicalAccountId,
+    submitted_epoch: z.number().int().nonnegative(),
+    approved_epoch: z.number().int().nonnegative().nullable(),
+    content_length: z.number().int().nonnegative(),
+    retention_epoch: z.number().int().nonnegative(),
+    status: SorafsPinStatus,
+    successor_of: FixedBytes32Hex.nullable(),
   })
-  .passthrough();
-export type SoracloudServiceConfigStatusEntry = z.infer<typeof SoracloudServiceConfigStatusEntry>;
+  .strict();
+export type SorafsPinManifestSummary = z.infer<typeof SorafsPinManifestSummary>;
 
-export const SoracloudServiceConfigStatusResponse = z
+export const SorafsPinRegistryResponse = z
   .object({
-    schema_version: z.number(),
-    service_name: z.string(),
-    current_version: z.string(),
-    config_generation: z.number(),
-    config_entry_count: z.number(),
-    configs: SoracloudServiceConfigStatusEntry.array().optional().default([]),
+    finalized_cursor: SorafsPinFinalizedCursor,
+    charged_usage: SorafsPinResourceUsage,
+    manifests: SorafsPinManifestSummary.array().max(256),
+    has_more: z.boolean(),
+    next_after_digest: FixedBytes32Hex.nullable(),
   })
-  .passthrough();
-export type SoracloudServiceConfigStatusResponse = z.infer<typeof SoracloudServiceConfigStatusResponse>;
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.has_more !== (value.next_after_digest !== null)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'has_more must match next_after_digest availability',
+        path: ['has_more'],
+      });
+    }
+  });
+export type SorafsPinRegistryResponse = z.infer<typeof SorafsPinRegistryResponse>;
 
-export const SoracloudServiceSecretStatusEntry = z
-  .object({
-    secret_name: z.string(),
-    encryption: z.unknown(),
-    key_id: z.string(),
-    key_version: z.number(),
-    commitment: z.string(),
-    ciphertext_bytes: z.number(),
-    last_update_sequence: z.number(),
-  })
-  .passthrough();
-export type SoracloudServiceSecretStatusEntry = z.infer<typeof SoracloudServiceSecretStatusEntry>;
+const SorafsPinStorageClass = z
+  .discriminatedUnion('type', [
+    z.object({ type: z.literal('Hot'), value: z.null() }).strict(),
+    z.object({ type: z.literal('Warm'), value: z.null() }).strict(),
+    z.object({ type: z.literal('Cold'), value: z.null() }).strict(),
+  ])
+  .transform((value) => value.type.toLowerCase() as 'hot' | 'warm' | 'cold');
 
-export const SoracloudServiceSecretStatusResponse = z
+const SorafsPinManifestRecord = z
   .object({
-    schema_version: z.number(),
-    service_name: z.string(),
-    current_version: z.string(),
-    secret_generation: z.number(),
-    secret_entry_count: z.number(),
-    secrets: SoracloudServiceSecretStatusEntry.array().optional().default([]),
+    digest: FixedBytes32Hex,
+    root_cid: ManifestRootCidHex,
+    chunker: z
+      .object({
+        profile_id: z.number().int().nonnegative().max(0xffff_ffff),
+        namespace: z.string(),
+        name: z.string(),
+        semver: z.string(),
+        multihash_code: z.number().int().nonnegative(),
+      })
+      .strict(),
+    chunk_digest_sha3_256: FixedBytes32Hex,
+    por_root: FixedBytes32Hex,
+    content_length: z.number().int().nonnegative(),
+    policy: z
+      .object({
+        min_replicas: z.number().int().nonnegative().max(0xffff),
+        storage_class: SorafsPinStorageClass,
+        retention_epoch: z.number().int().nonnegative(),
+      })
+      .strict(),
+    submitted_by: CanonicalAccountId,
+    submitted_epoch: z.number().int().nonnegative(),
+    approved_epoch: z.number().int().nonnegative().nullable(),
+    alias: z
+      .object({
+        name: z.string(),
+        namespace: z.string(),
+        proof: z.string(),
+      })
+      .strict()
+      .nullable(),
+    successor_of: FixedBytes32Hex.optional(),
+    metadata: Metadata,
+    status: SorafsPinStatus,
+    retirement_reason: z.string().optional(),
+    council_envelope_digest: FixedBytes32Hex.nullable(),
+    pin_fee_payment: z
+      .object({
+        paid_by: CanonicalAccountId,
+        fee_asset_id: AssetDefinitionIdSchema,
+        treasury_account_id: CanonicalAccountId,
+        amount: QuantityValue,
+      })
+      .strict()
+      .optional(),
   })
-  .passthrough();
-export type SoracloudServiceSecretStatusResponse = z.infer<typeof SoracloudServiceSecretStatusResponse>;
+  .strict();
 
-export const SoracloudTrainingJobStatusEntry = z
+export const SorafsPinManifestResponse = z
   .object({
-    service_name: z.string(),
-    model_name: z.string(),
-    job_id: z.string(),
-    status: z.string(),
-    worker_group_size: z.number(),
-    target_steps: z.number(),
-    completed_steps: z.number(),
-    checkpoint_interval_steps: z.number(),
-    last_checkpoint_step: z
-      .number()
-      .nullish()
-      .transform((value) => value ?? null),
-    checkpoint_count: z.number(),
-    retry_count: z.number(),
-    max_retries: z.number(),
-    step_compute_units: z.number(),
-    compute_budget_units: z.number(),
-    compute_consumed_units: z.number(),
-    compute_remaining_units: z.number(),
-    storage_budget_bytes: z.number(),
-    storage_consumed_bytes: z.number(),
-    storage_remaining_bytes: z.number(),
-    latest_metrics_hash: SoracloudNullableString,
-    last_failure_reason: SoracloudNullableString,
-    created_sequence: z.number(),
-    updated_sequence: z.number(),
+    finalized_cursor: SorafsPinFinalizedCursor,
+    manifest: SorafsPinManifestRecord,
   })
-  .passthrough();
-export type SoracloudTrainingJobStatusEntry = z.infer<typeof SoracloudTrainingJobStatusEntry>;
+  .strict();
+export type SorafsPinManifestResponse = z.infer<typeof SorafsPinManifestResponse>;
 
-export const SoracloudTrainingJobStatusResponse = z
+export const ConnectSessionResponse = z
   .object({
-    schema_version: z.number(),
-    job: SoracloudTrainingJobStatusEntry,
+    sid: z.string().min(1),
+    network_id: z.string().min(1),
+    app_pk: z.string().min(1),
+    nonce: z.string().min(1),
+    wallet_uri: z.string().min(1),
+    app_uri: z.string().min(1),
+    token_app: z.string().min(1),
+    token_wallet: z.string().min(1),
+    token_management: z.string().min(1),
+    token_relay: z.string().min(1),
   })
-  .passthrough();
-export type SoracloudTrainingJobStatusResponse = z.infer<typeof SoracloudTrainingJobStatusResponse>;
-
-export const SoracloudModelWeightVersionEntry = z
-  .object({
-    weight_version: z.string(),
-    parent_version: SoracloudNullableString,
-    training_job_id: z.string(),
-    weight_artifact_hash: z.string(),
-    dataset_ref: z.string(),
-    training_config_hash: z.string(),
-    reproducibility_hash: z.string(),
-    provenance_attestation_hash: z.string(),
-    registered_sequence: z.number(),
-    promoted_sequence: z
-      .number()
-      .nullish()
-      .transform((value) => value ?? null),
-    gate_report_hash: SoracloudNullableString,
-  })
-  .passthrough();
-export type SoracloudModelWeightVersionEntry = z.infer<typeof SoracloudModelWeightVersionEntry>;
-
-export const SoracloudModelWeightStatusEntry = z
-  .object({
-    service_name: z.string(),
-    model_name: z.string(),
-    current_version: SoracloudNullableString,
-    version_count: z.number(),
-    versions: SoracloudModelWeightVersionEntry.array().optional().default([]),
-  })
-  .passthrough();
-export type SoracloudModelWeightStatusEntry = z.infer<typeof SoracloudModelWeightStatusEntry>;
-
-export const SoracloudModelWeightStatusResponse = z
-  .object({
-    schema_version: z.number(),
-    model: SoracloudModelWeightStatusEntry,
-  })
-  .passthrough();
-export type SoracloudModelWeightStatusResponse = z.infer<typeof SoracloudModelWeightStatusResponse>;
-
-export const SoracloudModelArtifactStatusEntry = z
-  .object({
-    service_name: z.string(),
-    model_name: z.string(),
-    artifact_id: z.string(),
-    training_job_id: z.string(),
-    weight_version: SoracloudNullableString,
-    weight_artifact_hash: z.string(),
-    dataset_ref: z.string(),
-    training_config_hash: z.string(),
-    reproducibility_hash: z.string(),
-    provenance_attestation_hash: z.string(),
-    registered_sequence: z.number(),
-    consumed_by_version: SoracloudNullableString,
-    private_bundle_root: SoracloudNullableString,
-    compile_profile_hash: SoracloudNullableString,
-    chunk_manifest_root: SoracloudNullableString,
-    privacy_mode: z
-      .unknown()
-      .nullish()
-      .transform((value) => value ?? null),
-  })
-  .passthrough();
-export type SoracloudModelArtifactStatusEntry = z.infer<typeof SoracloudModelArtifactStatusEntry>;
-
-export const SoracloudModelArtifactStatusResponse = z
-  .object({
-    schema_version: z.number(),
-    service_name: z.string(),
-    model_name: z.string(),
-    artifact_count: z.number(),
-    artifact: SoracloudModelArtifactStatusEntry,
-    artifacts: SoracloudModelArtifactStatusEntry.array().optional().default([]),
-  })
-  .passthrough();
-export type SoracloudModelArtifactStatusResponse = z.infer<typeof SoracloudModelArtifactStatusResponse>;
-
-export const SoracloudUploadedModelStatusResponse = z
-  .object({
-    schema_version: z.number(),
-    bundle: SoracloudJsonRecord,
-    uploaded_chunk_count: z.number(),
-    chunk_ordinals: z.number().array().optional().default([]),
-    compile_profile: SoracloudJsonRecord.nullish().transform((value) => value ?? null),
-    artifact: SoracloudModelArtifactStatusEntry.nullish().transform((value) => value ?? null),
-  })
-  .passthrough();
-export type SoracloudUploadedModelStatusResponse = z.infer<typeof SoracloudUploadedModelStatusResponse>;
-
-export const SoracloudPrivateInferenceStatusResponse = z
-  .object({
-    schema_version: z.number(),
-    session: SoracloudJsonRecord,
-    checkpoint_count: z.number(),
-    checkpoints: SoracloudJsonRecordArray.optional().default([]),
-  })
-  .passthrough();
-export type SoracloudPrivateInferenceStatusResponse = z.infer<typeof SoracloudPrivateInferenceStatusResponse>;
-
-export const SoracloudHfSharedLeaseStatusResponse = z
-  .object({
-    schema_version: z.number(),
-    source: SoracloudJsonRecord,
-    runtime_projection: SoracloudJsonRecord.nullish().transform((value) => value ?? null),
-    pool: SoracloudJsonRecord.nullish().transform((value) => value ?? null),
-    member: SoracloudJsonRecord.nullish().transform((value) => value ?? null),
-    placement: SoracloudJsonRecord.nullish().transform((value) => value ?? null),
-    latest_audit_event: SoracloudJsonRecord.nullish().transform((value) => value ?? null),
-    audit_event_count: z.number(),
-    storage_base_fee_nanos: z.union([z.string(), z.number(), z.bigint()]).transform((value) => value.toString()),
-    compute_reservation_fee_nanos: z.union([z.string(), z.number(), z.bigint()]).transform((value) => value.toString()),
-    eligible_host_count: z.number(),
-    warm_host_count: z.number(),
-    importer_pending: z.boolean(),
-  })
-  .passthrough();
-export type SoracloudHfSharedLeaseStatusResponse = z.infer<typeof SoracloudHfSharedLeaseStatusResponse>;
-
-export const SoracloudModelHostStatusResponse = z
-  .object({
-    schema_version: z.number(),
-    validator_account_id: SoracloudNullableString,
-    active_host_count: z.number(),
-    hosts: SoracloudJsonRecordArray.optional().default([]),
-  })
-  .passthrough();
-export type SoracloudModelHostStatusResponse = z.infer<typeof SoracloudModelHostStatusResponse>;
-
-export const SoracloudAgentApartmentStatusEntry = z
-  .object({
-    apartment_name: z.string(),
-    manifest_hash: z.string(),
-    status: z.string(),
-    lease_started_sequence: z.number(),
-    lease_expires_sequence: z.number(),
-    lease_remaining_ticks: z.number(),
-    restart_count: z.number(),
-    state_quota_bytes: z.number(),
-    tool_capability_count: z.number(),
-    policy_capability_count: z.number(),
-    revoked_policy_capability_count: z.number(),
-    pending_wallet_request_count: z.number(),
-    pending_mailbox_message_count: z.number(),
-    autonomy_budget_ceiling_units: z.number(),
-    autonomy_budget_remaining_units: z.number(),
-    artifact_allowlist_count: z.number(),
-    autonomy_run_count: z.number(),
-    process_generation: z.number(),
-    process_started_sequence: z.number(),
-    last_active_sequence: z.number(),
-    last_checkpoint_sequence: z
-      .number()
-      .nullish()
-      .transform((value) => value ?? null),
-    checkpoint_count: z.number(),
-    persistent_state_total_bytes: z.number(),
-    persistent_state_key_count: z.number(),
-    spend_limit_count: z.number(),
-    upgrade_policy: z.unknown(),
-    last_restart_sequence: z
-      .number()
-      .nullish()
-      .transform((value) => value ?? null),
-    last_restart_reason: SoracloudNullableString,
-  })
-  .passthrough();
-export type SoracloudAgentApartmentStatusEntry = z.infer<typeof SoracloudAgentApartmentStatusEntry>;
-
-export const SoracloudAgentStatusResponse = z
-  .object({
-    schema_version: z.number(),
-    apartment_count: z.number(),
-    event_count: z.number(),
-    apartments: SoracloudAgentApartmentStatusEntry.array().optional().default([]),
-  })
-  .passthrough();
-export type SoracloudAgentStatusResponse = z.infer<typeof SoracloudAgentStatusResponse>;
-
-export const SoracloudAgentMailboxMessageEntry = z
-  .object({
-    message_id: z.string(),
-    from_apartment: z.string(),
-    channel: z.string(),
-    payload: z.string(),
-    payload_hash: z.string(),
-    enqueued_sequence: z.number(),
-  })
-  .passthrough();
-export type SoracloudAgentMailboxMessageEntry = z.infer<typeof SoracloudAgentMailboxMessageEntry>;
-
-export const SoracloudAgentMailboxStatusResponse = z
-  .object({
-    schema_version: z.number(),
-    apartment_name: z.string(),
-    status: z.string(),
-    pending_message_count: z.number(),
-    event_count: z.number(),
-    messages: SoracloudAgentMailboxMessageEntry.array().optional().default([]),
-  })
-  .passthrough();
-export type SoracloudAgentMailboxStatusResponse = z.infer<typeof SoracloudAgentMailboxStatusResponse>;
-
-export const SoracloudAgentAutonomyAllowlistEntry = z
-  .object({
-    artifact_hash: z.string(),
-    provenance_hash: SoracloudNullableString,
-    added_sequence: z.number(),
-  })
-  .passthrough();
-export type SoracloudAgentAutonomyAllowlistEntry = z.infer<typeof SoracloudAgentAutonomyAllowlistEntry>;
-
-export const SoracloudAgentAutonomyRunRecord = z
-  .object({
-    run_id: z.string(),
-    artifact_hash: z.string(),
-    provenance_hash: SoracloudNullableString,
-    budget_units: z.number(),
-    run_label: z.string(),
-    workflow_input_json: SoracloudNullableString,
-    approved_sequence: z.number(),
-    authoritative_runtime_receipt: SoracloudJsonRecord.nullish().transform((value) => value ?? null),
-    authoritative_execution_audit: SoracloudJsonRecord.nullish().transform((value) => value ?? null),
-  })
-  .passthrough();
-export type SoracloudAgentAutonomyRunRecord = z.infer<typeof SoracloudAgentAutonomyRunRecord>;
-
-export const SoracloudAgentAutonomyStatusResponse = z
-  .object({
-    apartment_name: z.string(),
-    sequence: z.number(),
-    status: z.string(),
-    lease_expires_sequence: z.number(),
-    lease_remaining_ticks: z.number(),
-    manifest_hash: z.string(),
-    revoked_policy_capability_count: z.number(),
-    budget_ceiling_units: z.number(),
-    budget_remaining_units: z.number(),
-    allowlist_count: z.number(),
-    run_count: z.number(),
-    process_generation: z.number(),
-    process_started_sequence: z.number(),
-    last_active_sequence: z.number(),
-    last_checkpoint_sequence: z
-      .number()
-      .nullish()
-      .transform((value) => value ?? null),
-    checkpoint_count: z.number(),
-    persistent_state_total_bytes: z.number(),
-    persistent_state_key_count: z.number(),
-    allowlist: SoracloudAgentAutonomyAllowlistEntry.array().optional().default([]),
-    recent_runs: SoracloudAgentAutonomyRunRecord.array().optional().default([]),
-    runtime_recent_runs: SoracloudJsonRecordArray.optional().default([]),
-  })
-  .passthrough();
-export type SoracloudAgentAutonomyStatusResponse = z.infer<typeof SoracloudAgentAutonomyStatusResponse>;
+  .strict();
+export type ConnectSessionResponse = z.infer<typeof ConnectSessionResponse>;
 
 export interface SorafsPinRegistrySearchParams {
-  limit: number;
-  offset: number;
+  limit?: number;
+  max_bytes?: number;
+  after_digest_hex?: string;
+  expected_finalized_height?: number;
+  expected_finalized_block_hash_hex?: string;
   status?: SorafsManifestState;
 }
 
-export interface SorafsAliasSearchParams {
-  limit: number;
-  offset: number;
-  namespace?: string;
-  manifest_digest?: string;
+export interface SorafsPinManifestSearchParams {
+  expected_finalized_height?: number;
+  expected_finalized_block_hash_hex?: string;
 }
 
-export interface SorafsReplicationSearchParams {
-  limit: number;
-  offset: number;
-  status?: 'pending' | 'completed' | 'expired';
-  manifest_digest?: string;
-}
-
-export const CountResponse = z.object({
-  count: z.number(),
-});
-export type CountResponse = z.infer<typeof CountResponse>;
-
-export const ZkAttachment = z.object({
-  id: z.string(),
-  content_type: z.string(),
-  size: z.number(),
-  created_ms: z.number(),
-  tenant: z.string().nullable(),
-});
-export type ZkAttachment = z.infer<typeof ZkAttachment>;
-
-export interface ZkAttachmentSearchParams {
-  limit: number;
-  offset: number;
-  content_type?: string;
-  has_tag?: string;
-  since_ms?: number;
-  before_ms?: number;
-  order?: 'asc' | 'desc';
-}
-
-export const ZkProverReport = z.object({
-  id: z.string(),
-  ok: z.boolean(),
-  error: z.string().nullable(),
-  content_type: z.string(),
-  size: z.number(),
-  created_ms: z.number(),
-  processed_ms: z.number(),
-  latency_ms: z.number().optional().default(0),
-  zk1_tags: z.string().array().nullable(),
-});
-export type ZkProverReport = z.infer<typeof ZkProverReport>;
-
-export interface ZkProverReportSearchParams {
-  limit: number;
-  offset: number;
-  status?: 'all' | 'ok' | 'failed';
-  content_type?: string;
-  has_tag?: string;
-  since_ms?: number;
-  before_ms?: number;
-  order?: 'asc' | 'desc';
-}
-
-export const GovernanceCouncilMember = z.object({
-  account_id: AccountIdSchema,
-});
-export type GovernanceCouncilMember = z.infer<typeof GovernanceCouncilMember>;
-
-export const GovernanceCouncil = z.object({
-  epoch: z.number(),
-  members: GovernanceCouncilMember.array(),
-});
-export type GovernanceCouncil = z.infer<typeof GovernanceCouncil>;
-
-export const GovernanceUnlockStats = z.object({
-  height_current: z.number(),
-  expired_locks_now: z.number(),
-  referenda_with_expired: z.number(),
-  last_sweep_height: z.number(),
-});
-export type GovernanceUnlockStats = z.infer<typeof GovernanceUnlockStats>;
-
-export const GovernanceReferendumStatus = z.enum(['Proposed', 'Open', 'Closed']);
-export type GovernanceReferendumStatus = z.infer<typeof GovernanceReferendumStatus>;
-
-export const GovernanceReferendumMode = z.enum(['Zk', 'Plain']);
-export type GovernanceReferendumMode = z.infer<typeof GovernanceReferendumMode>;
-
-export const GovernanceReferendum = z.object({
-  h_start: z.number(),
-  h_end: z.number(),
-  status: GovernanceReferendumStatus,
-  mode: GovernanceReferendumMode,
-});
-export type GovernanceReferendum = z.infer<typeof GovernanceReferendum>;
-
-export const GovernanceReferendumResponse = z.object({
-  found: z.boolean(),
-  referendum: GovernanceReferendum.nullable(),
-});
-export type GovernanceReferendumResponse = z.infer<typeof GovernanceReferendumResponse>;
-
-export const GovernanceLockRecord = z.object({
-  owner: AccountIdSchema,
-  amount: BigIntCoerce,
-  expiry_height: z.number(),
-  direction: z.number(),
-  duration_blocks: z.number().optional().default(0),
-});
-export type GovernanceLockRecord = z.infer<typeof GovernanceLockRecord>;
-
-export const GovernanceLocksResponse = z.object({
-  found: z.boolean(),
-  referendum_id: z.string(),
-  locks: z.record(z.string(), GovernanceLockRecord).nullable(),
-});
-export type GovernanceLocksResponse = z.infer<typeof GovernanceLocksResponse>;
-
-export const GovernanceTallyResponse = z.object({
-  referendum_id: z.string(),
-  approve: BigIntCoerce,
-  reject: BigIntCoerce,
-  abstain: BigIntCoerce,
-});
-export type GovernanceTallyResponse = z.infer<typeof GovernanceTallyResponse>;
-
-export const GovernanceProposalStatus = z.enum(['Proposed', 'Approved', 'Rejected', 'Enacted']);
-export type GovernanceProposalStatus = z.infer<typeof GovernanceProposalStatus>;
-
-const NullableGovernanceString = z
+const ZkLowerHex32 = z.string().regex(/^[0-9a-f]{64}$/u, 'expected a lowercase 32-byte hex value');
+const ZkHeight = z.number().int().nonnegative();
+const ZkPortableRegistryIdField = z
   .string()
-  .nullish()
-  .transform((value) => value?.trim() || null);
+  .min(1)
+  .max(256)
+  .regex(/^[a-z0-9](?:[a-z0-9._:/-]*[a-z0-9])?$/u, 'expected a portable registry identifier')
+  .refine(
+    (value) => !['..', '//', ':::', '/:', ':/', '/.', './', ':.', '.:'].some((separator) => value.includes(separator)),
+    'expected a portable registry identifier'
+  );
+const ZkCanonicalBase64 = z
+  .string()
+  .min(1)
+  .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u, 'expected standard base64');
 
-export const GovernanceDeployContractProposal = z.object({
-  contract_address: NullableGovernanceString.optional().default(null),
-  contract_alias: NullableGovernanceString.optional().default(null),
-  dataspace: NullableGovernanceString.optional().default(null),
-  namespace: NullableGovernanceString.optional().default(null),
-  contract_id: NullableGovernanceString.optional().default(null),
-  code_hash_hex: z.string(),
-  abi_hash_hex: z.string(),
-  abi_version: z.union([z.string(), z.number()]).transform((value) => value.toString()),
-});
-export type GovernanceDeployContractProposal = z.infer<typeof GovernanceDeployContractProposal>;
+export const ZkProofStatus = z.enum(['Submitted', 'Verified', 'Rejected']);
+export type ZkProofStatus = z.infer<typeof ZkProofStatus>;
 
-export const GovernanceProposalKind = z.discriminatedUnion('kind', [
-  z.object({
-    kind: z.literal('DeployContract'),
-    payload: GovernanceDeployContractProposal,
-  }),
+export const ZkVerifyingKeyId = z
+  .object({
+    backend: ZkPortableRegistryIdField,
+    name: ZkPortableRegistryIdField,
+  })
+  .strict();
+export type ZkVerifyingKeyId = z.infer<typeof ZkVerifyingKeyId>;
+
+export const ZkProofId = z
+  .object({
+    backend: z.string().min(1),
+    hash: ZkLowerHex32,
+  })
+  .strict();
+export type ZkProofId = z.infer<typeof ZkProofId>;
+
+export const ZkBridgeProofBinding = z
+  .object({
+    kind: z.enum(['verifier_manifest', 'sccp_route_configuration_v1']),
+    hash: ZkLowerHex32,
+  })
+  .strict();
+export type ZkBridgeProofBinding = z.infer<typeof ZkBridgeProofBinding>;
+
+export const ZkBridgeProofPayload = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('ics'),
+      state_root: ZkLowerHex32,
+      leaf_hash: ZkLowerHex32,
+      hash_function: z.enum(['Sha256', 'Blake2b']),
+      path_len: z.number().int().nonnegative(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('transparent_zk'),
+      backend: z.string().min(1),
+      proof_len_bytes: z.number().int().nonnegative(),
+      recursion_depth: z.number().int().nonnegative().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('native_protocol'),
+      backend: z.string().min(1),
+      proof_len_bytes: z.number().int().nonnegative(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('sccp_destination'),
+      backend: z.string().min(1),
+      artifact_len_bytes: z.number().int().nonnegative(),
+      message_id: ZkLowerHex32.optional(),
+      request_hash: ZkLowerHex32.optional(),
+      destination_binding_hash: ZkLowerHex32.optional(),
+    })
+    .strict(),
 ]);
-export type GovernanceProposalKind = z.infer<typeof GovernanceProposalKind>;
+export type ZkBridgeProofPayload = z.infer<typeof ZkBridgeProofPayload>;
 
-export const GovernanceProposal = z.object({
-  proposer: AccountIdSchema,
-  kind: GovernanceProposalKind,
-  created_height: z.number(),
-  status: GovernanceProposalStatus,
-});
-export type GovernanceProposal = z.infer<typeof GovernanceProposal>;
+export const ZkBridgeProof = z
+  .object({
+    binding: ZkBridgeProofBinding,
+    commitment: ZkLowerHex32,
+    size_bytes: z.number().int().nonnegative(),
+    range: z
+      .object({
+        start_height: ZkHeight,
+        end_height: ZkHeight,
+      })
+      .strict(),
+    payload: ZkBridgeProofPayload,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.range.start_height > value.range.end_height) {
+      context.addIssue({
+        code: 'custom',
+        path: ['range', 'end_height'],
+        message: 'end_height must be greater than or equal to start_height',
+      });
+    }
+  });
+export type ZkBridgeProof = z.infer<typeof ZkBridgeProof>;
 
-export const GovernanceProposalResponse = z.object({
-  found: z.boolean(),
-  proposal: GovernanceProposal.nullable(),
-});
-export type GovernanceProposalResponse = z.infer<typeof GovernanceProposalResponse>;
+export const ZkProofRegistryItem = z
+  .object({
+    backend: z.string().min(1),
+    hash: ZkLowerHex32,
+    status: ZkProofStatus,
+    verified_at_height: ZkHeight.optional(),
+    vk_ref: ZkVerifyingKeyId.nullable(),
+    vk_commitment: ZkLowerHex32.nullable(),
+    bridge: ZkBridgeProof.optional(),
+  })
+  .strict();
+export type ZkProofRegistryItem = z.infer<typeof ZkProofRegistryItem>;
+
+export const ZkProofDetail = z
+  .object({
+    backend: z.string().min(1),
+    proof_hash: ZkLowerHex32,
+    status: ZkProofStatus,
+    verified_at_height: ZkHeight.optional(),
+    vk_ref: ZkVerifyingKeyId.nullable(),
+    vk_commitment: ZkLowerHex32.nullable(),
+    bridge: ZkBridgeProof.optional(),
+  })
+  .strict();
+export type ZkProofDetail = z.infer<typeof ZkProofDetail>;
+
+export const ZkProofCount = z.object({ count: z.number().int().nonnegative() }).strict();
+export type ZkProofCount = z.infer<typeof ZkProofCount>;
+
+export interface ZkProofFilterParams {
+  backend?: string;
+  status?: ZkProofStatus;
+  bridge_only?: boolean;
+  bridge_start_from_height?: number;
+  bridge_end_until_height?: number;
+  has_tag?: string;
+  verified_from_height?: number;
+  verified_until_height?: number;
+}
+
+export interface ZkProofListParams extends ZkProofFilterParams {
+  limit?: number;
+  offset?: number;
+  order?: 'asc' | 'desc';
+  ids_only?: boolean;
+}
+
+export const ZkVerifyingKeyStatus = z.enum(['Active', 'Proposed', 'Withdrawn']);
+export type ZkVerifyingKeyStatus = z.infer<typeof ZkVerifyingKeyStatus>;
+
+export const ZkVerifyingKeyRecord = z
+  .object({
+    version: z.number().int().nonnegative().max(0xffff_ffff),
+    circuit_id: z.string().min(1),
+    owner_manifest_id: z.string().min(1).nullable(),
+    namespace: z.string().min(1),
+    backend: z.string().min(1),
+    curve: z.string().min(1),
+    public_inputs_schema_hash: ZkLowerHex32,
+    commitment: ZkLowerHex32,
+    vk_len: z.number().int().nonnegative().max(0xffff_ffff),
+    max_proof_bytes: z.number().int().nonnegative().max(0xffff_ffff),
+    gas_schedule_id: z.string().min(1).nullable(),
+    metadata_uri_cid: z.string().min(1).nullable(),
+    vk_bytes_cid: z.string().min(1).nullable(),
+    activation_height: ZkHeight.nullable(),
+    withdraw_height: ZkHeight.nullable(),
+    status: ZkVerifyingKeyStatus,
+    key: z
+      .object({
+        backend: z.string().min(1),
+        bytes_b64: ZkCanonicalBase64,
+      })
+      .strict()
+      .nullable(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.activation_height !== null &&
+      value.withdraw_height !== null &&
+      value.withdraw_height <= value.activation_height
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['withdraw_height'],
+        message: 'withdraw_height must be greater than activation_height',
+      });
+    }
+  });
+export type ZkVerifyingKeyRecord = z.infer<typeof ZkVerifyingKeyRecord>;
+
+export const ZkVerifyingKeyListItem = z
+  .object({
+    id: ZkVerifyingKeyId,
+    record: ZkVerifyingKeyRecord,
+  })
+  .strict();
+export type ZkVerifyingKeyListItem = z.infer<typeof ZkVerifyingKeyListItem>;
+
+export const ZkVerifyingKeyDetail = z
+  .object({
+    id: ZkVerifyingKeyId,
+    record: ZkVerifyingKeyRecord,
+    record_norito_base64: ZkCanonicalBase64,
+  })
+  .strict();
+export type ZkVerifyingKeyDetail = z.infer<typeof ZkVerifyingKeyDetail>;
+
+export interface ZkVerifyingKeyListParams {
+  backend?: string;
+  status?: ZkVerifyingKeyStatus;
+  name_contains?: string;
+  limit?: number;
+  offset?: number;
+  order?: 'asc' | 'desc';
+  ids_only?: boolean;
+}
+
+export const WorldCursorSchema = z
+  .string()
+  .min(1)
+  .max(1424)
+  .regex(/^[A-Za-z0-9_-]+$/u);
+
+export const CursorPagination = z
+  .object({
+    limit: z.number().int().min(1).max(100),
+    next_cursor: WorldCursorSchema.nullable(),
+    has_more: z.boolean(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.has_more !== (value.next_cursor !== null)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'has_more must match next_cursor availability',
+        path: ['has_more'],
+      });
+    }
+  });
+
+export type CursorPagination = z.infer<typeof CursorPagination>;
+
+const MultisigProposalCursor = z
+  .string()
+  .min(1)
+  .max(512)
+  .regex(/^[A-Za-z0-9_-]+$/u, 'expected canonical unpadded base64url');
+export const MultisigProposalsSearchParamsSchema = z
+  .object({
+    status: MultisigProposalStatus.array()
+      .max(4)
+      .refine((statuses) => new Set(statuses).size === statuses.length, 'status entries must be unique')
+      .optional(),
+    cursor: MultisigProposalCursor.nullable().optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+  })
+  .strict();

@@ -2,7 +2,7 @@
   <BaseButton
     :pressed="menuDropdown.isOpen.value"
     class="mobile-menu"
-    aria-label="mobile menu"
+    :aria-label="$t('accessibility.mobileMenu')"
     bordered
     rounded
     @click="menuDropdown.toggle"
@@ -10,16 +10,8 @@
     <DotsIcon />
   </BaseButton>
 
-  <Teleport
-    v-if="menuDropdown.isOpen.value"
-    :to="`#${PORTAL_ID}`"
-  >
-    <BaseDropdownWindow
-      v-model="routeModel"
-      size="lg"
-      :ignore-click-outside="['.mobile-menu']"
-      :items
-    />
+  <Teleport v-if="menuDropdown.isOpen.value" :to="`#${PORTAL_ID}`">
+    <BaseDropdownWindow v-model="routeModel" size="lg" :ignore-click-outside="['.mobile-menu']" :items />
   </Teleport>
 </template>
 
@@ -35,6 +27,7 @@ import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import { useI18n } from 'vue-i18n';
 import { PORTAL_ID } from '@/shared/ui/consts';
 import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
+import { isToriiBaseUrlForced } from '@/shared/api';
 
 const { t } = useI18n();
 
@@ -49,7 +42,7 @@ const nodeSettingsDropdown = useNodeSettingsDropdown();
 const links = computed(() => menu.map((item) => ({ label: t(item.i18nKey), value: item.to })));
 const items = computed(() => [
   ...links.value,
-  { label: t('settings.nodeSelector'), value: ACTION_NODE_SETTINGS },
+  ...(isToriiBaseUrlForced() ? [] : [{ label: t('settings.nodeSelector'), value: ACTION_NODE_SETTINGS }]),
   { label: t('settings.language'), value: ACTION_LANGUAGE },
   { label: t('settings.theme'), value: ACTION_THEME },
 ]);

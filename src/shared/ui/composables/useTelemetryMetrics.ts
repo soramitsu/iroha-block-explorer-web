@@ -11,6 +11,7 @@ interface TelemetryState {
   isStale: ComputedRef<boolean>
   streamStatus: Ref<'CONNECTING' | 'OPEN' | 'CLOSED'>
   streamedMetrics: Ref<PeerMetrics | null>
+  reconnect: () => void
 }
 
 let telemetryState: TelemetryState | null = null;
@@ -101,6 +102,7 @@ function createTelemetryMetricsState(): TelemetryState {
     isStale,
     streamStatus,
     streamedMetrics,
+    reconnect: () => telemetryStream?.reconnect(),
   };
 }
 

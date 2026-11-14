@@ -167,6 +167,7 @@ describe('TransactionDetails', () => {
             created_at: new Date('2026-02-24T12:00:00Z'),
             kind: 'RegisterSmartContractBytes',
             box: {
+              wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractBytes',
               encoded: '0xcontract',
               json: {
                 kind: 'RegisterSmartContractBytes',
@@ -314,7 +315,7 @@ describe('TransactionDetails', () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to local decoder when torii message is missing', async () => {
+  it('does not invent a rejection reason when Torii omits its message', async () => {
     scopeExpose.value.data.data.rejection_reason = {
       encoded:
         '0x020000004b00000000000000020000003f000000000000000400000033000000000000000400000000000000030000001f000000000000000000000013000000000000000b000000000000000300000000000000736270',
@@ -325,12 +326,10 @@ describe('TransactionDetails', () => {
     const wrapper = factory();
     await flushPromises();
 
-    expect(findRejectedReasonValue(wrapper)).toBe(
-      'Validation failed: Instruction failed: Repeated instruction for id: sbp'
-    );
+    expect(findRejectedReasonValue(wrapper)).toBeNull();
   });
 
-  it('falls back to local decoder when torii message contains only opaque numeric tags', async () => {
+  it('preserves the authoritative Torii message containing opaque numeric tags', async () => {
     scopeExpose.value.data.data.rejection_reason = {
       encoded:
         '0x020000004b00000000000000020000003f000000000000000400000033000000000000000400000000000000030000001f000000000000000000000013000000000000000b000000000000000300000000000000736270',
@@ -342,7 +341,7 @@ describe('TransactionDetails', () => {
     await flushPromises();
 
     expect(findRejectedReasonValue(wrapper)).toBe(
-      'Validation failed: Instruction failed: Repeated instruction for id: sbp'
+      'Validation failed: Instruction failed: InstructionExecutionError(4).'
     );
   });
 
@@ -413,7 +412,8 @@ describe('TransactionDetails', () => {
                   created_at: new Date('2026-02-24T12:00:00Z'),
                   kind: 'RegisterSmartContractBytes',
                   box: {
-                    encoded: '0xcontract',
+                    wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractBytes',
+              encoded: '0xcontract',
                     json: {
                       kind: 'RegisterSmartContractBytes',
                       payload: {
@@ -436,6 +436,7 @@ describe('TransactionDetails', () => {
                   created_at: new Date('2026-02-24T12:00:01Z'),
                   kind: 'RegisterSmartContractCode',
                   box: {
+                    wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractCode',
                     encoded: '0xmanifest',
                     json: {
                       kind: 'RegisterSmartContractCode',

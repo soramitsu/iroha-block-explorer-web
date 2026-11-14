@@ -40,4 +40,18 @@ describe('validateRoadmap', () => {
       'stale Active Task Notes section must be archived'
     );
   });
+
+  it('rejects a malformed delimiter with extra columns', () => {
+    const malformed = validRoadmap.replace('| --- | --- | --- | --- |', '| --- | --- | --- | --- | --- | --- |');
+
+    expect(validateRoadmap(malformed)).toContain('roadmap table delimiter must define exactly four Markdown columns');
+  });
+
+  it('rejects a table whose header does not match the required schema', () => {
+    const malformed = validRoadmap.replace('| ID | Task | Status | Notes |', '| ID | Task | State | Notes |');
+
+    expect(validateRoadmap(malformed)).toContain(
+      'roadmap table must have exactly the ID, Task, Status, and Notes columns'
+    );
+  });
 });

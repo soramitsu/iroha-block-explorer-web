@@ -13,7 +13,7 @@ vi.mock('@/shared/runtime-config', () => ({
   getRuntimeConfig: () => ({}),
 }));
 
-const TORII_ENV = { VITE_API_URL: 'https://torii.example/v1/explorer' };
+const TORII_ENV = { VITE_API_URL: 'https://torii.example' };
 const SAMPLE_AUTHORITY = 'testuﾛ1QDﾘHKHsncAQPsﾐﾚCCecｴVﾖrTﾖx2ﾒﾕﾃVﾂﾓVﾕﾇｾaﾐ2GBTXB';
 const nativeFetch = global.fetch;
 
@@ -55,7 +55,9 @@ const STATUS = {
     tx_queue_saturated: false,
     tx_queue_oldest_queued_age_ms: 900,
   },
-  teu_lane_commit: [{ lane_id: 0, capacity: 50_000_000, committed: 384, block_height: 1101, settlement_backlog_xor_micro: 0 }],
+  teu_lane_commit: [
+    { lane_id: 0, capacity: 50_000_000, committed: 384, block_height: 1101, settlement_backlog_xor_micro: 0 },
+  ],
   teu_dataspace_backlog: [],
   dataspace_catalog: [{ lane_id: 0, lane_alias: 'core', dataspace_id: 0, alias: 'universal' }],
 };
@@ -97,7 +99,13 @@ describe('fetchBlockSamples', () => {
     if (result.status !== SUCCESSFUL_FETCHING) return;
     expect(result.data.nextCursor).toBe('next-page');
     expect(result.data.items).toEqual([
-      { height: 1102, hash: BLOCK_HASH, createdAtMs: Date.parse('2026-10-24T07:48:01.266Z'), transactionsTotal: 3, transactionsRejected: 1 },
+      {
+        height: 1102,
+        hash: BLOCK_HASH,
+        createdAtMs: Date.parse('2026-10-24T07:48:01.266Z'),
+        transactionsTotal: 3,
+        transactionsRejected: 1,
+      },
       // An unreadable body keeps unknown counts instead of measured zeros.
       { height: 1101, hash: BLOCK_HASH, createdAtMs: null, transactionsTotal: 0, transactionsRejected: 0 },
     ]);
@@ -164,7 +172,9 @@ describe('fetchNodeStatus', () => {
   });
 
   it('accepts a peer without a consensus snapshot or catalogue', async () => {
-    global.fetch = vi.fn().mockImplementation(() => jsonResponse(without(STATUS, 'sumeragi', 'dataspace_catalog'))) as any;
+    global.fetch = vi
+      .fn()
+      .mockImplementation(() => jsonResponse(without(STATUS, 'sumeragi', 'dataspace_catalog'))) as any;
     const api = await importApi();
     const result = await api.fetchNodeStatus();
     expect(result.status).toBe(SUCCESSFUL_FETCHING);
@@ -216,7 +226,15 @@ describe('fetchTransactionSamples', () => {
   it('keeps unknown executable kinds instead of failing the page', async () => {
     global.fetch = vi.fn().mockImplementation(() =>
       jsonResponse({
-        items: [{ authority: SAMPLE_AUTHORITY, block: 3, created_at: '2026-10-24T07:47:59Z', executable: 'Batch', status: 'Rejected' }],
+        items: [
+          {
+            authority: SAMPLE_AUTHORITY,
+            block: 3,
+            created_at: '2026-10-24T07:47:59Z',
+            executable: 'Batch',
+            status: 'Rejected',
+          },
+        ],
         next_cursor: null,
       })
     ) as any;
@@ -227,9 +245,22 @@ describe('fetchTransactionSamples', () => {
 
   it('rejects rows that ignored the projection or carry an unknown status', async () => {
     for (const row of [
-      { authority: SAMPLE_AUTHORITY, hash: BLOCK_HASH,
-            prev_block_hash: null, block: 3, created_at: '2026-10-24T07:47:59Z', executable: 'Instructions', status: 'Committed' },
-      { authority: SAMPLE_AUTHORITY, block: 3, created_at: '2026-10-24T07:47:59Z', executable: 'Instructions', status: 'Pending' },
+      {
+        authority: SAMPLE_AUTHORITY,
+        hash: BLOCK_HASH,
+        prev_block_hash: null,
+        block: 3,
+        created_at: '2026-10-24T07:47:59Z',
+        executable: 'Instructions',
+        status: 'Committed',
+      },
+      {
+        authority: SAMPLE_AUTHORITY,
+        block: 3,
+        created_at: '2026-10-24T07:47:59Z',
+        executable: 'Instructions',
+        status: 'Pending',
+      },
     ]) {
       global.fetch = vi.fn().mockImplementation(() => jsonResponse({ items: [row], next_cursor: null })) as any;
       const api = await importApi();

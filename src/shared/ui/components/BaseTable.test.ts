@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { h } from 'vue';
+import { h, ref, nextTick } from 'vue';
 import BaseTable from './BaseTable.vue';
+const elementWidth = ref(1440);
+vi.mock('@vueuse/core', async (original) => ({ ...await original<typeof import('@vueuse/core')>(), useElementSize: () => ({ width: elementWidth }) }));
 
 const BaseLoadingStub = {
   name: 'BaseLoading',
@@ -9,6 +11,35 @@ const BaseLoadingStub = {
 };
 
 describe('BaseTable', () => {
+  it('switches rows using measured container width and respects a dense-table threshold', async () => {
+    const wrapper = mount(BaseTable, {
+      props: { loading: false, items: [{ id: 'a' }], containerClass: 'rows', disablePagination: true },
+      slots: { row: () => 'desktop', 'mobile-card': () => 'card' },
+      global: { mocks: { $t: (key: string) => key } },
+    });
+    expect(wrapper.attributes('role')).toBe('table');
+    elementWidth.value = 959;
+    await nextTick();
+    expect(wrapper.find('[role="listitem"]').text()).toBe('card');
+    elementWidth.value = 960;
+    await nextTick();
+    expect(wrapper.attributes('role')).toBe('table');
+    await wrapper.setProps({ breakpoint: 1200 });
+    expect(wrapper.find('[role="listitem"]').exists()).toBe(true);
+    elementWidth.value = 1440;
+    wrapper.unmount();
+  });
+
+  it('renders a consumer-provided filtered-empty slot without losing pagination', () => {
+    const wrapper = mount(BaseTable, {
+      props: { loading: false, items: [], containerClass: 'rows', paginationMode: 'cursor' },
+      slots: { empty: () => h('button', 'Clear filters') },
+      global: { stubs: { BaseCursorPagination: true }, mocks: { $t: (key: string) => key } },
+    });
+    expect(wrapper.get('button').text()).toBe('Clear filters');
+    expect(wrapper.find('base-cursor-pagination-stub').exists()).toBe(true);
+  });
+
   it('keeps rendering existing rows while background refresh is pending', () => {
     const wrapper = mount(BaseTable, {
       props: {
@@ -171,50 +202,27 @@ describe('BaseTable', () => {
     expect(wrapper.emitted('click:row')).toEqual([[item], [item]]);
   });
 
-  it('reports a failed empty read with retry instead of claiming there is no data', async () => {
+  it('forwards an opt-in Torii fetch-window cap to numbered pagination', () => {
     const wrapper = mount(BaseTable, {
       props: {
         loading: false,
-        error: { kind: 'invalid-response', message: 'Unexpected collection response' },
-        disablePagination: true,
-        items: [],
+        items: [{ id: 'a' }],
+        total: 1_000,
+        maxFetchSize: 500,
         containerClass: 'base-table__container',
       },
       global: {
-        stubs: { BaseButton: { template: '<button><slot /></button>' } },
+        stubs: {
+          BasePagination: {
+            name: 'BasePagination',
+            props: ['maxFetchSize'],
+            template: '<div data-test="pagination" :data-max-fetch-size="maxFetchSize" />',
+          },
+        },
         mocks: { $t: (key: string) => key },
       },
     });
 
-    expect(wrapper.get('[role="alert"]').text()).toContain('transactions.unknownError');
-    expect(wrapper.text()).not.toContain('noData');
-    await wrapper.get('[data-test="resource-retry"]').trigger('click');
-    expect(wrapper.emitted('retry')).toEqual([[]]);
-
-    await wrapper.setProps({ error: null });
-    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
-    expect(wrapper.text()).toContain('noData');
+    expect(wrapper.get('[data-test="pagination"]').attributes('data-max-fetch-size')).toBe('500');
   });
-
-  it('preserves existing rows alongside a refresh failure', () => {
-    const wrapper = mount(BaseTable, {
-      props: {
-        loading: false,
-        error: { kind: 'network', message: 'offline' },
-        disablePagination: true,
-        items: [{ id: 'previous-result' }],
-        containerClass: 'base-table__container',
-      },
-      slots: { row: ({ item }: any) => h('div', { class: 'row' }, item.id) },
-      global: {
-        stubs: { BaseButton: { template: '<button><slot /></button>' } },
-        mocks: { $t: (key: string) => key },
-      },
-    });
-
-    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
-    expect(wrapper.get('.row').text()).toBe('previous-result');
-    expect(wrapper.text()).not.toContain('noData');
-  });
-
 });

@@ -1,195 +1,198 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
-import { nextTick } from 'vue';
 import VpnStats from './VpnStats.vue';
 import { i18n } from '@/shared/lib/localization';
+import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 
-const setupState = vi.hoisted(() => ({ callCount: 0 }));
-const metricsState = vi.hoisted(() => ({
-  isLoading: false,
-  data: { status: 'ok', data: '' } as any,
-  refetch: vi.fn(),
-}));
-const countriesState = vi.hoisted(() => ({
-  isLoading: false,
-  data: { status: 'ok', data: [] as any[] } as any,
-  refetch: vi.fn(),
+const mocks = vi.hoisted(() => ({
+  fetchVpnProfile: vi.fn(),
 }));
 
-vi.mock('@/shared/api', async () => {
-  const { ref } = await vi.importActual<typeof import('vue')>('vue');
-  const mockedBaseUrlState = ref('https://torii.example');
-
-  return {
-    __setBaseUrl: (value: string) => {
-      mockedBaseUrlState.value = value;
-    },
-    fetchToriiMetricsText: vi.fn(),
-    fetchPeersInfo: vi.fn(),
-    getToriiBaseUrl: () => mockedBaseUrlState.value,
-  };
-});
-
-vi.mock('@/shared/utils/setup-async-data', () => ({
-  setupAsyncData: vi.fn(() => {
-    const states = [metricsState, countriesState];
-    const current = states[setupState.callCount]!;
-    setupState.callCount += 1;
-    return current;
-  }),
+vi.mock('@/shared/api', () => ({
+  fetchVpnProfile: mocks.fetchVpnProfile,
 }));
 
 const BaseContentBlockStub = {
   props: ['title'],
-  template: '<section><h2>{{ title }}</h2><slot /><slot name="header-action" /></section>',
+  template: '<section><h2>{{ title }}</h2><slot /></section>',
 };
 
-const BaseInnerBlockStub = {
-  props: ['title'],
-  template: '<div><h3>{{ title }}</h3><slot /></div>',
+const DataFieldStub = {
+  inheritAttrs: false,
+  props: ['title', 'value', 'link'],
+  template: `
+    <div v-bind="$attrs">
+      <span>{{ title }}</span>
+      <a v-if="link" :href="link">{{ value }}</a>
+      <span v-else>{{ value }}</span>
+    </div>
+  `,
 };
 
-const BaseLoadingStub = {
-  template: '<div>loading…</div>',
+const availableProfile = {
+  available: true,
+  relay_endpoint: '/dns4/relay.example/udp/443/quic',
+  supported_exit_classes: ['standard', 'low-latency', 'high-security'],
+  default_exit_class: 'standard',
+  lease_secs: 3_600,
+  dns_push_interval_secs: 60,
+  meter_family: 'vpn_bytes_total',
+  route_pushes: [],
+  excluded_routes: [],
+  dns_servers: ['10.10.0.53'],
+  tunnel_addresses: ['10.10.0.0/24'],
+  mtu_bytes: 1_280,
+  display_billing_label: 'standard · vpn_bytes_total · 10 XOR',
+  operator_account_id: 'iroha:sample-operator',
+  lease_fee: '10',
+  settlement_grace_secs: 30,
+  flow_label_bits: 24,
+  padding_budget_ms: 10,
+  relay_id_hex: '11'.repeat(32),
+  relay_mldsa65_public_key_hex: '22'.repeat(1_952),
+  descriptor_commit_hex: '33'.repeat(32),
+  tls_server_name: 'relay.example',
+  relay_tls_spki_sha256_hex: '44'.repeat(32),
+  relay_certificate_sha256_hex: '55'.repeat(32),
+  directory_snapshot_digest_hex: '66'.repeat(32),
 };
-
-const BaseTableStub = {
-  props: ['items'],
-  template: '<div><slot name="header" /><slot v-for="item in items" name="row" :item="item" /></div>',
-};
-
-const COMPLETE_METRICS = `
-soranet_vpn_runtime_status{state="disabled"} 0
-soranet_vpn_runtime_status{state="active"} 1
-soranet_vpn_runtime_status{state="stubbed"} 0
-soranet_vpn_sessions_total 4
-soranet_vpn_bytes_total 4096
-soranet_vpn_ingress_bytes_total 2048
-soranet_vpn_egress_bytes_total 2048
-soranet_vpn_data_bytes_total 3072
-soranet_vpn_data_ingress_bytes_total 1536
-soranet_vpn_data_egress_bytes_total 1536
-soranet_vpn_cover_bytes_total 512
-soranet_vpn_cover_ingress_bytes_total 256
-soranet_vpn_cover_egress_bytes_total 256
-soranet_vpn_control_bytes_total 512
-soranet_vpn_control_ingress_bytes_total 256
-soranet_vpn_control_egress_bytes_total 256
-soranet_vpn_receipt_ingress_bytes_total 1024
-soranet_vpn_receipt_egress_bytes_total 1024
-soranet_vpn_receipt_cover_bytes_total 128
-`;
 
 describe('VpnStats', () => {
-  const mountedWrappers: Array<ReturnType<typeof mount>> = [];
-
-  afterEach(() => {
-    while (mountedWrappers.length > 0) {
-      mountedWrappers.pop()?.unmount();
-    }
+  beforeEach(() => {
+    mocks.fetchVpnProfile.mockReset();
+    mocks.fetchVpnProfile.mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: availableProfile });
   });
 
-  beforeEach(async () => {
-    const api = await import('@/shared/api') as any;
-    setupState.callCount = 0;
-    api.__setBaseUrl('https://torii.example');
-    metricsState.isLoading = false;
-    metricsState.data = {
-      status: 'ok',
-      data: COMPLETE_METRICS,
-    };
-    metricsState.refetch.mockReset();
-    countriesState.isLoading = false;
-    countriesState.data = {
-      status: 'ok',
-      data: [
-        {
-          url: 'https://jp-1.example',
-          connected: true,
-          telemetry_unsupported: false,
-          config: null,
-          location: { lat: 35, lon: 139, country: 'Japan', city: 'Tokyo' },
-          connected_peers: [],
-        },
-        {
-          url: 'https://jp-2.example',
-          connected: false,
-          telemetry_unsupported: false,
-          config: null,
-          location: { lat: 34, lon: 135, country: 'Japan', city: 'Osaka' },
-          connected_peers: [],
-        },
-        {
-          url: 'https://ae-1.example',
-          connected: true,
-          telemetry_unsupported: false,
-          config: null,
-          location: { lat: 25, lon: 55, country: 'UAE', city: 'Dubai' },
-          connected_peers: [],
-        },
-      ],
-    };
-    countriesState.refetch.mockReset();
-  });
-
-  const factory = () => {
-    const wrapper = mount(VpnStats, {
+  function mountPage() {
+    return mount(VpnStats, {
       global: {
         plugins: [i18n],
         stubs: {
           BaseContentBlock: BaseContentBlockStub,
-          BaseInnerBlock: BaseInnerBlockStub,
-          BaseLoading: BaseLoadingStub,
-          BaseTable: BaseTableStub,
+          DataField: DataFieldStub,
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="String(to)"><slot /></a>',
+          },
         },
       },
     });
-    mountedWrappers.push(wrapper);
-    return wrapper;
-  };
+  }
 
-  it('renders VPN overview metrics and country rows', async () => {
-    const wrapper = factory();
+  it('renders the exact public relay and lease profile', async () => {
+    const wrapper = mountPage();
     await flushPromises();
 
-    expect(wrapper.text()).toContain('VPN overview');
-    expect(wrapper.text()).toContain('Active');
-    expect(wrapper.text()).toContain('4 KB');
-    expect(wrapper.text()).toContain('Japan');
-    expect(wrapper.text()).toContain('UAE');
+    expect(mocks.fetchVpnProfile).toHaveBeenCalledOnce();
+    expect(wrapper.get('[data-test="vpn-profile-availability"]').text()).toContain('Active');
+    expect(wrapper.get('[data-test="vpn-profile-relay"]').text()).toContain(
+      '/dns4/relay.example/udp/443/quic'
+    );
+    expect(wrapper.get('[data-test="vpn-profile-exit-classes"]').text()).toContain(
+      'standard · low-latency · high-security'
+    );
+    expect(wrapper.get('[data-test="vpn-profile-default-exit-class"]').text()).toContain('standard');
+    expect(wrapper.get('[data-test="vpn-profile-lease"]').text()).toContain('1h');
+    expect(wrapper.get('[data-test="vpn-profile-dns-push-interval"]').text()).toContain('1m');
+    expect(wrapper.get('[data-test="vpn-profile-billing"]').text()).toContain(
+      'standard · vpn_bytes_total · 10 XOR'
+    );
+    expect(wrapper.get('[data-test="vpn-profile-meter-family"]').text()).toContain('vpn_bytes_total');
+    expect(wrapper.get('[data-test="vpn-profile-lease-fee"]').text()).toContain('10');
+    expect(wrapper.get('[data-test="vpn-profile-settlement-grace"]').text()).toContain('30s');
+    expect(wrapper.get('[data-test="vpn-profile-operator"] a').attributes('href')).toBe(
+      `/accounts/${encodeURIComponent(availableProfile.operator_account_id)}`
+    );
+    expect(wrapper.get('[data-test="vpn-profile-pushed-routes"]').text()).toContain('None');
+    expect(wrapper.get('[data-test="vpn-profile-excluded-routes"]').text()).toContain('None');
+    expect(wrapper.get('[data-test="vpn-profile-dns-servers"]').text()).toContain('10.10.0.53');
+    expect(wrapper.get('[data-test="vpn-profile-tunnel-addresses"]').text()).toContain('10.10.0.0/24');
+    expect(wrapper.get('[data-test="vpn-profile-mtu"]').text()).toContain('1280 B');
+    expect(wrapper.get('[data-test="vpn-profile-flow-label-bits"]').text()).toContain('24');
+    expect(wrapper.get('[data-test="vpn-profile-padding-budget"]').text()).toContain('10ms');
+    expect(wrapper.get('[data-test="vpn-profile-relay-id"]').text()).toContain('11'.repeat(32));
+    expect(wrapper.get('[data-test="vpn-profile-relay-mldsa65"]').text()).toContain('22'.repeat(1_952));
+    expect(wrapper.get('[data-test="vpn-profile-descriptor-commit"]').text()).toContain('33'.repeat(32));
+    expect(wrapper.get('[data-test="vpn-profile-tls"]').text()).toContain('relay.example');
+    expect(wrapper.get('[data-test="vpn-profile-tls-spki"]').text()).toContain('44'.repeat(32));
+    expect(wrapper.get('[data-test="vpn-profile-certificate"]').text()).toContain('55'.repeat(32));
+    expect(wrapper.get('[data-test="vpn-profile-directory"]').text()).toContain('66'.repeat(32));
+    expect(wrapper.find('[data-test="vpn-profile-unavailable"]').exists()).toBe(false);
   });
 
-  it('refetches both datasets when the selected node base changes', async () => {
-    factory();
+  it('preserves policy fields and omits an absent trust tuple when VPN is unavailable', async () => {
+    mocks.fetchVpnProfile.mockResolvedValueOnce({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        ...availableProfile,
+        available: false,
+        relay_endpoint: '',
+        relay_id_hex: '',
+        relay_mldsa65_public_key_hex: '',
+        descriptor_commit_hex: '',
+        tls_server_name: '',
+        relay_tls_spki_sha256_hex: '',
+        relay_certificate_sha256_hex: '',
+        directory_snapshot_digest_hex: '',
+      },
+    });
+
+    const wrapper = mountPage();
     await flushPromises();
-    metricsState.refetch.mockClear();
-    countriesState.refetch.mockClear();
 
-    const api = await import('@/shared/api') as any;
-    api.__setBaseUrl('https://backup.example');
-    await nextTick();
-
-    expect(metricsState.refetch).toHaveBeenCalledTimes(1);
-    expect(countriesState.refetch).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('[data-test="vpn-profile-availability"]').text()).toContain('Disabled');
+    expect(wrapper.get('[data-test="vpn-profile-unavailable"]').text()).toContain(
+      'The VPN control plane is not currently available.'
+    );
+    expect(wrapper.get('[data-test="vpn-profile-relay"]').text()).toContain('None');
+    expect(wrapper.get('[data-test="vpn-profile-tls"]').text()).toContain('None');
+    expect(wrapper.get('[data-test="vpn-profile-relay-id"]').text()).toContain('None');
+    expect(wrapper.get('[data-test="vpn-profile-relay-mldsa65"]').text()).toContain('None');
+    expect(wrapper.get('[data-test="vpn-profile-descriptor-commit"]').text()).toContain('None');
+    expect(wrapper.get('[data-test="vpn-profile-tls-spki"]').text()).toContain('None');
+    expect(wrapper.get('[data-test="vpn-profile-certificate"]').text()).toContain('None');
+    expect(wrapper.get('[data-test="vpn-profile-directory"]').text()).toContain('None');
+    expect(wrapper.get('[data-test="vpn-profile-billing"]').text()).toContain('10 XOR');
   });
 
-  it('shows VPN metrics unavailable while keeping country data visible', async () => {
-    metricsState.data = { status: 'unknown-error' };
+  it('shows a strict load failure and retries the same public endpoint', async () => {
+    mocks.fetchVpnProfile
+      .mockResolvedValueOnce({ status: UNKNOWN_ERROR, error: new Error('Torii unavailable') })
+      .mockResolvedValueOnce({ status: SUCCESSFUL_FETCHING, data: availableProfile });
 
-    const wrapper = factory();
+    const wrapper = mountPage();
     await flushPromises();
 
-    expect(wrapper.text()).toContain(i18n.global.t('vpn.unavailable'));
-    expect(wrapper.text()).toContain('Japan');
+    expect(wrapper.text()).toContain('The public VPN profile could not be loaded.');
+    expect(wrapper.find('[data-test="vpn-public-profile"]').exists()).toBe(false);
+
+    await wrapper.get('[data-test="resource-retry"]').trigger('click');
+    await flushPromises();
+
+    expect(mocks.fetchVpnProfile).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-test="vpn-public-profile"]').exists()).toBe(true);
   });
 
-  it('shows country data unavailable while keeping VPN metrics visible', async () => {
-    countriesState.data = { status: 'unknown-error' };
-
-    const wrapper = factory();
+  it('describes metrics as an unauthenticated-class diagnostic outside the browser', async () => {
+    const wrapper = mountPage();
     await flushPromises();
 
-    expect(wrapper.text()).toContain(i18n.global.t('vpn.countryDataUnavailable'));
-    expect(wrapper.text()).toContain('Active');
+    expect(wrapper.find('[data-test="vpn-diagnostic-boundary"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Diagnostic telemetry stays outside the Explorer');
+    expect(wrapper.text()).toContain('unauthenticated Diagnostic route');
+    expect(wrapper.text()).toContain("Torii's global API-token/CIDR policy");
+    expect(wrapper.text()).toContain('/metrics');
+    expect(wrapper.text()).not.toContain('operator-restricted');
+  });
+
+  it('separates Torii admission, deployment token policy, and Explorer behavior', async () => {
+    const wrapper = mountPage();
+    await flushPromises();
+
+    const contract = wrapper.find('[data-test="vpn-auth-contract"]');
+    expect(contract.text()).toContain('Unauthenticated Diagnostic route');
+    expect(contract.text()).toContain('May require Torii API token or admitted CIDR');
+    expect(contract.text()).toContain('No Prometheus request, scrape, or proxy');
+    expect(contract.text()).not.toContain('Metrics access grant');
   });
 });

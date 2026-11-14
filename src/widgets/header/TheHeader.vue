@@ -1,42 +1,47 @@
 <template>
-  <header class="app-header">
-    <HeaderLogo />
-
+  <aside
+    v-if="!isHomeRoute"
+    class="explorer-sidebar"
+  >
+    <HeaderLogo /><NavigationMenu />
+  </aside>
+  <header
+    class="app-header"
+    :class="{ 'app-header--home': isHomeRoute }"
+  >
+    <HeaderLogo
+      v-if="!isHomeRoute"
+      class="app-header__logo"
+    />
     <SearchField
+      v-if="!isHomeRoute"
       class="app-header__search"
       size="md"
-      :placeholder="$t('search')"
     />
-
-    <div class="app-header__nav">
-      <GroupedNavigation />
-    </div>
-
     <div class="app-header__buttons">
-      <ExplorerReadAccess class="app-header__button" />
-      <ScopedExplorerControl
-        v-if="currentScope"
-        class="app-header__button app-header__button_node"
-      />
-      <NodeSettings
-        v-else
-        class="app-header__button app-header__button_node"
-      />
-      <ThemeSwitcher class="app-header__button app-header__button_icon" />
-      <LangDropdown class="app-header__button app-header__button_lang" />
+      <ScopedExplorerControl v-if="currentScope" />
+      <NodeSettings v-else />
+      <ExplorerReadAccess />
+      <ThemeSwitcher /><LangDropdown />
     </div>
-
     <div
       :id="PORTAL_ID"
       class="app-header__dropdown"
     />
   </header>
+  <NavigationMenu
+    v-if="!isHomeRoute"
+    class="explorer-mobile-navigation"
+    layout="inline"
+  />
 </template>
 
 <script setup lang="ts">
-import HeaderLogo from './HeaderLogo.vue';
+import { computed } from 'vue';
 import ExplorerReadAccess from '@/shared/ui/components/ExplorerReadAccess.vue';
-import { GroupedNavigation } from '@/features/navigation';
+import { useRoute } from 'vue-router';
+import HeaderLogo from './HeaderLogo.vue';
+import { NavigationMenu } from '@/features/navigation';
 import { LangDropdown } from '@/features/switch-lang';
 import { ThemeSwitcher } from '@/features/switch-theme';
 import { SearchField } from '@/features/search';
@@ -45,155 +50,44 @@ import { PORTAL_ID } from '@/shared/ui/consts';
 import { useCurrentExplorerScope } from '@/shared/ui/composables/useExplorerScopeNavigation';
 
 const currentScope = useCurrentExplorerScope();
+const route = useRoute();
+const isHomeRoute = computed(() => route.name === 'home');
 </script>
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
-
+.explorer-sidebar {
+  display: none; position: fixed; inset-block: 0; inset-inline-start: 0; width: 240px;
+  overflow-y: auto; background: theme-color('surface'); border-inline-end: 1px solid theme-color('border-primary'); z-index: 30;
+  > .header-logo { height: 72px; display: flex; justify-content: start; padding: 16px 24px; }
+  .header-logo__img { width: 160px; }
+  @media (min-width: 1200px) { display: block; }
+}
 .app-header {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas:
-    'logo controls'
-    'nav nav';
-  align-items: center;
-  column-gap: size(1);
-  row-gap: size(1);
-  min-height: $header-height-mobile;
-  padding: size(1) size(1);
-  margin: 0 auto;
-  max-width: 1180px;
-  position: relative;
-  z-index: 20;
-  isolation: isolate;
-  background: color-mix(in srgb, theme-color('surface') 88%, transparent);
-  border: 1px solid color-mix(in srgb, theme-color('border-primary') 70%, transparent);
-  border-radius: size(2.5);
-  box-shadow:
-    0 12px 30px color-mix(in srgb, theme-color('primary') 8%, transparent),
-    0 2px 8px color-mix(in srgb, theme-color('background') 30%, transparent);
-  backdrop-filter: blur(10px);
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 1px;
-    border-radius: calc(size(2.5) - 1px);
-    pointer-events: none;
-    background:
-      radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.12), transparent 30%),
-      radial-gradient(circle at 86% 14%, color-mix(in srgb, theme-color('primary') 6%, transparent), transparent 32%);
-    opacity: 0.7;
+  position: relative; z-index: 25; background: theme-color('surface');
+  border-bottom: 1px solid theme-color('border-primary'); padding: 6px 12px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'logo controls' 'search search'; gap: 4px 8px;
+  &__logo { grid-area: logo; justify-content: flex-start; .header-logo__img { width: 120px; max-width: 100%; } }
+  &__buttons { grid-area: controls; display: flex; align-items: center; gap: 4px; min-width: 0; }
+  &__search { grid-area: search; min-width: 0; }
+  @media (max-width: 1199px) { .scoped-explorer-control__label { max-width: clamp(48px, 12vw, 144px); } }
+  &__dropdown { position: absolute; inset-inline-end: 12px; top: 100%; z-index: 40; }
+  @media (min-width: 1200px) {
+    margin-inline-start: 240px; min-height: 72px; padding: 12px 24px;
+    grid-template-columns: minmax(0, 640px) auto; grid-template-areas: 'search controls'; justify-content: space-between; gap: 20px;
+    &__logo { display: none; }
   }
-
-  @include xs {
-    padding: size(1) size(2);
-    min-height: $header-height-landscape-mobile;
+  &--home {
+    display: flex; justify-content: flex-end; min-height: 64px; padding: 10px 12px;
+    margin: 0; border: 0; background: transparent;
+    @media (min-width: 640px) { padding: 16px 24px; min-height: 76px; }
+    @media (min-width: 1440px) { padding: 24px 32px; }
   }
-
-  @include md {
-    padding: size(1.5) size(3);
-    min-height: $header-height;
-  }
-
-  @include lg {
-    grid-template-columns: auto minmax(230px, 1fr) auto;
-    grid-template-areas:
-      'logo search controls'
-      'nav nav nav';
-    column-gap: size(2);
-  }
-
-  @include xl {
-    max-width: $xl;
-  }
-
-  @include xxl {
-    padding: 0 size(7);
-    max-width: $xxl;
-  }
-
-  &__search {
-    display: none !important;
-
-    @include lg {
-      grid-area: search;
-      display: flex !important;
-      justify-self: center;
-      min-width: 0;
-    }
-  }
-
-  &__nav {
-    grid-area: nav;
-    display: block;
-    width: 100%;
-    margin-inline-start: 0;
-  }
-
-  &__buttons {
-    grid-area: controls;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: size(0.5);
-    width: fit-content;
-    max-width: 100%;
-    min-width: 0;
-    flex-wrap: nowrap;
-    justify-self: end;
-    margin-inline-start: auto;
-
-    @include sm {
-      gap: size(1);
-    }
-
-    @include xxl {
-      gap: size(2);
-    }
-
-  }
-
-  &__button {
-    flex: 0 0 auto;
-    min-width: 0;
-  }
-
-  &__button_node {
-    flex: 0 1 auto;
-    min-width: 0;
-    max-width: size(24);
-
-    @include xxl {
-      max-width: size(28);
-    }
-  }
-
-  &__button_icon,
-  &__button_lang {
-    flex-shrink: 0;
-  }
-
-  .header-logo {
-    grid-area: logo;
-    justify-self: start;
-  }
-
-  &__dropdown {
-    position: absolute;
-    top: calc(100% + size(1));
-    z-index: 100;
-    inset-inline-end: size(1);
-
-    @include xs {
-      inset-inline-end: size(2);
-    }
-
-    @include md {
-      inset-inline-end: size(3);
-    }
-  }
-
+}
+.explorer-mobile-navigation {
+  border-bottom: 1px solid theme-color('border-primary');
+  background: theme-color('surface'); padding: 12px;
+  @media (min-width: 1200px) { display: none; }
 }
 </style>

@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="root"
     class="base-table"
     :role="rendersDesktopRows ? 'table' : undefined"
     :aria-busy="props.loading"
@@ -33,7 +34,9 @@
       class="content-row content-row_empty row-text"
       role="status"
     >
-      {{ $t('noData') }}
+      <slot name="empty">
+        {{ props.emptyLabel ?? $t('noData') }}
+      </slot>
     </div>
 
     <div
@@ -97,13 +100,14 @@
       :items="props.items.length"
       :payload-pagination
       :pagination-breakpoint
+      :max-fetch-size="props.maxFetchSize"
     />
   </div>
 </template>
 
 <script setup lang="ts" generic="T">
-import { computed, useSlots } from 'vue';
-import { useWindowSize } from '@vueuse/core';
+import { computed, ref, useSlots } from 'vue';
+import { useElementSize } from '@vueuse/core';
 import BaseLoading from './BaseLoading.vue';
 import BaseResourceState from './BaseResourceState.vue';
 import type { ApiProblem } from '@/shared/utils/resource-state';
@@ -114,12 +118,14 @@ import type { CollectionContinuation, Pagination } from '@/shared/api/schemas';
 interface Props {
   loading: boolean
   error?: ApiProblem | null
+  emptyLabel?: string
   total?: number
   payloadPagination?: Pagination | null
   cursorPagination?: CollectionContinuation | null
   paginationMode?: 'numbered' | 'cursor'
   disablePagination?: boolean
   paginationBreakpoint?: number
+  maxFetchSize?: number | null
   items: T[]
   rowKey?: (item: T, index: number) => string | number
   containerClass: string
@@ -134,7 +140,7 @@ const emit = defineEmits<{
 }>();
 
 const props = withDefaults(defineProps<Props>(), {
-  breakpoint: 1200,
+  breakpoint: 960,
   error: null,
   disablePagination: false,
   rowPointer: false,
@@ -144,13 +150,15 @@ const props = withDefaults(defineProps<Props>(), {
   cursorPagination: null,
   paginationMode: 'numbered',
   paginationBreakpoint: 960,
+  maxFetchSize: null,
 });
 
 const page = defineModel<number>('page', { default: 1 });
 const pageSize = defineModel<number>('pageSize', { default: 10 });
 const cursor = defineModel<string | null>('cursor', { default: null });
 
-const { width } = useWindowSize();
+const root = ref<HTMLElement | null>(null);
+const { width } = useElementSize(root);
 const slots = useSlots();
 
 const isEmpty = computed(() => props.items.length === 0);

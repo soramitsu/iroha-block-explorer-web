@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   isEncodedAccountLiteral,
-  isAccountSelectorLiteral,
-  normalizeDisplayedAccountSelectorLiteral,
   isEncodedAssetLiteral,
   normalizeAccountAliasLiteral,
   normalizeAccountIdLiteral,
-  normalizeAccountSelectorLiteral,
   normalizeEncodedAccountLiteral,
-  normalizeLooseAccountLiteral,
   normalizeToriiAccountSelectorLiteral,
   parseAccountAliasLiteral,
 } from './account-literal';
@@ -55,53 +51,26 @@ describe('account literal helpers', () => {
     expect(normalizeAccountAliasLiteral('alice')).toBeNull();
     expect(normalizeAccountAliasLiteral('alice@wonder.land.ops')).toBeNull();
     expect(normalizeAccountAliasLiteral('alice@@retail')).toBeNull();
-    expect(normalizeAccountSelectorLiteral('rose#main')).toBeNull();
     expect(normalizeEncodedAccountLiteral(SAMPLE_NORITO_ACCOUNT)).toBeNull();
     expect(normalizeEncodedAccountLiteral('norito:not-hex')).toBeNull();
   });
 
-  it('accepts canonical ids or aliases as account selectors', () => {
-    expect(normalizeLooseAccountLiteral(SAMPLE_I105_MODERN)).toBe(SAMPLE_I105_MODERN);
-    expect(normalizeLooseAccountLiteral(SAMPLE_ALIAS)).toBe('treasury@banking.retail');
-    expect(normalizeAccountSelectorLiteral('Primary@Retail')).toBe('primary@retail');
-    expect(normalizeLooseAccountLiteral('rose#main#alice@wonderland')).toBeNull();
-    expect(normalizeLooseAccountLiteral('??')).toBeNull();
-  });
-
-  it('preserves encoded account selectors without rewriting their network prefix', () => {
+  it('preserves canonical ids for the explicit multisig selector contract', () => {
     expect(normalizeToriiAccountSelectorLiteral(SAMPLE_I105_TEST_MODERN)).toBe(SAMPLE_I105_TEST_MODERN);
-    expect(normalizeToriiAccountSelectorLiteral(SAMPLE_I105_MODERN, 'https://taira.sora.org')).toBe(SAMPLE_I105_MODERN);
-    expect(normalizeToriiAccountSelectorLiteral(SAMPLE_I105_TEST_MODERN, 'https://nexus.mof3.sora.org:18080')).toBe(
-      SAMPLE_I105_TEST_MODERN
-    );
+    expect(normalizeToriiAccountSelectorLiteral(SAMPLE_I105_MODERN)).toBe(SAMPLE_I105_MODERN);
   });
 
-  it('keeps aliases intact when normalizing account selectors for Torii', () => {
+  it('keeps aliases only for the explicit multisig selector contract', () => {
     expect(normalizeToriiAccountSelectorLiteral(SAMPLE_ALIAS)).toBe('treasury@banking.retail');
     expect(normalizeToriiAccountSelectorLiteral('??')).toBeNull();
   });
 
-  it('preserves displayed account ids without rewriting their network prefix', () => {
-    expect(normalizeDisplayedAccountSelectorLiteral(SAMPLE_I105_MODERN, 'https://taira.sora.org')).toBe(
-      SAMPLE_I105_MODERN
-    );
-    expect(normalizeDisplayedAccountSelectorLiteral(SAMPLE_I105_TEST_MODERN, 'https://nexus.mof3.sora.org:18080')).toBe(
-      SAMPLE_I105_TEST_MODERN
-    );
-    expect(normalizeDisplayedAccountSelectorLiteral(SAMPLE_ALIAS, 'https://taira.sora.org')).toBe(
-      'treasury@banking.retail'
-    );
-  });
-
-  it('detects canonical ids, selectors, and norito asset literals', () => {
+  it('detects canonical ids and Norito asset literals', () => {
     expect(isEncodedAccountLiteral(SAMPLE_I105_MODERN)).toBe(true);
     expect(isEncodedAccountLiteral(SAMPLE_I105)).toBe(false);
     expect(isEncodedAccountLiteral(SAMPLE_ALIAS)).toBe(false);
     expect(isEncodedAccountLiteral(SAMPLE_NORITO_ACCOUNT)).toBe(false);
     expect(isEncodedAccountLiteral('alice@retail')).toBe(false);
-    expect(isAccountSelectorLiteral(SAMPLE_ALIAS)).toBe(true);
-    expect(isAccountSelectorLiteral('alice@retail')).toBe(true);
-
     expect(isEncodedAssetLiteral(SAMPLE_NORITO_ASSET)).toBe(true);
     expect(isEncodedAssetLiteral('usd#main')).toBe(false);
   });

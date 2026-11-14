@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createKotodamaStudioGraphNode, type KotodamaStudioGraphDocumentV2 } from '@/shared/lib/kotodama-studio-graph';
+import { i18n } from '@/shared/lib/localization';
 import ContractGraphCanvas from './ContractGraphCanvas.vue';
 
 const vueFlowMocks = vi.hoisted(() => ({
@@ -176,6 +177,7 @@ function factory(graph = createGraph()) {
       selectedNodeId: null,
       diagnostics: [],
     },
+    global: { plugins: [i18n] },
   });
 }
 

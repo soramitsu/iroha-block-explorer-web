@@ -9,7 +9,7 @@ type PageResult<T> = { status: typeof SUCCESSFUL_FETCHING; data: CollectionPage<
 /**
  * Rows per page: the feeds' maximum. Torii decodes a 100-row continuation
  * within its query decode limit again since the 2026-10-25 validator rollout
- * (EX-329), so every bounded scan reads full pages.
+ * (EX-358), so every bounded scan reads full pages.
  */
 export const BOUNDED_SCAN_PAGE_LIMIT = 100;
 /** Empty continuation pages followed per requested page. */

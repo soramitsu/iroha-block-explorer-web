@@ -416,6 +416,7 @@ describe('InstructionsTable', () => {
       ...baseInstruction,
       kind: 'RegisterSmartContractBytes',
       box: {
+        wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractBytes',
         encoded: '0x07',
         framed_sha256: FRAMED_SHA256,
         json: {
@@ -431,6 +432,7 @@ describe('InstructionsTable', () => {
       kind: 'RegisterSmartContractCode',
       index: 1,
       box: {
+        wire_id: 'iroha.instruction.v1::smart_contract_code::RegisterSmartContractCode',
         encoded: '0x08',
         framed_sha256: FRAMED_SHA256,
         json: {

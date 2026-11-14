@@ -20,7 +20,7 @@ describe('exact Node release runtime', () => {
   it('bootstraps the exact toolchain inside the digest-pinned Playwright image', () => {
     const jenkinsfile = readFileSync(path.resolve('Jenkinsfile'), 'utf8');
     expect(jenkinsfile).toContain(
-      'sh scripts/bootstrap-exact-toolchain.sh node scripts/run-ci-gates.mjs'
+      'PLAYWRIGHT_BROWSERS_PATH=/ms-playwright sh scripts/bootstrap-exact-toolchain.sh node scripts/run-ci-gates.mjs'
     );
     expect(jenkinsfile).toContain(
       'mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d'

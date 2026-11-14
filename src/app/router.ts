@@ -136,6 +136,16 @@ export const routes = [
     component: () => import('@/pages/NodesTelemetry.vue'),
   },
   {
+    path: '/parameters',
+    name: 'system-parameters',
+    component: () => import('@/pages/SystemParameters.vue'),
+  },
+  {
+    path: '/soracles',
+    name: 'soracles',
+    component: () => import('@/pages/SoraclesPage.vue'),
+  },
+  {
     path: '/kaigi/relays',
     name: 'kaigi-relays',
     component: () => import('@/pages/KaigiRelays.vue'),
@@ -156,9 +166,9 @@ export const routes = [
     component: () => import('@/pages/SorafsRegistry.vue'),
   },
   {
-    path: '/zk/telemetry',
-    name: 'zk-telemetry',
-    component: () => import('@/pages/ZkTelemetry.vue'),
+    path: '/zk/registry',
+    name: 'zk-registry',
+    component: () => import('@/pages/ZkRegistry.vue'),
   },
   {
     path: '/vpn',

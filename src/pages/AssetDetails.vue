@@ -15,7 +15,7 @@ import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { normalizeAccountSelectorLiteral } from '@/shared/lib/account-literal';
+import { normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
 import { getAssetDefinitionDisplayName } from '@/shared/lib/asset-definition-id';
 import { useI18n } from 'vue-i18n';
 import type { Asset, AssetSearchParams } from '@/shared/api/schemas';
@@ -58,7 +58,7 @@ const listState = reactive({
 });
 const holderFilter = ref('');
 const holderFilterState = computed(() =>
-  parseOptionalFilter(holderFilter.value, normalizeAccountSelectorLiteral, t('searchUnsupported'))
+  parseOptionalFilter(holderFilter.value, normalizeToriiAccountSelectorLiteral, t('searchUnsupported'))
 );
 const parsedHolderFilter = computed<string | undefined>(() => holderFilterState.value.value);
 const holderFilterError = computed(() => holderFilterState.value.error);
@@ -120,7 +120,7 @@ const isInitialTerminalEmptyAssetsPage = computed(() =>
 );
 
 const assetInstanceRowKey = (item: Asset) => item.id;
-const assetInstanceDefinitionName = (item: Asset) => getAssetDefinitionDisplayName(item);
+const assetInstanceDefinitionName = (item: Asset) => getAssetDefinitionDisplayName(item.definition_id);
 </script>
 
 <template>

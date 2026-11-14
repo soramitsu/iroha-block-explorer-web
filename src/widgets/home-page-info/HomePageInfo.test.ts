@@ -1,82 +1,97 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { ref } from 'vue';
-import type { NetworkMetrics } from '@/shared/api/schemas';
 import HomePageInfo from './HomePageInfo.vue';
 
-const telemetry = {
-  metrics: ref<NetworkMetrics | null>(null),
-  isLoading: ref(false),
-  isUnavailable: ref(true),
-  isStale: ref(false),
-};
+const telemetry = vi.hoisted(() => ({
+  metrics: { __v_isRef: true, value: null as null | Record<string, unknown> },
+  isLoading: { __v_isRef: true, value: false },
+  streamStatus: { __v_isRef: true, value: 'OPEN' },
+  isStale: { __v_isRef: true, get value() { return telemetry.streamStatus.value !== 'OPEN'; } },
+  reconnect: vi.fn(),
+}));
 
 vi.mock('@/shared/ui/composables/useTelemetryMetrics', () => ({
   useTelemetryMetrics: () => telemetry,
 }));
 
-const sampleMetrics: NetworkMetrics = {
-  accounts: 13,
-  assets: 13,
-  domains: 6,
-  block: 835,
-  transactions_accepted: 1005,
-  transactions_rejected: 2,
-  peers: 4,
-  block_created_at: new Date('2026-09-12T03:30:05.553Z'),
-  finalized_block: 834,
-  avg_commit_time: null,
-  avg_block_time: null,
-};
-
-function mountInfo() {
-  return mount(HomePageInfo, {
-    global: {
-      mocks: { $t: (key: string) => key },
-      stubs: { SearchField: true, BaseLoading: true },
-    },
-  });
-}
-
-describe('home network metrics', () => {
+describe('HomePageInfo', () => {
   beforeEach(() => {
     telemetry.metrics.value = null;
     telemetry.isLoading.value = false;
-    telemetry.isUnavailable.value = true;
-    telemetry.isStale.value = false;
+    telemetry.streamStatus.value = 'OPEN';
+    telemetry.reconnect.mockClear();
   });
 
-  it('shows unavailable telemetry without inventing zero counters or one node', () => {
-    const wrapper = mountInfo();
-    expect(wrapper.get('[role="status"]').text()).toBe('telemetry.telemetryUnavailable');
-    expect(wrapper.findAll('.home-page-info__item-value')).toHaveLength(0);
+  function factory() {
+    return mount(HomePageInfo, {
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+        stubs: {
+          BaseButton: { template: '<button><slot /></button>' },
+          BaseLoading: {
+            template: '<div data-test="metrics-loading" />',
+          },
+        },
+      },
+    });
+  }
+
+  it('shows one availability notice until an exact telemetry sample exists', () => {
+    const wrapper = factory();
+    const values = wrapper.findAll('.home-page-info__item-value');
+
+    expect(values).toHaveLength(0);
+    expect(wrapper.text()).toContain('ux.metricsUnavailable');
   });
 
-  it('shows loading while waiting for the first public snapshot', () => {
-    telemetry.isLoading.value = true;
-    telemetry.isUnavailable.value = false;
-    const wrapper = mountInfo();
-    expect(wrapper.find('base-loading-stub').exists()).toBe(true);
-    expect(wrapper.find('[role="status"]').exists()).toBe(false);
-    expect(wrapper.findAll('.home-page-info__item-value')).toHaveLength(0);
-  });
+  it('renders exact zero and nonzero values from the telemetry sample', () => {
+    telemetry.metrics.value = {
+      peers: 0,
+      domains: 2,
+      accounts: 3,
+      assets: 4,
+      transactions_accepted: 5,
+      transactions_rejected: 6,
+      block: 7,
+      block_created_at: null,
+      finalized_block: 7,
+      avg_commit_time: null,
+      avg_block_time: null,
+    };
 
-  it('renders all six authoritative counters after a snapshot', () => {
-    telemetry.metrics.value = sampleMetrics;
-    telemetry.isUnavailable.value = false;
-    const wrapper = mountInfo();
-    expect(wrapper.findAll('.home-page-info__item-value').map((item) => item.text())).toEqual([
-      '13', '13', '6', '835', '1007', '4',
+    const wrapper = factory();
+
+    expect(wrapper.findAll('.home-page-info__item-value').map((value) => value.text())).toEqual([
+      '3',
+      '4',
+      '2',
+      '7',
+      '11',
+      '0',
     ]);
-    expect(wrapper.find('[role="status"]').exists()).toBe(false);
   });
 
-  it('labels retained metrics stale when the stream is disconnected', () => {
-    telemetry.metrics.value = sampleMetrics;
-    telemetry.isUnavailable.value = false;
-    telemetry.isStale.value = true;
-    const wrapper = mountInfo();
-    expect(wrapper.get('[role="status"]').text()).toBe('telemetry.dataStale');
-    expect(wrapper.findAll('.home-page-info__item-value')).toHaveLength(6);
+  it('keeps the metric grids hidden while the first sample is connecting', () => {
+    telemetry.isLoading.value = true;
+
+    const wrapper = factory();
+
+    expect(wrapper.find('[data-test="metrics-loading"]').exists()).toBe(true);
+    expect(wrapper.find('.home-page-info__grid').exists()).toBe(false);
   });
+  it('reconnects the current stream on retry', async () => {
+    const wrapper = factory();
+    await wrapper.get('button').trigger('click');
+    expect(telemetry.reconnect).toHaveBeenCalledOnce();
+  });
+  it('marks retained statistics stale after a disconnect', () => {
+    telemetry.metrics.value = { peers: 1, accounts: 2, assets: 3, domains: 4, block: 5, transactions_accepted: 6, transactions_rejected: 0 };
+    telemetry.streamStatus.value = 'CLOSED';
+    const wrapper = factory();
+    expect(wrapper.text()).toContain('ux.metricsStale');
+    expect(wrapper.findAll('dd')).toHaveLength(6);
+  });
+
 });

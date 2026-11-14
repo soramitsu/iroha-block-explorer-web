@@ -18,7 +18,7 @@ describe('Explorer read identity lifecycle', () => {
       const privateAtMount = explorerReadAccountId.value !== null;
       return () => h('div', { 'data-test': 'view', 'data-instance': instance }, privateAtMount ? 'Private records' : 'Public records');
     } });
-    wrapper = mount(App, { global: { stubs: {
+    wrapper = mount(App, { global: { mocks: { $t: (key: string) => key }, stubs: {
       RouterView: View,
       TheHeader: true,
       BasePageLayout: { template: '<div><slot /></div>' },
@@ -37,7 +37,7 @@ describe('Explorer read identity lifecycle', () => {
   });
 
   it('closes the approved wallet when the application is removed', () => {
-    wrapper = mount(App, { global: { stubs: {
+    wrapper = mount(App, { global: { mocks: { $t: (key: string) => key }, stubs: {
       RouterView: true, TheHeader: true, BasePageLayout: true, NotificationsInstance: true,
     } } });
     const close = vi.fn();

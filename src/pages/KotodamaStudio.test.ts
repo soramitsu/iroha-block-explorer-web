@@ -2,10 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, type PropType } from 'vue';
 import { i18n } from '@/shared/lib/localization';
-import type {
-  KotodamaStudioGraphDiagnostic,
-  KotodamaStudioGraphDocumentV2,
-} from '@/shared/lib/kotodama-studio-graph';
+import type { KotodamaStudioGraphDiagnostic, KotodamaStudioGraphDocumentV2 } from '@/shared/lib/kotodama-studio-graph';
 import KotodamaStudio from './KotodamaStudio.vue';
 
 const notifications = vi.hoisted(() => ({
@@ -105,24 +102,41 @@ const ContractGraphCanvasStub = defineComponent({
       emit('update:selectedNodeId', node?.id ?? null);
     };
 
-    return () => h('div', {
-      ...attrs,
-      'data-test': attrs['data-test'] ?? 'studio-graph-canvas',
-    }, [
-      h('button', {
-        'data-test': 'graph-select-entrypoint',
-        onClick: () => selectKind('entrypoint'),
-      }, 'Select entrypoint'),
-      h('button', {
-        'data-test': 'graph-select-effect',
-        onClick: () => selectKind('effect'),
-      }, 'Select effect'),
-      h('button', {
-        'data-test': 'graph-select-branch',
-        onClick: () => selectKind('branch'),
-      }, 'Select branch'),
-      h('output', { 'data-test': 'graph-diagnostic-count' }, String(props.diagnostics.length)),
-    ]);
+    return () =>
+      h(
+        'div',
+        {
+          ...attrs,
+          'data-test': attrs['data-test'] ?? 'studio-graph-canvas',
+        },
+        [
+          h(
+            'button',
+            {
+              'data-test': 'graph-select-entrypoint',
+              onClick: () => selectKind('entrypoint'),
+            },
+            'Select entrypoint'
+          ),
+          h(
+            'button',
+            {
+              'data-test': 'graph-select-effect',
+              onClick: () => selectKind('effect'),
+            },
+            'Select effect'
+          ),
+          h(
+            'button',
+            {
+              'data-test': 'graph-select-branch',
+              onClick: () => selectKind('branch'),
+            },
+            'Select branch'
+          ),
+          h('output', { 'data-test': 'graph-diagnostic-count' }, String(props.diagnostics.length)),
+        ]
+      );
   },
 });
 
@@ -189,10 +203,12 @@ describe('KotodamaStudio', () => {
 
     expect(wrapper.get('[data-test="studio-compile-mode"]').text()).toBe('canonical-rust-service');
     expect(wrapper.get('[data-test="studio-deploy"]').attributes('disabled')).toBeDefined();
-    expect(compilerMocks.compileKotodamaStudioSource).toHaveBeenCalledWith(expect.objectContaining({
-      compilerUrl: 'https://compiler.example',
-      source: expect.stringContaining('seiyaku StablecoinSimple'),
-    }));
+    expect(compilerMocks.compileKotodamaStudioSource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        compilerUrl: 'https://compiler.example',
+        source: expect.stringContaining('seiyaku StablecoinSimple'),
+      })
+    );
     expect(notifications.success).toHaveBeenCalledWith('Contract bundle compiled by the canonical Rust service.');
   });
 
@@ -202,8 +218,9 @@ describe('KotodamaStudio', () => {
     await settle();
 
     expect(wrapper.get('[data-test="studio-compile"]').attributes('disabled')).toBeDefined();
-    expect(wrapper.get('[data-test="studio-compile-panel"]').text())
-      .toContain('Compilation is disabled until an operator configures a trusted canonical Rust compiler service URL.');
+    expect(wrapper.get('[data-test="studio-compile-panel"]').text()).toContain(
+      'Compilation is disabled until an operator configures a trusted canonical Rust compiler service URL.'
+    );
     expect(compilerMocks.compileKotodamaStudioSource).not.toHaveBeenCalled();
   });
 
@@ -212,8 +229,9 @@ describe('KotodamaStudio', () => {
     await settle();
 
     expect(wrapper.get('[data-test="studio-deploy"]').attributes('disabled')).toBeDefined();
-    expect(wrapper.get('[data-test="studio-deployment-unavailable"]').text())
-      .toContain('does not provide an approved browser signing and submission API');
+    expect(wrapper.get('[data-test="studio-deployment-unavailable"]').text()).toContain(
+      'does not provide an approved browser signing and submission API'
+    );
     expect(wrapper.find('input[type="password"]').exists()).toBe(false);
 
     await wrapper.get('[data-test="studio-compile"]').trigger('click');
@@ -230,22 +248,24 @@ describe('KotodamaStudio', () => {
       codeHashHex: '',
       abiHashHex: '',
       compilerFingerprint: '',
-      diagnostics: [{
-        code: 'EK_PARSE',
-        severity: 'error',
-        phase: 'parse',
-        message: 'Unexpected token',
-        primary_span: {
-          source: 'studio.ko',
-          start: { line: 3, column: 5 },
-          end: { line: 3, column: 6 },
-          byte_range: { start: 10, end: 11 },
+      diagnostics: [
+        {
+          code: 'EK_PARSE',
+          severity: 'error',
+          phase: 'parse',
+          message: 'Unexpected token',
+          primary_span: {
+            source: 'studio.ko',
+            start: { line: 3, column: 5 },
+            end: { line: 3, column: 6 },
+            byte_range: { start: 10, end: 11 },
+          },
+          labels: [],
+          notes: [],
+          help: null,
+          fix: null,
         },
-        labels: [],
-        notes: [],
-        help: null,
-        fix: null,
-      }],
+      ],
       warnings: [],
       manifest: null,
       sourceMap: [],
@@ -258,8 +278,9 @@ describe('KotodamaStudio', () => {
     await wrapper.get('[data-test="studio-compile"]').trigger('click');
     await settle();
 
-    expect(wrapper.get('[data-test="studio-semantic-diagnostics"]').text())
-      .toContain('Line 3, column 5: Unexpected token');
+    expect(wrapper.get('[data-test="studio-semantic-diagnostics"]').text()).toContain(
+      'Line 3, column 5: Unexpected token'
+    );
     expect(notifications.error).toHaveBeenCalledWith('The canonical Rust compiler found problems.');
     expect(wrapper.find('[data-test="studio-direct-deploy-private-key"]').exists()).toBe(false);
   });
@@ -274,10 +295,10 @@ describe('KotodamaStudio', () => {
     await wrapper.get('[data-test="studio-compile"]').trigger('click');
     await settle();
 
-    expect(wrapper.get('[data-test="studio-compile-panel"]').text())
-      .toContain('Kotodama compiler service failed (503): unavailable');
-    expect(notifications.error)
-      .toHaveBeenCalledWith('Kotodama compiler service failed (503): unavailable');
+    expect(wrapper.get('[data-test="studio-compile-panel"]').text()).toContain(
+      'Unable to compile the graph-generated source.'
+    );
+    expect(notifications.error).toHaveBeenCalledWith('Unable to compile the graph-generated source.');
     expect(wrapper.find('[data-test="studio-compile-mode"]').exists()).toBe(false);
   });
 
@@ -377,68 +398,72 @@ describe('KotodamaStudio', () => {
     await wrapper.get('select[aria-label="Parameter type"]').setValue('AssetDefinitionId');
     await settle();
 
-    expect(wrapper.get('[data-test="studio-source"]').text()).toContain('kotoage fn execute_assets(asset: AssetDefinitionId)');
+    expect(wrapper.get('[data-test="studio-source"]').text()).toContain(
+      'kotoage fn execute_assets(asset: AssetDefinitionId)'
+    );
     expect(wrapper.get('.kotodama-studio__ports').text()).toContain('asset');
     expect(wrapper.get('.kotodama-studio__ports').text()).toContain('AssetDefinitionId');
   });
 
   it('edits branch edge labels from the inspector and persists the graph document', async () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      version: 2,
-      updatedAt: '2026-04-24T00:00:00.000Z',
-      metadata: {
-        title: 'BranchEditor',
-        dataspace: 'branch',
-        authority: 'operator@branch.main',
-        chainId: 'wonderland',
-        description: 'Edge editor fixture.',
-      },
-      legacy: null,
-      graph: {
-        nodes: [
-          {
-            id: 'entry-run',
-            type: 'kotodamaGraph',
-            position: { x: 80, y: 100 },
-            data: {
-              title: 'run',
-              detail: 'Entrypoint',
-              kind: 'entrypoint',
-              config: { name: 'run', params: '', returnType: '', permission: '', access: '' },
-              ports: [],
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        updatedAt: '2026-04-24T00:00:00.000Z',
+        metadata: {
+          title: 'BranchEditor',
+          dataspace: 'branch',
+          authority: 'operator@branch.main',
+          chainId: 'wonderland',
+          description: 'Edge editor fixture.',
+        },
+        graph: {
+          nodes: [
+            {
+              id: 'entry-run',
+              type: 'kotodamaGraph',
+              position: { x: 80, y: 100 },
+              data: {
+                title: 'run',
+                detail: 'Entrypoint',
+                kind: 'entrypoint',
+                config: { name: 'run', params: '', returnType: '', permission: '', access: '' },
+                ports: [],
+              },
             },
-          },
-          {
-            id: 'branch-check',
-            type: 'kotodamaGraph',
-            position: { x: 360, y: 100 },
-            data: {
-              title: 'check',
-              detail: 'Branch',
-              kind: 'branch',
-              config: { condition: 'true' },
-              ports: [],
+            {
+              id: 'branch-check',
+              type: 'kotodamaGraph',
+              position: { x: 360, y: 100 },
+              data: {
+                title: 'check',
+                detail: 'Branch',
+                kind: 'branch',
+                config: { condition: 'true' },
+                ports: [],
+              },
             },
-          },
-          {
-            id: 'effect-info',
-            type: 'kotodamaGraph',
-            position: { x: 640, y: 100 },
-            data: {
-              title: 'say',
-              detail: 'Effect',
-              kind: 'effect',
-              config: { effect: 'info', args: '"branched"', statement: '' },
-              ports: [],
+            {
+              id: 'effect-info',
+              type: 'kotodamaGraph',
+              position: { x: 640, y: 100 },
+              data: {
+                title: 'say',
+                detail: 'Effect',
+                kind: 'effect',
+                config: { effect: 'info', args: '"branched"', statement: '' },
+                ports: [],
+              },
             },
-          },
-        ],
-        edges: [
-          { id: 'edge-entry-branch-next', source: 'entry-run', target: 'branch-check', label: 'next' },
-          { id: 'edge-branch-effect-then', source: 'branch-check', target: 'effect-info', label: 'then' },
-        ],
-      },
-    }));
+          ],
+          edges: [
+            { id: 'edge-entry-branch-next', source: 'entry-run', target: 'branch-check', label: 'next' },
+            { id: 'edge-branch-effect-then', source: 'branch-check', target: 'effect-info', label: 'then' },
+          ],
+        },
+      })
+    );
 
     const wrapper = factory();
     await settle();
@@ -464,7 +489,9 @@ describe('KotodamaStudio', () => {
     await findButtonByText(wrapper, 'State').trigger('click');
     await settle();
 
-    expect(wrapper.get('[data-test="studio-semantic-diagnostics"]').text()).toContain('State "counter" is defined more than once.');
+    expect(wrapper.get('[data-test="studio-semantic-diagnostics"]').text()).toContain(
+      'State "counter" is defined more than once.'
+    );
     expect(wrapper.get('[data-test="studio-compile"]').attributes('disabled')).toBeDefined();
     expect(wrapper.get('[data-test="graph-diagnostic-count"]').text()).toBe('2');
   });

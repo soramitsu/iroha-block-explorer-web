@@ -15,7 +15,7 @@ import { useRouter, type LocationQueryRaw } from 'vue-router';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import type { Asset, AssetDefinition, NFT, RWA } from '@/shared/api/schemas';
-import { normalizeAccountSelectorLiteral } from '@/shared/lib/account-literal';
+import { normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
 import { getRwaDomain } from '@/shared/lib/rwa-id';
 import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 import { parseOptionalFilter } from '@/shared/lib/optional-filter';
@@ -76,22 +76,22 @@ const rwaFilters = reactive({
 });
 const holderFilter = ref(initialTab === 'holders' ? firstRouteQueryValue(route.query.holder) ?? '' : '');
 const ownerFilterState = computed(() =>
-  parseOptionalFilter(assetFilters.owner, normalizeAccountSelectorLiteral, t('searchUnsupported'))
+  parseOptionalFilter(assetFilters.owner, normalizeToriiAccountSelectorLiteral, t('searchUnsupported'))
 );
 const parsedOwnerFilter = computed<string | undefined>(() => ownerFilterState.value.value);
 const ownerFilterError = computed(() => ownerFilterState.value.error);
 const nftOwnerFilterState = computed(() =>
-  parseOptionalFilter(nftFilters.owner, normalizeAccountSelectorLiteral, t('searchUnsupported'))
+  parseOptionalFilter(nftFilters.owner, normalizeToriiAccountSelectorLiteral, t('searchUnsupported'))
 );
 const parsedNftOwnerFilter = computed<string | undefined>(() => nftOwnerFilterState.value.value);
 const nftOwnerFilterError = computed(() => nftOwnerFilterState.value.error);
 const rwaOwnerFilterState = computed(() =>
-  parseOptionalFilter(rwaFilters.owner, normalizeAccountSelectorLiteral, t('searchUnsupported'))
+  parseOptionalFilter(rwaFilters.owner, normalizeToriiAccountSelectorLiteral, t('searchUnsupported'))
 );
 const parsedRwaOwnerFilter = computed<string | undefined>(() => rwaOwnerFilterState.value.value);
 const rwaOwnerFilterError = computed(() => rwaOwnerFilterState.value.error);
 const holderFilterState = computed(() =>
-  parseOptionalFilter(holderFilter.value, normalizeAccountSelectorLiteral, t('searchUnsupported'))
+  parseOptionalFilter(holderFilter.value, normalizeToriiAccountSelectorLiteral, t('searchUnsupported'))
 );
 const parsedHolderFilter = computed<string | undefined>(() => holderFilterState.value.value);
 const holderFilterError = computed(() => holderFilterState.value.error);

@@ -10,7 +10,9 @@ const blocks = { items: tairaHistory.blocks.items, next_cursor: blockCursor };
 const latest = { items: tairaHistory.latestTransactions.items, next_cursor: null };
 const nativeFetch = globalThis.fetch;
 
-afterEach(() => { globalThis.fetch = nativeFetch; });
+afterEach(() => {
+  globalThis.fetch = nativeFetch;
+});
 
 describe('opaque Taira collection continuations', () => {
   it('parses SDK block and latest transaction pages without client snapshot metadata', () => {
@@ -18,12 +20,14 @@ describe('opaque Taira collection continuations', () => {
     expect(parsed.items[0].height).toBe(835);
     expect(parsed.items[0].created_at).toEqual(new Date('2026-09-12T03:30:05.553Z'));
     expect(parsed.nextCursor).toBe(blockCursor);
-    expect(LatestTransactionsResponse.parse({ items: latest.items, nextCursor: null }).items[0].authority)
-      .toBe(latest.items[0].authority);
+    expect(LatestTransactionsResponse.parse({ items: latest.items, nextCursor: null }).items[0].authority).toBe(
+      latest.items[0].authority
+    );
   });
 
   it.each(['opaque', 'A'.repeat(192), 'B'.repeat(204), 'C'.repeat(1500)])(
-    'does not guess a server cursor frame from its length or prefix', (nextCursor) => {
+    'does not guess a server cursor frame from its length or prefix',
+    (nextCursor) => {
       expect(CollectionContinuation.parse({ nextCursor }).nextCursor).toBe(nextCursor);
     }
   );
@@ -35,7 +39,8 @@ describe('opaque Taira collection continuations', () => {
   });
 
   it('uses the installed SDK POST query and forwards an empty-page continuation unchanged', async () => {
-    const fetchSpy = vi.fn<typeof fetch>()
+    const fetchSpy = vi
+      .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse({ items: [], next_cursor: blockCursor }))
       .mockResolvedValueOnce(jsonResponse({ items: blocks.items, next_cursor: null }));
     globalThis.fetch = fetchSpy;
@@ -63,8 +68,12 @@ describe('opaque Taira collection continuations', () => {
     globalThis.fetch = fetchSpy;
     await fetchInstructions({ limit: 10, kind: 'Mint', max_block_height: 12 });
     const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body));
-    expect(body.filter).toEqual({ op: 'and', args: [
-      { op: 'eq', args: ['kind', 'Mint'] }, { op: 'lte', args: ['block', 12] },
-    ] });
+    expect(body.filter).toEqual({
+      op: 'and',
+      args: [
+        { op: 'eq', args: ['kind', 'Mint'] },
+        { op: 'lte', args: ['block', 12] },
+      ],
+    });
   });
 });

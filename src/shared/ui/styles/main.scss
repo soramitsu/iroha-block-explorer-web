@@ -3,9 +3,9 @@
 @forward './breakpoints';
 @forward './dashboard';
 
-$header-height: 120px;
+$header-height: 72px;
 $header-height-landscape-mobile: 100px;
-$header-height-mobile: 80px;
+$header-height-mobile: 104px;
 
 $home-content-width: 1200px;
 $home-content-width-tablet: 860px;
@@ -16,7 +16,7 @@ $home-content-width-tablet: 860px;
 
 /* Adds custom focus styles for better accessibility */
 :focus-visible {
-  outline: 2px solid color-mix(in srgb, theme-color('primary') 36%, white);
+  outline: 2px solid theme-color('primary');
   outline-offset: 3px;
   transition:
     outline-color 0.2s ease-in-out,

@@ -122,7 +122,7 @@ const arrowIconRotateValue = computed(() => {
     flex-direction: column;
 
     @include tpg-s4;
-    @include shadow-input;
+    border: 1px solid theme-color('border-secondary');
 
     &_reversed {
       flex-direction: column-reverse;

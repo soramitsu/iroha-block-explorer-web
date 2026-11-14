@@ -1,8 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { flushPromises, mount } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import ScopedExplorerControl from './ScopedExplorerControl.vue';
 import { PORTAL_ID } from '@/shared/ui/consts';
 import { useNodeSettingsDropdown } from '@/shared/ui/composables/header-portal';
+
+enableAutoUnmount(afterEach);
 
 const {
   scopeState,
@@ -13,6 +15,7 @@ const {
   listDataspacePublicNodesSpy,
   upsertDataspacePublicNodeSpy,
   getConfiguredToriiBaseUrlSpy,
+  isToriiBaseUrlForcedSpy,
 } = vi.hoisted(() => ({
   scopeState: {
     value: {
@@ -38,6 +41,7 @@ const {
   setRouteScopedToriiBaseUrlSpy: vi.fn(),
   listDataspacePublicNodesSpy: vi.fn(),
   upsertDataspacePublicNodeSpy: vi.fn(),
+  isToriiBaseUrlForcedSpy: vi.fn(() => false),
   getConfiguredToriiBaseUrlSpy: vi.fn(() => 'https://registry.example:8080'),
 }));
 
@@ -58,6 +62,7 @@ vi.mock('@/shared/ui/composables/useExplorerScopeNavigation', () => ({
 
 vi.mock('@/shared/api', () => ({
   getConfiguredToriiBaseUrl: getConfiguredToriiBaseUrlSpy,
+  isToriiBaseUrlForced: isToriiBaseUrlForcedSpy,
   setRouteScopedToriiBaseUrl: setRouteScopedToriiBaseUrlSpy,
 }));
 
@@ -76,6 +81,7 @@ const BaseButtonStub = {
 describe('ScopedExplorerControl', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    isToriiBaseUrlForcedSpy.mockReturnValue(false);
     document.body.innerHTML = `<div id="${PORTAL_ID}"></div>`;
     const dropdown = useNodeSettingsDropdown();
     if (dropdown.isOpen.value) dropdown.toggle();
@@ -180,4 +186,22 @@ describe('ScopedExplorerControl', () => {
     expect(useNodeSettingsDropdown().isOpen.value).toBe(false);
   });
 
+
+  it('labels the forced endpoint and disables scoped endpoint changes', async () => {
+    isToriiBaseUrlForcedSpy.mockReturnValue(true);
+    const wrapper = factory();
+    await flushPromises();
+    expect(wrapper.get('[data-test="scoped-explorer-control-button"]').text()).toContain('registry.example:8080');
+    await wrapper.get('[data-test="scoped-explorer-control-button"]').trigger('click');
+    const nodeButtons = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.scoped-explorer-control__node'));
+    expect(nodeButtons).toHaveLength(2);
+    expect(nodeButtons.every((button) => button.disabled)).toBe(true);
+    nodeButtons[1]?.click();
+    nodeButtons[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushPromises();
+    expect(setRouteScopedToriiBaseUrlSpy).not.toHaveBeenCalled();
+    expect(upsertDataspacePublicNodeSpy).not.toHaveBeenCalled();
+    expect(replaceSpy).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
 });

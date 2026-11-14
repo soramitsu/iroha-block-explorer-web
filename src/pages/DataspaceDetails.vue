@@ -372,7 +372,7 @@ function addPublicNode() {
   const scope = storageScope.value;
   if (!scope) return;
 
-  const normalized = http.normalizeToriiBaseUrl(publicNodeDraft.url, null);
+  const normalized = http.normalizeToriiBaseUrl(publicNodeDraft.url);
   if (!normalized) {
     publicNodeError.value = t('dataspaces.publicNodes.invalidUrl');
     return;

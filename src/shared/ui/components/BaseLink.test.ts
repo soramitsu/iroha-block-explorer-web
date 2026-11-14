@@ -100,7 +100,7 @@ describe('BaseLink', () => {
     expect(resolved.query).toEqual({ instruction: '2', foo: 'bar', torii: 'https://taira.sora.org', dataspaceLaneId: '7', dataspaceId: '42' });
   });
 
-  it('does not rewrite home exit links', () => {
+  it('preserves the selected scope on the home overview', () => {
     scopeState.value = {
       torii: 'https://public-node.example:8080',
       dataspaceLaneId: '7',
@@ -118,7 +118,7 @@ describe('BaseLink', () => {
       },
     });
 
-    expect(wrapper.get('[data-test="router-link"]').attributes('data-to')).toBe('/');
+    expect(wrapper.get('[data-test="router-link"]').attributes('data-to')).toContain('/?torii=');
   });
 
   it('does not rewrite external links', () => {

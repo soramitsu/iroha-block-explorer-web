@@ -8,12 +8,7 @@
       </div>
 
       <div class="kotodama-studio__actions">
-        <BaseButton
-          data-test="studio-compile"
-          bordered
-          :disabled="compileUnavailable"
-          @click="runCompile"
-        >
+        <BaseButton data-test="studio-compile" bordered :disabled="compileUnavailable" @click="runCompile">
           {{ compileState.status === 'running' ? $t('studio.compileBusy') : $t('studio.compileAction') }}
         </BaseButton>
         <BaseButton bordered @click="exportDocument">
@@ -22,12 +17,7 @@
         <BaseButton bordered @click="triggerImport">
           {{ $t('studio.importAction') }}
         </BaseButton>
-        <BaseButton
-          data-test="studio-deploy"
-          bordered
-          disabled
-          :title="DEPLOYMENT_UNAVAILABLE_MESSAGE"
-        >
+        <BaseButton data-test="studio-deploy" bordered disabled :title="deploymentUnavailableMessage">
           {{ $t('studio.deployAction') }}
         </BaseButton>
         <input
@@ -36,7 +26,7 @@
           type="file"
           accept="application/json"
           @change="handleImportChange"
-        >
+        />
       </div>
     </header>
 
@@ -59,15 +49,11 @@
       <aside class="kotodama-studio__palette">
         <section class="kotodama-studio__panel">
           <header class="kotodama-studio__panel-header">
-            <h2>Typed palette</h2>
-            <p>Add real contract constructs to the graph.</p>
+            <h2>{{ $t('studio.graph.paletteTitle') }}</h2>
+            <p>{{ $t('studio.graph.paletteHint') }}</p>
           </header>
 
-          <div
-            v-for="group in paletteGroups"
-            :key="group.name"
-            class="kotodama-studio__palette-group"
-          >
+          <div v-for="group in paletteGroups" :key="group.name" class="kotodama-studio__palette-group">
             <h3>{{ group.name }}</h3>
             <button
               v-for="item in group.items"
@@ -87,11 +73,7 @@
             <p>{{ $t('studio.metadataHint') }}</p>
           </header>
 
-          <label
-            v-for="field in metadataFields"
-            :key="field.key"
-            class="kotodama-studio__field"
-          >
+          <label v-for="field in metadataFields" :key="field.key" class="kotodama-studio__field">
             <span>{{ field.label }}</span>
             <textarea
               v-if="field.kind === 'textarea'"
@@ -104,7 +86,7 @@
               :value="graphDocument.metadata[field.key]"
               type="text"
               @input="updateMetadataField(field.key, ($event.target as HTMLInputElement).value)"
-            >
+            />
           </label>
         </section>
       </aside>
@@ -112,14 +94,18 @@
       <section class="kotodama-studio__canvas-panel">
         <div class="kotodama-studio__canvas-header">
           <div>
-            <h2>Contract graph</h2>
-            <p>{{ sourceOutput.summary.entrypoints.length }} entrypoints, {{ sourceOutput.summary.states.length }} state fields, {{ sourceOutput.summary.triggers.length }} triggers</p>
+            <h2>{{ $t('studio.graph.canvasTitle') }}</h2>
+            <p>{{ graphNarrative }}</p>
           </div>
           <span
             class="kotodama-studio__status"
             :class="{ 'kotodama-studio__status--error': blockingDiagnostics.length > 0 }"
           >
-            {{ blockingDiagnostics.length > 0 ? `${blockingDiagnostics.length} blocking` : 'Graph ready' }}
+            {{
+              blockingDiagnostics.length > 0
+                ? $t('studio.graph.blockingCount', { count: blockingDiagnostics.length })
+                : $t('studio.graph.ready')
+            }}
           </span>
         </div>
 
@@ -141,17 +127,17 @@
 
           <template v-if="selectedNode">
             <label class="kotodama-studio__field">
-              <span>Node title</span>
+              <span>{{ $t('studio.graph.nodeTitle') }}</span>
               <input
                 data-test="studio-node-title"
                 :value="selectedNode.data.title"
                 type="text"
                 @input="updateSelectedNodeData('title', ($event.target as HTMLInputElement).value)"
-              >
+              />
             </label>
 
             <label class="kotodama-studio__field">
-              <span>Node detail</span>
+              <span>{{ $t('studio.graph.nodeDetail') }}</span>
               <textarea
                 :value="selectedNode.data.detail"
                 rows="2"
@@ -159,33 +145,19 @@
               />
             </label>
 
-            <div
-              v-if="selectedNodePorts.length"
-              class="kotodama-studio__ports"
-            >
-              <span>Typed ports</span>
-              <div
-                v-for="port in selectedNodePorts"
-                :key="port.id"
-                class="kotodama-studio__port"
-              >
-                <strong>{{ port.label }}</strong>
-                <small>{{ port.direction }} · {{ port.valueType }}</small>
+            <div v-if="selectedNodePorts.length" class="kotodama-studio__ports">
+              <span>{{ $t('studio.graph.typedPorts') }}</span>
+              <div v-for="port in selectedNodePorts" :key="port.id" class="kotodama-studio__port">
+                <strong>{{ portLabel(port) }}</strong>
+                <small>{{ formatPortDirection(port.direction) }} · {{ port.valueType }}</small>
               </div>
             </div>
 
-            <div
-              v-if="selectedNodeIsFunction"
-              class="kotodama-studio__builder"
-              data-test="studio-param-builder"
-            >
+            <div v-if="selectedNodeIsFunction" class="kotodama-studio__builder" data-test="studio-param-builder">
               <div class="kotodama-studio__builder-header">
-                <span>Parameters</span>
-                <button
-                  type="button"
-                  @click="addSelectedParam"
-                >
-                  Add
+                <span>{{ $t('studio.graph.parameters') }}</span>
+                <button type="button" @click="addSelectedParam">
+                  {{ $t('studio.graph.add') }}
                 </button>
               </div>
               <div
@@ -195,48 +167,33 @@
               >
                 <input
                   :value="param.name"
-                  aria-label="Parameter name"
+                  :aria-label="$t('studio.graph.parameterName')"
                   @input="updateSelectedParam(index, 'name', ($event.target as HTMLInputElement).value)"
-                >
+                />
                 <select
                   :value="param.valueType"
-                  aria-label="Parameter type"
+                  :aria-label="$t('studio.graph.parameterType')"
                   @change="updateSelectedParam(index, 'valueType', ($event.target as HTMLSelectElement).value)"
                 >
-                  <option
-                    v-for="type in valueTypeOptions"
-                    :key="type"
-                    :value="type"
-                  >
+                  <option v-for="type in valueTypeOptions" :key="type" :value="type">
                     {{ type }}
                   </option>
                 </select>
-                <button
-                  type="button"
-                  @click="removeSelectedParam(index)"
-                >
-                  Remove
+                <button type="button" @click="removeSelectedParam(index)">
+                  {{ $t('studio.graph.remove') }}
                 </button>
               </div>
             </div>
 
-            <label
-              v-for="field in visibleSelectedNodeConfigFields"
-              :key="field.key"
-              class="kotodama-studio__field"
-            >
-              <span>{{ field.label }}</span>
+            <label v-for="field in visibleSelectedNodeConfigFields" :key="field.key" class="kotodama-studio__field">
+              <span>{{ $t(field.labelKey) }}</span>
               <select
                 v-if="field.kind === 'select'"
                 :value="selectedNode.data.config[field.key] ?? ''"
                 @change="updateSelectedNodeConfig(field.key, ($event.target as HTMLSelectElement).value)"
               >
-                <option
-                  v-for="option in field.options ?? []"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
+                <option v-for="option in field.options ?? []" :key="option.value" :value="option.value">
+                  {{ option.labelKey ? $t(option.labelKey) : option.value }}
                 </option>
               </select>
               <textarea
@@ -250,16 +207,12 @@
                 :value="selectedNode.data.config[field.key] ?? ''"
                 type="text"
                 @input="updateSelectedNodeConfig(field.key, ($event.target as HTMLInputElement).value)"
-              >
+              />
             </label>
 
-            <div
-              v-if="selectedOutgoingEdges.length"
-              class="kotodama-studio__builder"
-              data-test="studio-edge-editor"
-            >
+            <div v-if="selectedOutgoingEdges.length" class="kotodama-studio__builder" data-test="studio-edge-editor">
               <div class="kotodama-studio__builder-header">
-                <span>Outgoing flow</span>
+                <span>{{ $t('studio.graph.outgoingFlow') }}</span>
               </div>
               <div
                 v-for="edge in selectedOutgoingEdges"
@@ -268,40 +221,27 @@
               >
                 <select
                   :value="edge.label"
-                  aria-label="Edge label"
+                  :aria-label="$t('studio.graph.edgeLabel')"
                   @change="updateEdgeLabel(edge.id, ($event.target as HTMLSelectElement).value)"
                 >
-                  <option
-                    v-for="label in edgeLabelOptions"
-                    :key="label"
-                    :value="label"
-                  >
-                    {{ label }}
+                  <option v-for="label in edgeLabelOptions" :key="label" :value="label">
+                    {{ $t(`studio.graph.edgeLabels.${label}`) }}
                   </option>
                 </select>
                 <span>{{ edgeTargetTitle(edge.target) }}</span>
-                <button
-                  type="button"
-                  @click="removeEdge(edge.id)"
-                >
-                  Remove
+                <button type="button" @click="removeEdge(edge.id)">
+                  {{ $t('studio.graph.remove') }}
                 </button>
               </div>
             </div>
 
-            <BaseButton
-              bordered
-              @click="removeSelectedNode"
-            >
-              Remove node
+            <BaseButton bordered @click="removeSelectedNode">
+              {{ $t('studio.graph.removeNode') }}
             </BaseButton>
           </template>
         </section>
 
-        <section
-          data-test="studio-semantic-panel"
-          class="kotodama-studio__panel"
-        >
+        <section data-test="studio-semantic-panel" class="kotodama-studio__panel">
           <header class="kotodama-studio__panel-header">
             <h2>{{ $t('studio.semanticTitle') }}</h2>
             <p>{{ graphDiagnostics.length ? $t('studio.semanticHint') : $t('studio.semanticReady') }}</p>
@@ -319,33 +259,24 @@
               :class="{ 'kotodama-studio__diagnostic--error': diagnostic.severity === 'error' }"
               @click="selectDiagnostic(diagnostic.nodeId)"
             >
-              <strong>{{ diagnostic.severity }}</strong>
+              <strong>{{ $t(`studio.graph.severity.${diagnostic.severity}`) }}</strong>
               <span>{{ diagnostic.message }}</span>
             </button>
           </div>
         </section>
 
-        <section
-          data-test="studio-compile-panel"
-          class="kotodama-studio__panel"
-        >
+        <section data-test="studio-compile-panel" class="kotodama-studio__panel">
           <header class="kotodama-studio__panel-header">
             <h2>{{ $t('studio.compileTitle') }}</h2>
             <p>{{ compilePanelMessage }}</p>
           </header>
 
-          <div
-            v-if="compileState.status === 'running'"
-            class="kotodama-studio__loading"
-          >
+          <div v-if="compileState.status === 'running'" class="kotodama-studio__loading">
             <BaseLoading />
           </div>
 
           <template v-else-if="compileState.result">
-            <dl
-              v-if="compileState.result.codeHashHex"
-              class="kotodama-studio__facts"
-            >
+            <dl v-if="compileState.result.codeHashHex" class="kotodama-studio__facts">
               <div>
                 <dt>{{ $t('studio.compileMode') }}</dt>
                 <dd data-test="studio-compile-mode">canonical-rust-service</dd>
@@ -359,14 +290,10 @@
                 <dd>{{ compileState.result.abiHashHex }}</dd>
               </div>
             </dl>
-
           </template>
 
-          <p
-            data-test="studio-deployment-unavailable"
-            class="kotodama-studio__inline-hint"
-          >
-            {{ DEPLOYMENT_UNAVAILABLE_MESSAGE }}
+          <p data-test="studio-deployment-unavailable" class="kotodama-studio__inline-hint">
+            {{ deploymentUnavailableMessage }}
           </p>
         </section>
 
@@ -384,6 +311,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import { useNotifications } from '@/shared/ui/composables/notifications';
@@ -422,31 +350,51 @@ import type { KotodamaCompilerDiagnostic } from '@/shared/lib/kotodama-studio-co
 type MetadataKey = 'title' | 'dataspace' | 'authority' | 'chainId' | 'description';
 
 interface TemplateOption {
-  id: KotodamaStudioGraphTemplateId
-  label: string
-  description: string
+  id: KotodamaStudioGraphTemplateId;
+  label: string;
+  description: string;
 }
 
 const STORAGE_KEY = 'kotodama_studio_graph_document_v2';
-const LEGACY_STORAGE_KEY = 'kotodama_studio_document_v1';
-const DEPLOYMENT_UNAVAILABLE_MESSAGE =
-  'Deployment is unavailable in this Explorer build because the exact linked Iroha JavaScript SDK does not provide an approved browser signing and submission API. No signing key is accepted or transmitted.';
+const { t } = useI18n();
+const translateStudio = (key: string, params?: Readonly<Record<string, string | number>>) => t(key, params ?? {});
+const deploymentUnavailableMessage = computed(() => t('studio.deploymentUnavailable'));
 
-const templateOptions: TemplateOption[] = [
-  { id: 'stablecoin', label: 'Stablecoin', description: 'Collateral checks, minting, and returned quotes.' },
-  { id: 'threshold_escrow', label: 'Escrow', description: 'State machine with shared guards and releases.' },
-  { id: 'asset_ops', label: 'Asset Ops', description: 'Mint, transfer, and burn from one entrypoint.' },
-  { id: 'subscription', label: 'Subscription', description: 'Scheduled billing and durable state.' },
-  { id: 'irohaswap_reduced', label: 'IrohaSwap Lite', description: 'Pool maps, guards, branches, and swaps.' },
-];
+const templateOptions = computed<TemplateOption[]>(() => [
+  {
+    id: 'stablecoin',
+    label: t('studio.templates.stablecoin.label'),
+    description: t('studio.templates.stablecoin.description'),
+  },
+  {
+    id: 'threshold_escrow',
+    label: t('studio.templates.thresholdEscrow.label'),
+    description: t('studio.templates.thresholdEscrow.description'),
+  },
+  {
+    id: 'asset_ops',
+    label: t('studio.templates.assetOps.label'),
+    description: t('studio.templates.assetOps.description'),
+  },
+  {
+    id: 'subscription',
+    label: t('studio.templates.subscription.label'),
+    description: t('studio.templates.subscription.description'),
+  },
+  {
+    id: 'irohaswap_reduced',
+    label: t('studio.templates.irohaSwapReduced.label'),
+    description: t('studio.templates.irohaSwapReduced.description'),
+  },
+]);
 
-const metadataFields: Array<{ key: MetadataKey, label: string, kind: 'text' | 'textarea' }> = [
-  { key: 'title', label: 'Contract title', kind: 'text' },
-  { key: 'dataspace', label: 'Dataspace', kind: 'text' },
-  { key: 'authority', label: 'Authority', kind: 'text' },
-  { key: 'chainId', label: 'Chain ID', kind: 'text' },
-  { key: 'description', label: 'Description', kind: 'textarea' },
-];
+const metadataFields = computed<Array<{ key: MetadataKey; label: string; kind: 'text' | 'textarea' }>>(() => [
+  { key: 'title', label: t('studio.graph.fields.contractTitle'), kind: 'text' },
+  { key: 'dataspace', label: t('studio.fields.dataspace'), kind: 'text' },
+  { key: 'authority', label: t('studio.fields.authority'), kind: 'text' },
+  { key: 'chainId', label: t('studio.fields.chainId'), kind: 'text' },
+  { key: 'description', label: t('studio.fields.description'), kind: 'textarea' },
+]);
 
 const valueTypeOptions: KotodamaStudioGraphValueType[] = [
   'int',
@@ -479,9 +427,9 @@ const selectedTemplate = ref<KotodamaStudioGraphTemplateId>('stablecoin');
 const selectedNodeId = ref<string | null>(null);
 const graphDocument = ref(loadInitialDocument());
 const compileState = ref<{
-  status: 'idle' | 'running' | 'ready' | 'error'
-  error: string
-  result: KotodamaStudioCompileResult | null
+  status: 'idle' | 'running' | 'ready' | 'error';
+  error: string;
+  result: KotodamaStudioCompileResult | null;
 }>({
   status: 'idle',
   error: '',
@@ -490,23 +438,23 @@ const compileState = ref<{
 let compileRequestGeneration = 0;
 
 function loadInitialDocument(): KotodamaStudioGraphDocumentV2 {
-  if (typeof window === 'undefined') return createKotodamaStudioGraphTemplate('stablecoin');
+  if (typeof window === 'undefined') return createKotodamaStudioGraphTemplate('stablecoin', translateStudio);
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) return parseKotodamaStudioGraphDocument(raw);
-    const legacyRaw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
-    if (legacyRaw) return normalizeKotodamaStudioGraphDocument(JSON.parse(legacyRaw));
   } catch {
     // Ignore invalid local documents and continue with a known-good graph.
   }
 
-  return createKotodamaStudioGraphTemplate('stablecoin');
+  return createKotodamaStudioGraphTemplate('stablecoin', translateStudio);
 }
 
 const sourceOutput = computed(() => buildKotodamaStudioGraphSource(graphDocument.value));
 const generatedSource = computed(() => sourceOutput.value.source);
-const validationDiagnostics = computed(() => validateKotodamaStudioGraphDocument(graphDocument.value));
+const validationDiagnostics = computed(() =>
+  validateKotodamaStudioGraphDocument(graphDocument.value, (key, params) => t(key, params ?? {}))
+);
 const compileDiagnostics = computed<KotodamaStudioGraphDiagnostic[]>(() => {
   const result = compileState.value.result;
   if (!result) return [];
@@ -515,27 +463,23 @@ const compileDiagnostics = computed<KotodamaStudioGraphDiagnostic[]>(() => {
       code: 'compiler_error',
       severity: 'error' as const,
       message: formatDiagnostic(diagnostic),
-      nodeId: findKotodamaStudioGraphNodeForLine(
-        sourceOutput.value.ranges,
-        diagnostic.primary_span?.start.line
-      ),
+      nodeId: findKotodamaStudioGraphNodeForLine(sourceOutput.value.ranges, diagnostic.primary_span?.start.line),
     })),
     ...result.warnings.map((diagnostic) => ({
       code: 'compiler_warning',
       severity: 'warning' as const,
       message: formatDiagnostic(diagnostic),
-      nodeId: findKotodamaStudioGraphNodeForLine(
-        sourceOutput.value.ranges,
-        diagnostic.primary_span?.start.line
-      ),
+      nodeId: findKotodamaStudioGraphNodeForLine(sourceOutput.value.ranges, diagnostic.primary_span?.start.line),
     })),
   ];
 });
 const graphDiagnostics = computed(() => [...validationDiagnostics.value, ...compileDiagnostics.value]);
-const blockingDiagnostics = computed(() => validationDiagnostics.value.filter((diagnostic) => diagnostic.severity === 'error'));
+const blockingDiagnostics = computed(() =>
+  validationDiagnostics.value.filter((diagnostic) => diagnostic.severity === 'error')
+);
 const selectedNode = computed(() =>
   selectedNodeId.value
-    ? graphDocument.value.graph.nodes.find((node) => node.id === selectedNodeId.value) ?? null
+    ? (graphDocument.value.graph.nodes.find((node) => node.id === selectedNodeId.value) ?? null)
     : null
 );
 const selectedNodeConfigFields = computed<KotodamaStudioGraphConfigField[]>(() =>
@@ -554,7 +498,9 @@ const visibleSelectedNodeConfigFields = computed<KotodamaStudioGraphConfigField[
   return selectedNodeConfigFields.value;
 });
 const selectedNodePorts = computed<KotodamaStudioGraphPort[]>(() => selectedNode.value?.data.ports ?? []);
-const selectedNodeIsFunction = computed(() => selectedNode.value?.data.kind === 'entrypoint' || selectedNode.value?.data.kind === 'helper');
+const selectedNodeIsFunction = computed(
+  () => selectedNode.value?.data.kind === 'entrypoint' || selectedNode.value?.data.kind === 'helper'
+);
 const selectedParams = computed<KotodamaStudioGraphParam[]>(() => {
   const node = selectedNode.value;
   if (!node || !selectedNodeIsFunction.value) return [];
@@ -570,9 +516,7 @@ const selectedParams = computed<KotodamaStudioGraphParam[]>(() => {
   return parseKotodamaStudioGraphParams(node.data.config.params ?? '');
 });
 const selectedOutgoingEdges = computed<KotodamaStudioGraphEdge[]>(() =>
-  selectedNode.value
-    ? graphDocument.value.graph.edges.filter((edge) => edge.source === selectedNode.value?.id)
-    : []
+  selectedNode.value ? graphDocument.value.graph.edges.filter((edge) => edge.source === selectedNode.value?.id) : []
 );
 const edgeLabelOptions = computed(() => {
   const kind = selectedNode.value?.data.kind;
@@ -582,30 +526,35 @@ const edgeLabelOptions = computed(() => {
 });
 const graphNarrative = computed(() => {
   const summary = sourceOutput.value.summary;
-  return `${summary.entrypoints.length} entrypoint${summary.entrypoints.length === 1 ? '' : 's'}, ${summary.triggers.length} trigger${summary.triggers.length === 1 ? '' : 's'}, ${summary.states.length} state field${summary.states.length === 1 ? '' : 's'}.`;
+  return t('studio.graph.summary', {
+    entrypoints: summary.entrypoints.length,
+    states: summary.states.length,
+    triggers: summary.triggers.length,
+  });
 });
 const paletteGroups = computed(() => {
   const groups = new Map<KotodamaStudioGraphPaletteItem['group'], KotodamaStudioGraphPaletteItem[]>();
   for (const item of KOTODAMA_STUDIO_GRAPH_PALETTE) {
     groups.set(item.group, [...(groups.get(item.group) ?? []), item]);
   }
-  return [...groups.entries()].map(([name, items]) => ({ name, items }));
+  return [...groups.entries()].map(([name, items]) => ({
+    name: t(`studio.graph.groups.${name}`),
+    items: items.map((item) => ({ ...item, label: t(item.labelKey) })),
+  }));
 });
-const compileUnavailable = computed(() =>
-  compilerUrl.value === null || compileState.value.status === 'running' || blockingDiagnostics.value.length > 0
+const compileUnavailable = computed(
+  () => compilerUrl.value === null || compileState.value.status === 'running' || blockingDiagnostics.value.length > 0
 );
 const compilePanelMessage = computed(() => {
   if (compilerUrl.value === null) {
-    return $tFallback(
-      'Compilation is disabled until an operator configures a trusted canonical Rust compiler service URL.'
-    );
+    return t('studio.compileDisabled');
   }
-  if (blockingDiagnostics.value.length > 0) return $tFallback('Fix the graph errors before compiling.');
-  if (compileState.value.status === 'running') return $tFallback('Compiling graph-generated Kotodama source with the canonical Rust service.');
+  if (blockingDiagnostics.value.length > 0) return t('studio.compileFixErrors');
+  if (compileState.value.status === 'running') return t('studio.compileRunning');
   if (compileState.value.status === 'error') return compileState.value.error;
-  if (compileState.value.result?.diagnostics.length) return 'The canonical Rust compiler found problems. Select a diagnostic to jump to the graph node.';
-  if (compileState.value.result) return $tFallback('Contract bundle compiled by the canonical Rust service.');
-  return $tFallback('Compile the graph-generated source to refresh the canonical artifact hashes.');
+  if (compileState.value.result?.diagnostics.length) return t('studio.compileProblems');
+  if (compileState.value.result) return t('studio.compileSucceeded');
+  return t('studio.compilePrompt');
 });
 
 watch(
@@ -635,10 +584,6 @@ watch(
   { deep: true, flush: 'sync' }
 );
 
-function $tFallback(value: string): string {
-  return value;
-}
-
 function touchDocument() {
   graphDocument.value = refreshKotodamaStudioGraphPorts({
     ...graphDocument.value,
@@ -660,7 +605,7 @@ function touchDocument() {
 
 function applyTemplate(templateId: KotodamaStudioGraphTemplateId) {
   selectedTemplate.value = templateId;
-  graphDocument.value = createKotodamaStudioGraphTemplate(templateId);
+  graphDocument.value = createKotodamaStudioGraphTemplate(templateId, translateStudio);
   selectedNodeId.value = graphDocument.value.graph.nodes.find((node) => node.data.kind === 'entrypoint')?.id ?? null;
   compileState.value = {
     status: 'idle',
@@ -671,18 +616,25 @@ function applyTemplate(templateId: KotodamaStudioGraphTemplateId) {
 
 function nextNodeIndex(kind: KotodamaStudioGraphNodeKind): number {
   const prefix = `${kind}-`;
-  return graphDocument.value.graph.nodes.reduce((highest, node) => {
-    if (!node.id.startsWith(prefix)) return highest;
-    const suffix = Number.parseInt(node.id.slice(prefix.length), 10);
-    return Number.isFinite(suffix) ? Math.max(highest, suffix) : highest;
-  }, 0) + 1;
+  return (
+    graphDocument.value.graph.nodes.reduce((highest, node) => {
+      if (!node.id.startsWith(prefix)) return highest;
+      const suffix = Number.parseInt(node.id.slice(prefix.length), 10);
+      return Number.isFinite(suffix) ? Math.max(highest, suffix) : highest;
+    }, 0) + 1
+  );
 }
 
 function addGraphNode(kind: KotodamaStudioGraphNodeKind) {
-  const node = createKotodamaStudioGraphNode(kind, nextNodeIndex(kind), {
-    x: 120 + (graphDocument.value.graph.nodes.length % 4) * 320,
-    y: 160 + Math.floor(graphDocument.value.graph.nodes.length / 4) * 220,
-  });
+  const node = createKotodamaStudioGraphNode(
+    kind,
+    nextNodeIndex(kind),
+    {
+      x: 120 + (graphDocument.value.graph.nodes.length % 4) * 320,
+      y: 160 + Math.floor(graphDocument.value.graph.nodes.length / 4) * 220,
+    },
+    translateStudio
+  );
   const nextGraph = {
     nodes: [...graphDocument.value.graph.nodes, node],
     edges: [...graphDocument.value.graph.edges],
@@ -706,7 +658,17 @@ function addGraphNode(kind: KotodamaStudioGraphNodeKind) {
 }
 
 function canAutoConnect(source: KotodamaStudioGraphNode, target: KotodamaStudioGraphNode): boolean {
-  const targetBody = ['guard', 'branch', 'loop', 'formula', 'assign_state', 'map_write', 'effect', 'return', 'note'].includes(target.data.kind);
+  const targetBody = [
+    'guard',
+    'branch',
+    'loop',
+    'formula',
+    'assign_state',
+    'map_write',
+    'effect',
+    'return',
+    'note',
+  ].includes(target.data.kind);
   if (!targetBody) return false;
   if (['state', 'map_state', 'trigger', 'return', 'note'].includes(source.data.kind)) return false;
   const outgoing = graphDocument.value.graph.edges.filter((edge) => edge.source === source.id);
@@ -714,7 +676,9 @@ function canAutoConnect(source: KotodamaStudioGraphNode, target: KotodamaStudioG
 }
 
 function nextBranchLabel(sourceId: string): string {
-  const labels = new Set(graphDocument.value.graph.edges.filter((edge) => edge.source === sourceId).map((edge) => edge.label));
+  const labels = new Set(
+    graphDocument.value.graph.edges.filter((edge) => edge.source === sourceId).map((edge) => edge.label)
+  );
   if (!labels.has('then')) return 'then';
   if (!labels.has('else')) return 'else';
   return 'next';
@@ -805,6 +769,25 @@ function edgeTargetTitle(targetId: string): string {
   return target ? target.data.title : targetId;
 }
 
+function portLabel(port: KotodamaStudioGraphPort): string {
+  const staticLabels: Record<string, string> = {
+    'flow-in': 'studio.graph.ports.flowIn',
+    then: 'studio.graph.edgeLabels.then',
+    else: 'studio.graph.edgeLabels.else',
+    next: 'studio.graph.edgeLabels.next',
+    body: 'studio.graph.edgeLabels.body',
+    condition: 'studio.graph.fields.condition',
+    key: 'studio.graph.fields.key',
+    value: 'studio.graph.fields.value',
+    return: 'studio.graph.palette.return',
+  };
+  const key = staticLabels[port.label];
+  if (key) return t(key);
+  const argument = /^arg-(?<index>\d+)$/u.exec(port.label);
+  if (argument?.groups?.index) return t('studio.graph.ports.argument', { index: argument.groups.index });
+  return port.label;
+}
+
 function updateEdgeLabel(edgeId: string, label: string) {
   graphDocument.value = refreshKotodamaStudioGraphPorts({
     ...graphDocument.value,
@@ -820,9 +803,11 @@ function updateEdgeLabel(edgeId: string, label: string) {
           ports: node.data.ports.map((port) => ({ ...port })),
         },
       })),
-      edges: graphDocument.value.graph.edges.map((edge) => edge.id === edgeId
-        ? { ...edge, label, id: `edge-${edge.source}-${edge.target}-${label || 'next'}` }
-        : { ...edge }),
+      edges: graphDocument.value.graph.edges.map((edge) =>
+        edge.id === edgeId
+          ? { ...edge, label, id: `edge-${edge.source}-${edge.target}-${label || 'next'}` }
+          : { ...edge }
+      ),
     },
   });
 }
@@ -869,13 +854,11 @@ function selectDiagnostic(nodeId: string | null) {
 async function runCompile() {
   const configuredCompilerUrl = compilerUrl.value;
   if (configuredCompilerUrl === null) {
-    notifications.error(
-      'Kotodama compiler service URL is not configured. Configure a trusted canonical Rust compiler service before compiling.'
-    );
+    notifications.error(t('studio.notifications.compilerNotConfigured'));
     return;
   }
   if (blockingDiagnostics.value.length > 0) {
-    notifications.error('Fix the graph errors before compiling.');
+    notifications.error(t('studio.compileFixErrors'));
     return;
   }
 
@@ -920,13 +903,13 @@ async function runCompile() {
       result,
     };
     if (result.diagnostics.length > 0) {
-      notifications.error('The canonical Rust compiler found problems.');
+      notifications.error(t('studio.notifications.compilerProblems'));
     } else {
-      notifications.success('Contract bundle compiled by the canonical Rust service.');
+      notifications.success(t('studio.compileSucceeded'));
     }
-  } catch (error) {
+  } catch {
     if (discardStaleRequest()) return;
-    const message = error instanceof Error ? error.message : 'Unable to compile the graph-generated source.';
+    const message = t('studio.notifications.compileFailed');
     compileState.value = {
       status: 'error',
       error: message,
@@ -953,9 +936,9 @@ async function handleImportChange(event: Event) {
       error: '',
       result: null,
     };
-    notifications.success('Studio graph imported.');
+    notifications.success(t('studio.notifications.importSucceeded'));
   } catch {
-    notifications.error('The selected studio file is not valid JSON.');
+    notifications.error(t('studio.notifications.importInvalidJson'));
   } finally {
     if (input) input.value = '';
   }
@@ -983,13 +966,17 @@ function buildStudioExportSlug(title: string): string {
   return normalized.length > 0 ? normalized : 'kotodama-studio-graph';
 }
 
+function formatPortDirection(direction: 'input' | 'output'): string {
+  return t(`studio.graph.portDirections.${direction}`);
+}
+
 function formatDiagnostic(diagnostic: KotodamaCompilerDiagnostic) {
   const line = diagnostic.primary_span?.start.line;
   const column = diagnostic.primary_span?.start.column;
   const location = line
     ? column
-      ? `Line ${line}, column ${column}: `
-      : `Line ${line}: `
+      ? `${t('studio.graph.diagnosticLocation.lineColumn', { line, column })}: `
+      : `${t('studio.graph.diagnosticLocation.line', { line })}: `
     : '';
   return `${location}${diagnostic.message}`;
 }
@@ -1005,10 +992,7 @@ function formatDiagnostic(diagnostic: KotodamaCompilerDiagnostic) {
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: size(1);
   color: #2d251f;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(49, 95, 134, 0.12), transparent 28%),
-    radial-gradient(circle at 100% 0%, rgba(183, 71, 44, 0.1), transparent 24%),
-    linear-gradient(180deg, rgba(249, 246, 240, 0.98), rgba(241, 236, 227, 0.98));
+  background: theme-color('surface');
   font-family: var(--app-font-family, 'Sora'), sans-serif;
 
   @include md {
@@ -1022,9 +1006,7 @@ function formatDiagnostic(diagnostic: KotodamaCompilerDiagnostic) {
   &__template {
     border: 1px solid rgba(81, 72, 63, 0.14);
     background: rgba(255, 252, 246, 0.88);
-    box-shadow:
-      0 18px 42px rgba(42, 38, 34, 0.08),
-      0 1px 0 rgba(255, 255, 255, 0.72) inset;
+    box-shadow: none;
   }
 
   &__topbar {
@@ -1107,7 +1089,6 @@ function formatDiagnostic(diagnostic: KotodamaCompilerDiagnostic) {
 
     &:hover,
     &--active {
-      transform: translateY(-1px);
       border-color: rgba(49, 95, 134, 0.34);
       background: rgba(255, 255, 255, 0.96);
     }
@@ -1410,7 +1391,7 @@ function formatDiagnostic(diagnostic: KotodamaCompilerDiagnostic) {
     overflow: auto;
     padding: size(1);
     border-radius: size(0.9);
-    background: linear-gradient(180deg, #261c17, #1d1512);
+    background: #1d1512;
     color: #f9eddc;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
@@ -1430,10 +1411,7 @@ function formatDiagnostic(diagnostic: KotodamaCompilerDiagnostic) {
 
 html.dark .kotodama-studio {
   color: #f8ead9;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(49, 95, 134, 0.22), transparent 28%),
-    radial-gradient(circle at 100% 0%, rgba(183, 71, 44, 0.18), transparent 24%),
-    linear-gradient(180deg, rgba(theme-color('body'), 0.98), rgba(theme-color('background'), 0.96));
+  background: theme-color('surface');
 
   &__topbar,
   &__canvas-panel,
@@ -1441,9 +1419,7 @@ html.dark .kotodama-studio {
   &__template {
     border-color: rgba(255, 255, 255, 0.08);
     background: rgba(42, 36, 32, 0.92);
-    box-shadow:
-      0 20px 44px rgba(0, 0, 0, 0.28),
-      0 1px 0 rgba(255, 255, 255, 0.04) inset;
+    box-shadow: none;
   }
 
   h1,

@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import { i18n } from '@/shared/lib/localization';
 import { routes } from '@/app/router';
 import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
+import batchTransactions from '../../../tests/fixtures/taira-batch-transactions.json';
 
 const api = vi.hoisted(() => ({
   fetchBlockSamples: vi.fn(),
@@ -16,6 +17,7 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock('@/shared/api', () => ({
+  isToriiBaseUrlForced: () => false,
   ...api,
   buildExplorerUrl: (path: string) => `https://torii.example/v1/explorer${path}`,
   getToriiBaseUrl: () => 'https://torii.example',
@@ -208,6 +210,20 @@ describe('Activity dashboard', () => {
     expect(wrapper.findAll('.dash-stat__value').map((value) => value.text())).toContain('1.8 s');
   });
 
+  it('shows the canonical Batch executable separately from unrecognized sample kinds', async () => {
+    const row = batchTransactions.batch_detail;
+    api.fetchTransactionSamples.mockResolvedValue({
+      status: SUCCESSFUL_FETCHING,
+      data: {
+        nextCursor: null,
+        items: [{ authority: row.authority, block: row.block, createdAtMs: Date.parse(row.created_at), executable: row.executable, status: row.status }],
+      },
+    });
+    const { wrapper } = await mountPage('/dashboards/activity', () => import('./ActivityDashboard.vue'));
+    expect(wrapper.findAll('.share-bar')[0]!.findAll('.share-bar__label').map((label) => label.text())).toEqual(['Batch']);
+    wrapper.unmount();
+  });
+
   it('states unknown totals when no block body in the window could be read', async () => {
     api.fetchBlockSamples.mockImplementation(unreadable(40));
     api.fetchTransactionSamples.mockResolvedValue({ status: SUCCESSFUL_FETCHING, data: { nextCursor: null, items: [] } });
@@ -278,7 +294,7 @@ describe('Ledger dashboard', () => {
       'Data space',
       'Global',
     ]);
-    expect(wrapper.text()).toContain('Asset definitions by balances');
+    expect(wrapper.text()).toContain('Balance entries per asset definition');
     // Without a telemetry stream the totals say so instead of looking live.
     expect(wrapper.find('[data-test="telemetry-state"]').text()).toBe('The telemetry stream is unavailable');
   });

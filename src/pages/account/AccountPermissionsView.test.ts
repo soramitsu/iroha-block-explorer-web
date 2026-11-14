@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { defineComponent } from 'vue';
+import { i18n } from '@/shared/lib/localization';
 import AccountPermissionsView from './AccountPermissionsView.vue';
 
 const apiMocks = vi.hoisted(() => ({
@@ -65,7 +66,7 @@ async function factory(query: Record<string, string> = {}) {
   const wrapper = mount(AccountPermissionsView, {
     props: { accountId: ACCOUNT },
     global: {
-      plugins: [router],
+      plugins: [router, i18n],
       stubs: {
         BaseButton: BaseButtonStub,
         BaseContentBlock: BaseContentBlockStub,
@@ -135,7 +136,7 @@ describe('AccountPermissionsView', () => {
       'error',
       { status: 'unknown-error', error: new Error('invalid response') },
       '[data-test="permissions-error"]',
-      'invalid response',
+      'Effective permissions could not be loaded',
     ],
   ])('renders the %s state distinctly from an empty permission set', async (_name, result, selector, message) => {
     apiMocks.fetchAccountPermissions.mockResolvedValue(result);

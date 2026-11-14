@@ -3,64 +3,43 @@
     <a
       class="app__skip-link"
       href="#main-content"
-    >Skip to main content</a>
-
+    >{{ $t('accessibility.skipToMain') }}</a>
+    <TheHeader />
     <main
-      v-if="isHomeRoute"
       id="main-content"
       ref="mainContent"
       class="app__main"
+      :class="{ 'app__main--full-bleed': isFullBleedRoute, 'app__main--home': isHomeRoute }"
       tabindex="-1"
     >
-      <RouterView :key="routerViewKey" />
-    </main>
-
-    <template v-else-if="isFullBleedRoute">
-      <TheHeader />
-      <div
-        id="main-content"
-        ref="mainContent"
-        class="app__main app__main--full-bleed"
-        tabindex="-1"
-      >
+      <RouterView
+        v-if="isFullBleedRoute || isHomeRoute"
+        :key="routerViewKey"
+      />
+      <BasePageLayout v-else>
         <RouterView :key="routerViewKey" />
-      </div>
-    </template>
-
-    <template v-else>
-      <TheHeader />
-
-      <main
-        id="main-content"
-        ref="mainContent"
-        class="app__main"
-        tabindex="-1"
-      >
-        <BasePageLayout>
-          <RouterView :key="routerViewKey" />
-        </BasePageLayout>
-      </main>
-    </template>
-
+      </BasePageLayout>
+    </main>
     <NotificationsInstance />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import NotificationsInstance from '@/shared/ui/components/NotificationsInstance.vue';
 import BasePageLayout from '@/shared/ui/components/BasePageLayout.vue';
-import { TheHeader } from '@/widgets/header';
 import { getToriiBaseUrl, setRouteScopedToriiBaseUrl } from '@/shared/api';
 import { parseExplorerScopeFromRoute } from '@/shared/lib/explorer-scope';
+
+const TheHeader = defineAsyncComponent(async () => (await import('@/widgets/header')).TheHeader);
+
 import { disconnectExplorerReadSession, explorerReadAuthRevision } from '@/shared/lib/explorer-read-auth';
 
 const route = useRoute();
-const mainContent = ref<HTMLElement | null>(null);
-
 watch(() => getToriiBaseUrl(), disconnectExplorerReadSession, { flush: 'sync' });
 onBeforeUnmount(disconnectExplorerReadSession);
+const mainContent = ref<HTMLElement | null>(null);
 
 watch(
   () => route.fullPath,
@@ -80,9 +59,12 @@ watch(
   }
 );
 
-const routerViewKey = computed(() => `torii:${getToriiBaseUrl()}:reader:${explorerReadAuthRevision.value}`);
-const isHomeRoute = computed(() => route.name === 'home');
+const routerViewKey = computed(() => {
+  const scope = parseExplorerScopeFromRoute(route);
+  return JSON.stringify([getToriiBaseUrl(), explorerReadAuthRevision.value, scope?.dataspaceLaneId, scope?.dataspaceId]);
+});
 const isFullBleedRoute = computed(() => route.name === 'kotodama-studio');
+const isHomeRoute = computed(() => route.name === 'home');
 </script>
 
 <style lang="scss">
@@ -102,82 +84,20 @@ body {
   --app-font-family: 'Sora';
   font-family: var(--app-font-family), 'Helvetica Neue', Arial, sans-serif;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 15% 20%, color-mix(in srgb, theme-color('primary') 8%, transparent), transparent 40%),
-    radial-gradient(circle at 85% 10%, color-mix(in srgb, theme-color('primary') 6%, transparent), transparent 35%),
-    linear-gradient(180deg, color-mix(in srgb, theme-color('background') 90%, transparent), theme-color('background'));
+  background: theme-color('body');
   color: theme-color('content-primary');
 }
 
-html:not(.dark) body {
-  background:
-    radial-gradient(circle at 14% 18%, color-mix(in srgb, theme-color('primary') 10%, transparent), transparent 44%),
-    radial-gradient(circle at 86% 10%, color-mix(in srgb, theme-color('info') 7%, transparent), transparent 40%),
-    linear-gradient(180deg, theme-color('body'), theme-color('background'));
-}
-
-html:not(.dark) #app {
-  background: color-mix(in srgb, theme-color('surface') 96%, transparent);
-}
-
-@media (dynamic-range: high), (video-dynamic-range: high) {
-  @supports (color: color(display-p3 1 1 1)) {
-    html.dark body {
-      background:
-        radial-gradient(
-          circle at 15% 20%,
-          color-mix(in display-p3, theme-color('primary') 18%, transparent),
-          transparent 48%
-        ),
-        radial-gradient(
-          circle at 85% 10%,
-          color-mix(in display-p3, theme-color('primary') 14%, transparent),
-          transparent 42%
-        ),
-        linear-gradient(
-          180deg,
-          color-mix(in display-p3, theme-color('background') 86%, transparent),
-          theme-color('background')
-        );
-    }
-
-    html.dark #app {
-      background: color-mix(in display-p3, theme-color('background') 88%, transparent);
-    }
-  }
-}
+html:not(.dark) { color-scheme: light; }
+html.dark { color-scheme: dark; }
 
 html[lang='ur'] body {
   --app-font-family:
-    'Noto Nastaliq Urdu',
-    'Urdu Typesetting',
-    'Noto Naskh Arabic',
-    'Noto Sans Arabic',
-    'Geeza Pro',
-    'Sora',
-    sans-serif;
-}
-
-html[lang='akk'] body {
-  --app-font-family:
-    'Noto Sans Cuneiform',
-    'Segoe UI Historic',
-    'Akkadian',
-    'Sora',
-    sans-serif;
-}
-
-html[lang='egy'] body {
-  --app-font-family:
-    'Noto Sans Egyptian Hieroglyphs',
-    'Aegyptus',
-    'Segoe UI Historic',
-    'Sora',
-    sans-serif;
+    'Noto Nastaliq Urdu', 'Urdu Typesetting', 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Geeza Pro', 'Sora', sans-serif;
 }
 
 #app {
-  background: color-mix(in srgb, theme-color('background') 92%, transparent);
+  background: theme-color('body');
   overflow-x: hidden;
   z-index: 0;
   position: relative;
@@ -193,12 +113,17 @@ html[lang='egy'] body {
     border-radius: size(1);
     color: theme-color('content-primary');
     background: theme-color('surface');
-    @include shadow-notification;
+    border: 1px solid theme-color('border-secondary');
     transform: translateY(calc(-100% - #{size(2)}));
 
     &:focus-visible {
       transform: translateY(0);
     }
+  }
+
+  &__main {
+    min-width: 0;
+    @media (min-width: 1200px) { &:not(.app__main--home) { margin-inline-start: 240px; } }
   }
 
   &__main:focus {
@@ -231,7 +156,7 @@ hr {
   border: none;
   height: 1px;
   background: theme-color('border-primary');
-  box-shadow: theme-shadow('separator');
+
 
   &[data-vertical] {
     width: 1px;
@@ -260,18 +185,11 @@ hr {
   }
 }
 
-.content-row--with-hover:hover {
-  box-shadow: theme-shadow('row');
-
-  + hr {
-    background: transparent;
-    box-shadow: none;
-  }
-}
+.content-row--with-hover:hover { background: theme-color('background-hover'); }
 
 .h-sm {
   @include tpg-h4;
-  color: theme-color('content-quaternary');
+  color: theme-color('content-secondary');
 }
 
 .cell {

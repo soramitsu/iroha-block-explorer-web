@@ -151,20 +151,16 @@ Supported keys:
 - `sorafsPublicBaseUrl` (string): optional public gateway origin used to build `/sorafs/cid/<cid>/...` links on
   `/sorafs/registry`. When omitted, the explorer falls back to the active Torii base URL and then
   `window.location.origin`.
-- `toriiEconometricsEndpointsEnabled` (boolean): set to `false` to force-disable Torii econometrics endpoints and use the
-  UI fallback scanners (the default is auto-detect).
 
 Example file: `public/config.json.example` (copy to `public/config.json` for local development; it is gitignored).
 Production builds intentionally exclude that root file: the deployment server must inject its independently signed and
 verified `config.json` instead of accepting developer-local bytes from `dist/`.
 
-History lists use the current native `cursor`/`limit` protocol and retain the server's snapshot
-height and hash while scanning or resuming. Blocks, transactions, instructions, and deployment
-history do not synthesize numbered pages or totals. Transaction caches bind the exact canonical
-NetworkId and effective Torii endpoint; unscoped caches are ignored, and outage data is labeled stale.
-RWA domain identifiers accept the native ASCII wire form (`domain.dataspace`), including validated
-punycode labels. Econometrics reports bounded scans as incomplete until cursor exhaustion and
-does not infer per-leg effects from an AssetBatch without authoritative leg outcomes.
+History lists use the current native `cursor`/`limit` protocol. Blocks, transactions,
+instructions, and deployment history do not synthesize numbered pages or totals. Reads use
+Torii responses and validated stream events directly; there is no persisted history cache.
+Econometrics uses the authoritative snapshot routes. RWA domain identifiers accept the native
+ASCII wire form (`domain.dataspace`), including validated punycode labels.
 
 ### Local run
 

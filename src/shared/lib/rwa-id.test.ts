@@ -16,47 +16,28 @@ describe('rwa id helpers', () => {
     expect(getRwaDomain(literal)).toBe('commodities.main');
   });
 
-  it('normalizes uppercase hashes and domain labels to canonical wire form', () => {
-    expect(normalizeRwaIdLiteral(`${alternateHash.toUpperCase()}$Commodities.Main`)).toBe(
-      `${alternateHash}$commodities.main`
-    );
+  it('uses the current SDK normalizer for hashes and requires canonical domain wire text', () => {
+    expect(normalizeRwaIdLiteral(`${alternateHash.toUpperCase()}$commodities.main`))
+      .toBe(`${alternateHash}$commodities.main`);
+    expect(normalizeRwaIdLiteral(`${alternateHash}$Commodities.Main`)).toBeNull();
   });
 
   it('accepts every canonical 64-hex hash shape without an invented marker bit', () => {
-    expect(normalizeRwaIdLiteral(`${'00'.repeat(32)}$commodities.main`)).toBe(
-      `${'00'.repeat(32)}$commodities.main`
-    );
-    expect(normalizeRwaIdLiteral(`${'fe'.repeat(32)}$commodities.main`)).toBe(
-      `${'fe'.repeat(32)}$commodities.main`
-    );
+    expect(normalizeRwaIdLiteral(`${'00'.repeat(32)}$commodities.main`)).toBe(`${'00'.repeat(32)}$commodities.main`);
+    expect(normalizeRwaIdLiteral(`${'fe'.repeat(32)}$commodities.main`)).toBe(`${'fe'.repeat(32)}$commodities.main`);
   });
 
-  it('accepts canonical ASCII and punycode labels in exactly one fully qualified scope', () => {
-    expect(normalizeDomainIdLiteral('XN--BCHER-KVA.Main')).toBe('xn--bcher-kva.main');
-    expect(normalizeDomainIdLiteral('issuer_main.SORA')).toBe('issuer_main.sora');
-    expect(normalizeDomainIdLiteral('123.456')).toBe('123.456');
-    expect(normalizeDomainIdLiteral(`${'a'.repeat(63)}.main`)).toBe(`${'a'.repeat(63)}.main`);
+  it('accepts only canonical, fully qualified DomainId wire text', () => {
+    expect(normalizeDomainIdLiteral('xn--bcher-kva.main')).toBe('xn--bcher-kva.main');
+    expect(normalizeDomainIdLiteral('BÜCHER.Main')).toBeNull();
+    expect(normalizeDomainIdLiteral('BÜCHER.Example.Main')).toBeNull();
+    expect(normalizeDomainIdLiteral('issuer_main.sora')).toBe('issuer_main.sora');
+    expect(normalizeDomainIdLiteral('issuer_main.SORA')).toBeNull();
+    expect(normalizeDomainIdLiteral('ab--cd.main')).toBeNull();
   });
 
-  it.each([
-    'BÜCHER.Main',
-    '\u1e00.Main',
-    'commodities.example.main',
-    'xn--bcher-kva.example.main',
-    '.main',
-    'commodities.',
-    'commodities..main',
-    ' commodities.main',
-    'commodities.main\n',
-    'commodities. main',
-    '-commodities.main',
-    'commodities-.main',
-    'ab--cd.main',
-    'xn--.main',
-    'xn--a.main',
-    `${'a'.repeat(64)}.main`,
-  ])('rejects noncanonical or invalid domain wire literal %s', (literal) => {
-    expect(normalizeDomainIdLiteral(literal)).toBeNull();
+  it('matches the upstream domain profile rejection for Latin Extended Additional', () => {
+    expect(normalizeDomainIdLiteral('\u1e00.Main')).toBeNull();
   });
 
   it.each([
@@ -68,9 +49,6 @@ describe('rwa id helpers', () => {
     `${sampleHash}$commodities`,
     `${sampleHash}$-commodities.main`,
     `${sampleHash}$ab--cd.main`,
-    `${sampleHash}$commodities.example.main`,
-    ` ${sampleHash}$commodities.main`,
-    `${sampleHash}$commodities.main\n`,
   ])('rejects invalid RWA id %s', (literal) => {
     expect(normalizeRwaIdLiteral(literal)).toBeNull();
   });

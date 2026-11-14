@@ -14,32 +14,11 @@ import DataField from '@/shared/ui/components/DataField.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { getRuntimeConfig } from '@/shared/runtime-config';
-import {
-  concentrationTopN,
-  computeSetChurn,
-  effectiveNumberFromEntropy,
-  decodeCommittedAssetActivity,
-  type AssetActivity,
-  giniCoefficient,
-  herfindahlIndex,
-  lorenzCurvePoints,
-  median,
-  nakamotoCoefficient,
-  nearestRankQuantile,
-  normalizedEntropy,
-  safeRatio,
-  shannonEntropy,
-  sum,
-  theilIndexT,
-} from '@/shared/lib/econometrics';
-import type { Instruction } from '@/shared/api/schemas';
-import { normalizeAccountSelectorLiteral } from '@/shared/lib/account-literal';
+import { effectiveNumberFromEntropy, safeRatio } from '@/shared/lib/econometrics';
+import { normalizeAccountIdLiteral } from '@/shared/lib/account-literal';
 import { normalizeAssetDefinitionSelectorLiteral } from '@/shared/lib/asset-definition-literal';
 import { parseOptionalFilter } from '@/shared/lib/optional-filter';
 import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
-import { advanceHistoryScanCursor, createHistoryScanCursor, type HistoryScanCursor } from '@/shared/lib/history-scan';
-import { createPublicHistoryCacheKey } from '@/shared/lib/history-cache';
 
 defineOptions({
   name: 'EconometricsPage',
@@ -58,73 +37,53 @@ const WINDOWS = [
 type WindowKey = (typeof WINDOWS)[number]['key'];
 
 interface HolderRow {
-  account: string
-  balance: BigNumber
-  share: number | null
-}
-
-interface HolderSnapshot {
-  computed_at_ms: number
-  holders: string[]
-  scanned: number
-  total: number | null
-}
-
-interface HolderChurn {
-  previousComputedAt: Date
-  deltaMs: number
-  previousScanned: number
-  currentScanned: number
-  retained: number
-  entered: number
-  exited: number
-  retentionPrev: number | null
-  retentionCurrent: number | null
+  account: string;
+  balance: BigNumber;
+  share: number | null;
 }
 
 interface VelocityWindowStats {
-  key: WindowKey
-  windowMs: number
-  start: Date
-  end: Date
-  days: number
-  transfers: number
-  uniqueSenders: number
-  uniqueReceivers: number
-  amount: BigNumber | null
-  amountParsed: number
-  amountMissing: number
-  turnover: number | null
-  velocityPerDay: number | null
-  transfersPerDay: number | null
-  complete: boolean
+  key: WindowKey;
+  windowMs: number;
+  start: Date;
+  end: Date;
+  days: number;
+  transfers: number;
+  uniqueSenders: number;
+  uniqueReceivers: number;
+  amount: BigNumber | null;
+  amountParsed: number;
+  amountMissing: number;
+  turnover: number | null;
+  velocityPerDay: number | null;
+  transfersPerDay: number | null;
+  complete: boolean;
 }
 
 interface IssuanceWindowStats {
-  key: WindowKey
-  windowMs: number
-  start: Date
-  end: Date
-  mintCount: number
-  burnCount: number
-  minted: BigNumber | null
-  burned: BigNumber | null
-  net: BigNumber | null
-  mintAmountParsed: number
-  mintAmountMissing: number
-  burnAmountParsed: number
-  burnAmountMissing: number
-  complete: boolean
+  key: WindowKey;
+  windowMs: number;
+  start: Date;
+  end: Date;
+  mintCount: number;
+  burnCount: number;
+  minted: BigNumber | null;
+  burned: BigNumber | null;
+  net: BigNumber | null;
+  mintAmountParsed: number;
+  mintAmountMissing: number;
+  burnAmountParsed: number;
+  burnAmountMissing: number;
+  complete: boolean;
 }
 
 interface IssuanceSeriesPoint {
-  bucketStartMs: number
-  minted: BigNumber
-  burned: BigNumber
-  net: BigNumber
+  bucketStartMs: number;
+  minted: BigNumber;
+  burned: BigNumber;
+  net: BigNumber;
 }
 
-type InstructionScanKind = 'Transfer' | 'Mint' | 'Burn';
 type AssetDefinitionSnapshotSuccess = Extract<
   Awaited<ReturnType<typeof http.fetchAssetDefinitionSnapshot>>,
   { status: typeof SUCCESSFUL_FETCHING }
@@ -134,57 +93,44 @@ type AssetDefinitionEconometricsSuccess = Extract<
   { status: typeof SUCCESSFUL_FETCHING }
 >;
 
-interface InstructionScanProgress {
-  scanned: number
-  matched: number
-}
-
-interface InstructionScanMeta extends InstructionScanProgress {
-  endedByPagination: boolean
-}
-
 const assetDefinitionRowKey = (item: { id: string }) => item.id;
 const holderRowKey = (item: { account: string }) => item.account;
 const velocityWindowRowKey = (item: { key: WindowKey }) => item.key;
 const issuanceWindowRowKey = (item: { key: WindowKey }) => item.key;
 
 interface EconometricsResult {
-  assetDefinitionId: string
-  assetDefinitionAlias: string | null
-  definitionTotalSupply: BigNumber | null
-  definitionLockedSupply: BigNumber | null
-  definitionCirculatingSupply: BigNumber | null
-  velocitySupply: BigNumber
-  supplyCoverage: number | null
-  holders: HolderRow[]
-  holdersTotalSupply: BigNumber
-  holdersCount: number
-  holdersTotalCount: number | null
-  holdersComplete: boolean
+  assetDefinitionId: string;
+  assetDefinitionAlias: string | null;
+  definitionTotalSupply: BigNumber | null;
+  velocitySupply: BigNumber;
+  supplyCoverage: number | null;
+  holders: HolderRow[];
+  holdersTotalSupply: BigNumber;
+  holdersCount: number;
+  holdersTotalCount: number | null;
   distribution: {
-    gini: number
-    hhi: number
-    effectiveHolders: number | null
-    theil: number
-    entropy: number
-    entropyNormalized: number
-    entropyEffectiveHolders: number | null
-    nakamoto33: number
-    nakamoto51: number
-    nakamoto67: number
-    top1: number
-    top5: number
-    top10: number
-    median: BigNumber | null
-    p90: BigNumber | null
-    p99: BigNumber | null
-    lorenz: Array<{ population: number, share: number }>
-  }
-  holderChurn: HolderChurn | null
-  velocityWindows: VelocityWindowStats[] | null
-  issuanceWindows: IssuanceWindowStats[] | null
-  issuanceSeries: IssuanceSeriesPoint[] | null
-  computedAt: Date
+    gini: number;
+    hhi: number;
+    effectiveHolders: number | null;
+    theil: number;
+    entropy: number;
+    entropyNormalized: number;
+    entropyEffectiveHolders: number | null;
+    nakamoto33: number;
+    nakamoto51: number;
+    nakamoto67: number;
+    top1: number;
+    top5: number;
+    top10: number;
+    median: BigNumber | null;
+    p90: BigNumber | null;
+    p99: BigNumber | null;
+    lorenz: Array<{ population: number; share: number }>;
+  };
+  velocityWindows: VelocityWindowStats[] | null;
+  issuanceWindows: IssuanceWindowStats[] | null;
+  issuanceSeries: IssuanceSeriesPoint[] | null;
+  computedAt: Date;
 }
 
 const router = useRouter();
@@ -192,9 +138,6 @@ const navigation = useScopedExplorerNavigation();
 const { t } = useI18n();
 
 const assetInput = ref('');
-const maxHoldersToScan = ref(5000);
-const maxTransfersToScan = ref(2000);
-const maxIssuanceToScan = ref(2000);
 
 const assetDefinitionsState = reactive({
   cursor: null as string | null,
@@ -206,7 +149,7 @@ const assetDefinitionsFilters = reactive({
   owner: '',
 });
 const ownerFilterState = computed(() =>
-  parseOptionalFilter(assetDefinitionsFilters.owner, normalizeAccountSelectorLiteral, t('searchUnsupported'))
+  parseOptionalFilter(assetDefinitionsFilters.owner, normalizeAccountIdLiteral, t('searchUnsupported'))
 );
 const parsedOwnerFilter = computed<string | undefined>(() => ownerFilterState.value.value);
 const ownerFilterError = computed(() => ownerFilterState.value.error);
@@ -221,7 +164,7 @@ watch(
 const assetDefinitionsQuery = computed(() => ({
   cursor: assetDefinitionsState.cursor,
   limit: assetDefinitionsState.limit,
-  domain: assetDefinitionsFilters.domain.trim() || undefined,
+  owning_domain: assetDefinitionsFilters.domain.trim() || undefined,
   owned_by: parsedOwnerFilter.value,
 }));
 
@@ -232,7 +175,7 @@ const assetDefinitionsScope = useParamScope(
       key: JSON.stringify({
         cursor: assetDefinitionsQuery.value.cursor,
         limit: assetDefinitionsQuery.value.limit,
-        domain: assetDefinitionsQuery.value.domain ?? null,
+        owning_domain: assetDefinitionsQuery.value.owning_domain ?? null,
         owned_by: assetDefinitionsQuery.value.owned_by ?? null,
       }),
       payload: assetDefinitionsQuery.value,
@@ -248,7 +191,9 @@ const assetDefinitionsPagination = computed(() =>
     : null
 );
 const assetDefinitions = computed(() =>
-  assetDefinitionsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? assetDefinitionsScope.value.expose.data.data.items : []
+  assetDefinitionsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
+    ? assetDefinitionsScope.value.expose.data.data.items
+    : []
 );
 
 const assetInputError = computed(() => {
@@ -265,28 +210,19 @@ const parsedAssetDefinitionId = computed<string | null>(() => {
 
 const state = reactive({
   isLoading: false,
-  stage: 'idle' as 'idle' | 'holders' | 'activity' | 'transfers' | 'issuance',
   error: null as string | null,
-  holdersFetched: 0,
-  holdersTotal: null as number | null,
-  transfersScanned: 0,
-  transfersMatched: 0,
-  mintsScanned: 0,
-  mintsMatched: 0,
-  burnsScanned: 0,
-  burnsMatched: 0,
 });
 
 const result = shallowRef<EconometricsResult | null>(null);
 let runNonce = 0;
-// Client-side scans are an explicit operator mode, never an error fallback.
-const econometricsEndpointsEnabled = getRuntimeConfig().toriiEconometricsEndpointsEnabled !== false;
 
 const canCompute = computed(() => !!parsedAssetDefinitionId.value && !assetInputError.value);
 const isInitialLoading = computed(() => state.isLoading && !result.value);
 
 const topHolders = computed(() => result.value?.holders.slice(0, 10) ?? []);
-const selectedAssetDefinitionId = computed(() => result.value?.assetDefinitionId ?? parsedAssetDefinitionId.value ?? null);
+const selectedAssetDefinitionId = computed(
+  () => result.value?.assetDefinitionId ?? parsedAssetDefinitionId.value ?? null
+);
 
 function formatPercent(ratio: number | null): string {
   if (ratio === null || !Number.isFinite(ratio)) return t('none');
@@ -303,22 +239,9 @@ function formatMaybeBigNumber(value: { toString: () => string } | null): string 
   return value.toString();
 }
 
-function holderMetricTitle(key: string, holderResult: EconometricsResult): string {
-  const title = t(key);
-  return holderResult.holdersComplete ? title : `${title} (${t('econometrics.coverageSampled')})`;
-}
-
 function formatHolderCoverage(holderResult: EconometricsResult): string {
-  if (holderResult.holdersComplete) {
-    const total = holderResult.holdersTotalCount ?? holderResult.holdersCount;
-    return `${holderResult.holdersCount}/${total} (${t('econometrics.coverageComplete')})`;
-  }
-  return `${t('econometrics.coverageSampled')}: ${t('table.scanSample', [holderResult.holdersCount])}`;
-}
-
-function formatDate(value: Date | null): string {
-  if (!value) return t('none');
-  return value.toISOString();
+  const total = holderResult.holdersTotalCount ?? holderResult.holdersCount;
+  return t('econometrics.topHoldersCoverage', [holderResult.holdersCount, total]);
 }
 
 function formatWindowLabel(key: WindowKey) {
@@ -334,496 +257,13 @@ function formatWindowLabel(key: WindowKey) {
   }
 }
 
-function formatDuration(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return t('none');
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours % 24 > 0) parts.push(`${hours % 24}h`);
-  if (minutes % 60 > 0 && parts.length < 2) parts.push(`${minutes % 60}m`);
-  return parts.join(' ');
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
-const snapshotCacheKey = createPublicHistoryCacheKey('econometrics-holder-snapshot', getRuntimeConfig().networkId, http.getToriiBaseUrl());
-
-function storageKey(assetDefinitionId: string): string | null {
-  const key = snapshotCacheKey();
-  return key ? `${key}:${encodeURIComponent(assetDefinitionId)}` : null;
-}
-
-function loadSnapshot(assetDefinitionId: string): HolderSnapshot | null {
-  const key = storageKey(assetDefinitionId);
-  if (typeof window === 'undefined' || !key) return null;
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<HolderSnapshot>;
-    if (!parsed || typeof parsed !== 'object') return null;
-    if (typeof parsed.computed_at_ms !== 'number') return null;
-    if (!Array.isArray(parsed.holders)) return null;
-    if (typeof parsed.scanned !== 'number') return null;
-    const total = typeof parsed.total === 'number' ? parsed.total : null;
-    return {
-      computed_at_ms: parsed.computed_at_ms,
-      holders: parsed.holders.filter((value): value is string => typeof value === 'string'),
-      scanned: parsed.scanned,
-      total,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function saveSnapshot(assetDefinitionId: string, snapshot: HolderSnapshot) {
-  const key = storageKey(assetDefinitionId);
-  if (typeof window === 'undefined' || !key) return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify(snapshot));
-  } catch {
-    // ignore
-  }
-}
-
-async function fetchAssetHolders(
-  definition: string,
-  opts: { perPage: number, maxItems: number },
-  localNonce: number
-) {
-  const holders: Array<{ account: string, balance: BigNumber }> = [];
-  let cursor: string | null = null;
-  let exhausted = false;
-  let truncated = false;
-  const visitedCursors = new Set<string>();
-
-  while (holders.length < opts.maxItems && !exhausted) {
-    if (localNonce !== runNonce) break;
-    const res = await http.fetchAssets({ cursor, limit: opts.perPage, definition });
-    if (res.status !== SUCCESSFUL_FETCHING) {
-      throw new Error(t('econometrics.fetchError'));
-    }
-
-    const { items, nextCursor } = res.data;
-    for (const item of items) {
-      if (holders.length >= opts.maxItems) {
-        truncated = true;
-        break;
-      }
-      holders.push({ account: item.account_id, balance: item.value });
-    }
-    if (localNonce === runNonce) {
-      state.holdersFetched = holders.length;
-      state.holdersTotal = null;
-    }
-    if (nextCursor === null) {
-      exhausted = true;
-      continue;
-    }
-    if (nextCursor === null || visitedCursors.has(nextCursor)) {
-      throw new Error(t('econometrics.fetchError'));
-    }
-    visitedCursors.add(nextCursor);
-    cursor = nextCursor;
-  }
-
-  const complete = exhausted && !truncated;
-  return { holders, totalItems: complete ? holders.length : null, complete };
-}
-
-async function scanInstructionsByKind(args: {
-  kind: InstructionScanKind
-  perPage: number
-  maxItems: number
-  maxBlockHeight?: number
-  cutoffMs: number
-  localNonce: number
-  onScanned?: (value: number) => void
-  onMatched?: (value: number) => void
-  definitionId: string
-  handleMatch: (activity: AssetActivity, createdAt: number) => void
-}): Promise<InstructionScanMeta> {
-  const progress: InstructionScanProgress = { scanned: 0, matched: 0 };
-  let cursor = createHistoryScanCursor();
-  let endedByPagination = false;
-
-  while (progress.scanned < args.maxItems) {
-    if (args.localNonce !== runNonce) break;
-    const response = await http.fetchInstructions({
-      cursor: cursor.nextCursor, limit: args.perPage, kind: args.kind, transaction_status: 'Committed',
-      ...(args.maxBlockHeight === undefined ? {} : { max_block_height: args.maxBlockHeight }),
-    });
-    if (response.status !== SUCCESSFUL_FETCHING) throw new Error(t('econometrics.fetchError'));
-    const continuation = advanceHistoryScanCursor(cursor, response.data);
-    const scannedBeforePage = progress.scanned;
-    const shouldStop = processInstructionScanPage(args, response.data.items, progress);
-    endedByPagination = continuation.nextCursor === null &&
-      progress.scanned - scannedBeforePage === response.data.items.length && args.localNonce === runNonce;
-    cursor = continuation;
-    if (shouldStop || endedByPagination) break;
-  }
-
-  return { ...progress, endedByPagination };
-}
-
-function processInstructionScanPage(
-  args: {
-    maxItems: number
-    cutoffMs: number
-    localNonce: number
-    onScanned?: (value: number) => void
-    onMatched?: (value: number) => void
-    kind: InstructionScanKind
-    definitionId: string
-    handleMatch: (activity: AssetActivity, createdAt: number) => void
-  },
-  items: Instruction[],
-  progress: InstructionScanProgress
-): boolean {
-  for (const instruction of items) {
-    if (args.localNonce !== runNonce) return true;
-
-    progress.scanned += 1;
-    args.onScanned?.(progress.scanned);
-
-    const createdAt = instruction.created_at.getTime();
-    // History cursors order ledger positions, not transaction-created timestamps.
-    // An old timestamp cannot prove later cursor pages fall outside the window.
-    if (createdAt < args.cutoffMs) {
-      if (progress.scanned >= args.maxItems) return true;
-      continue;
-    }
-
-    if (!instruction.box.json) {
-      throw new Error('Asset activity statistics are unavailable: the native instruction envelope does not expose a decoded semantic payload');
-    }
-    if (instruction.kind !== args.kind || instruction.box.json.kind !== args.kind) {
-      throw new Error('Asset activity history returned an unexpected instruction kind');
-    }
-    const activity = decodeCommittedAssetActivity(args.kind, instruction.box.json.payload, instruction.transaction_status);
-    if (!activity || activity.definitionId !== args.definitionId) {
-      if (progress.scanned >= args.maxItems) return true;
-      continue;
-    }
-
-    progress.matched += 1;
-    args.onMatched?.(progress.matched);
-    args.handleMatch(activity, createdAt);
-
-    if (progress.scanned >= args.maxItems) return true;
-  }
-
-  return false;
-}
-
-function initVelocityWindows(nowMs: number) {
-  const windowsAcc = WINDOWS.map((entry) => ({
-    key: entry.key as WindowKey,
-    windowMs: entry.ms,
-    startMs: nowMs - entry.ms,
-    transfers: 0,
-    senders: new Set<string>(),
-    receivers: new Set<string>(),
-    amountSum: new BigNumber(0),
-    amountParsed: 0,
-    amountMissing: 0,
-  }));
-  return windowsAcc;
-}
-
-function updateVelocityWindows(
-  windowsAcc: ReturnType<typeof initVelocityWindows>,
-  createdAt: number,
-  activity: AssetActivity
-) {
-  const amount = activity.amount;
-
-  for (const win of windowsAcc) {
-    if (createdAt < win.startMs) continue;
-    win.transfers += 1;
-
-    if (activity.source !== null) win.senders.add(activity.source);
-    win.receivers.add(activity.destination);
-
-    if (amount) {
-      win.amountSum = win.amountSum.plus(amount);
-      win.amountParsed += 1;
-    } else {
-      win.amountMissing += 1;
-    }
-  }
-}
-
-function finalizeVelocityWindows(
-  windowsAcc: ReturnType<typeof initVelocityWindows>,
-  args: {
-    meta: InstructionScanMeta
-    nowMs: number
-    supplyDenom: BigNumber
-  }
-): VelocityWindowStats[] {
-  return windowsAcc.map((win) => {
-    const amount = win.amountParsed > 0 ? win.amountSum : null;
-    const turnover = amount ? safeRatio(amount, args.supplyDenom) : null;
-    const days = win.windowMs / DAY_MS;
-    const velocityPerDay = turnover === null ? null : turnover / days;
-    const transfersPerDay = win.transfers / days;
-
-    const complete = args.meta.endedByPagination;
-
-    return {
-      key: win.key,
-      windowMs: win.windowMs,
-      start: new Date(win.startMs),
-      end: new Date(args.nowMs),
-      days,
-      transfers: win.transfers,
-      uniqueSenders: win.senders.size,
-      uniqueReceivers: win.receivers.size,
-      amount,
-      amountParsed: win.amountParsed,
-      amountMissing: win.amountMissing,
-      turnover,
-      velocityPerDay,
-      transfersPerDay,
-      complete,
-    };
-  });
-}
-
-async function fetchVelocityWindows(args: {
-  definitionId: string
-  supplyDenom: BigNumber
-  nowMs: number
-  localNonce: number
-}) {
-  const windowsAcc = initVelocityWindows(args.nowMs);
-  const earliestStartMs = Math.min(...windowsAcc.map((entry) => entry.startMs));
-  const meta = await scanInstructionsByKind({
-    kind: 'Transfer',
-    perPage: 100,
-    maxItems: maxTransfersToScan.value,
-    cutoffMs: earliestStartMs,
-    localNonce: args.localNonce,
-    onScanned: (value) => {
-      if (args.localNonce === runNonce) state.transfersScanned = value;
-    },
-    onMatched: (value) => {
-      if (args.localNonce === runNonce) state.transfersMatched = value;
-    },
-    definitionId: args.definitionId,
-    handleMatch: (activity, createdAt) => {
-      updateVelocityWindows(windowsAcc, createdAt, activity);
-    },
-  });
-
-  return {
-    scanned: meta.scanned,
-    matched: meta.matched,
-    windows: finalizeVelocityWindows(windowsAcc, {
-      meta,
-      nowMs: args.nowMs,
-      supplyDenom: args.supplyDenom,
-    }),
-  };
-}
-
-function initIssuanceWindows(nowMs: number) {
-  return WINDOWS.map((entry) => ({
-    key: entry.key as WindowKey,
-    windowMs: entry.ms,
-    startMs: nowMs - entry.ms,
-    mintCount: 0,
-    burnCount: 0,
-    mintedSum: new BigNumber(0),
-    burnedSum: new BigNumber(0),
-    mintAmountParsed: 0,
-    mintAmountMissing: 0,
-    burnAmountParsed: 0,
-    burnAmountMissing: 0,
-  }));
-}
-
-function initIssuanceSeries(nowMs: number) {
-  const startMs = nowMs - ISSUANCE_SERIES_DAYS * DAY_MS;
-  const buckets = Array.from({ length: ISSUANCE_SERIES_DAYS }, (_, idx) => ({
-    bucketStartMs: startMs + idx * DAY_MS,
-    minted: new BigNumber(0),
-    burned: new BigNumber(0),
-    net: new BigNumber(0),
-  }));
-  return { startMs, buckets };
-}
-
-function updateIssuanceProgress(kind: 'Mint' | 'Burn', metric: 'scanned' | 'matched', value: number) {
-  if (kind === 'Mint') {
-    if (metric === 'scanned') state.mintsScanned = value;
-    else state.mintsMatched = value;
-    return;
-  }
-
-  if (metric === 'scanned') state.burnsScanned = value;
-  else state.burnsMatched = value;
-}
-
-function updateIssuanceWindows(
-  windowsAcc: ReturnType<typeof initIssuanceWindows>,
-  args: {
-    kind: 'Mint' | 'Burn'
-    createdAt: number
-    amount: BigNumber | null
-  }
-) {
-  for (const win of windowsAcc) {
-    if (args.createdAt < win.startMs) continue;
-    if (args.kind === 'Mint') {
-      win.mintCount += 1;
-      if (args.amount) {
-        win.mintedSum = win.mintedSum.plus(args.amount);
-        win.mintAmountParsed += 1;
-      } else {
-        win.mintAmountMissing += 1;
-      }
-      continue;
-    }
-
-    win.burnCount += 1;
-    if (args.amount) {
-      win.burnedSum = win.burnedSum.plus(args.amount);
-      win.burnAmountParsed += 1;
-    } else {
-      win.burnAmountMissing += 1;
-    }
-  }
-}
-
-function updateIssuanceSeries(
-  series: ReturnType<typeof initIssuanceSeries>,
-  args: {
-    kind: 'Mint' | 'Burn'
-    createdAt: number
-    amount: BigNumber | null
-  }
-) {
-  if (args.createdAt < series.startMs) return;
-
-  const bucket = Math.floor((args.createdAt - series.startMs) / DAY_MS);
-  if (bucket < 0 || bucket >= series.buckets.length) return;
-
-  const entry = series.buckets[bucket]!;
-  if (args.kind === 'Mint') {
-    if (args.amount) entry.minted = entry.minted.plus(args.amount);
-  } else if (args.amount) {
-    entry.burned = entry.burned.plus(args.amount);
-  }
-  entry.net = entry.minted.minus(entry.burned);
-}
-
-async function scanIssuanceKind(args: {
-  kind: 'Mint' | 'Burn'
-  maxBlockHeight: number
-  definitionId: string
-  cutoffMs: number
-  localNonce: number
-  windowsAcc: ReturnType<typeof initIssuanceWindows>
-  series: ReturnType<typeof initIssuanceSeries>
-}): Promise<InstructionScanMeta> {
-  return scanInstructionsByKind({
-    kind: args.kind,
-    perPage: 100,
-    maxItems: maxIssuanceToScan.value,
-    maxBlockHeight: args.maxBlockHeight,
-    cutoffMs: args.cutoffMs,
-    localNonce: args.localNonce,
-    onScanned: (value) => {
-      if (args.localNonce === runNonce) updateIssuanceProgress(args.kind, 'scanned', value);
-    },
-    onMatched: (value) => {
-      if (args.localNonce === runNonce) updateIssuanceProgress(args.kind, 'matched', value);
-    },
-    definitionId: args.definitionId,
-    handleMatch: (activity, createdAt) => {
-      const amount = activity.amount;
-      updateIssuanceWindows(args.windowsAcc, { kind: args.kind, createdAt, amount });
-      updateIssuanceSeries(args.series, { kind: args.kind, createdAt, amount });
-    },
-  });
-}
-
-function finalizeIssuanceWindows(
-  windowsAcc: ReturnType<typeof initIssuanceWindows>,
-  args: {
-    mintMeta: InstructionScanMeta
-    burnMeta: InstructionScanMeta
-    nowMs: number
-  }
-): IssuanceWindowStats[] {
-  return windowsAcc.map((win) => {
-    const mintComplete = args.mintMeta.endedByPagination;
-    const burnComplete = args.burnMeta.endedByPagination;
-    const complete = mintComplete && burnComplete;
-
-    const minted = win.mintAmountParsed > 0 ? win.mintedSum : null;
-    const burned = win.burnAmountParsed > 0 ? win.burnedSum : null;
-    const net = win.mintAmountParsed + win.burnAmountParsed > 0 ? win.mintedSum.minus(win.burnedSum) : null;
-    return {
-      key: win.key,
-      windowMs: win.windowMs,
-      start: new Date(win.startMs),
-      end: new Date(args.nowMs),
-      mintCount: win.mintCount,
-      burnCount: win.burnCount,
-      minted,
-      burned,
-      net,
-      mintAmountParsed: win.mintAmountParsed,
-      mintAmountMissing: win.mintAmountMissing,
-      burnAmountParsed: win.burnAmountParsed,
-      burnAmountMissing: win.burnAmountMissing,
-      complete,
-    };
-  });
-}
-
-async function fetchIssuance(definitionId: string, nowMs: number, localNonce: number) {
-  const tip = await http.fetchBlocks({ limit: 1 });
-  if (tip.status !== SUCCESSFUL_FETCHING || tip.data.items.length !== 1) {
-    throw new Error('A committed block is required to bound issuance statistics.');
-  }
-  const maxBlockHeight = tip.data.items[0].height;
-  const windowsAcc = initIssuanceWindows(nowMs);
-  const series = initIssuanceSeries(nowMs);
-  const [mintMeta, burnMeta] = await Promise.all([
-    scanIssuanceKind({ kind: 'Mint', maxBlockHeight, definitionId, cutoffMs: series.startMs, localNonce, windowsAcc, series }),
-    scanIssuanceKind({ kind: 'Burn', maxBlockHeight, definitionId, cutoffMs: series.startMs, localNonce, windowsAcc, series }),
-  ]);
-  const buildWindows = () => finalizeIssuanceWindows(windowsAcc, { mintMeta, burnMeta, nowMs });
-
-  return {
-    complete: buildWindows().every((win) => win.complete),
-    windows: buildWindows(),
-    series: series.buckets,
-  };
 }
 
 function resetEconometricsRunState() {
   state.isLoading = true;
   state.error = null;
-  state.stage = 'holders';
-  state.holdersFetched = 0;
-  state.holdersTotal = null;
-  state.transfersScanned = 0;
-  state.transfersMatched = 0;
-  state.mintsScanned = 0;
-  state.mintsMatched = 0;
-  state.burnsScanned = 0;
-  state.burnsMatched = 0;
 }
 
 function createEmptyDistribution(): EconometricsResult['distribution'] {
@@ -844,7 +284,10 @@ function createEmptyDistribution(): EconometricsResult['distribution'] {
     median: null,
     p90: null,
     p99: null,
-    lorenz: [{ population: 0, share: 0 }, { population: 1, share: 1 }],
+    lorenz: [
+      { population: 0, share: 0 },
+      { population: 1, share: 1 },
+    ],
   };
 }
 
@@ -863,9 +306,8 @@ function buildDistributionFromSnapshot(snapshot: AssetDefinitionSnapshotSuccess[
       }))
       .sort((a, b) => b.balance.comparedTo(a.balance) ?? 0),
     holdersTotalSupply,
-    holdersCount: snapshot.holders_total,
+    holdersCount: snapshot.top_holders.length,
     holdersTotalCount: snapshot.holders_total,
-    holdersComplete: true,
     distribution: {
       gini: dist.gini,
       hhi,
@@ -888,98 +330,12 @@ function buildDistributionFromSnapshot(snapshot: AssetDefinitionSnapshotSuccess[
   };
 }
 
-async function buildDistributionFromHolderScan(definition: string, localNonce: number) {
-  const { holders, totalItems, complete } = await fetchAssetHolders(
-    definition,
-    {
-      perPage: 100,
-      maxItems: maxHoldersToScan.value,
-    },
-    localNonce
-  );
-  if (localNonce !== runNonce) return null;
-
-  const balances = holders.map((entry) => entry.balance);
-  const holdersTotalSupply = sum(balances);
-  const hhi = herfindahlIndex(balances);
-  const entropy = shannonEntropy(balances);
-
-  return {
-    holders: holders
-      .slice()
-      .sort((a, b) => b.balance.comparedTo(a.balance) ?? 0)
-      .map((entry) => ({
-        account: entry.account,
-        balance: entry.balance,
-        share: safeRatio(entry.balance, holdersTotalSupply),
-      })),
-    holdersTotalSupply,
-    holdersCount: balances.length,
-    holdersTotalCount: totalItems,
-    holdersComplete: complete,
-    distribution: {
-      gini: giniCoefficient(balances),
-      hhi,
-      effectiveHolders: hhi > 0 ? 1 / hhi : null,
-      theil: theilIndexT(balances),
-      entropy,
-      entropyNormalized: normalizedEntropy(balances),
-      entropyEffectiveHolders: effectiveNumberFromEntropy(entropy),
-      nakamoto33: nakamotoCoefficient(balances, 0.33),
-      nakamoto51: nakamotoCoefficient(balances, 0.51),
-      nakamoto67: nakamotoCoefficient(balances, 0.67),
-      top1: concentrationTopN(balances, 1),
-      top5: concentrationTopN(balances, 5),
-      top10: concentrationTopN(balances, 10),
-      median: median(balances),
-      p90: nearestRankQuantile(balances, 0.9),
-      p99: nearestRankQuantile(balances, 0.99),
-      lorenz: lorenzCurvePoints(balances, 32),
-    } satisfies EconometricsResult['distribution'],
-  };
-}
-
-function computeHolderChurn(
-  definitionId: string,
-  args: {
-    nowMs: number
-    holders: HolderRow[]
-    holdersTotalCount: number | null
-  }
-): HolderChurn | null {
-  const snapshotPrev = loadSnapshot(definitionId);
-  const snapshotNow: HolderSnapshot = {
-    computed_at_ms: args.nowMs,
-    holders: args.holders.map((row) => row.account),
-    scanned: args.holders.length,
-    total: args.holdersTotalCount,
-  };
-  saveSnapshot(definitionId, snapshotNow);
-  if (!snapshotPrev) return null;
-
-  const churnStats = computeSetChurn(snapshotPrev.holders, snapshotNow.holders);
-  const deltaMs = Math.max(0, snapshotNow.computed_at_ms - snapshotPrev.computed_at_ms);
-  return {
-    previousComputedAt: new Date(snapshotPrev.computed_at_ms),
-    deltaMs,
-    previousScanned: snapshotPrev.scanned,
-    currentScanned: snapshotNow.scanned,
-    retained: churnStats.retained,
-    entered: churnStats.entered,
-    exited: churnStats.exited,
-    retentionPrev: churnStats.retentionPrev,
-    retentionCurrent: churnStats.retentionCurrent,
-  };
-}
-
 function explorerReadError(response: unknown): Error {
   if (isRecord(response) && response.error instanceof Error) return response.error;
   return new Error(t('econometrics.fetchError'));
 }
 
 async function fetchHolderSnapshot(definition: string) {
-  if (!econometricsEndpointsEnabled) return null;
-
   const response = await http.fetchAssetDefinitionSnapshot(definition);
   if (response.status !== SUCCESSFUL_FETCHING) throw explorerReadError(response);
   return response.data;
@@ -992,27 +348,11 @@ function resolveDefinitionSupplies(definitionRes: Awaited<ReturnType<typeof http
     assetDefinitionId: definitionDto.id,
     assetDefinitionAlias: definitionDto.alias ?? null,
     definitionTotalSupply: definitionDto.total_quantity,
-    definitionLockedSupply: definitionDto.locked_quantity ?? null,
-    definitionCirculatingSupply: definitionDto.circulating_quantity ?? null,
   };
 }
 
-async function resolveHolderData(
-  definition: string,
-  localNonce: number,
-  snapshot: Awaited<ReturnType<typeof fetchHolderSnapshot>>
-) {
-  if (snapshot) return buildDistributionFromSnapshot(snapshot);
-  return buildDistributionFromHolderScan(definition, localNonce);
-}
-
-function syncSnapshotHolderProgress(
-  snapshot: Awaited<ReturnType<typeof fetchHolderSnapshot>>,
-  localNonce: number
-) {
-  if (!snapshot || localNonce !== runNonce) return;
-  state.holdersFetched = snapshot.holders_total;
-  state.holdersTotal = snapshot.holders_total;
+async function resolveHolderData(snapshot: Awaited<ReturnType<typeof fetchHolderSnapshot>>) {
+  return buildDistributionFromSnapshot(snapshot);
 }
 
 function resolveVelocitySupply(preferredSupply: BigNumber | null, holdersTotalSupply: BigNumber): BigNumber {
@@ -1021,37 +361,26 @@ function resolveVelocitySupply(preferredSupply: BigNumber | null, holdersTotalSu
     : holdersTotalSupply;
 }
 
-async function loadHolderDistribution(definition: string, nowMs: number, localNonce: number) {
+async function loadHolderDistribution(definition: string, localNonce: number) {
   const definitionRes = await http.fetchAssetDefinition(definition);
   if (localNonce !== runNonce) return null;
-  const { assetDefinitionId, assetDefinitionAlias, definitionTotalSupply, definitionLockedSupply, definitionCirculatingSupply } = resolveDefinitionSupplies(
-    definitionRes
-  );
+  const { assetDefinitionId, assetDefinitionAlias, definitionTotalSupply } = resolveDefinitionSupplies(definitionRes);
 
   const snapshot = await fetchHolderSnapshot(assetDefinitionId);
   if (localNonce !== runNonce) return null;
 
-  const holderData = await resolveHolderData(assetDefinitionId, localNonce, snapshot);
+  const holderData = await resolveHolderData(snapshot);
   if (!holderData || localNonce !== runNonce) return null;
-  syncSnapshotHolderProgress(snapshot, localNonce);
 
-  const preferredVelocitySupply = definitionCirculatingSupply ?? definitionTotalSupply;
-  const velocitySupply = resolveVelocitySupply(preferredVelocitySupply, holderData.holdersTotalSupply);
+  const velocitySupply = resolveVelocitySupply(definitionTotalSupply, holderData.holdersTotalSupply);
 
   return {
     assetDefinitionId,
     assetDefinitionAlias,
     ...holderData,
     definitionTotalSupply,
-    definitionLockedSupply,
-    definitionCirculatingSupply,
     velocitySupply,
     supplyCoverage: definitionTotalSupply ? safeRatio(holderData.holdersTotalSupply, definitionTotalSupply) : null,
-    holderChurn: computeHolderChurn(assetDefinitionId, {
-      nowMs,
-      holders: holderData.holders,
-      holdersTotalCount: holderData.holdersTotalCount,
-    }),
   };
 }
 
@@ -1122,60 +451,22 @@ function mapIssuanceWindowsFromActivity(
     });
 }
 
-async function loadActivityBundle(args: {
-  definition: string
-  nowMs: number
-  localNonce: number
-  velocitySupply: BigNumber
-}) {
-  let velocityWindows: VelocityWindowStats[] | null = null;
-  let issuanceWindows: IssuanceWindowStats[] | null = null;
-  let issuanceSeries: IssuanceSeriesPoint[] | null = null;
-  let activityComputedAt: Date | null = null;
-
-  state.stage = 'activity';
-  if (econometricsEndpointsEnabled) {
-    const activityRes = await http.fetchAssetDefinitionEconometrics(args.definition);
-    if (args.localNonce !== runNonce) return null;
-    if (activityRes.status !== SUCCESSFUL_FETCHING) throw explorerReadError(activityRes);
-
-    activityComputedAt = new Date(activityRes.data.computed_at_ms);
-    velocityWindows = mapVelocityWindowsFromActivity(activityRes.data.velocity_windows, args.velocitySupply);
-    issuanceWindows = mapIssuanceWindowsFromActivity(activityRes.data.issuance_windows);
-    issuanceSeries = activityRes.data.issuance_series
-      .slice()
-      .sort((a, b) => a.bucket_start_ms - b.bucket_start_ms)
-      .map((point) => ({
-        bucketStartMs: point.bucket_start_ms,
-        minted: point.minted,
-        burned: point.burned,
-        net: point.net,
-      }));
-  }
-
+async function loadActivityBundle(args: { definition: string; localNonce: number; velocitySupply: BigNumber }) {
+  const activityRes = await http.fetchAssetDefinitionEconometrics(args.definition);
   if (args.localNonce !== runNonce) return null;
+  if (activityRes.status !== SUCCESSFUL_FETCHING) throw explorerReadError(activityRes);
 
-  if (!velocityWindows) {
-    state.stage = 'transfers';
-    const transferStats = await fetchVelocityWindows({
-      definitionId: args.definition,
-      supplyDenom: args.velocitySupply,
-      nowMs: args.nowMs,
-      localNonce: args.localNonce,
-    });
-    if (args.localNonce !== runNonce) return null;
-    velocityWindows = transferStats.windows;
-  }
-
-  if (args.localNonce !== runNonce) return null;
-
-  if (!issuanceWindows || !issuanceSeries) {
-    state.stage = 'issuance';
-    const issuance = await fetchIssuance(args.definition, args.nowMs, args.localNonce);
-    if (args.localNonce !== runNonce) return null;
-    issuanceWindows = issuance.windows;
-    issuanceSeries = issuance.series;
-  }
+  const velocityWindows = mapVelocityWindowsFromActivity(activityRes.data.velocity_windows, args.velocitySupply);
+  const issuanceWindows = mapIssuanceWindowsFromActivity(activityRes.data.issuance_windows);
+  const issuanceSeries = activityRes.data.issuance_series
+    .slice()
+    .sort((a, b) => a.bucket_start_ms - b.bucket_start_ms)
+    .map((point) => ({
+      bucketStartMs: point.bucket_start_ms,
+      minted: point.minted,
+      burned: point.burned,
+      net: point.net,
+    }));
 
   if (args.localNonce !== runNonce) return null;
 
@@ -1183,22 +474,20 @@ async function loadActivityBundle(args: {
     velocityWindows,
     issuanceWindows,
     issuanceSeries,
-    computedAt: activityComputedAt ?? new Date(),
+    computedAt: new Date(activityRes.data.computed_at_ms),
   };
 }
 
 async function computeEconometrics(definition: string) {
   const localNonce = (runNonce += 1);
-  const nowMs = Date.now();
   resetEconometricsRunState();
 
   try {
-    const holderBundle = await loadHolderDistribution(definition, nowMs, localNonce);
+    const holderBundle = await loadHolderDistribution(definition, localNonce);
     if (!holderBundle || localNonce !== runNonce) return;
 
     const activityBundle = await loadActivityBundle({
       definition: holderBundle.assetDefinitionId,
-      nowMs,
       localNonce,
       velocitySupply: holderBundle.velocitySupply,
     });
@@ -1208,30 +497,24 @@ async function computeEconometrics(definition: string) {
       assetDefinitionId: holderBundle.assetDefinitionId,
       assetDefinitionAlias: holderBundle.assetDefinitionAlias,
       definitionTotalSupply: holderBundle.definitionTotalSupply,
-      definitionLockedSupply: holderBundle.definitionLockedSupply,
-      definitionCirculatingSupply: holderBundle.definitionCirculatingSupply,
       velocitySupply: holderBundle.velocitySupply,
       supplyCoverage: holderBundle.supplyCoverage,
       holders: holderBundle.holders,
       holdersTotalSupply: holderBundle.holdersTotalSupply,
       holdersCount: holderBundle.holdersCount,
       holdersTotalCount: holderBundle.holdersTotalCount,
-      holdersComplete: holderBundle.holdersComplete,
       distribution: holderBundle.distribution ?? createEmptyDistribution(),
-      holderChurn: holderBundle.holderChurn,
       velocityWindows: activityBundle.velocityWindows,
       issuanceWindows: activityBundle.issuanceWindows,
       issuanceSeries: activityBundle.issuanceSeries,
       computedAt: activityBundle.computedAt,
     };
-  } catch (err) {
+  } catch {
     if (localNonce !== runNonce) return;
-    const message = err instanceof Error ? err.message : String(err);
-    state.error = message;
+    state.error = t('econometrics.fetchError');
   } finally {
     if (localNonce === runNonce) {
       state.isLoading = false;
-      state.stage = 'idle';
     }
   }
 }
@@ -1310,16 +593,9 @@ const issuanceNetSparkline = computed(() => {
 
 <template>
   <div class="econometrics-page">
-    <BaseContentBlock
-      :title="$t('econometrics.title')"
-      class="econometrics-page__block"
-    >
+    <BaseContentBlock :title="$t('econometrics.title')" class="econometrics-page__block">
       <template #header-action>
-        <BaseButton
-          line
-          :disabled="!canCompute || state.isLoading"
-          @click="handleCompute"
-        >
+        <BaseButton line :disabled="!canCompute || state.isLoading" @click="handleCompute">
           {{ $t('econometrics.compute') }}
         </BaseButton>
       </template>
@@ -1328,44 +604,10 @@ const issuanceNetSparkline = computed(() => {
         <div class="econometrics-page__filters">
           <label>
             <span class="label">{{ $t('econometrics.assetLabel') }}</span>
-            <input
-              v-model="assetInput"
-              type="text"
-              :placeholder="$t('econometrics.assetPlaceholder')"
-            >
-            <small
-              v-if="assetInputError"
-              class="econometrics-page__filters-error"
-            >
+            <input v-model="assetInput" type="text" :placeholder="$t('econometrics.assetPlaceholder')" />
+            <small v-if="assetInputError" class="econometrics-page__filters-error">
               {{ assetInputError }}
             </small>
-          </label>
-          <label>
-            <span class="label">{{ $t('econometrics.maxHoldersLabel') }}</span>
-            <input
-              v-model.number="maxHoldersToScan"
-              type="number"
-              min="100"
-              step="100"
-            >
-          </label>
-          <label>
-            <span class="label">{{ $t('econometrics.maxTransfersLabel') }}</span>
-            <input
-              v-model.number="maxTransfersToScan"
-              type="number"
-              min="200"
-              step="200"
-            >
-          </label>
-          <label>
-            <span class="label">{{ $t('econometrics.maxIssuanceLabel') }}</span>
-            <input
-              v-model.number="maxIssuanceToScan"
-              type="number"
-              min="200"
-              step="200"
-            >
           </label>
         </div>
 
@@ -1377,7 +619,7 @@ const issuanceNetSparkline = computed(() => {
                 v-model="assetDefinitionsFilters.domain"
                 type="text"
                 :placeholder="$t('assets.filters.domainPlaceholder')"
-              >
+              />
             </label>
             <label>
               <span class="label">{{ $t('assets.filters.ownerLabel') }}</span>
@@ -1385,11 +627,8 @@ const issuanceNetSparkline = computed(() => {
                 v-model="assetDefinitionsFilters.owner"
                 type="text"
                 :placeholder="$t('assets.filters.ownerPlaceholder')"
-              >
-              <small
-                v-if="ownerFilterError"
-                class="econometrics-page__asset-filters-error"
-              >
+              />
+              <small v-if="ownerFilterError" class="econometrics-page__asset-filters-error">
                 {{ ownerFilterError }}
               </small>
             </label>
@@ -1408,10 +647,7 @@ const issuanceNetSparkline = computed(() => {
             @click:row="(asset) => startCompute(asset.id)"
           >
             <template #header>
-              <div
-                class="econometrics-page__asset-row econometrics-page__asset-row--header"
-                role="presentation"
-              >
+              <div class="econometrics-page__asset-row econometrics-page__asset-row--header" role="presentation">
                 <span class="h-sm cell" role="columnheader">{{ $t('econometrics.assetDefinition') }}</span>
                 <span class="h-sm cell" role="columnheader">{{ $t('assets.assets') }}</span>
                 <span class="h-sm cell" role="columnheader">{{ $t('econometrics.totalSupplyDefinition') }}</span>
@@ -1428,12 +664,6 @@ const issuanceNetSparkline = computed(() => {
                 role="presentation"
               >
                 <div class="econometrics-page__asset-definition cell" role="cell">
-                  <span
-                    v-if="item.alias"
-                    class="econometrics-page__asset-alias row-text"
-                  >
-                    {{ item.alias }}
-                  </span>
                   <span class="row-text-monospace">{{ item.id }}</span>
                 </div>
                 <span class="row-text-monospace cell" role="cell">{{ item.assets }}</span>
@@ -1446,118 +676,50 @@ const issuanceNetSparkline = computed(() => {
           </BaseTable>
         </BaseInnerBlock>
 
-        <div
-          v-if="state.error"
-          class="econometrics-page__error row-text"
-        >
+        <div v-if="state.error" class="econometrics-page__error row-text">
           {{ state.error }}
         </div>
 
-        <div
-          v-if="isInitialLoading"
-          class="econometrics-page__loading"
-        >
+        <div v-if="isInitialLoading" class="econometrics-page__loading">
           <BaseLoading />
           <div class="econometrics-page__loading-text row-text-monospace">
-            <template v-if="state.stage === 'holders'">
-              {{ $t('econometrics.loadingHolders', [state.holdersFetched, state.holdersTotal ?? '?']) }}
-            </template>
-            <template v-else-if="state.stage === 'transfers'">
-              {{ $t('econometrics.loadingTransfers', [state.transfersScanned, state.transfersMatched]) }}
-            </template>
-            <template v-else-if="state.stage === 'issuance'">
-              {{
-                $t('econometrics.loadingIssuance', [
-                  state.mintsScanned,
-                  state.mintsMatched,
-                  state.burnsScanned,
-                  state.burnsMatched,
-                ])
-              }}
-            </template>
-            <template v-else>
-              {{ $t('econometrics.loading') }}
-            </template>
+            {{ $t('econometrics.loading') }}
           </div>
         </div>
 
         <div v-else-if="result">
-          <div
-            v-if="state.isLoading"
-            class="econometrics-page__refresh-indicator"
-            aria-hidden="true"
-          >
+          <div v-if="state.isLoading" class="econometrics-page__refresh-indicator" aria-hidden="true">
             <BaseLoading />
           </div>
 
-          <BaseInnerBlock :title="holderMetricTitle('econometrics.snapshotTitle', result)">
-            <div
-              v-if="!result.holdersComplete"
-              class="econometrics-page__note row-text"
-              role="status"
-              data-testid="holder-sample-notice"
-            >
-              {{ $t('econometrics.coverageSampled') }}: {{ $t('table.scanSample', [result.holdersCount]) }}
-            </div>
+          <BaseInnerBlock :title="$t('econometrics.snapshotTitle')">
             <div class="econometrics-page__grid">
-              <DataField
-                :title="$t('econometrics.assetDefinition')"
-                :value="result.assetDefinitionId"
-                monospace
-              />
-              <DataField
-                :title="$t('sorafs.columns.alias')"
-                :value="result.assetDefinitionAlias"
-                monospace
-              />
-              <DataField
-                :title="holderMetricTitle('econometrics.holders', result)"
-                :value="result.holdersCount"
-                monospace
-              />
+              <DataField :title="$t('econometrics.assetDefinition')" :value="result.assetDefinitionId" monospace />
+              <DataField :title="$t('sorafs.columns.alias')" :value="result.assetDefinitionAlias" monospace />
+              <DataField :title="$t('econometrics.holders')" :value="result.holdersCount" monospace />
               <DataField
                 :title="$t('econometrics.totalSupplyDefinition')"
                 :value="formatMaybeBigNumber(result.definitionTotalSupply)"
                 monospace
               />
               <DataField
-                :title="$t('econometrics.circulatingSupply')"
-                :value="formatMaybeBigNumber(result.definitionCirculatingSupply)"
-                monospace
-              />
-              <DataField
-                :title="$t('econometrics.lockedSupply')"
-                :value="formatMaybeBigNumber(result.definitionLockedSupply)"
-                monospace
-              />
-              <DataField
-                :title="holderMetricTitle('econometrics.totalSupply', result)"
+                :title="$t('econometrics.totalSupply')"
                 :value="result.holdersTotalSupply.toString()"
                 monospace
               />
               <DataField
-                :title="holderMetricTitle('econometrics.supplyCoverage', result)"
+                :title="$t('econometrics.supplyCoverage')"
                 :value="formatPercent(result.supplyCoverage)"
                 monospace
               />
-              <DataField
-                :title="$t('econometrics.coverage')"
-                :value="formatHolderCoverage(result)"
-                monospace
-              />
-              <DataField
-                :title="$t('econometrics.gini')"
-                :value="formatRatio(result.distribution.gini, 6)"
-                monospace
-              />
-              <DataField
-                :title="$t('econometrics.hhi')"
-                :value="formatRatio(result.distribution.hhi, 6)"
-                monospace
-              />
+              <DataField :title="$t('econometrics.coverage')" :value="formatHolderCoverage(result)" monospace />
+              <DataField :title="$t('econometrics.gini')" :value="formatRatio(result.distribution.gini, 6)" monospace />
+              <DataField :title="$t('econometrics.hhi')" :value="formatRatio(result.distribution.hhi, 6)" monospace />
               <DataField
                 :title="$t('econometrics.effectiveHolders')"
-                :value="result.distribution.effectiveHolders ? result.distribution.effectiveHolders.toFixed(2) : $t('none')"
+                :value="
+                  result.distribution.effectiveHolders ? result.distribution.effectiveHolders.toFixed(2) : $t('none')
+                "
                 monospace
               />
               <DataField
@@ -1593,20 +755,14 @@ const issuanceNetSparkline = computed(() => {
               <DataField
                 :title="$t('econometrics.entropyEffectiveHolders')"
                 :value="
-                  result.distribution.entropyEffectiveHolders ? result.distribution.entropyEffectiveHolders.toFixed(2) : $t('none')
+                  result.distribution.entropyEffectiveHolders
+                    ? result.distribution.entropyEffectiveHolders.toFixed(2)
+                    : $t('none')
                 "
                 monospace
               />
-              <DataField
-                :title="$t('econometrics.top1')"
-                :value="formatPercent(result.distribution.top1)"
-                monospace
-              />
-              <DataField
-                :title="$t('econometrics.top5')"
-                :value="formatPercent(result.distribution.top5)"
-                monospace
-              />
+              <DataField :title="$t('econometrics.top1')" :value="formatPercent(result.distribution.top1)" monospace />
+              <DataField :title="$t('econometrics.top5')" :value="formatPercent(result.distribution.top5)" monospace />
               <DataField
                 :title="$t('econometrics.top10')"
                 :value="formatPercent(result.distribution.top10)"
@@ -1630,11 +786,7 @@ const issuanceNetSparkline = computed(() => {
             </div>
 
             <div class="econometrics-page__lorenz">
-              <svg
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                 <line
                   x1="0"
                   y1="100"
@@ -1649,11 +801,11 @@ const issuanceNetSparkline = computed(() => {
                   class="econometrics-page__lorenz-curve"
                 />
               </svg>
-              <span class="caption">{{ holderMetricTitle('econometrics.lorenzCaption', result) }}</span>
+              <span class="caption">{{ $t('econometrics.lorenzCaption') }}</span>
             </div>
           </BaseInnerBlock>
 
-          <BaseInnerBlock :title="holderMetricTitle('econometrics.topHoldersTitle', result)">
+          <BaseInnerBlock :title="$t('econometrics.topHoldersTitle')">
             <BaseTable
               :loading="false"
               :items="topHolders"
@@ -1664,10 +816,7 @@ const issuanceNetSparkline = computed(() => {
               @click:row="(holder) => openHolderAccount(holder.account)"
             >
               <template #header>
-                <div
-                  class="econometrics-page__holders-row"
-                  role="presentation"
-                >
+                <div class="econometrics-page__holders-row" role="presentation">
                   <span class="h-sm cell" role="columnheader">{{ $t('accountId') }}</span>
                   <span class="h-sm cell" role="columnheader">{{ $t('value') }}</span>
                   <span class="h-sm cell" role="columnheader">{{ $t('econometrics.share') }}</span>
@@ -1675,17 +824,9 @@ const issuanceNetSparkline = computed(() => {
               </template>
 
               <template #row="{ item }">
-                <div
-                  class="econometrics-page__holders-row"
-                  role="presentation"
-                >
+                <div class="econometrics-page__holders-row" role="presentation">
                   <div class="cell" role="cell">
-                    <BaseHash
-                      :hash="item.account"
-                      :link="`/accounts/${item.account}`"
-                      type="short"
-                      copy
-                    />
+                    <BaseHash :hash="item.account" :link="`/accounts/${item.account}`" type="short" copy />
                   </div>
                   <span class="row-text-monospace cell" role="cell">{{ item.balance.toString() }}</span>
                   <span class="row-text-monospace cell" role="cell">{{ formatPercent(item.share) }}</span>
@@ -1719,25 +860,23 @@ const issuanceNetSparkline = computed(() => {
                 </div>
               </template>
               <template #row="{ item }">
-                <div
-                  class="econometrics-page__velocity-row"
-                  role="presentation"
-                >
+                <div class="econometrics-page__velocity-row" role="presentation">
                   <span class="row-text-monospace" role="cell">{{ formatWindowLabel(item.key) }}</span>
                   <span class="row-text-monospace" role="cell">{{ item.transfers }}</span>
                   <span class="row-text-monospace" role="cell">
                     {{ item.amount ? item.amount.toString() : $t('none') }}
-                    <span
-                      v-if="item.amountParsed + item.amountMissing > 0"
-                      class="econometrics-page__sub"
-                    >({{ item.amountParsed }}/{{ item.amountParsed + item.amountMissing }})</span>
+                    <span v-if="item.amountParsed + item.amountMissing > 0" class="econometrics-page__sub"
+                      >({{ item.amountParsed }}/{{ item.amountParsed + item.amountMissing }})</span
+                    >
                   </span>
                   <span class="row-text-monospace" role="cell">{{ formatPercent(item.turnover) }}</span>
                   <span class="row-text-monospace" role="cell">{{ formatRatio(item.velocityPerDay, 6) }}</span>
                   <span class="row-text-monospace" role="cell">{{ formatRatio(item.transfersPerDay, 3) }}</span>
                   <span class="row-text-monospace" role="cell">{{ item.uniqueSenders }}</span>
                   <span class="row-text-monospace" role="cell">{{ item.uniqueReceivers }}</span>
-                  <span class="row-text-monospace" role="cell">{{ item.complete ? $t('econometrics.coverageComplete') : $t('econometrics.coverageSampled') }}</span>
+                  <span class="row-text-monospace" role="cell">{{
+                    item.complete ? $t('econometrics.coverageComplete') : $t('econometrics.coverageSampled')
+                  }}</span>
                 </div>
               </template>
 
@@ -1745,7 +884,9 @@ const issuanceNetSparkline = computed(() => {
                 <div class="econometrics-page__mobile-card">
                   <div class="econometrics-page__mobile-row">
                     <span class="h-sm econometrics-page__mobile-label">{{ $t('econometrics.window') }}</span>
-                    <span class="row-text-monospace econometrics-page__mobile-value">{{ formatWindowLabel(item.key) }}</span>
+                    <span class="row-text-monospace econometrics-page__mobile-value">{{
+                      formatWindowLabel(item.key)
+                    }}</span>
                   </div>
 
                   <div class="econometrics-page__mobile-row">
@@ -1757,26 +898,31 @@ const issuanceNetSparkline = computed(() => {
                     <span class="h-sm econometrics-page__mobile-label">{{ $t('econometrics.transferAmount') }}</span>
                     <span class="row-text-monospace econometrics-page__mobile-value">
                       {{ item.amount ? item.amount.toString() : $t('none') }}
-                      <span
-                        v-if="item.amountParsed + item.amountMissing > 0"
-                        class="econometrics-page__sub"
-                      >({{ item.amountParsed }}/{{ item.amountParsed + item.amountMissing }})</span>
+                      <span v-if="item.amountParsed + item.amountMissing > 0" class="econometrics-page__sub"
+                        >({{ item.amountParsed }}/{{ item.amountParsed + item.amountMissing }})</span
+                      >
                     </span>
                   </div>
 
                   <div class="econometrics-page__mobile-row">
                     <span class="h-sm econometrics-page__mobile-label">{{ $t('econometrics.turnover') }}</span>
-                    <span class="row-text-monospace econometrics-page__mobile-value">{{ formatPercent(item.turnover) }}</span>
+                    <span class="row-text-monospace econometrics-page__mobile-value">{{
+                      formatPercent(item.turnover)
+                    }}</span>
                   </div>
 
                   <div class="econometrics-page__mobile-row">
                     <span class="h-sm econometrics-page__mobile-label">{{ $t('econometrics.velocity') }}</span>
-                    <span class="row-text-monospace econometrics-page__mobile-value">{{ formatRatio(item.velocityPerDay, 6) }}</span>
+                    <span class="row-text-monospace econometrics-page__mobile-value">{{
+                      formatRatio(item.velocityPerDay, 6)
+                    }}</span>
                   </div>
 
                   <div class="econometrics-page__mobile-row">
                     <span class="h-sm econometrics-page__mobile-label">{{ $t('econometrics.transferPerDay') }}</span>
-                    <span class="row-text-monospace econometrics-page__mobile-value">{{ formatRatio(item.transfersPerDay, 3) }}</span>
+                    <span class="row-text-monospace econometrics-page__mobile-value">{{
+                      formatRatio(item.transfersPerDay, 3)
+                    }}</span>
                   </div>
 
                   <div class="econometrics-page__mobile-row">
@@ -1806,11 +952,7 @@ const issuanceNetSparkline = computed(() => {
 
           <BaseInnerBlock :title="$t('econometrics.issuanceTitle')">
             <div class="econometrics-page__sparkline">
-              <svg
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                 <line
                   x1="0"
                   y1="50"
@@ -1848,27 +990,24 @@ const issuanceNetSparkline = computed(() => {
                 </div>
               </template>
               <template #row="{ item }">
-                <div
-                  class="econometrics-page__issuance-row"
-                  role="presentation"
-                >
+                <div class="econometrics-page__issuance-row" role="presentation">
                   <span class="row-text-monospace" role="cell">{{ formatWindowLabel(item.key) }}</span>
                   <span class="row-text-monospace" role="cell">
                     {{ formatMaybeBigNumber(item.minted) }}
-                    <span
-                      v-if="item.mintAmountParsed + item.mintAmountMissing > 0"
-                      class="econometrics-page__sub"
-                    >({{ item.mintAmountParsed }}/{{ item.mintAmountParsed + item.mintAmountMissing }})</span>
+                    <span v-if="item.mintAmountParsed + item.mintAmountMissing > 0" class="econometrics-page__sub"
+                      >({{ item.mintAmountParsed }}/{{ item.mintAmountParsed + item.mintAmountMissing }})</span
+                    >
                   </span>
                   <span class="row-text-monospace" role="cell">
                     {{ formatMaybeBigNumber(item.burned) }}
-                    <span
-                      v-if="item.burnAmountParsed + item.burnAmountMissing > 0"
-                      class="econometrics-page__sub"
-                    >({{ item.burnAmountParsed }}/{{ item.burnAmountParsed + item.burnAmountMissing }})</span>
+                    <span v-if="item.burnAmountParsed + item.burnAmountMissing > 0" class="econometrics-page__sub"
+                      >({{ item.burnAmountParsed }}/{{ item.burnAmountParsed + item.burnAmountMissing }})</span
+                    >
                   </span>
                   <span class="row-text-monospace" role="cell">{{ formatMaybeBigNumber(item.net) }}</span>
-                  <span class="row-text-monospace" role="cell">{{ item.complete ? $t('econometrics.coverageComplete') : $t('econometrics.coverageSampled') }}</span>
+                  <span class="row-text-monospace" role="cell">{{
+                    item.complete ? $t('econometrics.coverageComplete') : $t('econometrics.coverageSampled')
+                  }}</span>
                 </div>
               </template>
 
@@ -1876,17 +1015,18 @@ const issuanceNetSparkline = computed(() => {
                 <div class="econometrics-page__mobile-card">
                   <div class="econometrics-page__mobile-row">
                     <span class="h-sm econometrics-page__mobile-label">{{ $t('econometrics.window') }}</span>
-                    <span class="row-text-monospace econometrics-page__mobile-value">{{ formatWindowLabel(item.key) }}</span>
+                    <span class="row-text-monospace econometrics-page__mobile-value">{{
+                      formatWindowLabel(item.key)
+                    }}</span>
                   </div>
 
                   <div class="econometrics-page__mobile-row">
                     <span class="h-sm econometrics-page__mobile-label">{{ $t('econometrics.minted') }}</span>
                     <span class="row-text-monospace econometrics-page__mobile-value">
                       {{ formatMaybeBigNumber(item.minted) }}
-                      <span
-                        v-if="item.mintAmountParsed + item.mintAmountMissing > 0"
-                        class="econometrics-page__sub"
-                      >({{ item.mintAmountParsed }}/{{ item.mintAmountParsed + item.mintAmountMissing }})</span>
+                      <span v-if="item.mintAmountParsed + item.mintAmountMissing > 0" class="econometrics-page__sub"
+                        >({{ item.mintAmountParsed }}/{{ item.mintAmountParsed + item.mintAmountMissing }})</span
+                      >
                     </span>
                   </div>
 
@@ -1894,16 +1034,17 @@ const issuanceNetSparkline = computed(() => {
                     <span class="h-sm econometrics-page__mobile-label">{{ $t('econometrics.burned') }}</span>
                     <span class="row-text-monospace econometrics-page__mobile-value">
                       {{ formatMaybeBigNumber(item.burned) }}
-                      <span
-                        v-if="item.burnAmountParsed + item.burnAmountMissing > 0"
-                        class="econometrics-page__sub"
-                      >({{ item.burnAmountParsed }}/{{ item.burnAmountParsed + item.burnAmountMissing }})</span>
+                      <span v-if="item.burnAmountParsed + item.burnAmountMissing > 0" class="econometrics-page__sub"
+                        >({{ item.burnAmountParsed }}/{{ item.burnAmountParsed + item.burnAmountMissing }})</span
+                      >
                     </span>
                   </div>
 
                   <div class="econometrics-page__mobile-row">
                     <span class="h-sm econometrics-page__mobile-label">{{ $t('econometrics.netIssuance') }}</span>
-                    <span class="row-text-monospace econometrics-page__mobile-value">{{ formatMaybeBigNumber(item.net) }}</span>
+                    <span class="row-text-monospace econometrics-page__mobile-value">{{
+                      formatMaybeBigNumber(item.net)
+                    }}</span>
                   </div>
 
                   <div class="econometrics-page__mobile-row">
@@ -1920,65 +1061,9 @@ const issuanceNetSparkline = computed(() => {
               {{ $t('econometrics.issuanceNote') }}
             </div>
           </BaseInnerBlock>
-
-          <BaseInnerBlock :title="$t('econometrics.churnTitle')">
-            <div
-              v-if="result.holderChurn"
-              class="econometrics-page__grid"
-            >
-              <DataField
-                :title="$t('econometrics.previousSnapshot')"
-                :value="formatDate(result.holderChurn.previousComputedAt)"
-                monospace
-              />
-              <DataField
-                :title="$t('econometrics.snapshotDelta')"
-                :value="formatDuration(result.holderChurn.deltaMs)"
-                monospace
-              />
-              <DataField
-                :title="$t('econometrics.retained')"
-                :value="result.holderChurn.retained"
-                monospace
-              />
-              <DataField
-                :title="$t('econometrics.entered')"
-                :value="result.holderChurn.entered"
-                monospace
-              />
-              <DataField
-                :title="$t('econometrics.exited')"
-                :value="result.holderChurn.exited"
-                monospace
-              />
-              <DataField
-                :title="$t('econometrics.retentionPrev')"
-                :value="formatPercent(result.holderChurn.retentionPrev)"
-                monospace
-              />
-              <DataField
-                :title="$t('econometrics.retentionCurrent')"
-                :value="formatPercent(result.holderChurn.retentionCurrent)"
-                monospace
-              />
-            </div>
-            <div
-              v-else
-              class="econometrics-page__empty row-text"
-            >
-              {{ $t('econometrics.churnEmpty') }}
-            </div>
-
-            <div class="econometrics-page__note row-text">
-              {{ $t('econometrics.churnNote') }}
-            </div>
-          </BaseInnerBlock>
         </div>
 
-        <div
-          v-else
-          class="econometrics-page__empty row-text"
-        >
+        <div v-else class="econometrics-page__empty row-text">
           {{ $t('econometrics.empty') }}
         </div>
       </template>
@@ -2215,7 +1300,10 @@ const issuanceNetSparkline = computed(() => {
   }
 
   &__issuance-row {
-    grid-template-columns: minmax(80px, 0.9fr) minmax(130px, 1.5fr) minmax(130px, 1.5fr) minmax(130px, 1.5fr) minmax(90px, 0.9fr);
+    grid-template-columns: minmax(80px, 0.9fr) minmax(130px, 1.5fr) minmax(130px, 1.5fr) minmax(130px, 1.5fr) minmax(
+        90px,
+        0.9fr
+      );
 
     &--header {
       grid-template-columns:

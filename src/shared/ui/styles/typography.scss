@@ -49,17 +49,17 @@
 }
 
 @mixin tpg-p1() {
-  @include t-factory($size: 15px, $height: 24px, $weight: 200);
+  @include t-factory($size: 15px, $height: 24px, $weight: 400);
 }
 
 @mixin tpg-s1() {
-  @include t-factory($size: 24px, $height: 32px, $weight: 200);
+  @include t-factory($size: 24px, $height: 32px, $weight: 400);
 }
 @mixin tpg-s2() {
   @include t-factory($size: 18px, $height: 24px, $weight: 300);
 }
 @mixin tpg-s3() {
-  @include t-factory($size: 15px, $height: 16px, $weight: 200);
+  @include t-factory($size: 15px, $height: 16px, $weight: 400);
 }
 @mixin tpg-s3-mono() {
   @include t-factory($size: 15px, $height: 16px, $weight: 300, $family: 'JetBrainsMono');
@@ -68,14 +68,14 @@
   @include t-factory($size: 13px, $height: 16px);
 }
 @mixin tpg-s5() {
-  @include t-factory($size: 11px, $height: 16px, $weight: 200);
+  @include t-factory($size: 11px, $height: 16px, $weight: 400);
 }
 @mixin tpg-s5-bold() {
   @include t-factory($size: 11px, $height: 16px, $weight: 700);
 }
 
 @mixin tpg-link1() {
-  @include t-factory($size: 15px, $height: 16px, $weight: 200);
+  @include t-factory($size: 15px, $height: 16px, $weight: 400);
 }
 
 @mixin tpg-link1-mono() {

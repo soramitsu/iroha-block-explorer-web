@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import Dataspaces from './Dataspaces.vue';
+vi.mock('@vueuse/core', async (original) => ({
+  ...await original<typeof import('@vueuse/core')>(),
+  useElementSize: () => ({ width: { value: 1440 }, height: { value: 900 } }),
+}));
+
 import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 
@@ -229,9 +234,9 @@ describe('Dataspaces overview page', () => {
       { lane_id: 7, dataspace_id: '6647857470246403404', alias: 'is' },
     ];
     const dataspaces = [...new Map(catalog.map((entry) => [entry.dataspace_id, entry])).values()];
-    const registeredPairs = new Set(catalog.map((entry) => `${entry.dataspace_id}:${entry.lane_id}`));
+    const registeredBindings = new Set(catalog.map((entry) => `${entry.dataspace_id}:${entry.lane_id}`));
     const backlog = dataspaces.flatMap((entry) => Array.from({ length: 8 }, (_, lane_id) => {
-      const registered = registeredPairs.has(`${entry.dataspace_id}:${lane_id}`);
+      const registered = registeredBindings.has(`${entry.dataspace_id}:${lane_id}`);
       return {
         ...statusPayload.teu_dataspace_backlog[0],
         ...entry,

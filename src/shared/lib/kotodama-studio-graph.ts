@@ -1,7 +1,14 @@
-import type { KotodamaStudioMetadata } from './kotodama-studio-document';
 import type { KotodamaStudioWorkspaceSummary } from './kotodama-studio-source';
 
 export const KOTODAMA_STUDIO_GRAPH_DOCUMENT_VERSION = 2;
+
+export interface KotodamaStudioMetadata {
+  title: string
+  dataspace: string
+  authority: string
+  chainId: string
+  description: string
+}
 
 export type KotodamaStudioGraphTemplateId =
   | 'stablecoin'
@@ -85,7 +92,6 @@ export interface KotodamaStudioGraphDocumentV2 {
   version: 2
   updatedAt: string
   metadata: KotodamaStudioMetadata
-  legacy?: KotodamaStudioGraphLegacyImportRecord | null
   graph: {
     nodes: KotodamaStudioGraphNode[]
     edges: KotodamaStudioGraphEdge[]
@@ -112,194 +118,193 @@ export interface KotodamaStudioGraphDiagnostic {
   field?: string
 }
 
-export interface KotodamaStudioGraphLegacyImportRecord {
-  sourceVersion: number | string
-  importedAt: string
-  workspaceState: Record<string, unknown> | null
-  workflow: Record<string, unknown> | null
-  notes: string[]
-}
+export type KotodamaStudioTranslate = (
+  key: string,
+  params?: Readonly<Record<string, string | number>>
+) => string;
+
+const untranslatedStudioKey: KotodamaStudioTranslate = (key) => key;
 
 export interface KotodamaStudioGraphConfigField {
   key: string
-  label: string
+  labelKey: string
   kind: 'text' | 'textarea' | 'select'
-  options?: Array<{ label: string, value: string }>
+  options?: Array<{ labelKey?: string, value: string }>
 }
 
 export interface KotodamaStudioGraphPaletteItem {
   kind: KotodamaStudioGraphNodeKind
-  label: string
-  group: 'Declarations' | 'Logic' | 'Values' | 'Iroha Effects'
+  labelKey: string
+  group: 'declarations' | 'logic' | 'values' | 'irohaEffects'
 }
 
 export const KOTODAMA_STUDIO_GRAPH_PALETTE: KotodamaStudioGraphPaletteItem[] = [
-  { group: 'Declarations', kind: 'state', label: 'State' },
-  { group: 'Declarations', kind: 'map_state', label: 'Map state' },
-  { group: 'Declarations', kind: 'helper', label: 'Helper function' },
-  { group: 'Declarations', kind: 'entrypoint', label: 'Public entrypoint' },
-  { group: 'Declarations', kind: 'trigger', label: 'Trigger' },
-  { group: 'Logic', kind: 'guard', label: 'Guard/assert' },
-  { group: 'Logic', kind: 'branch', label: 'If/else branch' },
-  { group: 'Logic', kind: 'loop', label: 'While loop' },
-  { group: 'Logic', kind: 'formula', label: 'Formula' },
-  { group: 'Logic', kind: 'assign_state', label: 'Set state' },
-  { group: 'Logic', kind: 'map_write', label: 'Set map value' },
-  { group: 'Logic', kind: 'return', label: 'Return' },
-  { group: 'Iroha Effects', kind: 'effect', label: 'Iroha effect' },
-  { group: 'Values', kind: 'note', label: 'Note' },
+  { group: 'declarations', kind: 'state', labelKey: 'studio.graph.palette.state' },
+  { group: 'declarations', kind: 'map_state', labelKey: 'studio.graph.palette.mapState' },
+  { group: 'declarations', kind: 'helper', labelKey: 'studio.graph.palette.helper' },
+  { group: 'declarations', kind: 'entrypoint', labelKey: 'studio.graph.palette.entrypoint' },
+  { group: 'declarations', kind: 'trigger', labelKey: 'studio.graph.palette.trigger' },
+  { group: 'logic', kind: 'guard', labelKey: 'studio.graph.palette.guard' },
+  { group: 'logic', kind: 'branch', labelKey: 'studio.graph.palette.branch' },
+  { group: 'logic', kind: 'loop', labelKey: 'studio.graph.palette.loop' },
+  { group: 'logic', kind: 'formula', labelKey: 'studio.graph.palette.formula' },
+  { group: 'logic', kind: 'assign_state', labelKey: 'studio.graph.palette.assignState' },
+  { group: 'logic', kind: 'map_write', labelKey: 'studio.graph.palette.mapWrite' },
+  { group: 'logic', kind: 'return', labelKey: 'studio.graph.palette.return' },
+  { group: 'irohaEffects', kind: 'effect', labelKey: 'studio.graph.palette.effect' },
+  { group: 'values', kind: 'note', labelKey: 'studio.graph.palette.note' },
 ];
 
 export const KOTODAMA_STUDIO_GRAPH_CONFIG_FIELDS: Record<KotodamaStudioGraphNodeKind, KotodamaStudioGraphConfigField[]> = {
   state: [
-    { key: 'name', label: 'State name', kind: 'text' },
+    { key: 'name', labelKey: 'studio.graph.fields.stateName', kind: 'text' },
     {
       key: 'valueType',
-      label: 'Type',
+      labelKey: 'studio.graph.fields.type',
       kind: 'select',
       options: [
-        { label: 'int', value: 'int' },
-        { label: 'bool', value: 'bool' },
-        { label: 'AccountId', value: 'AccountId' },
-        { label: 'AssetDefinitionId', value: 'AssetDefinitionId' },
-        { label: 'DomainId', value: 'DomainId' },
-        { label: 'Name', value: 'Name' },
-        { label: 'Json', value: 'Json' },
-        { label: 'Blob', value: 'Blob' },
-        { label: 'NoritoBytes', value: 'NoritoBytes' },
+        { value: 'int' },
+        { value: 'bool' },
+        { value: 'AccountId' },
+        { value: 'AssetDefinitionId' },
+        { value: 'DomainId' },
+        { value: 'Name' },
+        { value: 'Json' },
+        { value: 'Blob' },
+        { value: 'NoritoBytes' },
       ],
     },
   ],
   map_state: [
-    { key: 'name', label: 'Map name', kind: 'text' },
-    { key: 'keyType', label: 'Key type', kind: 'text' },
-    { key: 'valueType', label: 'Value type', kind: 'text' },
+    { key: 'name', labelKey: 'studio.graph.fields.mapName', kind: 'text' },
+    { key: 'keyType', labelKey: 'studio.graph.fields.keyType', kind: 'text' },
+    { key: 'valueType', labelKey: 'studio.graph.fields.valueType', kind: 'text' },
   ],
   helper: [
-    { key: 'name', label: 'Function name', kind: 'text' },
-    { key: 'params', label: 'Parameters', kind: 'textarea' },
-    { key: 'returnType', label: 'Return type', kind: 'text' },
+    { key: 'name', labelKey: 'studio.graph.fields.functionName', kind: 'text' },
+    { key: 'params', labelKey: 'studio.graph.fields.parameters', kind: 'textarea' },
+    { key: 'returnType', labelKey: 'studio.graph.fields.returnType', kind: 'text' },
   ],
   entrypoint: [
-    { key: 'name', label: 'Entrypoint name', kind: 'text' },
-    { key: 'params', label: 'Parameters', kind: 'textarea' },
-    { key: 'returnType', label: 'Return type', kind: 'text' },
-    { key: 'permission', label: 'Permission', kind: 'text' },
+    { key: 'name', labelKey: 'studio.graph.fields.entrypointName', kind: 'text' },
+    { key: 'params', labelKey: 'studio.graph.fields.parameters', kind: 'textarea' },
+    { key: 'returnType', labelKey: 'studio.graph.fields.returnType', kind: 'text' },
+    { key: 'permission', labelKey: 'studio.graph.fields.permission', kind: 'text' },
   ],
   trigger: [
-    { key: 'id', label: 'Trigger id', kind: 'text' },
-    { key: 'entrypoint', label: 'Entrypoint', kind: 'text' },
+    { key: 'id', labelKey: 'studio.graph.fields.triggerId', kind: 'text' },
+    { key: 'entrypoint', labelKey: 'studio.graph.fields.entrypoint', kind: 'text' },
     {
       key: 'mode',
-      label: 'Mode',
+      labelKey: 'studio.graph.fields.mode',
       kind: 'select',
       options: [
-        { label: 'Pre-commit', value: 'pre_commit' },
-        { label: 'Manual', value: 'manual' },
-        { label: 'Schedule', value: 'schedule' },
+        { labelKey: 'studio.graph.options.preCommit', value: 'pre_commit' },
+        { labelKey: 'studio.graph.options.manual', value: 'manual' },
+        { labelKey: 'studio.graph.options.schedule', value: 'schedule' },
       ],
     },
-    { key: 'startMs', label: 'Schedule start ms', kind: 'text' },
-    { key: 'periodMs', label: 'Schedule period ms', kind: 'text' },
+    { key: 'startMs', labelKey: 'studio.graph.fields.scheduleStartMs', kind: 'text' },
+    { key: 'periodMs', labelKey: 'studio.graph.fields.schedulePeriodMs', kind: 'text' },
   ],
   guard: [
-    { key: 'condition', label: 'Condition', kind: 'textarea' },
-    { key: 'message', label: 'Failure message', kind: 'text' },
+    { key: 'condition', labelKey: 'studio.graph.fields.condition', kind: 'textarea' },
+    { key: 'message', labelKey: 'studio.graph.fields.failureMessage', kind: 'text' },
   ],
   branch: [
-    { key: 'condition', label: 'Condition', kind: 'textarea' },
+    { key: 'condition', labelKey: 'studio.graph.fields.condition', kind: 'textarea' },
   ],
   loop: [
-    { key: 'condition', label: 'Loop while', kind: 'textarea' },
+    { key: 'condition', labelKey: 'studio.graph.fields.loopWhile', kind: 'textarea' },
   ],
   formula: [
-    { key: 'name', label: 'Local name', kind: 'text' },
+    { key: 'name', labelKey: 'studio.graph.fields.localName', kind: 'text' },
     {
       key: 'valueType',
-      label: 'Output type',
+      labelKey: 'studio.graph.fields.outputType',
       kind: 'select',
       options: [
-        { label: 'Infer from expression', value: '' },
-        { label: 'int', value: 'int' },
-        { label: 'bool', value: 'bool' },
-        { label: 'AccountId', value: 'AccountId' },
-        { label: 'AssetDefinitionId', value: 'AssetDefinitionId' },
-        { label: 'DomainId', value: 'DomainId' },
-        { label: 'Name', value: 'Name' },
-        { label: 'Json', value: 'Json' },
-        { label: 'Blob', value: 'Blob' },
-        { label: 'NoritoBytes', value: 'NoritoBytes' },
+        { labelKey: 'studio.graph.options.inferFromExpression', value: '' },
+        { value: 'int' },
+        { value: 'bool' },
+        { value: 'AccountId' },
+        { value: 'AssetDefinitionId' },
+        { value: 'DomainId' },
+        { value: 'Name' },
+        { value: 'Json' },
+        { value: 'Blob' },
+        { value: 'NoritoBytes' },
       ],
     },
-    { key: 'expression', label: 'Expression', kind: 'textarea' },
-    { key: 'left', label: 'Formula left operand', kind: 'text' },
+    { key: 'expression', labelKey: 'studio.graph.fields.expression', kind: 'textarea' },
+    { key: 'left', labelKey: 'studio.graph.fields.formulaLeft', kind: 'text' },
     {
       key: 'operator',
-      label: 'Formula operator',
+      labelKey: 'studio.graph.fields.formulaOperator',
       kind: 'select',
       options: [
-        { label: 'Custom expression', value: '' },
-        { label: '+', value: '+' },
-        { label: '-', value: '-' },
-        { label: '*', value: '*' },
-        { label: '/', value: '/' },
-        { label: '==', value: '==' },
-        { label: '!=', value: '!=' },
-        { label: '>', value: '>' },
-        { label: '>=', value: '>=' },
-        { label: '<', value: '<' },
-        { label: '<=', value: '<=' },
-        { label: '&&', value: '&&' },
-        { label: '||', value: '||' },
+        { labelKey: 'studio.graph.options.customExpression', value: '' },
+        { value: '+' },
+        { value: '-' },
+        { value: '*' },
+        { value: '/' },
+        { value: '==' },
+        { value: '!=' },
+        { value: '>' },
+        { value: '>=' },
+        { value: '<' },
+        { value: '<=' },
+        { value: '&&' },
+        { value: '||' },
       ],
     },
-    { key: 'right', label: 'Formula right operand', kind: 'text' },
+    { key: 'right', labelKey: 'studio.graph.fields.formulaRight', kind: 'text' },
   ],
   assign_state: [
-    { key: 'target', label: 'State name', kind: 'text' },
-    { key: 'value', label: 'Value', kind: 'textarea' },
+    { key: 'target', labelKey: 'studio.graph.fields.stateName', kind: 'text' },
+    { key: 'value', labelKey: 'studio.graph.fields.value', kind: 'textarea' },
   ],
   map_write: [
-    { key: 'target', label: 'Map name', kind: 'text' },
-    { key: 'key', label: 'Key', kind: 'textarea' },
-    { key: 'value', label: 'Value', kind: 'textarea' },
+    { key: 'target', labelKey: 'studio.graph.fields.mapName', kind: 'text' },
+    { key: 'key', labelKey: 'studio.graph.fields.key', kind: 'textarea' },
+    { key: 'value', labelKey: 'studio.graph.fields.value', kind: 'textarea' },
   ],
   effect: [
     {
       key: 'effect',
-      label: 'Effect',
+      labelKey: 'studio.graph.fields.effect',
       kind: 'select',
       options: [
-        { label: 'info', value: 'info' },
-        { label: 'transfer_asset', value: 'transfer_asset' },
-        { label: 'mint_asset', value: 'mint_asset' },
-        { label: 'burn_asset', value: 'burn_asset' },
-        { label: 'set_account_detail', value: 'set_account_detail' },
-        { label: 'execute_query', value: 'execute_query' },
-        { label: 'execute_instruction', value: 'execute_instruction' },
-        { label: 'call function', value: 'call_function' },
-        { label: 'custom statement', value: 'custom' },
+        { value: 'info' },
+        { value: 'transfer_asset' },
+        { value: 'mint_asset' },
+        { value: 'burn_asset' },
+        { value: 'set_account_detail' },
+        { value: 'execute_query' },
+        { value: 'execute_instruction' },
+        { labelKey: 'studio.graph.options.callFunction', value: 'call_function' },
+        { labelKey: 'studio.graph.options.customStatement', value: 'custom' },
       ],
     },
-    { key: 'args', label: 'Arguments', kind: 'textarea' },
-    { key: 'from', label: 'From account', kind: 'text' },
-    { key: 'to', label: 'To account', kind: 'text' },
-    { key: 'account', label: 'Account', kind: 'text' },
-    { key: 'assetDefinition', label: 'Asset definition', kind: 'text' },
-    { key: 'amount', label: 'Amount', kind: 'text' },
-    { key: 'detailKey', label: 'Detail key', kind: 'text' },
-    { key: 'detailValue', label: 'Detail value', kind: 'text' },
-    { key: 'queryPayload', label: 'Query payload', kind: 'text' },
-    { key: 'instructionPayload', label: 'Instruction payload', kind: 'text' },
-    { key: 'callName', label: 'Function name', kind: 'text' },
-    { key: 'callArgs', label: 'Function arguments', kind: 'text' },
-    { key: 'statement', label: 'Custom statement', kind: 'textarea' },
+    { key: 'args', labelKey: 'studio.graph.fields.arguments', kind: 'textarea' },
+    { key: 'from', labelKey: 'studio.graph.fields.fromAccount', kind: 'text' },
+    { key: 'to', labelKey: 'studio.graph.fields.toAccount', kind: 'text' },
+    { key: 'account', labelKey: 'studio.graph.fields.account', kind: 'text' },
+    { key: 'assetDefinition', labelKey: 'studio.graph.fields.assetDefinition', kind: 'text' },
+    { key: 'amount', labelKey: 'studio.graph.fields.amount', kind: 'text' },
+    { key: 'detailKey', labelKey: 'studio.graph.fields.detailKey', kind: 'text' },
+    { key: 'detailValue', labelKey: 'studio.graph.fields.detailValue', kind: 'text' },
+    { key: 'queryPayload', labelKey: 'studio.graph.fields.queryPayload', kind: 'text' },
+    { key: 'instructionPayload', labelKey: 'studio.graph.fields.instructionPayload', kind: 'text' },
+    { key: 'callName', labelKey: 'studio.graph.fields.functionName', kind: 'text' },
+    { key: 'callArgs', labelKey: 'studio.graph.fields.functionArguments', kind: 'text' },
+    { key: 'statement', labelKey: 'studio.graph.fields.customStatement', kind: 'textarea' },
   ],
   return: [
-    { key: 'value', label: 'Return value', kind: 'textarea' },
+    { key: 'value', labelKey: 'studio.graph.fields.returnValue', kind: 'textarea' },
   ],
   note: [
-    { key: 'body', label: 'Note', kind: 'textarea' },
+    { key: 'body', labelKey: 'studio.graph.fields.note', kind: 'textarea' },
   ],
 };
 
@@ -323,13 +328,13 @@ const DECLARATION_NODE_KINDS = new Set<KotodamaStudioGraphNodeKind>([
   'trigger',
 ]);
 
-function defaultMetadata(): KotodamaStudioMetadata {
+function defaultMetadata(translate: KotodamaStudioTranslate = untranslatedStudioKey): KotodamaStudioMetadata {
   return {
     title: 'GraphFirstContract',
     dataspace: 'universal',
     authority: 'operator@studio.main',
     chainId: 'wonderland',
-    description: 'A deployable Kotodama contract built from a typed graph.',
+    description: translate('studio.graph.defaultMetadataDescription'),
   };
 }
 
@@ -372,7 +377,6 @@ function cloneGraphDocument(document: KotodamaStudioGraphDocumentV2): KotodamaSt
     version: 2,
     updatedAt: document.updatedAt,
     metadata: { ...document.metadata },
-    legacy: document.legacy ? cloneLegacyImportRecord(document.legacy) : null,
     graph: {
       nodes: document.graph.nodes.map((node) => ({
         ...node,
@@ -391,34 +395,6 @@ function cloneGraphDocument(document: KotodamaStudioGraphDocumentV2): KotodamaSt
 function readRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
-}
-
-function cloneRecord(value: Record<string, unknown> | null): Record<string, unknown> | null {
-  return value ? JSON.parse(JSON.stringify(value)) as Record<string, unknown> : null;
-}
-
-function cloneLegacyImportRecord(value: KotodamaStudioGraphLegacyImportRecord): KotodamaStudioGraphLegacyImportRecord {
-  return {
-    sourceVersion: value.sourceVersion,
-    importedAt: value.importedAt,
-    workspaceState: cloneRecord(value.workspaceState),
-    workflow: cloneRecord(value.workflow),
-    notes: [...value.notes],
-  };
-}
-
-function readLegacyImportRecord(value: unknown): KotodamaStudioGraphLegacyImportRecord | null {
-  const record = readRecord(value);
-  if (!record) return null;
-  return {
-    sourceVersion: typeof record.sourceVersion === 'number' || typeof record.sourceVersion === 'string' ? record.sourceVersion : 'unknown',
-    importedAt: readString(record.importedAt, new Date(0).toISOString()),
-    workspaceState: cloneRecord(readRecord(record.workspaceState)),
-    workflow: cloneRecord(readRecord(record.workflow)),
-    notes: Array.isArray(record.notes)
-      ? record.notes.map((note) => readString(note)).filter(Boolean)
-      : [],
-  };
 }
 
 function readString(value: unknown, fallback = ''): string {
@@ -494,8 +470,11 @@ function expandStructuredConfig(kind: KotodamaStudioGraphNodeKind, config: Recor
   return next;
 }
 
-function readMetadata(value: unknown): KotodamaStudioMetadata {
-  const fallback = defaultMetadata();
+function readMetadata(
+  value: unknown,
+  translate: KotodamaStudioTranslate = untranslatedStudioKey
+): KotodamaStudioMetadata {
+  const fallback = defaultMetadata(translate);
   const record = readRecord(value);
   return {
     title: readString(record?.title, fallback.title),
@@ -506,13 +485,17 @@ function readMetadata(value: unknown): KotodamaStudioMetadata {
   };
 }
 
-function normalizeGraphNode(value: unknown, index: number): KotodamaStudioGraphNode {
+function normalizeGraphNode(
+  value: unknown,
+  index: number,
+  translate: KotodamaStudioTranslate = untranslatedStudioKey
+): KotodamaStudioGraphNode {
   const record = readRecord(value);
   const data = readRecord(record?.data);
   const rawKind = readString(data?.kind, 'note') as KotodamaStudioGraphNodeKind;
   const kind = [...BODY_NODE_KINDS, ...DECLARATION_NODE_KINDS].includes(rawKind) ? rawKind : 'note';
   const configRecord = readRecord(data?.config);
-  const defaults = defaultNodeData(kind);
+  const defaults = defaultNodeData(kind, translate);
   const expandedConfig = expandStructuredConfig(kind, {
     ...defaults.config,
     ...Object.fromEntries(
@@ -764,7 +747,7 @@ export function deriveKotodamaStudioGraphPorts(
   const flowInputKinds = new Set<KotodamaStudioGraphNodeKind>(['guard', 'branch', 'loop', 'formula', 'assign_state', 'map_write', 'effect', 'return', 'note']);
   const flowOutputKinds = new Set<KotodamaStudioGraphNodeKind>(['helper', 'entrypoint', 'guard', 'branch', 'loop', 'formula', 'assign_state', 'map_write', 'effect', 'note']);
 
-  if (flowInputKinds.has(kind)) ports.push(typedPort('flow-in', 'input', 'flow in', 'flow', 'flow'));
+  if (flowInputKinds.has(kind)) ports.push(typedPort('flow-in', 'input', 'flow-in', 'flow', 'flow'));
   if (flowOutputKinds.has(kind)) {
     if (kind === 'branch') {
       ports.push(typedPort('then', 'output', 'then', 'flow', 'flow'));
@@ -796,7 +779,7 @@ export function deriveKotodamaStudioGraphPorts(
     ports.push(typedPort('condition', 'input', 'condition', 'bool', 'value'));
   } else if (kind === 'assign_state') {
     const targetType = document ? buildStateTypeMap(document).get(normalizeIdentifier(config(node, 'target'), '')) ?? 'unknown' : 'unknown';
-    ports.push(typedPort('value', 'input', config(node, 'target', 'state value'), targetType, 'value'));
+    ports.push(typedPort('value', 'input', config(node, 'target', 'value'), targetType, 'value'));
   } else if (kind === 'map_write') {
     const target = document ? buildMapStateTypeMap(document).get(normalizeIdentifier(config(node, 'target'), '')) : null;
     ports.push(typedPort('key', 'input', 'key', target?.keyType ?? 'unknown', 'value'));
@@ -812,10 +795,10 @@ export function deriveKotodamaStudioGraphPorts(
       execute_instruction: ['NoritoBytes'],
     };
     for (const [index, valueType] of (effectPorts[effect] ?? []).entries()) {
-      ports.push(typedPort(`arg-${index + 1}`, 'input', `arg ${index + 1}`, valueType, 'effect'));
+      ports.push(typedPort(`arg-${index + 1}`, 'input', `arg-${index + 1}`, valueType, 'effect'));
     }
   } else if (kind === 'return') {
-    ports.push(typedPort('value', 'input', 'return value', document ? expectedReturnTypeForNode(document, node.id) : 'unknown', 'value'));
+    ports.push(typedPort('value', 'input', 'return', document ? expectedReturnTypeForNode(document, node.id) : 'unknown', 'value'));
   }
 
   return ports;
@@ -832,45 +815,50 @@ function withGraphNodePorts(node: KotodamaStudioGraphNode, document: KotodamaStu
   };
 }
 
-export function defaultNodeData(kind: KotodamaStudioGraphNodeKind): KotodamaStudioGraphNodeData {
+export function defaultNodeData(
+  kind: KotodamaStudioGraphNodeKind,
+  translate: KotodamaStudioTranslate = untranslatedStudioKey
+): KotodamaStudioGraphNodeData {
+  const copy = (part: 'title' | 'detail') => translate(`studio.graph.defaultNodes.${kind}.${part}`);
   switch (kind) {
     case 'state':
-      return { kind, title: 'State field', detail: 'Durable scalar value', config: { name: 'counter', valueType: 'int' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { name: 'counter', valueType: 'int' }, ports: [] };
     case 'map_state':
-      return { kind, title: 'Map state', detail: 'Durable keyed value', config: { name: 'Ledger', keyType: 'Name', valueType: 'int' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { name: 'Ledger', keyType: 'Name', valueType: 'int' }, ports: [] };
     case 'helper':
-      return { kind, title: 'Helper function', detail: 'Reusable internal logic', config: { name: 'helper', params: '', returnType: '' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { name: 'helper', params: '', returnType: '' }, ports: [] };
     case 'entrypoint':
-      return { kind, title: 'Public entrypoint', detail: 'Callable contract action', config: { name: 'run', params: '', returnType: '', permission: 'Admin' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { name: 'run', params: '', returnType: '', permission: 'Admin' }, ports: [] };
     case 'trigger':
-      return { kind, title: 'Trigger', detail: 'Schedules or reacts to an entrypoint', config: { id: 'trigger_1', entrypoint: 'run', mode: 'pre_commit', startMs: '0', periodMs: '60000' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { id: 'trigger_1', entrypoint: 'run', mode: 'pre_commit', startMs: '0', periodMs: '60000' }, ports: [] };
     case 'guard':
-      return { kind, title: 'Guard', detail: 'Stop when a condition fails', config: { condition: 'amount > 0', message: 'invalid amount' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { condition: 'amount > 0', message: translate('studio.graph.defaultNodes.guard.failureMessage') }, ports: [] };
     case 'branch':
-      return { kind, title: 'Branch', detail: 'Route logic by condition', config: { condition: 'value > 0' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { condition: 'value > 0' }, ports: [] };
     case 'loop':
-      return { kind, title: 'Loop', detail: 'Repeat while true', config: { condition: 'i < limit' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { condition: 'i < limit' }, ports: [] };
     case 'formula':
-      return { kind, title: 'Formula', detail: 'Create a local value', config: { name: 'value', valueType: '', expression: 'amount * price', left: '', operator: '', right: '' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { name: 'value', valueType: '', expression: 'amount * price', left: '', operator: '', right: '' }, ports: [] };
     case 'assign_state':
-      return { kind, title: 'Set state', detail: 'Write a durable scalar', config: { target: 'counter', value: 'counter + 1' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { target: 'counter', value: 'counter + 1' }, ports: [] };
     case 'map_write':
-      return { kind, title: 'Set map value', detail: 'Write durable keyed state', config: { target: 'Ledger', key: 'pool', value: 'amount' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { target: 'Ledger', key: 'pool', value: 'amount' }, ports: [] };
     case 'effect':
-      return { kind, title: 'Iroha effect', detail: 'Execute a chain side effect', config: { effect: 'info', args: '"hello"', statement: '', from: '', to: '', account: '', assetDefinition: '', amount: '', detailKey: '', detailValue: '', queryPayload: '', instructionPayload: '', callName: '', callArgs: '' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { effect: 'info', args: JSON.stringify(translate('studio.graph.defaultNodes.effect.message')), statement: '', from: '', to: '', account: '', assetDefinition: '', amount: '', detailKey: '', detailValue: '', queryPayload: '', instructionPayload: '', callName: '', callArgs: '' }, ports: [] };
     case 'return':
-      return { kind, title: 'Return', detail: 'Finish with a value', config: { value: '' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { value: '' }, ports: [] };
     case 'note':
-      return { kind, title: 'Note', detail: 'Design note', config: { body: 'Explain this step.' }, ports: [] };
+      return { kind, title: copy('title'), detail: copy('detail'), config: { body: translate('studio.graph.defaultNodes.note.body') }, ports: [] };
   }
 }
 
 export function createKotodamaStudioGraphNode(
   kind: KotodamaStudioGraphNodeKind,
   index: number,
-  position: { x: number, y: number }
+  position: { x: number, y: number },
+  translate: KotodamaStudioTranslate = untranslatedStudioKey
 ): KotodamaStudioGraphNode {
-  const data = defaultNodeData(kind);
+  const data = defaultNodeData(kind, translate);
   return withGraphNodePorts({
     id: `${kind}-${index}`,
     type: 'kotodamaGraph',
@@ -883,15 +871,23 @@ export function createKotodamaStudioGraphNode(
   });
 }
 
-export function createEmptyKotodamaStudioGraphDocument(): KotodamaStudioGraphDocumentV2 {
-  return createKotodamaStudioGraphTemplate('stablecoin');
+export function createEmptyKotodamaStudioGraphDocument(
+  translate: KotodamaStudioTranslate = untranslatedStudioKey
+): KotodamaStudioGraphDocumentV2 {
+  return createKotodamaStudioGraphTemplate('stablecoin', translate);
 }
 
-export function createKotodamaStudioGraphTemplate(templateId: KotodamaStudioGraphTemplateId): KotodamaStudioGraphDocumentV2 {
-  return refreshKotodamaStudioGraphPorts(createKotodamaStudioGraphTemplateDraft(templateId));
+export function createKotodamaStudioGraphTemplate(
+  templateId: KotodamaStudioGraphTemplateId,
+  translate: KotodamaStudioTranslate = untranslatedStudioKey
+): KotodamaStudioGraphDocumentV2 {
+  return refreshKotodamaStudioGraphPorts(createKotodamaStudioGraphTemplateDraft(templateId, translate));
 }
 
-function createKotodamaStudioGraphTemplateDraft(templateId: KotodamaStudioGraphTemplateId): KotodamaStudioGraphDocumentV2 {
+function createKotodamaStudioGraphTemplateDraft(
+  templateId: KotodamaStudioGraphTemplateId,
+  translate: KotodamaStudioTranslate
+): KotodamaStudioGraphDocumentV2 {
   const updatedAt = new Date(0).toISOString();
 
   if (templateId === 'asset_ops') {
@@ -903,17 +899,17 @@ function createKotodamaStudioGraphTemplateDraft(templateId: KotodamaStudioGraphT
         dataspace: 'universal',
         authority: 'operator@studio.main',
         chainId: 'wonderland',
-        description: 'Mint, transfer, and burn one asset definition.',
+        description: translate('studio.graph.templateDescriptions.assetOps'),
       },
       graph: {
         nodes: [
-          graphNode('entry-execute', 'entrypoint', 'execute', 'Public asset operation entrypoint', 80, 120, { name: 'execute', params: '', returnType: '', permission: 'Admin' }),
-          graphNode('let-alice', 'formula', 'Authority as alice', 'Cache the caller account', 380, 60, { name: 'alice', expression: 'authority()' }),
-          graphNode('let-bob', 'formula', 'Authority as bob', 'Demo recipient account', 680, 60, { name: 'bob', expression: 'authority()' }),
-          graphNode('let-coin', 'formula', 'Asset definition', 'Typed asset pointer', 980, 60, { name: 'coin', expression: 'asset_definition!("6pEP9RjNoZ7beWkT3pLfKoM1dyfi")' }),
-          graphNode('mint', 'effect', 'Mint asset', 'Mint initial balance', 380, 250, { effect: 'mint_asset', args: 'alice, coin, 1000' }),
-          graphNode('transfer', 'effect', 'Transfer asset', 'Move part of the balance', 680, 250, { effect: 'transfer_asset', args: 'alice, bob, coin, 500' }),
-          graphNode('burn', 'effect', 'Burn asset', 'Remove a portion from supply', 980, 250, { effect: 'burn_asset', args: 'bob, coin, 100' }),
+          graphNode('entry-execute', 'entrypoint', translate('studio.graph.templateNodes.asset_ops.entry_execute.title'), translate('studio.graph.templateNodes.asset_ops.entry_execute.detail'), 80, 120, { name: 'execute', params: '', returnType: '', permission: 'Admin' }),
+          graphNode('let-alice', 'formula', translate('studio.graph.templateNodes.asset_ops.let_alice.title'), translate('studio.graph.templateNodes.asset_ops.let_alice.detail'), 380, 60, { name: 'alice', expression: 'authority()' }),
+          graphNode('let-bob', 'formula', translate('studio.graph.templateNodes.asset_ops.let_bob.title'), translate('studio.graph.templateNodes.asset_ops.let_bob.detail'), 680, 60, { name: 'bob', expression: 'authority()' }),
+          graphNode('let-coin', 'formula', translate('studio.graph.templateNodes.asset_ops.let_coin.title'), translate('studio.graph.templateNodes.asset_ops.let_coin.detail'), 980, 60, { name: 'coin', expression: 'asset_definition!("6pEP9RjNoZ7beWkT3pLfKoM1dyfi")' }),
+          graphNode('mint', 'effect', translate('studio.graph.templateNodes.asset_ops.mint.title'), translate('studio.graph.templateNodes.asset_ops.mint.detail'), 380, 250, { effect: 'mint_asset', args: 'alice, coin, 1000' }),
+          graphNode('transfer', 'effect', translate('studio.graph.templateNodes.asset_ops.transfer.title'), translate('studio.graph.templateNodes.asset_ops.transfer.detail'), 680, 250, { effect: 'transfer_asset', args: 'alice, bob, coin, 500' }),
+          graphNode('burn', 'effect', translate('studio.graph.templateNodes.asset_ops.burn.title'), translate('studio.graph.templateNodes.asset_ops.burn.detail'), 980, 250, { effect: 'burn_asset', args: 'bob, coin, 100' }),
         ],
         edges: [
           graphEdge('entry-execute', 'let-alice'),
@@ -936,15 +932,15 @@ function createKotodamaStudioGraphTemplateDraft(templateId: KotodamaStudioGraphT
         dataspace: 'stream',
         authority: 'billing@stream.main',
         chainId: 'wonderland',
-        description: 'Schedule a recurring subscription charge.',
+        description: translate('studio.graph.templateDescriptions.subscription'),
       },
       graph: {
         nodes: [
-          graphNode('state-renewals', 'state', 'renewals', 'Number of renewal attempts', 80, 60, { name: 'renewals', valueType: 'int' }),
-          graphNode('entry-bill', 'entrypoint', 'bill', 'Charge the customer and update state', 80, 260, { name: 'bill', params: '', returnType: '', permission: 'Billing' }),
-          graphNode('charge', 'effect', 'Charge customer', 'Transfer billing asset', 390, 260, { effect: 'transfer_asset', args: 'account!("customer@stream.main"), account!("treasury@stream.main"), asset_definition!("6pEP9RjNoZ7beWkT3pLfKoM1dyfi"), 10' }),
-          graphNode('renew', 'assign_state', 'Record renewal', 'Update renewal counter', 700, 260, { target: 'renewals', value: '2' }),
-          graphNode('trigger-monthly', 'trigger', 'Monthly trigger', 'Runs the billing entrypoint', 80, 470, { id: 'bill_monthly', entrypoint: 'bill', mode: 'schedule', startMs: '0', periodMs: '2592000000' }),
+          graphNode('state-renewals', 'state', translate('studio.graph.templateNodes.subscription.state_renewals.title'), translate('studio.graph.templateNodes.subscription.state_renewals.detail'), 80, 60, { name: 'renewals', valueType: 'int' }),
+          graphNode('entry-bill', 'entrypoint', translate('studio.graph.templateNodes.subscription.entry_bill.title'), translate('studio.graph.templateNodes.subscription.entry_bill.detail'), 80, 260, { name: 'bill', params: '', returnType: '', permission: 'Billing' }),
+          graphNode('charge', 'effect', translate('studio.graph.templateNodes.subscription.charge.title'), translate('studio.graph.templateNodes.subscription.charge.detail'), 390, 260, { effect: 'transfer_asset', args: 'account!("customer@stream.main"), account!("treasury@stream.main"), asset_definition!("6pEP9RjNoZ7beWkT3pLfKoM1dyfi"), 10' }),
+          graphNode('renew', 'assign_state', translate('studio.graph.templateNodes.subscription.renew.title'), translate('studio.graph.templateNodes.subscription.renew.detail'), 700, 260, { target: 'renewals', value: '2' }),
+          graphNode('trigger-monthly', 'trigger', translate('studio.graph.templateNodes.subscription.trigger_monthly.title'), translate('studio.graph.templateNodes.subscription.trigger_monthly.detail'), 80, 470, { id: 'bill_monthly', entrypoint: 'bill', mode: 'schedule', startMs: '0', periodMs: '2592000000' }),
         ],
         edges: [
           graphEdge('entry-bill', 'charge'),
@@ -963,50 +959,50 @@ function createKotodamaStudioGraphTemplateDraft(templateId: KotodamaStudioGraphT
         dataspace: 'escrow',
         authority: 'operator@escrow.main',
         chainId: 'wonderland',
-        description: 'Open, fund, release, and refund a threshold escrow.',
+        description: translate('studio.graph.templateDescriptions.thresholdEscrow'),
       },
       graph: {
         nodes: [
-          graphNode('state-payer', 'state', 'payer_account', 'Escrow payer', 80, 40, { name: 'payer_account', valueType: 'AccountId' }),
-          graphNode('state-recipient', 'state', 'recipient_account', 'Escrow recipient', 310, 40, { name: 'recipient_account', valueType: 'AccountId' }),
-          graphNode('state-escrow-account', 'state', 'escrow_account_id', 'Escrow account', 540, 40, { name: 'escrow_account_id', valueType: 'AccountId' }),
-          graphNode('state-asset', 'state', 'escrow_asset_definition', 'Escrow asset', 770, 40, { name: 'escrow_asset_definition', valueType: 'AssetDefinitionId' }),
-          graphNode('state-target', 'state', 'target_amount_value', 'Funding target', 1000, 40, { name: 'target_amount_value', valueType: 'int' }),
-          graphNode('state-funded', 'state', 'funded_amount_value', 'Funded amount', 1230, 40, { name: 'funded_amount_value', valueType: 'int' }),
-          graphNode('state-open', 'state', 'is_open', 'Open flag', 1460, 40, { name: 'is_open', valueType: 'bool' }),
-          graphNode('state-released', 'state', 'is_released', 'Released flag', 1690, 40, { name: 'is_released', valueType: 'bool' }),
-          graphNode('state-refunded', 'state', 'is_refunded', 'Refunded flag', 1920, 40, { name: 'is_refunded', valueType: 'bool' }),
-          graphNode('helper-open', 'helper', 'assert_open', 'Shared open-state guard', 80, 230, { name: 'assert_open', params: '', returnType: '' }),
-          graphNode('guard-open', 'guard', 'Escrow is open', 'Require open escrow', 370, 230, { condition: 'is_open', message: 'escrow is not open' }),
-          graphNode('guard-not-released', 'guard', 'Not released', 'Prevent double release', 660, 230, { condition: '!is_released', message: 'escrow already released' }),
-          graphNode('guard-not-refunded', 'guard', 'Not refunded', 'Prevent double refund', 950, 230, { condition: '!is_refunded', message: 'escrow already refunded' }),
-          graphNode('helper-payer', 'helper', 'assert_payer', 'Caller must be payer', 80, 420, { name: 'assert_payer', params: '', returnType: '' }),
-          graphNode('guard-payer', 'guard', 'Only payer', 'Authority matches payer', 370, 420, { condition: 'authority() == payer_account', message: 'only payer may call this entrypoint' }),
-          graphNode('entry-open', 'entrypoint', 'open_escrow', 'Initialize escrow terms', 80, 650, { name: 'open_escrow', params: 'recipient: AccountId, escrow_account: AccountId, asset_definition: AssetDefinitionId, target_amount: int', returnType: '', permission: 'Admin' }),
-          graphNode('guard-target', 'guard', 'Target positive', 'Require a positive funding target', 390, 650, { condition: 'target_amount > 0', message: 'target_amount must be positive' }),
-          graphNode('set-payer', 'assign_state', 'Set payer', 'Store payer authority', 700, 650, { target: 'payer_account', value: 'authority()' }),
-          graphNode('set-recipient', 'assign_state', 'Set recipient', 'Store recipient', 1010, 650, { target: 'recipient_account', value: 'recipient' }),
-          graphNode('set-escrow-account', 'assign_state', 'Set escrow account', 'Store escrow account', 1320, 650, { target: 'escrow_account_id', value: 'escrow_account' }),
-          graphNode('set-asset', 'assign_state', 'Set asset', 'Store asset definition', 1630, 650, { target: 'escrow_asset_definition', value: 'asset_definition' }),
-          graphNode('set-target', 'assign_state', 'Set target', 'Store target amount', 1940, 650, { target: 'target_amount_value', value: 'target_amount' }),
-          graphNode('set-funded-zero', 'assign_state', 'Clear funded', 'Reset funding', 2250, 650, { target: 'funded_amount_value', value: '0' }),
-          graphNode('set-open', 'assign_state', 'Mark open', 'Open the escrow', 2560, 650, { target: 'is_open', value: 'true' }),
-          graphNode('set-released-false', 'assign_state', 'Clear released', 'Reset release flag', 2870, 650, { target: 'is_released', value: 'false' }),
-          graphNode('set-refunded-false', 'assign_state', 'Clear refunded', 'Reset refund flag', 3180, 650, { target: 'is_refunded', value: 'false' }),
-          graphNode('entry-deposit', 'entrypoint', 'deposit', 'Fund escrow', 80, 920, { name: 'deposit', params: 'amount: int', returnType: '', permission: 'Admin' }),
-          graphNode('call-open', 'effect', 'Assert open', 'Use shared guard', 390, 920, { effect: 'call_function', args: 'assert_open()' }),
-          graphNode('call-payer', 'effect', 'Assert payer', 'Use payer guard', 700, 920, { effect: 'call_function', args: 'assert_payer()' }),
-          graphNode('guard-amount', 'guard', 'Positive deposit', 'Require positive amount', 1010, 920, { condition: 'amount > 0', message: 'amount must be positive' }),
-          graphNode('next-funded', 'formula', 'Next funded', 'Compute post-deposit amount', 1320, 920, { name: 'next_funded', expression: 'funded_amount_value + amount' }),
-          graphNode('guard-target-max', 'guard', 'Within target', 'Avoid overfunding', 1630, 920, { condition: 'next_funded <= target_amount_value', message: 'deposit exceeds target_amount' }),
-          graphNode('deposit-transfer', 'effect', 'Transfer deposit', 'Move funds into escrow', 1940, 920, { effect: 'transfer_asset', args: 'payer_account, escrow_account_id, escrow_asset_definition, amount' }),
-          graphNode('set-funded-next', 'assign_state', 'Update funded', 'Store funded total', 2250, 920, { target: 'funded_amount_value', value: 'next_funded' }),
-          graphNode('entry-release', 'entrypoint', 'release_if_ready', 'Release when fully funded', 80, 1190, { name: 'release_if_ready', params: '', returnType: '', permission: 'Admin' }),
-          graphNode('release-open', 'effect', 'Assert open', 'Use shared guard', 390, 1190, { effect: 'call_function', args: 'assert_open()' }),
-          graphNode('release-ready', 'guard', 'Fully funded', 'Require target funded', 700, 1190, { condition: 'funded_amount_value == target_amount_value', message: 'escrow is not fully funded' }),
-          graphNode('release-transfer', 'effect', 'Release funds', 'Move escrow to recipient', 1010, 1190, { effect: 'transfer_asset', args: 'escrow_account_id, recipient_account, escrow_asset_definition, funded_amount_value' }),
-          graphNode('release-close', 'assign_state', 'Close escrow', 'Mark no longer open', 1320, 1190, { target: 'is_open', value: 'false' }),
-          graphNode('release-flag', 'assign_state', 'Mark released', 'Set release flag', 1630, 1190, { target: 'is_released', value: 'true' }),
+          graphNode('state-payer', 'state', translate('studio.graph.templateNodes.threshold_escrow.state_payer.title'), translate('studio.graph.templateNodes.threshold_escrow.state_payer.detail'), 80, 40, { name: 'payer_account', valueType: 'AccountId' }),
+          graphNode('state-recipient', 'state', translate('studio.graph.templateNodes.threshold_escrow.state_recipient.title'), translate('studio.graph.templateNodes.threshold_escrow.state_recipient.detail'), 310, 40, { name: 'recipient_account', valueType: 'AccountId' }),
+          graphNode('state-escrow-account', 'state', translate('studio.graph.templateNodes.threshold_escrow.state_escrow_account.title'), translate('studio.graph.templateNodes.threshold_escrow.state_escrow_account.detail'), 540, 40, { name: 'escrow_account_id', valueType: 'AccountId' }),
+          graphNode('state-asset', 'state', translate('studio.graph.templateNodes.threshold_escrow.state_asset.title'), translate('studio.graph.templateNodes.threshold_escrow.state_asset.detail'), 770, 40, { name: 'escrow_asset_definition', valueType: 'AssetDefinitionId' }),
+          graphNode('state-target', 'state', translate('studio.graph.templateNodes.threshold_escrow.state_target.title'), translate('studio.graph.templateNodes.threshold_escrow.state_target.detail'), 1000, 40, { name: 'target_amount_value', valueType: 'int' }),
+          graphNode('state-funded', 'state', translate('studio.graph.templateNodes.threshold_escrow.state_funded.title'), translate('studio.graph.templateNodes.threshold_escrow.state_funded.detail'), 1230, 40, { name: 'funded_amount_value', valueType: 'int' }),
+          graphNode('state-open', 'state', translate('studio.graph.templateNodes.threshold_escrow.state_open.title'), translate('studio.graph.templateNodes.threshold_escrow.state_open.detail'), 1460, 40, { name: 'is_open', valueType: 'bool' }),
+          graphNode('state-released', 'state', translate('studio.graph.templateNodes.threshold_escrow.state_released.title'), translate('studio.graph.templateNodes.threshold_escrow.state_released.detail'), 1690, 40, { name: 'is_released', valueType: 'bool' }),
+          graphNode('state-refunded', 'state', translate('studio.graph.templateNodes.threshold_escrow.state_refunded.title'), translate('studio.graph.templateNodes.threshold_escrow.state_refunded.detail'), 1920, 40, { name: 'is_refunded', valueType: 'bool' }),
+          graphNode('helper-open', 'helper', translate('studio.graph.templateNodes.threshold_escrow.helper_open.title'), translate('studio.graph.templateNodes.threshold_escrow.helper_open.detail'), 80, 230, { name: 'assert_open', params: '', returnType: '' }),
+graphNode('guard-open', 'guard', translate('studio.graph.templateNodes.threshold_escrow.guard_open.title'), translate('studio.graph.templateNodes.threshold_escrow.guard_open.detail'), 370, 230, { condition: 'is_open', message: translate('studio.graph.templateNodes.threshold_escrow.guard_open.failureMessage') }),
+          graphNode('guard-not-released', 'guard', translate('studio.graph.templateNodes.threshold_escrow.guard_not_released.title'), translate('studio.graph.templateNodes.threshold_escrow.guard_not_released.detail'), 660, 230, { condition: '!is_released', message: translate('studio.graph.templateNodes.threshold_escrow.guard_not_released.failureMessage') }),
+          graphNode('guard-not-refunded', 'guard', translate('studio.graph.templateNodes.threshold_escrow.guard_not_refunded.title'), translate('studio.graph.templateNodes.threshold_escrow.guard_not_refunded.detail'), 950, 230, { condition: '!is_refunded', message: translate('studio.graph.templateNodes.threshold_escrow.guard_not_refunded.failureMessage') }),
+          graphNode('helper-payer', 'helper', translate('studio.graph.templateNodes.threshold_escrow.helper_payer.title'), translate('studio.graph.templateNodes.threshold_escrow.helper_payer.detail'), 80, 420, { name: 'assert_payer', params: '', returnType: '' }),
+          graphNode('guard-payer', 'guard', translate('studio.graph.templateNodes.threshold_escrow.guard_payer.title'), translate('studio.graph.templateNodes.threshold_escrow.guard_payer.detail'), 370, 420, { condition: 'authority() == payer_account', message: translate('studio.graph.templateNodes.threshold_escrow.guard_payer.failureMessage') }),
+          graphNode('entry-open', 'entrypoint', translate('studio.graph.templateNodes.threshold_escrow.entry_open.title'), translate('studio.graph.templateNodes.threshold_escrow.entry_open.detail'), 80, 650, { name: 'open_escrow', params: 'recipient: AccountId, escrow_account: AccountId, asset_definition: AssetDefinitionId, target_amount: int', returnType: '', permission: 'Admin' }),
+          graphNode('guard-target', 'guard', translate('studio.graph.templateNodes.threshold_escrow.guard_target.title'), translate('studio.graph.templateNodes.threshold_escrow.guard_target.detail'), 390, 650, { condition: 'target_amount > 0', message: translate('studio.graph.templateNodes.threshold_escrow.guard_target.failureMessage') }),
+          graphNode('set-payer', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.set_payer.title'), translate('studio.graph.templateNodes.threshold_escrow.set_payer.detail'), 700, 650, { target: 'payer_account', value: 'authority()' }),
+          graphNode('set-recipient', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.set_recipient.title'), translate('studio.graph.templateNodes.threshold_escrow.set_recipient.detail'), 1010, 650, { target: 'recipient_account', value: 'recipient' }),
+          graphNode('set-escrow-account', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.set_escrow_account.title'), translate('studio.graph.templateNodes.threshold_escrow.set_escrow_account.detail'), 1320, 650, { target: 'escrow_account_id', value: 'escrow_account' }),
+          graphNode('set-asset', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.set_asset.title'), translate('studio.graph.templateNodes.threshold_escrow.set_asset.detail'), 1630, 650, { target: 'escrow_asset_definition', value: 'asset_definition' }),
+          graphNode('set-target', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.set_target.title'), translate('studio.graph.templateNodes.threshold_escrow.set_target.detail'), 1940, 650, { target: 'target_amount_value', value: 'target_amount' }),
+          graphNode('set-funded-zero', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.set_funded_zero.title'), translate('studio.graph.templateNodes.threshold_escrow.set_funded_zero.detail'), 2250, 650, { target: 'funded_amount_value', value: '0' }),
+          graphNode('set-open', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.set_open.title'), translate('studio.graph.templateNodes.threshold_escrow.set_open.detail'), 2560, 650, { target: 'is_open', value: 'true' }),
+          graphNode('set-released-false', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.set_released_false.title'), translate('studio.graph.templateNodes.threshold_escrow.set_released_false.detail'), 2870, 650, { target: 'is_released', value: 'false' }),
+          graphNode('set-refunded-false', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.set_refunded_false.title'), translate('studio.graph.templateNodes.threshold_escrow.set_refunded_false.detail'), 3180, 650, { target: 'is_refunded', value: 'false' }),
+          graphNode('entry-deposit', 'entrypoint', translate('studio.graph.templateNodes.threshold_escrow.entry_deposit.title'), translate('studio.graph.templateNodes.threshold_escrow.entry_deposit.detail'), 80, 920, { name: 'deposit', params: 'amount: int', returnType: '', permission: 'Admin' }),
+          graphNode('call-open', 'effect', translate('studio.graph.templateNodes.threshold_escrow.call_open.title'), translate('studio.graph.templateNodes.threshold_escrow.call_open.detail'), 390, 920, { effect: 'call_function', args: 'assert_open()' }),
+          graphNode('call-payer', 'effect', translate('studio.graph.templateNodes.threshold_escrow.call_payer.title'), translate('studio.graph.templateNodes.threshold_escrow.call_payer.detail'), 700, 920, { effect: 'call_function', args: 'assert_payer()' }),
+          graphNode('guard-amount', 'guard', translate('studio.graph.templateNodes.threshold_escrow.guard_amount.title'), translate('studio.graph.templateNodes.threshold_escrow.guard_amount.detail'), 1010, 920, { condition: 'amount > 0', message: translate('studio.graph.templateNodes.threshold_escrow.guard_amount.failureMessage') }),
+          graphNode('next-funded', 'formula', translate('studio.graph.templateNodes.threshold_escrow.next_funded.title'), translate('studio.graph.templateNodes.threshold_escrow.next_funded.detail'), 1320, 920, { name: 'next_funded', expression: 'funded_amount_value + amount' }),
+          graphNode('guard-target-max', 'guard', translate('studio.graph.templateNodes.threshold_escrow.guard_target_max.title'), translate('studio.graph.templateNodes.threshold_escrow.guard_target_max.detail'), 1630, 920, { condition: 'next_funded <= target_amount_value', message: translate('studio.graph.templateNodes.threshold_escrow.guard_target_max.failureMessage') }),
+          graphNode('deposit-transfer', 'effect', translate('studio.graph.templateNodes.threshold_escrow.deposit_transfer.title'), translate('studio.graph.templateNodes.threshold_escrow.deposit_transfer.detail'), 1940, 920, { effect: 'transfer_asset', args: 'payer_account, escrow_account_id, escrow_asset_definition, amount' }),
+          graphNode('set-funded-next', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.set_funded_next.title'), translate('studio.graph.templateNodes.threshold_escrow.set_funded_next.detail'), 2250, 920, { target: 'funded_amount_value', value: 'next_funded' }),
+          graphNode('entry-release', 'entrypoint', translate('studio.graph.templateNodes.threshold_escrow.entry_release.title'), translate('studio.graph.templateNodes.threshold_escrow.entry_release.detail'), 80, 1190, { name: 'release_if_ready', params: '', returnType: '', permission: 'Admin' }),
+          graphNode('release-open', 'effect', translate('studio.graph.templateNodes.threshold_escrow.release_open.title'), translate('studio.graph.templateNodes.threshold_escrow.release_open.detail'), 390, 1190, { effect: 'call_function', args: 'assert_open()' }),
+          graphNode('release-ready', 'guard', translate('studio.graph.templateNodes.threshold_escrow.release_ready.title'), translate('studio.graph.templateNodes.threshold_escrow.release_ready.detail'), 700, 1190, { condition: 'funded_amount_value == target_amount_value', message: translate('studio.graph.templateNodes.threshold_escrow.release_ready.failureMessage') }),
+          graphNode('release-transfer', 'effect', translate('studio.graph.templateNodes.threshold_escrow.release_transfer.title'), translate('studio.graph.templateNodes.threshold_escrow.release_transfer.detail'), 1010, 1190, { effect: 'transfer_asset', args: 'escrow_account_id, recipient_account, escrow_asset_definition, funded_amount_value' }),
+          graphNode('release-close', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.release_close.title'), translate('studio.graph.templateNodes.threshold_escrow.release_close.detail'), 1320, 1190, { target: 'is_open', value: 'false' }),
+          graphNode('release-flag', 'assign_state', translate('studio.graph.templateNodes.threshold_escrow.release_flag.title'), translate('studio.graph.templateNodes.threshold_escrow.release_flag.detail'), 1630, 1190, { target: 'is_released', value: 'true' }),
         ],
         edges: [
           graphEdge('helper-open', 'guard-open'),
@@ -1049,43 +1045,43 @@ function createKotodamaStudioGraphTemplateDraft(templateId: KotodamaStudioGraphT
         dataspace: 'dex',
         authority: 'operator@dex.main',
         chainId: 'wonderland',
-        description: 'Reduced XYK pool graph for pool setup and swaps.',
+        description: translate('studio.graph.templateDescriptions.irohaSwapReduced'),
       },
       graph: {
         nodes: [
-          graphNode('map-asset-a', 'map_state', 'PoolAssetA', 'Pool asset A', 80, 40, { name: 'PoolAssetA', keyType: 'Name', valueType: 'AssetDefinitionId' }),
-          graphNode('map-asset-b', 'map_state', 'PoolAssetB', 'Pool asset B', 330, 40, { name: 'PoolAssetB', keyType: 'Name', valueType: 'AssetDefinitionId' }),
-          graphNode('map-account', 'map_state', 'PoolAccount', 'Pool account', 580, 40, { name: 'PoolAccount', keyType: 'Name', valueType: 'AccountId' }),
-          graphNode('map-reserve-a', 'map_state', 'ReserveA', 'Reserve A', 830, 40, { name: 'ReserveA', keyType: 'Name', valueType: 'int' }),
-          graphNode('map-reserve-b', 'map_state', 'ReserveB', 'Reserve B', 1080, 40, { name: 'ReserveB', keyType: 'Name', valueType: 'int' }),
-          graphNode('entry-init-pool', 'entrypoint', 'init_pool', 'Create a new pool', 80, 260, { name: 'init_pool', params: 'pool: Name, asset_a: AssetDefinitionId, asset_b: AssetDefinitionId, pool_account: AccountId', returnType: '', permission: 'Admin' }),
-          graphNode('guard-assets-different', 'guard', 'Assets differ', 'Pool cannot use same asset twice', 400, 260, { condition: 'asset_a != asset_b', message: 'identical assets' }),
-          graphNode('write-asset-a', 'map_write', 'Store asset A', 'PoolAssetA[pool]', 720, 260, { target: 'PoolAssetA', key: 'pool', value: 'asset_a' }),
-          graphNode('write-asset-b', 'map_write', 'Store asset B', 'PoolAssetB[pool]', 1040, 260, { target: 'PoolAssetB', key: 'pool', value: 'asset_b' }),
-          graphNode('write-account', 'map_write', 'Store pool account', 'PoolAccount[pool]', 1360, 260, { target: 'PoolAccount', key: 'pool', value: 'pool_account' }),
-          graphNode('write-ra', 'map_write', 'Zero reserve A', 'ReserveA[pool]', 1680, 260, { target: 'ReserveA', key: 'pool', value: '0' }),
-          graphNode('write-rb', 'map_write', 'Zero reserve B', 'ReserveB[pool]', 2000, 260, { target: 'ReserveB', key: 'pool', value: '0' }),
-          graphNode('entry-swap', 'entrypoint', 'swap', 'Swap one side of the pool', 80, 560, { name: 'swap', params: 'trader: AccountId, pool: Name, input_asset: AssetDefinitionId, amount_in: int, min_output: int', returnType: 'int', permission: 'Admin' }),
-          graphNode('guard-amount-in', 'guard', 'Positive input', 'Reject empty swaps', 400, 560, { condition: 'amount_in > 0', message: 'invalid amount' }),
-          graphNode('let-asset-a', 'formula', 'Load asset A', 'Read pool metadata', 720, 560, { name: 'asset_a', expression: 'PoolAssetA[pool]' }),
-          graphNode('let-asset-b', 'formula', 'Load asset B', 'Read pool metadata', 1040, 560, { name: 'asset_b', expression: 'PoolAssetB[pool]' }),
-          graphNode('let-pool-account', 'formula', 'Load pool account', 'Read pool account', 1360, 560, { name: 'pool_account', expression: 'PoolAccount[pool]' }),
-          graphNode('let-reserve-a', 'formula', 'Reserve A', 'Read reserve A', 1680, 560, { name: 'reserve_a', expression: 'ReserveA[pool]' }),
-          graphNode('let-reserve-b', 'formula', 'Reserve B', 'Read reserve B', 2000, 560, { name: 'reserve_b', expression: 'ReserveB[pool]' }),
-          graphNode('let-is-a', 'formula', 'Input side', 'Check side', 2320, 560, { name: 'is_a_in', expression: 'input_asset == asset_a' }),
-          graphNode('let-effective', 'formula', 'Fee-adjusted input', '0.3 percent fee', 2640, 560, { name: 'effective', expression: '(amount_in * 997) / 1000' }),
-          graphNode('let-out', 'formula', 'Output quote', 'Reduced quote expression', 2960, 560, { name: 'out', expression: 'is_a_in ? ((reserve_b * effective) / (reserve_a + effective)) : ((reserve_a * effective) / (reserve_b + effective))' }),
-          graphNode('guard-slippage', 'guard', 'Slippage guard', 'Require min output', 3280, 560, { condition: 'out >= min_output', message: 'slippage' }),
-          graphNode('branch-side', 'branch', 'Which side?', 'Update reserves by input side', 3600, 560, { condition: 'is_a_in' }),
-          graphNode('write-a-in', 'map_write', 'Add reserve A', 'A input path', 3920, 460, { target: 'ReserveA', key: 'pool', value: 'reserve_a + amount_in' }),
-          graphNode('write-b-out', 'map_write', 'Remove reserve B', 'A input path', 4240, 460, { target: 'ReserveB', key: 'pool', value: 'reserve_b - out' }),
-          graphNode('transfer-a-in', 'effect', 'Transfer A in', 'Trader pays A', 4560, 460, { effect: 'transfer_asset', args: 'trader, pool_account, asset_a, amount_in' }),
-          graphNode('transfer-b-out', 'effect', 'Transfer B out', 'Pool pays B', 4880, 460, { effect: 'transfer_asset', args: 'pool_account, trader, asset_b, out' }),
-          graphNode('write-b-in', 'map_write', 'Add reserve B', 'B input path', 3920, 720, { target: 'ReserveB', key: 'pool', value: 'reserve_b + amount_in' }),
-          graphNode('write-a-out', 'map_write', 'Remove reserve A', 'B input path', 4240, 720, { target: 'ReserveA', key: 'pool', value: 'reserve_a - out' }),
-          graphNode('transfer-b-in', 'effect', 'Transfer B in', 'Trader pays B', 4560, 720, { effect: 'transfer_asset', args: 'trader, pool_account, asset_b, amount_in' }),
-          graphNode('transfer-a-out', 'effect', 'Transfer A out', 'Pool pays A', 4880, 720, { effect: 'transfer_asset', args: 'pool_account, trader, asset_a, out' }),
-          graphNode('return-out', 'return', 'Return output', 'Expose swap result', 5200, 560, { value: 'out' }),
+          graphNode('map-asset-a', 'map_state', translate('studio.graph.templateNodes.irohaswap_reduced.map_asset_a.title'), translate('studio.graph.templateNodes.irohaswap_reduced.map_asset_a.detail'), 80, 40, { name: 'PoolAssetA', keyType: 'Name', valueType: 'AssetDefinitionId' }),
+          graphNode('map-asset-b', 'map_state', translate('studio.graph.templateNodes.irohaswap_reduced.map_asset_b.title'), translate('studio.graph.templateNodes.irohaswap_reduced.map_asset_b.detail'), 330, 40, { name: 'PoolAssetB', keyType: 'Name', valueType: 'AssetDefinitionId' }),
+          graphNode('map-account', 'map_state', translate('studio.graph.templateNodes.irohaswap_reduced.map_account.title'), translate('studio.graph.templateNodes.irohaswap_reduced.map_account.detail'), 580, 40, { name: 'PoolAccount', keyType: 'Name', valueType: 'AccountId' }),
+          graphNode('map-reserve-a', 'map_state', translate('studio.graph.templateNodes.irohaswap_reduced.map_reserve_a.title'), translate('studio.graph.templateNodes.irohaswap_reduced.map_reserve_a.detail'), 830, 40, { name: 'ReserveA', keyType: 'Name', valueType: 'int' }),
+          graphNode('map-reserve-b', 'map_state', translate('studio.graph.templateNodes.irohaswap_reduced.map_reserve_b.title'), translate('studio.graph.templateNodes.irohaswap_reduced.map_reserve_b.detail'), 1080, 40, { name: 'ReserveB', keyType: 'Name', valueType: 'int' }),
+          graphNode('entry-init-pool', 'entrypoint', translate('studio.graph.templateNodes.irohaswap_reduced.entry_init_pool.title'), translate('studio.graph.templateNodes.irohaswap_reduced.entry_init_pool.detail'), 80, 260, { name: 'init_pool', params: 'pool: Name, asset_a: AssetDefinitionId, asset_b: AssetDefinitionId, pool_account: AccountId', returnType: '', permission: 'Admin' }),
+          graphNode('guard-assets-different', 'guard', translate('studio.graph.templateNodes.irohaswap_reduced.guard_assets_different.title'), translate('studio.graph.templateNodes.irohaswap_reduced.guard_assets_different.detail'), 400, 260, { condition: 'asset_a != asset_b', message: translate('studio.graph.templateNodes.irohaswap_reduced.guard_assets_different.failureMessage') }),
+          graphNode('write-asset-a', 'map_write', translate('studio.graph.templateNodes.irohaswap_reduced.write_asset_a.title'), translate('studio.graph.templateNodes.irohaswap_reduced.write_asset_a.detail'), 720, 260, { target: 'PoolAssetA', key: 'pool', value: 'asset_a' }),
+          graphNode('write-asset-b', 'map_write', translate('studio.graph.templateNodes.irohaswap_reduced.write_asset_b.title'), translate('studio.graph.templateNodes.irohaswap_reduced.write_asset_b.detail'), 1040, 260, { target: 'PoolAssetB', key: 'pool', value: 'asset_b' }),
+          graphNode('write-account', 'map_write', translate('studio.graph.templateNodes.irohaswap_reduced.write_account.title'), translate('studio.graph.templateNodes.irohaswap_reduced.write_account.detail'), 1360, 260, { target: 'PoolAccount', key: 'pool', value: 'pool_account' }),
+          graphNode('write-ra', 'map_write', translate('studio.graph.templateNodes.irohaswap_reduced.write_ra.title'), translate('studio.graph.templateNodes.irohaswap_reduced.write_ra.detail'), 1680, 260, { target: 'ReserveA', key: 'pool', value: '0' }),
+          graphNode('write-rb', 'map_write', translate('studio.graph.templateNodes.irohaswap_reduced.write_rb.title'), translate('studio.graph.templateNodes.irohaswap_reduced.write_rb.detail'), 2000, 260, { target: 'ReserveB', key: 'pool', value: '0' }),
+          graphNode('entry-swap', 'entrypoint', translate('studio.graph.templateNodes.irohaswap_reduced.entry_swap.title'), translate('studio.graph.templateNodes.irohaswap_reduced.entry_swap.detail'), 80, 560, { name: 'swap', params: 'trader: AccountId, pool: Name, input_asset: AssetDefinitionId, amount_in: int, min_output: int', returnType: 'int', permission: 'Admin' }),
+          graphNode('guard-amount-in', 'guard', translate('studio.graph.templateNodes.irohaswap_reduced.guard_amount_in.title'), translate('studio.graph.templateNodes.irohaswap_reduced.guard_amount_in.detail'), 400, 560, { condition: 'amount_in > 0', message: translate('studio.graph.templateNodes.irohaswap_reduced.guard_amount_in.failureMessage') }),
+          graphNode('let-asset-a', 'formula', translate('studio.graph.templateNodes.irohaswap_reduced.let_asset_a.title'), translate('studio.graph.templateNodes.irohaswap_reduced.let_asset_a.detail'), 720, 560, { name: 'asset_a', expression: 'PoolAssetA[pool]' }),
+          graphNode('let-asset-b', 'formula', translate('studio.graph.templateNodes.irohaswap_reduced.let_asset_b.title'), translate('studio.graph.templateNodes.irohaswap_reduced.let_asset_b.detail'), 1040, 560, { name: 'asset_b', expression: 'PoolAssetB[pool]' }),
+          graphNode('let-pool-account', 'formula', translate('studio.graph.templateNodes.irohaswap_reduced.let_pool_account.title'), translate('studio.graph.templateNodes.irohaswap_reduced.let_pool_account.detail'), 1360, 560, { name: 'pool_account', expression: 'PoolAccount[pool]' }),
+          graphNode('let-reserve-a', 'formula', translate('studio.graph.templateNodes.irohaswap_reduced.let_reserve_a.title'), translate('studio.graph.templateNodes.irohaswap_reduced.let_reserve_a.detail'), 1680, 560, { name: 'reserve_a', expression: 'ReserveA[pool]' }),
+          graphNode('let-reserve-b', 'formula', translate('studio.graph.templateNodes.irohaswap_reduced.let_reserve_b.title'), translate('studio.graph.templateNodes.irohaswap_reduced.let_reserve_b.detail'), 2000, 560, { name: 'reserve_b', expression: 'ReserveB[pool]' }),
+          graphNode('let-is-a', 'formula', translate('studio.graph.templateNodes.irohaswap_reduced.let_is_a.title'), translate('studio.graph.templateNodes.irohaswap_reduced.let_is_a.detail'), 2320, 560, { name: 'is_a_in', expression: 'input_asset == asset_a' }),
+          graphNode('let-effective', 'formula', translate('studio.graph.templateNodes.irohaswap_reduced.let_effective.title'), translate('studio.graph.templateNodes.irohaswap_reduced.let_effective.detail'), 2640, 560, { name: 'effective', expression: '(amount_in * 997) / 1000' }),
+          graphNode('let-out', 'formula', translate('studio.graph.templateNodes.irohaswap_reduced.let_out.title'), translate('studio.graph.templateNodes.irohaswap_reduced.let_out.detail'), 2960, 560, { name: 'out', expression: 'is_a_in ? ((reserve_b * effective) / (reserve_a + effective)) : ((reserve_a * effective) / (reserve_b + effective))' }),
+          graphNode('guard-slippage', 'guard', translate('studio.graph.templateNodes.irohaswap_reduced.guard_slippage.title'), translate('studio.graph.templateNodes.irohaswap_reduced.guard_slippage.detail'), 3280, 560, { condition: 'out >= min_output', message: translate('studio.graph.templateNodes.irohaswap_reduced.guard_slippage.failureMessage') }),
+          graphNode('branch-side', 'branch', translate('studio.graph.templateNodes.irohaswap_reduced.branch_side.title'), translate('studio.graph.templateNodes.irohaswap_reduced.branch_side.detail'), 3600, 560, { condition: 'is_a_in' }),
+          graphNode('write-a-in', 'map_write', translate('studio.graph.templateNodes.irohaswap_reduced.write_a_in.title'), translate('studio.graph.templateNodes.irohaswap_reduced.write_a_in.detail'), 3920, 460, { target: 'ReserveA', key: 'pool', value: 'reserve_a + amount_in' }),
+          graphNode('write-b-out', 'map_write', translate('studio.graph.templateNodes.irohaswap_reduced.write_b_out.title'), translate('studio.graph.templateNodes.irohaswap_reduced.write_b_out.detail'), 4240, 460, { target: 'ReserveB', key: 'pool', value: 'reserve_b - out' }),
+          graphNode('transfer-a-in', 'effect', translate('studio.graph.templateNodes.irohaswap_reduced.transfer_a_in.title'), translate('studio.graph.templateNodes.irohaswap_reduced.transfer_a_in.detail'), 4560, 460, { effect: 'transfer_asset', args: 'trader, pool_account, asset_a, amount_in' }),
+          graphNode('transfer-b-out', 'effect', translate('studio.graph.templateNodes.irohaswap_reduced.transfer_b_out.title'), translate('studio.graph.templateNodes.irohaswap_reduced.transfer_b_out.detail'), 4880, 460, { effect: 'transfer_asset', args: 'pool_account, trader, asset_b, out' }),
+          graphNode('write-b-in', 'map_write', translate('studio.graph.templateNodes.irohaswap_reduced.write_b_in.title'), translate('studio.graph.templateNodes.irohaswap_reduced.write_b_in.detail'), 3920, 720, { target: 'ReserveB', key: 'pool', value: 'reserve_b + amount_in' }),
+          graphNode('write-a-out', 'map_write', translate('studio.graph.templateNodes.irohaswap_reduced.write_a_out.title'), translate('studio.graph.templateNodes.irohaswap_reduced.write_a_out.detail'), 4240, 720, { target: 'ReserveA', key: 'pool', value: 'reserve_a - out' }),
+          graphNode('transfer-b-in', 'effect', translate('studio.graph.templateNodes.irohaswap_reduced.transfer_b_in.title'), translate('studio.graph.templateNodes.irohaswap_reduced.transfer_b_in.detail'), 4560, 720, { effect: 'transfer_asset', args: 'trader, pool_account, asset_b, amount_in' }),
+          graphNode('transfer-a-out', 'effect', translate('studio.graph.templateNodes.irohaswap_reduced.transfer_a_out.title'), translate('studio.graph.templateNodes.irohaswap_reduced.transfer_a_out.detail'), 4880, 720, { effect: 'transfer_asset', args: 'pool_account, trader, asset_a, out' }),
+          graphNode('return-out', 'return', translate('studio.graph.templateNodes.irohaswap_reduced.return_out.title'), translate('studio.graph.templateNodes.irohaswap_reduced.return_out.detail'), 5200, 560, { value: 'out' }),
         ],
         edges: [
           graphEdge('entry-init-pool', 'guard-assets-different'),
@@ -1127,20 +1123,20 @@ function createKotodamaStudioGraphTemplateDraft(templateId: KotodamaStudioGraphT
       dataspace: 'stable',
       authority: 'operator@stable.main',
       chainId: 'wonderland',
-      description: 'Mint stable assets when collateral ratio checks pass.',
+      description: translate('studio.graph.templateDescriptions.stablecoin'),
     },
     graph: {
       nodes: [
-        graphNode('entry-mintable', 'entrypoint', 'mintable_amount', 'Return collateral-limited mint amount', 80, 120, { name: 'mintable_amount', params: 'collateral_amount: int, price: int, target_ratio_bps: int', returnType: 'int', permission: '' }),
-        graphNode('value', 'formula', 'Collateral value', 'collateral_amount * price', 420, 120, { name: 'value', expression: 'collateral_amount * price' }),
-        graphNode('max-mint', 'formula', 'Max mint', 'Target-ratio limited amount', 760, 120, { name: 'max_mint', expression: '(value * 10000) / target_ratio_bps' }),
-        graphNode('return-max', 'return', 'Return max mint', 'Expose computed amount', 1100, 120, { value: 'max_mint' }),
-        graphNode('entry-mint-stable', 'entrypoint', 'mint_stable', 'Lock collateral and mint stable asset', 80, 390, { name: 'mint_stable', params: 'user: AccountId, vault_account: AccountId, collateral_asset: AssetDefinitionId, stable_asset: AssetDefinitionId, collateral_amount: int, price: int, min_ratio_bps: int, mint_amount: int', returnType: '', permission: 'Admin' }),
-        graphNode('move-collateral', 'effect', 'Move collateral', 'Transfer collateral into vault', 420, 390, { effect: 'transfer_asset', args: 'user, vault_account, collateral_asset, collateral_amount' }),
-        graphNode('stable-value', 'formula', 'Collateral value', 'Compute collateral value', 760, 390, { name: 'value', expression: 'collateral_amount * price' }),
-        graphNode('post-ratio', 'formula', 'Post ratio', 'Basis-point collateral ratio', 1100, 390, { name: 'post_ratio', expression: '(value * 10000) / mint_amount' }),
-        graphNode('ratio-ok', 'guard', 'Ratio check', 'Require minimum collateral ratio', 1440, 390, { condition: 'post_ratio >= min_ratio_bps', message: 'insufficient collateral' }),
-        graphNode('mint-stable', 'effect', 'Mint stable', 'Mint stablecoin to user', 1780, 390, { effect: 'mint_asset', args: 'user, stable_asset, mint_amount' }),
+        graphNode('entry-mintable', 'entrypoint', translate('studio.graph.templateNodes.stablecoin.entry_mintable.title'), translate('studio.graph.templateNodes.stablecoin.entry_mintable.detail'), 80, 120, { name: 'mintable_amount', params: 'collateral_amount: int, price: int, target_ratio_bps: int', returnType: 'int', permission: '' }),
+        graphNode('value', 'formula', translate('studio.graph.templateNodes.stablecoin.value.title'), translate('studio.graph.templateNodes.stablecoin.value.detail'), 420, 120, { name: 'value', expression: 'collateral_amount * price' }),
+        graphNode('max-mint', 'formula', translate('studio.graph.templateNodes.stablecoin.max_mint.title'), translate('studio.graph.templateNodes.stablecoin.max_mint.detail'), 760, 120, { name: 'max_mint', expression: '(value * 10000) / target_ratio_bps' }),
+        graphNode('return-max', 'return', translate('studio.graph.templateNodes.stablecoin.return_max.title'), translate('studio.graph.templateNodes.stablecoin.return_max.detail'), 1100, 120, { value: 'max_mint' }),
+        graphNode('entry-mint-stable', 'entrypoint', translate('studio.graph.templateNodes.stablecoin.entry_mint_stable.title'), translate('studio.graph.templateNodes.stablecoin.entry_mint_stable.detail'), 80, 390, { name: 'mint_stable', params: 'user: AccountId, vault_account: AccountId, collateral_asset: AssetDefinitionId, stable_asset: AssetDefinitionId, collateral_amount: int, price: int, min_ratio_bps: int, mint_amount: int', returnType: '', permission: 'Admin' }),
+        graphNode('move-collateral', 'effect', translate('studio.graph.templateNodes.stablecoin.move_collateral.title'), translate('studio.graph.templateNodes.stablecoin.move_collateral.detail'), 420, 390, { effect: 'transfer_asset', args: 'user, vault_account, collateral_asset, collateral_amount' }),
+        graphNode('stable-value', 'formula', translate('studio.graph.templateNodes.stablecoin.stable_value.title'), translate('studio.graph.templateNodes.stablecoin.stable_value.detail'), 760, 390, { name: 'value', expression: 'collateral_amount * price' }),
+        graphNode('post-ratio', 'formula', translate('studio.graph.templateNodes.stablecoin.post_ratio.title'), translate('studio.graph.templateNodes.stablecoin.post_ratio.detail'), 1100, 390, { name: 'post_ratio', expression: '(value * 10000) / mint_amount' }),
+        graphNode('ratio-ok', 'guard', translate('studio.graph.templateNodes.stablecoin.ratio_ok.title'), translate('studio.graph.templateNodes.stablecoin.ratio_ok.detail'), 1440, 390, { condition: 'post_ratio >= min_ratio_bps', message: translate('studio.graph.templateNodes.stablecoin.ratio_ok.failureMessage') }),
+        graphNode('mint-stable', 'effect', translate('studio.graph.templateNodes.stablecoin.mint_stable.title'), translate('studio.graph.templateNodes.stablecoin.mint_stable.detail'), 1780, 390, { effect: 'mint_asset', args: 'user, stable_asset, mint_amount' }),
       ],
       edges: [
         graphEdge('entry-mintable', 'value'),
@@ -1156,11 +1152,14 @@ function createKotodamaStudioGraphTemplateDraft(templateId: KotodamaStudioGraphT
   };
 }
 
-export function normalizeKotodamaStudioGraphDocument(value: unknown): KotodamaStudioGraphDocumentV2 {
+export function normalizeKotodamaStudioGraphDocument(
+  value: unknown,
+  translate: KotodamaStudioTranslate = untranslatedStudioKey
+): KotodamaStudioGraphDocumentV2 {
   const record = readRecord(value);
   if (record?.version === 2) {
     const graph = readRecord(record.graph);
-    const nodes = Array.isArray(graph?.nodes) ? graph.nodes.map(normalizeGraphNode) : [];
+    const nodes = Array.isArray(graph?.nodes) ? graph.nodes.map((node, index) => normalizeGraphNode(node, index, translate)) : [];
     const edges = Array.isArray(graph?.edges)
       ? graph.edges
         .map(normalizeGraphEdge)
@@ -1171,8 +1170,7 @@ export function normalizeKotodamaStudioGraphDocument(value: unknown): KotodamaSt
     return refreshKotodamaStudioGraphPorts({
       version: 2,
       updatedAt: readString(record.updatedAt, new Date(0).toISOString()),
-      metadata: readMetadata(record.metadata),
-      legacy: readLegacyImportRecord(record.legacy),
+      metadata: readMetadata(record.metadata, translate),
       graph: {
         nodes,
         edges: edges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)),
@@ -1180,84 +1178,215 @@ export function normalizeKotodamaStudioGraphDocument(value: unknown): KotodamaSt
     });
   }
 
-  return normalizeKotodamaStudioGraphDocumentFromV1(value);
+  throw new Error('Studio graph document must use version 2');
 }
 
-export function normalizeKotodamaStudioGraphDocumentFromV1(value: unknown): KotodamaStudioGraphDocumentV2 {
+function invalidImportedGraphDocument(path: string, expectation: string): never {
+  throw new TypeError(`Studio graph document ${path} ${expectation}`);
+}
+
+function requireImportedRecord(value: unknown, path: string): Record<string, unknown> {
   const record = readRecord(value);
-  const metadata = readMetadata(record?.metadata);
-  const workflow = readRecord(record?.workflow);
-  const rawNodes = Array.isArray(workflow?.nodes) ? workflow.nodes : [];
-  const legacyNodes = rawNodes.map((node, index) => {
-    const nodeRecord = readRecord(node);
-    const data = readRecord(nodeRecord?.data);
-    return {
-      id: readString(nodeRecord?.id, `legacy-${index + 1}`),
-      title: readString(data?.title, `Legacy step ${index + 1}`),
-      caption: readString(data?.caption),
-      category: readString(data?.category, 'logic'),
-      binding: readString(data?.binding),
-      position: readPosition(nodeRecord?.position, { x: 120 + index * 280, y: 260 }),
-    };
-  });
-  const firstBinding = legacyNodes.find((node) => node.binding.length > 0)?.binding;
-  const entrypointName = normalizeIdentifier(firstBinding || legacyNodes.find((node) => node.category === 'contract')?.title || 'legacy_main', 'legacy_main');
-  const convertedNodes: KotodamaStudioGraphNode[] = [
-    graphNode('entry-legacy', 'entrypoint', entrypointName, 'Converted from a Studio v1 document', 80, 120, {
-      name: entrypointName,
-      params: '',
-      returnType: '',
-      permission: '',
-    }),
-  ];
-  const convertedEdges: KotodamaStudioGraphEdge[] = [];
-  let previousBodyNodeId = 'entry-legacy';
+  if (!record) invalidImportedGraphDocument(path, 'must be an object');
+  return record;
+}
 
-  for (const [index, legacyNode] of legacyNodes.entries()) {
-    if (legacyNode.category === 'trigger') {
-      convertedNodes.push(graphNode(`trigger-${index + 1}`, 'trigger', legacyNode.title, legacyNode.caption || 'Converted v1 trigger', legacyNode.position.x, legacyNode.position.y, {
-        id: normalizeIdentifier(legacyNode.title, `trigger_${index + 1}`),
-        entrypoint: entrypointName,
-        mode: 'pre_commit',
-        startMs: '0',
-        periodMs: '60000',
-      }));
-      continue;
-    }
+function requireImportedKeys(record: Record<string, unknown>, path: string, expectedKeys: readonly string[]): void {
+  const expected = new Set(expectedKeys);
+  const unexpected = Object.keys(record).filter((key) => !expected.has(key));
+  if (unexpected.length > 0) {
+    invalidImportedGraphDocument(path, `contains unsupported fields: ${unexpected.sort().join(', ')}`);
+  }
+  const missing = expectedKeys.filter((key) => !Object.hasOwn(record, key));
+  if (missing.length > 0) {
+    invalidImportedGraphDocument(path, `is missing required fields: ${missing.join(', ')}`);
+  }
+}
 
-    const bodyNodeId = `legacy-note-${index + 1}`;
-    convertedNodes.push(graphNode(bodyNodeId, 'effect', legacyNode.title, legacyNode.caption || 'Converted v1 workflow step', legacyNode.position.x, legacyNode.position.y, {
-      effect: 'info',
-      args: quoteString(`${legacyNode.category}: ${legacyNode.title}`),
-      statement: '',
-    }));
-    convertedEdges.push(graphEdge(previousBodyNodeId, bodyNodeId));
-    previousBodyNodeId = bodyNodeId;
+function requireImportedString(
+  record: Record<string, unknown>,
+  key: string,
+  path: string,
+  options: { nonEmpty?: boolean } = {}
+): string {
+  const value = record[key];
+  if (typeof value !== 'string') invalidImportedGraphDocument(`${path}.${key}`, 'must be a string');
+  if (options.nonEmpty && value.trim().length === 0) {
+    invalidImportedGraphDocument(`${path}.${key}`, 'must not be empty');
+  }
+  return value;
+}
+
+function parseImportedMetadata(value: unknown): KotodamaStudioMetadata {
+  const path = 'metadata';
+  const record = requireImportedRecord(value, path);
+  requireImportedKeys(record, path, ['title', 'dataspace', 'authority', 'chainId', 'description']);
+  return {
+    title: requireImportedString(record, 'title', path),
+    dataspace: requireImportedString(record, 'dataspace', path),
+    authority: requireImportedString(record, 'authority', path),
+    chainId: requireImportedString(record, 'chainId', path),
+    description: requireImportedString(record, 'description', path),
+  };
+}
+
+function parseImportedPosition(value: unknown, path: string): KotodamaStudioGraphNode['position'] {
+  const record = requireImportedRecord(value, path);
+  requireImportedKeys(record, path, ['x', 'y']);
+  const x = record.x;
+  const y = record.y;
+  if (typeof x !== 'number' || !Number.isFinite(x)) invalidImportedGraphDocument(`${path}.x`, 'must be finite');
+  if (typeof y !== 'number' || !Number.isFinite(y)) invalidImportedGraphDocument(`${path}.y`, 'must be finite');
+  return { x, y };
+}
+
+const IMPORTED_PORT_DIRECTIONS = new Set<KotodamaStudioGraphPort['direction']>(['input', 'output']);
+const IMPORTED_PORT_ROLES = new Set<KotodamaStudioGraphPort['role']>(['flow', 'value', 'param', 'state', 'effect']);
+const IMPORTED_VALUE_TYPES = new Set<KotodamaStudioGraphValueType>([
+  'flow',
+  'void',
+  'unknown',
+  'int',
+  'bool',
+  'AccountId',
+  'AssetDefinitionId',
+  'DomainId',
+  'Name',
+  'Json',
+  'Blob',
+  'NoritoBytes',
+]);
+
+function isImportedValueType(value: string): value is KotodamaStudioGraphValueType {
+  return IMPORTED_VALUE_TYPES.has(value as KotodamaStudioGraphValueType) || /^Map<[^,>]+,\s*[^>]+>$/u.test(value);
+}
+
+function parseImportedPort(value: unknown, nodeIndex: number, portIndex: number): KotodamaStudioGraphPort {
+  const path = `graph.nodes[${nodeIndex}].data.ports[${portIndex}]`;
+  const record = requireImportedRecord(value, path);
+  requireImportedKeys(record, path, ['id', 'direction', 'label', 'valueType', 'role']);
+  const id = requireImportedString(record, 'id', path, { nonEmpty: true });
+  const direction = requireImportedString(record, 'direction', path);
+  const label = requireImportedString(record, 'label', path);
+  const valueType = requireImportedString(record, 'valueType', path);
+  const role = requireImportedString(record, 'role', path);
+  if (!IMPORTED_PORT_DIRECTIONS.has(direction as KotodamaStudioGraphPort['direction'])) {
+    invalidImportedGraphDocument(`${path}.direction`, 'must be input or output');
+  }
+  if (!isImportedValueType(valueType)) invalidImportedGraphDocument(`${path}.valueType`, 'is unsupported');
+  if (!IMPORTED_PORT_ROLES.has(role as KotodamaStudioGraphPort['role'])) {
+    invalidImportedGraphDocument(`${path}.role`, 'is unsupported');
+  }
+  return {
+    id,
+    direction: direction as KotodamaStudioGraphPort['direction'],
+    label,
+    valueType,
+    role: role as KotodamaStudioGraphPort['role'],
+  };
+}
+
+function parseImportedNode(value: unknown, index: number): KotodamaStudioGraphNode {
+  const path = `graph.nodes[${index}]`;
+  const record = requireImportedRecord(value, path);
+  requireImportedKeys(record, path, ['id', 'type', 'position', 'data']);
+  const id = requireImportedString(record, 'id', path, { nonEmpty: true });
+  if (record.type !== 'kotodamaGraph') {
+    invalidImportedGraphDocument(`${path}.type`, 'must be kotodamaGraph');
   }
 
-  return refreshKotodamaStudioGraphPorts({
-    version: 2,
-    updatedAt: readString(record?.updatedAt, new Date(0).toISOString()),
-    metadata,
-    legacy: {
-      sourceVersion: typeof record?.version === 'number' || typeof record?.version === 'string' ? record.version : 1,
-      importedAt: readString(record?.updatedAt, new Date(0).toISOString()),
-      workspaceState: cloneRecord(readRecord(record?.workspaceState)),
-      workflow: cloneRecord(workflow),
-      notes: [
-        'Converted from Studio v1. Original Blockly workspace and storyboard workflow are preserved here for legacy reference.',
-        'Generated graph nodes preserve metadata and workflow intent where possible; exact Blockly block semantics may need manual review.',
-      ],
+  const dataPath = `${path}.data`;
+  const data = requireImportedRecord(record.data, dataPath);
+  requireImportedKeys(data, dataPath, ['title', 'detail', 'kind', 'config', 'ports']);
+  const kind = requireImportedString(data, 'kind', dataPath);
+  if (![...BODY_NODE_KINDS, ...DECLARATION_NODE_KINDS].includes(kind as KotodamaStudioGraphNodeKind)) {
+    invalidImportedGraphDocument(`${dataPath}.kind`, 'is unsupported');
+  }
+
+  const configPath = `${dataPath}.config`;
+  const config = requireImportedRecord(data.config, configPath);
+  const importedConfig: Record<string, string> = {};
+  for (const [key, configValue] of Object.entries(config)) {
+    if (key.trim().length === 0) invalidImportedGraphDocument(configPath, 'contains an empty field name');
+    if (typeof configValue !== 'string') {
+      invalidImportedGraphDocument(`${configPath}.${key}`, 'must be a string');
+    }
+    importedConfig[key] = configValue;
+  }
+
+  if (!Array.isArray(data.ports)) invalidImportedGraphDocument(`${dataPath}.ports`, 'must be an array');
+  return {
+    id,
+    type: 'kotodamaGraph',
+    position: parseImportedPosition(record.position, `${path}.position`),
+    data: {
+      title: requireImportedString(data, 'title', dataPath),
+      detail: requireImportedString(data, 'detail', dataPath),
+      kind: kind as KotodamaStudioGraphNodeKind,
+      config: importedConfig,
+      ports: data.ports.map((port, portIndex) => parseImportedPort(port, index, portIndex)),
     },
-    graph: {
-      nodes: convertedNodes,
-      edges: convertedEdges,
-    },
+  };
+}
+
+function parseImportedEdge(value: unknown, index: number): KotodamaStudioGraphEdge {
+  const path = `graph.edges[${index}]`;
+  const record = requireImportedRecord(value, path);
+  requireImportedKeys(record, path, ['id', 'source', 'target', 'label']);
+  return {
+    id: requireImportedString(record, 'id', path, { nonEmpty: true }),
+    source: requireImportedString(record, 'source', path, { nonEmpty: true }),
+    target: requireImportedString(record, 'target', path, { nonEmpty: true }),
+    label: requireImportedString(record, 'label', path),
+  };
+}
+
+function requireUniqueImportedIds(values: readonly string[], path: string): void {
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) invalidImportedGraphDocument(path, `contains duplicate id: ${value}`);
+    seen.add(value);
+  }
+}
+
+function parseImportedGraphDocument(value: unknown): KotodamaStudioGraphDocumentV2 {
+  const record = requireImportedRecord(value, 'root');
+  if (record.version !== KOTODAMA_STUDIO_GRAPH_DOCUMENT_VERSION) {
+    throw new Error('Studio graph document must use version 2');
+  }
+  requireImportedKeys(record, 'root', ['version', 'updatedAt', 'metadata', 'graph']);
+  const updatedAt = requireImportedString(record, 'updatedAt', 'root', { nonEmpty: true });
+  if (!Number.isFinite(Date.parse(updatedAt))) invalidImportedGraphDocument('root.updatedAt', 'must be a timestamp');
+
+  const graph = requireImportedRecord(record.graph, 'graph');
+  requireImportedKeys(graph, 'graph', ['nodes', 'edges']);
+  if (!Array.isArray(graph.nodes)) invalidImportedGraphDocument('graph.nodes', 'must be an array');
+  if (!Array.isArray(graph.edges)) invalidImportedGraphDocument('graph.edges', 'must be an array');
+
+  const nodes = graph.nodes.map(parseImportedNode);
+  const edges = graph.edges.map(parseImportedEdge);
+  requireUniqueImportedIds(nodes.map((node) => node.id), 'graph.nodes');
+  requireUniqueImportedIds(edges.map((edge) => edge.id), 'graph.edges');
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  edges.forEach((edge, index) => {
+    if (!nodeIds.has(edge.source)) {
+      invalidImportedGraphDocument(`graph.edges[${index}].source`, `references unknown node: ${edge.source}`);
+    }
+    if (!nodeIds.has(edge.target)) {
+      invalidImportedGraphDocument(`graph.edges[${index}].target`, `references unknown node: ${edge.target}`);
+    }
   });
+
+  return {
+    version: KOTODAMA_STUDIO_GRAPH_DOCUMENT_VERSION,
+    updatedAt,
+    metadata: parseImportedMetadata(record.metadata),
+    graph: { nodes, edges },
+  };
 }
 
 export function parseKotodamaStudioGraphDocument(raw: string): KotodamaStudioGraphDocumentV2 {
-  return normalizeKotodamaStudioGraphDocument(JSON.parse(raw));
+  return refreshKotodamaStudioGraphPorts(parseImportedGraphDocument(JSON.parse(raw)));
 }
 
 export function stringifyKotodamaStudioGraphDocument(document: KotodamaStudioGraphDocumentV2): string {
@@ -1704,7 +1833,10 @@ export function isValidKotodamaStudioGraphConnection(
   return outgoing.length < 1;
 }
 
-export function validateKotodamaStudioGraphDocument(document: KotodamaStudioGraphDocumentV2): KotodamaStudioGraphDiagnostic[] {
+export function validateKotodamaStudioGraphDocument(
+  document: KotodamaStudioGraphDocumentV2,
+  translate: KotodamaStudioTranslate = untranslatedStudioKey
+): KotodamaStudioGraphDiagnostic[] {
   const diagnostics: KotodamaStudioGraphDiagnostic[] = [];
   const nodes = document.graph.nodes;
   const nodesById = new Map(nodes.map((node) => [node.id, node] as const));
@@ -1725,24 +1857,24 @@ export function validateKotodamaStudioGraphDocument(document: KotodamaStudioGrap
   );
 
   if (!normalizeIdentifier(document.metadata.title, '')) {
-    diagnostics.push({ code: 'contract_missing_title', severity: 'error', message: 'Contract title must be a valid identifier.', nodeId: null });
+    diagnostics.push({ code: 'contract_missing_title', severity: 'error', message: translate('studio.graph.diagnostics.contractMissingTitle'), nodeId: null });
   }
 
   for (const duplicate of duplicateValues(functionNames)) {
     for (const nodeId of duplicate.nodeIds) {
-      diagnostics.push({ code: 'duplicate_function', severity: 'error', message: `Function or entrypoint "${duplicate.value}" is defined more than once.`, nodeId });
+      diagnostics.push({ code: 'duplicate_function', severity: 'error', message: translate('studio.graph.diagnostics.duplicateFunction', { name: duplicate.value }), nodeId });
     }
   }
 
   for (const duplicate of duplicateValues(stateNames)) {
     for (const nodeId of duplicate.nodeIds) {
-      diagnostics.push({ code: 'duplicate_state', severity: 'error', message: `State "${duplicate.value}" is defined more than once.`, nodeId });
+      diagnostics.push({ code: 'duplicate_state', severity: 'error', message: translate('studio.graph.diagnostics.duplicateState', { name: duplicate.value }), nodeId });
     }
   }
 
   for (const edge of document.graph.edges) {
     if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) {
-      diagnostics.push({ code: 'invalid_edge', severity: 'error', message: `Link "${edge.id}" points to a missing graph node.`, nodeId: null });
+      diagnostics.push({ code: 'invalid_edge', severity: 'error', message: translate('studio.graph.diagnostics.invalidEdge', { id: edge.id }), nodeId: null });
       continue;
     }
     if (!isValidKotodamaStudioGraphConnection(document, edge)) {
@@ -1751,8 +1883,8 @@ export function validateKotodamaStudioGraphDocument(document: KotodamaStudioGrap
         code: 'invalid_connection',
         severity: 'error',
         message: source?.data.kind === 'branch' || source?.data.kind === 'loop'
-          ? `Link "${edge.id}" has an invalid or duplicate "${edge.label}" flow port.`
-          : `Link "${edge.id}" violates the typed flow-port rules.`,
+          ? translate('studio.graph.diagnostics.invalidFlowPort', { id: edge.id, label: edge.label })
+          : translate('studio.graph.diagnostics.invalidTypedConnection', { id: edge.id }),
         nodeId: edge.source,
       });
     }
@@ -1761,50 +1893,50 @@ export function validateKotodamaStudioGraphDocument(document: KotodamaStudioGrap
   for (const node of nodes) {
     if (node.data.kind === 'entrypoint' || node.data.kind === 'helper') {
       if (!normalizeIdentifier(config(node, 'name'), '')) {
-        diagnostics.push({ code: 'function_missing_name', severity: 'error', message: 'Function nodes need a valid name.', nodeId: node.id });
+        diagnostics.push({ code: 'function_missing_name', severity: 'error', message: translate('studio.graph.diagnostics.functionMissingName'), nodeId: node.id });
       }
     }
 
     if (node.data.kind === 'state' || node.data.kind === 'map_state') {
       if (!normalizeIdentifier(config(node, 'name'), '')) {
-        diagnostics.push({ code: 'state_missing_name', severity: 'error', message: 'State nodes need a valid name.', nodeId: node.id });
+        diagnostics.push({ code: 'state_missing_name', severity: 'error', message: translate('studio.graph.diagnostics.stateMissingName'), nodeId: node.id });
       }
     }
 
     if (node.data.kind === 'trigger') {
       const target = normalizeIdentifier(config(node, 'entrypoint'), '');
       if (!target || !entrypointNames.has(target)) {
-        diagnostics.push({ code: 'trigger_invalid_entrypoint', severity: 'error', message: 'Trigger must target an existing public entrypoint.', nodeId: node.id });
+        diagnostics.push({ code: 'trigger_invalid_entrypoint', severity: 'error', message: translate('studio.graph.diagnostics.triggerInvalidEntrypoint'), nodeId: node.id });
       }
       if (config(node, 'mode') === 'schedule') {
         const period = Number.parseInt(config(node, 'periodMs'), 10);
         if (!Number.isFinite(period) || period <= 0) {
-          diagnostics.push({ code: 'trigger_invalid_period', severity: 'error', message: 'Scheduled triggers need a positive period in milliseconds.', nodeId: node.id });
+          diagnostics.push({ code: 'trigger_invalid_period', severity: 'error', message: translate('studio.graph.diagnostics.triggerInvalidPeriod'), nodeId: node.id });
         }
       }
     }
 
     if ((node.data.kind === 'guard' || node.data.kind === 'branch' || node.data.kind === 'loop') && !config(node, 'condition')) {
-      diagnostics.push({ code: 'condition_missing', severity: 'error', message: 'Logic nodes need a condition.', nodeId: node.id, field: 'condition' });
+      diagnostics.push({ code: 'condition_missing', severity: 'error', message: translate('studio.graph.diagnostics.conditionMissing'), nodeId: node.id, field: 'condition' });
     } else if (node.data.kind === 'guard' || node.data.kind === 'branch' || node.data.kind === 'loop') {
       const conditionType = expressionTypeForNode(document, node, config(node, 'condition'));
       if (!areTypesCompatible('bool', conditionType)) {
-        diagnostics.push({ code: 'condition_type_mismatch', severity: 'error', message: `Condition must be bool, but the graph infers ${conditionType}.`, nodeId: node.id, field: 'condition' });
+        diagnostics.push({ code: 'condition_type_mismatch', severity: 'error', message: translate('studio.graph.diagnostics.conditionTypeMismatch', { actual: conditionType }), nodeId: node.id, field: 'condition' });
       }
     }
 
     if (node.data.kind === 'formula') {
       if (!normalizeIdentifier(config(node, 'name'), '')) {
-        diagnostics.push({ code: 'formula_missing_name', severity: 'error', message: 'Formula nodes need a local variable name.', nodeId: node.id, field: 'name' });
+        diagnostics.push({ code: 'formula_missing_name', severity: 'error', message: translate('studio.graph.diagnostics.formulaMissingName'), nodeId: node.id, field: 'name' });
       }
       if (!formulaExpression(node)) {
-        diagnostics.push({ code: 'formula_missing_expression', severity: 'error', message: 'Formula nodes need an expression.', nodeId: node.id, field: 'expression' });
+        diagnostics.push({ code: 'formula_missing_expression', severity: 'error', message: translate('studio.graph.diagnostics.formulaMissingExpression'), nodeId: node.id, field: 'expression' });
       }
       const configuredType = normalizeValueType(config(node, 'valueType'), 'unknown');
       if (configuredType !== 'unknown') {
         const inferredType = expressionTypeForNode(document, node, formulaExpression(node));
         if (!areTypesCompatible(configuredType, inferredType)) {
-          diagnostics.push({ code: 'formula_type_mismatch', severity: 'error', message: `Formula is declared as ${configuredType}, but the expression looks like ${inferredType}.`, nodeId: node.id, field: 'valueType' });
+          diagnostics.push({ code: 'formula_type_mismatch', severity: 'error', message: translate('studio.graph.diagnostics.formulaTypeMismatch', { expected: configuredType, actual: inferredType }), nodeId: node.id, field: 'valueType' });
         }
       }
     }
@@ -1813,11 +1945,11 @@ export function validateKotodamaStudioGraphDocument(document: KotodamaStudioGrap
       const target = normalizeIdentifier(config(node, 'target'), '');
       const expected = scalarStates.get(target);
       if (!target || !expected) {
-        diagnostics.push({ code: 'state_target_missing', severity: 'error', message: 'Set-state nodes must target an existing scalar state.', nodeId: node.id, field: 'target' });
+        diagnostics.push({ code: 'state_target_missing', severity: 'error', message: translate('studio.graph.diagnostics.stateTargetMissing'), nodeId: node.id, field: 'target' });
       } else {
         const actual = expressionTypeForNode(document, node, config(node, 'value'));
         if (!areTypesCompatible(expected, actual)) {
-          diagnostics.push({ code: 'state_value_type_mismatch', severity: 'error', message: `State "${target}" expects ${expected}, but this value looks like ${actual}.`, nodeId: node.id, field: 'value' });
+          diagnostics.push({ code: 'state_value_type_mismatch', severity: 'error', message: translate('studio.graph.diagnostics.stateValueTypeMismatch', { name: target, expected, actual }), nodeId: node.id, field: 'value' });
         }
       }
     }
@@ -1826,15 +1958,15 @@ export function validateKotodamaStudioGraphDocument(document: KotodamaStudioGrap
       const target = normalizeIdentifier(config(node, 'target'), '');
       const expected = mapStates.get(target);
       if (!target || !expected) {
-        diagnostics.push({ code: 'map_target_missing', severity: 'error', message: 'Map-write nodes must target an existing map state.', nodeId: node.id, field: 'target' });
+        diagnostics.push({ code: 'map_target_missing', severity: 'error', message: translate('studio.graph.diagnostics.mapTargetMissing'), nodeId: node.id, field: 'target' });
       } else {
         const keyType = expressionTypeForNode(document, node, config(node, 'key'));
         const valueType = expressionTypeForNode(document, node, config(node, 'value'));
         if (!areTypesCompatible(expected.keyType, keyType)) {
-          diagnostics.push({ code: 'map_key_type_mismatch', severity: 'error', message: `Map "${target}" keys expect ${expected.keyType}, but this key looks like ${keyType}.`, nodeId: node.id, field: 'key' });
+          diagnostics.push({ code: 'map_key_type_mismatch', severity: 'error', message: translate('studio.graph.diagnostics.mapKeyTypeMismatch', { name: target, expected: expected.keyType, actual: keyType }), nodeId: node.id, field: 'key' });
         }
         if (!areTypesCompatible(expected.valueType, valueType)) {
-          diagnostics.push({ code: 'map_value_type_mismatch', severity: 'error', message: `Map "${target}" values expect ${expected.valueType}, but this value looks like ${valueType}.`, nodeId: node.id, field: 'value' });
+          diagnostics.push({ code: 'map_value_type_mismatch', severity: 'error', message: translate('studio.graph.diagnostics.mapValueTypeMismatch', { name: target, expected: expected.valueType, actual: valueType }), nodeId: node.id, field: 'value' });
         }
       }
     }
@@ -1843,10 +1975,10 @@ export function validateKotodamaStudioGraphDocument(document: KotodamaStudioGrap
       const effect = config(node, 'effect', 'info');
       const args = effectArgs(node);
       if (effect !== 'custom' && effect !== 'info' && args.length === 0) {
-        diagnostics.push({ code: 'effect_missing_args', severity: 'error', message: `${effect} needs arguments.`, nodeId: node.id, field: 'args' });
+        diagnostics.push({ code: 'effect_missing_args', severity: 'error', message: translate('studio.graph.diagnostics.effectMissingArgs', { effect }), nodeId: node.id, field: 'args' });
       }
       if (effect === 'custom' && !config(node, 'statement')) {
-        diagnostics.push({ code: 'effect_missing_statement', severity: 'error', message: 'Custom effects need a statement.', nodeId: node.id, field: 'statement' });
+        diagnostics.push({ code: 'effect_missing_statement', severity: 'error', message: translate('studio.graph.diagnostics.effectMissingStatement'), nodeId: node.id, field: 'statement' });
       }
 
       const expectedArgs: Record<string, KotodamaStudioGraphValueType[]> = {
@@ -1859,12 +1991,12 @@ export function validateKotodamaStudioGraphDocument(document: KotodamaStudioGrap
       };
       const expected = expectedArgs[effect] ?? [];
       if (expected.length > 0 && args.length > 0 && args.length !== expected.length) {
-        diagnostics.push({ code: 'effect_arg_count_mismatch', severity: 'error', message: `${effect} expects ${expected.length} typed arguments.`, nodeId: node.id, field: 'args' });
+        diagnostics.push({ code: 'effect_arg_count_mismatch', severity: 'error', message: translate('studio.graph.diagnostics.effectArgCountMismatch', { effect, count: expected.length }), nodeId: node.id, field: 'args' });
       }
       for (const [index, expectedType] of expected.entries()) {
         const actualType = args[index] ? expressionTypeForNode(document, node, args[index]!) : 'unknown';
         if (!areTypesCompatible(expectedType, actualType)) {
-          diagnostics.push({ code: 'effect_arg_type_mismatch', severity: 'error', message: `${effect} argument ${index + 1} expects ${expectedType}, but this value looks like ${actualType}.`, nodeId: node.id, field: 'args' });
+          diagnostics.push({ code: 'effect_arg_type_mismatch', severity: 'error', message: translate('studio.graph.diagnostics.effectArgTypeMismatch', { effect, index: index + 1, expected: expectedType, actual: actualType }), nodeId: node.id, field: 'args' });
         }
       }
     }
@@ -1873,13 +2005,13 @@ export function validateKotodamaStudioGraphDocument(document: KotodamaStudioGrap
       const expected = expectedReturnTypeForNode(document, node.id);
       const value = config(node, 'value');
       if (expected === 'void' && value) {
-        diagnostics.push({ code: 'return_void_value', severity: 'error', message: 'This function does not declare a return type, so the return node must be empty.', nodeId: node.id, field: 'value' });
+        diagnostics.push({ code: 'return_void_value', severity: 'error', message: translate('studio.graph.diagnostics.returnVoidValue'), nodeId: node.id, field: 'value' });
       } else if (expected !== 'void' && !value) {
-        diagnostics.push({ code: 'return_missing_value', severity: 'error', message: `This function returns ${expected}; the return node needs a value.`, nodeId: node.id, field: 'value' });
+        diagnostics.push({ code: 'return_missing_value', severity: 'error', message: translate('studio.graph.diagnostics.returnMissingValue', { expected }), nodeId: node.id, field: 'value' });
       } else if (expected !== 'void') {
         const actual = expressionTypeForNode(document, node, value);
         if (!areTypesCompatible(expected, actual)) {
-          diagnostics.push({ code: 'return_type_mismatch', severity: 'error', message: `Return expects ${expected}, but this value looks like ${actual}.`, nodeId: node.id, field: 'value' });
+          diagnostics.push({ code: 'return_type_mismatch', severity: 'error', message: translate('studio.graph.diagnostics.returnTypeMismatch', { expected, actual }), nodeId: node.id, field: 'value' });
         }
       }
     }
@@ -1915,7 +2047,6 @@ export function updateKotodamaStudioGraphNode(
     ...document,
     updatedAt: new Date().toISOString(),
     metadata: { ...document.metadata },
-    legacy: document.legacy ? cloneLegacyImportRecord(document.legacy) : null,
     graph: {
       nodes: document.graph.nodes.map((node) => node.id === nodeId ? updater({
         ...node,
@@ -1935,7 +2066,6 @@ export function refreshKotodamaStudioGraphPorts(document: KotodamaStudioGraphDoc
   const nextDocument: KotodamaStudioGraphDocumentV2 = {
     ...document,
     metadata: { ...document.metadata },
-    legacy: document.legacy ? cloneLegacyImportRecord(document.legacy) : null,
     graph: {
       edges: document.graph.edges.map((edge) => ({ ...edge })),
       nodes: [],

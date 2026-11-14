@@ -4,6 +4,7 @@ import type { NetworkMetrics } from '@/shared/api/schemas';
 
 const hoisted = vi.hoisted(() => ({
   fetchNetworkMetrics: vi.fn(),
+  reconnect: vi.fn(),
   sampleMetrics: {
     peers: 5,
     domains: 3,
@@ -48,6 +49,7 @@ vi.mock('@/shared/api', () => {
       return {
         status,
         data: computed(() => payload.value),
+        reconnect: hoisted.reconnect,
       };
     }),
   };
@@ -60,6 +62,7 @@ describe('useTelemetryMetrics', () => {
     __resetTelemetryMetricsForTests();
     hoisted.listeners.splice(0, hoisted.listeners.length);
     hoisted.fetchNetworkMetrics.mockClear();
+    hoisted.reconnect.mockClear();
     vi.stubGlobal('EventSource', class {} as any);
   });
 
@@ -83,6 +86,13 @@ describe('useTelemetryMetrics', () => {
     expect(isStale.value).toBe(false);
   });
 
+  it('retries only the existing public telemetry stream', () => {
+    const telemetry = useTelemetryMetrics();
+    telemetry.reconnect();
+    expect(hoisted.reconnect).toHaveBeenCalledOnce();
+    expect(hoisted.listeners).toHaveLength(1);
+  });
+
   it('reports unavailable data when the browser has no EventSource', () => {
     vi.stubGlobal('EventSource', undefined);
     const { metrics, streamStatus, streamedMetrics, isLoading, isUnavailable } = useTelemetryMetrics();
@@ -92,6 +102,8 @@ describe('useTelemetryMetrics', () => {
     expect(isLoading.value).toBe(false);
     expect(isUnavailable.value).toBe(true);
     expect(hoisted.listeners).toHaveLength(0);
+    expect(() => useTelemetryMetrics().reconnect()).not.toThrow();
+    expect(hoisted.reconnect).not.toHaveBeenCalled();
   });
 
   it('reports an unavailable stream before any snapshot and stays empty while reconnecting', async () => {

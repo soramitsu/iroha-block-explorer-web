@@ -1,413 +1,378 @@
-<template>
-  <div class="vpn-stats-page">
-    <BaseContentBlock :title="$t('vpn.overviewTitle')">
-      <template #header-action>
-        <span class="vpn-stats-page__source">
-          {{ $t('vpn.source') }}: {{ toriiBaseUrl }}
-        </span>
-      </template>
-
-      <div
-        v-if="metricsRequest.isLoading && !vpnMetrics"
-        class="vpn-stats-page__state"
-      >
-        <BaseLoading />
-      </div>
-
-      <div
-        v-else-if="metricsAvailable"
-        class="vpn-stats-page__card-grid"
-      >
-        <article
-          v-for="card in overviewCards"
-          :key="card.key"
-          class="vpn-stats-page__card"
-        >
-          <span class="vpn-stats-page__card-label">{{ card.label }}</span>
-          <span
-            class="vpn-stats-page__card-value"
-            :class="card.toneClass"
-          >
-            {{ card.value }}
-          </span>
-        </article>
-      </div>
-
-      <div
-        v-else
-        class="vpn-stats-page__state vpn-stats-page__state--error"
-      >
-        {{ $t('vpn.unavailable') }}
-      </div>
-    </BaseContentBlock>
-
-    <BaseContentBlock :title="$t('vpn.breakdownTitle')">
-      <div
-        v-if="metricsRequest.isLoading && !vpnMetrics"
-        class="vpn-stats-page__state"
-      >
-        <BaseLoading />
-      </div>
-
-      <template v-else-if="metricsAvailable">
-        <BaseInnerBlock :title="$t('vpn.trafficClassesTitle')">
-          <div class="vpn-stats-page__traffic-grid">
-            <article
-              v-for="row in trafficRows"
-              :key="row.key"
-              class="vpn-stats-page__traffic-card"
-            >
-              <span class="vpn-stats-page__card-label">{{ row.label }}</span>
-              <span class="vpn-stats-page__traffic-total">{{ row.total }}</span>
-              <div class="vpn-stats-page__traffic-meta">
-                <span>{{ $t('vpn.ingress') }}: {{ row.ingress }}</span>
-                <span>{{ $t('vpn.egress') }}: {{ row.egress }}</span>
-              </div>
-            </article>
-          </div>
-        </BaseInnerBlock>
-
-        <BaseInnerBlock :title="$t('vpn.receiptsTitle')">
-          <div class="vpn-stats-page__card-grid vpn-stats-page__card-grid--compact">
-            <article
-              v-for="card in receiptCards"
-              :key="card.key"
-              class="vpn-stats-page__card"
-            >
-              <span class="vpn-stats-page__card-label">{{ card.label }}</span>
-              <span class="vpn-stats-page__card-value">{{ card.value }}</span>
-            </article>
-          </div>
-        </BaseInnerBlock>
-      </template>
-
-      <div
-        v-else
-        class="vpn-stats-page__state vpn-stats-page__state--error"
-      >
-        {{ $t('vpn.unavailable') }}
-      </div>
-    </BaseContentBlock>
-
-    <BaseContentBlock :title="$t('vpn.countriesTitle')">
-      <div
-        v-if="countriesRequest.isLoading && !countriesRequest.data"
-        class="vpn-stats-page__state"
-      >
-        <BaseLoading />
-      </div>
-
-      <template v-else-if="countriesAvailable">
-        <BaseTable
-          :loading="countriesRequest.isLoading"
-          :items="countryRows"
-          :row-key="countryRowKey"
-          :disable-pagination="true"
-          container-class="vpn-stats-page__countries-table"
-        >
-          <template #header>
-            <div
-              class="vpn-stats-page__countries-row vpn-stats-page__countries-row--header"
-              role="presentation"
-            >
-              <span role="columnheader">{{ $t('vpn.country') }}</span>
-              <span role="columnheader">{{ $t('vpn.peers') }}</span>
-              <span role="columnheader">{{ $t('vpn.connectedPeers') }}</span>
-            </div>
-          </template>
-
-          <template #row="{ item }">
-            <div
-              class="vpn-stats-page__countries-row"
-              role="presentation"
-            >
-              <span class="row-text" role="cell">{{ item.country }}</span>
-              <span class="row-text" role="cell">{{ formatNumber(item.peerCount) }}</span>
-              <span class="row-text" role="cell">{{ formatNumber(item.connectedCount) }}</span>
-            </div>
-          </template>
-        </BaseTable>
-      </template>
-
-      <div
-        v-else
-        class="vpn-stats-page__state vpn-stats-page__state--error"
-      >
-        {{ $t('vpn.countryDataUnavailable') }}
-      </div>
-    </BaseContentBlock>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
-import BaseInnerBlock from '@/shared/ui/components/BaseInnerBlock.vue';
-import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
-import BaseTable from '@/shared/ui/components/BaseTable.vue';
-import { fetchPeersInfo, fetchToriiMetricsText, getToriiBaseUrl } from '@/shared/api';
+import * as http from '@/shared/api';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { hasVpnMetrics, parseVpnMetricsSnapshot, summarizeVpnCountries } from '@/shared/lib/vpn';
+import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
+import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
+import DataField from '@/shared/ui/components/DataField.vue';
+import { formatTimestamp } from '@/shared/ui/utils/formatters';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
-import { formatBytes, formatNumber } from '@/shared/ui/utils/formatters';
 
 defineOptions({
   name: 'VpnStatsPage',
 });
 
 const { t } = useI18n();
-
-const metricsRequest = setupAsyncData(() => fetchToriiMetricsText(), {
-  interval: 10_000,
+const profileResource = setupAsyncData(() => http.fetchVpnProfile());
+const profile = computed(() => {
+  const result = profileResource.data;
+  return result?.status === SUCCESSFUL_FETCHING ? result.data : null;
 });
-
-const countriesRequest = setupAsyncData(() => fetchPeersInfo(), {
-  interval: 10_000,
-});
-
-const toriiBaseUrl = computed(() => getToriiBaseUrl());
-
-watch(toriiBaseUrl, (next, previous) => {
-  if (!previous || next === previous) return;
-  metricsRequest.refetch();
-  countriesRequest.refetch();
-});
-
-const vpnMetrics = computed(() => {
-  const result = metricsRequest.data;
-  if (result?.status !== SUCCESSFUL_FETCHING) return null;
-  return parseVpnMetricsSnapshot(result.data);
-});
-
-const metricsAvailable = computed(() => vpnMetrics.value !== null && hasVpnMetrics(vpnMetrics.value));
-
-const runtimeStateLabel = computed(() => t(`vpn.statusLabels.${vpnMetrics.value?.runtimeState ?? 'unknown'}`));
-
-const overviewCards = computed(() => {
-  if (!vpnMetrics.value) return [];
-
-  return [
-    {
-      key: 'runtime',
-      label: t('vpn.runtimeState'),
-      value: runtimeStateLabel.value,
-      toneClass: `vpn-stats-page__card-value--${vpnMetrics.value.runtimeState}`,
-    },
-    {
-      key: 'sessions',
-      label: t('vpn.sessions'),
-      value: vpnMetrics.value.sessions === null ? '—' : formatNumber(vpnMetrics.value.sessions),
-      toneClass: '',
-    },
-    {
-      key: 'total',
-      label: t('vpn.totalBytes'),
-      value: vpnMetrics.value.totalBytes === null ? '—' : formatBytes(vpnMetrics.value.totalBytes),
-      toneClass: '',
-    },
-    {
-      key: 'ingress',
-      label: t('vpn.ingressBytes'),
-      value: vpnMetrics.value.ingressBytes === null ? '—' : formatBytes(vpnMetrics.value.ingressBytes),
-      toneClass: '',
-    },
-    {
-      key: 'egress',
-      label: t('vpn.egressBytes'),
-      value: vpnMetrics.value.egressBytes === null ? '—' : formatBytes(vpnMetrics.value.egressBytes),
-      toneClass: '',
-    },
-  ];
-});
-
-const trafficRows = computed(() => {
-  if (!vpnMetrics.value) return [];
-
-  return [
-    {
-      key: 'data',
-      label: t('vpn.dataBytes'),
-      total: vpnMetrics.value.dataBytes === null ? '—' : formatBytes(vpnMetrics.value.dataBytes),
-      ingress: vpnMetrics.value.dataIngressBytes === null ? '—' : formatBytes(vpnMetrics.value.dataIngressBytes),
-      egress: vpnMetrics.value.dataEgressBytes === null ? '—' : formatBytes(vpnMetrics.value.dataEgressBytes),
-    },
-    {
-      key: 'cover',
-      label: t('vpn.coverBytes'),
-      total: vpnMetrics.value.coverBytes === null ? '—' : formatBytes(vpnMetrics.value.coverBytes),
-      ingress: vpnMetrics.value.coverIngressBytes === null ? '—' : formatBytes(vpnMetrics.value.coverIngressBytes),
-      egress: vpnMetrics.value.coverEgressBytes === null ? '—' : formatBytes(vpnMetrics.value.coverEgressBytes),
-    },
-    {
-      key: 'control',
-      label: t('vpn.controlBytes'),
-      total: vpnMetrics.value.controlBytes === null ? '—' : formatBytes(vpnMetrics.value.controlBytes),
-      ingress: vpnMetrics.value.controlIngressBytes === null ? '—' : formatBytes(vpnMetrics.value.controlIngressBytes),
-      egress: vpnMetrics.value.controlEgressBytes === null ? '—' : formatBytes(vpnMetrics.value.controlEgressBytes),
-    },
-  ];
-});
-
-const receiptCards = computed(() => {
-  if (!vpnMetrics.value) return [];
-
-  return [
-    {
-      key: 'receipt-ingress',
-      label: t('vpn.receiptIngressBytes'),
-      value: vpnMetrics.value.receiptIngressBytes === null ? '—' : formatBytes(vpnMetrics.value.receiptIngressBytes),
-    },
-    {
-      key: 'receipt-egress',
-      label: t('vpn.receiptEgressBytes'),
-      value: vpnMetrics.value.receiptEgressBytes === null ? '—' : formatBytes(vpnMetrics.value.receiptEgressBytes),
-    },
-    {
-      key: 'receipt-cover',
-      label: t('vpn.receiptCoverBytes'),
-      value: vpnMetrics.value.receiptCoverBytes === null ? '—' : formatBytes(vpnMetrics.value.receiptCoverBytes),
-    },
-  ];
-});
-
-const countryRows = computed(() => {
-  const result = countriesRequest.data;
-  if (result?.status !== SUCCESSFUL_FETCHING) return [];
-  return summarizeVpnCountries(result.data).map((row) => ({
-    ...row,
-    country: row.key === 'unknown' ? t('vpn.unknownCountry') : row.country,
-  }));
-});
-
-const countriesAvailable = computed(() => countriesRequest.data?.status === SUCCESSFUL_FETCHING);
-
-const countryRowKey = (item: { key: string }) => item.key;
+const availabilityLabel = computed(() =>
+  profile.value?.available ? t('vpn.statusLabels.active') : t('vpn.statusLabels.disabled')
+);
+const leaseDuration = computed(() =>
+  profile.value ? formatTimestamp(profile.value.lease_secs * 1_000) : null
+);
+const dnsPushInterval = computed(() =>
+  profile.value ? formatTimestamp(profile.value.dns_push_interval_secs * 1_000) : null
+);
+const settlementGrace = computed(() =>
+  profile.value ? formatTimestamp(profile.value.settlement_grace_secs * 1_000) : null
+);
+const paddingBudget = computed(() =>
+  profile.value ? formatTimestamp(profile.value.padding_budget_ms) : null
+);
+const supportedExitClasses = computed(() => profile.value?.supported_exit_classes.join(' · ') || t('none'));
+const pushedRoutes = computed(() => profile.value?.route_pushes.join(' · ') || t('none'));
+const excludedRoutes = computed(() => profile.value?.excluded_routes.join(' · ') || t('none'));
+const dnsServers = computed(() => profile.value?.dns_servers.join(' · ') || t('none'));
+const tunnelAddresses = computed(() => profile.value?.tunnel_addresses.join(' · ') || t('none'));
 </script>
 
-<style scoped lang="scss">
+<template>
+  <div class="vpn-stats-page">
+    <BaseContentBlock :title="$t('vpn.profile.title')">
+      <template #default>
+        <BaseResourceState
+          :snapshot="profileResource.snapshot"
+          :error-label="$t('vpn.profile.loadError')"
+          @retry="profileResource.refetch()"
+        >
+          <div v-if="profile" class="vpn-stats-page__profile" data-test="vpn-public-profile">
+            <p class="vpn-stats-page__description">
+              {{ $t('vpn.profile.description') }}
+            </p>
+
+            <p
+              v-if="!profile.available"
+              class="vpn-stats-page__unavailable row-text"
+              data-test="vpn-profile-unavailable"
+              role="status"
+            >
+              {{ $t('vpn.profile.unavailable') }}
+            </p>
+
+            <div class="vpn-stats-page__profile-grid">
+              <DataField
+                data-test="vpn-profile-availability"
+                :title="$t('vpn.profile.fields.availability')"
+                :value="availabilityLabel"
+              />
+              <DataField
+                data-test="vpn-profile-relay"
+                :title="$t('vpn.profile.fields.relayEndpoint')"
+                :value="profile.relay_endpoint || $t('none')"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-exit-classes"
+                :title="$t('vpn.profile.fields.exitClasses')"
+                :value="supportedExitClasses"
+              />
+              <DataField
+                data-test="vpn-profile-default-exit-class"
+                :title="$t('vpn.profile.fields.defaultExitClass')"
+                :value="profile.default_exit_class"
+              />
+              <DataField
+                data-test="vpn-profile-lease"
+                :title="$t('vpn.profile.fields.leaseDuration')"
+                :value="leaseDuration"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-dns-push-interval"
+                :title="$t('vpn.profile.fields.dnsPushInterval')"
+                :value="dnsPushInterval"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-billing"
+                :title="$t('vpn.profile.fields.billing')"
+                :value="profile.display_billing_label"
+              />
+              <DataField
+                data-test="vpn-profile-meter-family"
+                :title="$t('vpn.profile.fields.meterFamily')"
+                :value="profile.meter_family"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-lease-fee"
+                :title="$t('vpn.profile.fields.leaseFee')"
+                :value="profile.lease_fee.toString()"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-settlement-grace"
+                :title="$t('vpn.profile.fields.settlementGrace')"
+                :value="settlementGrace"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-operator"
+                :title="$t('vpn.profile.fields.operatorAccount')"
+                :value="profile.operator_account_id"
+                :link="`/accounts/${encodeURIComponent(profile.operator_account_id)}`"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-pushed-routes"
+                :title="$t('vpn.profile.fields.routePushes')"
+                :value="pushedRoutes"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-excluded-routes"
+                :title="$t('vpn.profile.fields.excludedRoutes')"
+                :value="excludedRoutes"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-dns-servers"
+                :title="$t('vpn.profile.fields.dnsServers')"
+                :value="dnsServers"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-tunnel-addresses"
+                :title="$t('vpn.profile.fields.tunnelAddresses')"
+                :value="tunnelAddresses"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-mtu"
+                :title="$t('vpn.profile.fields.mtuBytes')"
+                :value="`${profile.mtu_bytes} B`"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-flow-label-bits"
+                :title="$t('vpn.profile.fields.flowLabelBits')"
+                :value="profile.flow_label_bits"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-padding-budget"
+                :title="$t('vpn.profile.fields.paddingBudget')"
+                :value="paddingBudget"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-relay-id"
+                :title="$t('vpn.profile.fields.relayId')"
+                :value="profile.relay_id_hex || $t('none')"
+                :hash="profile.relay_id_hex"
+                type="short"
+                copy
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-relay-mldsa65"
+                :title="$t('vpn.profile.fields.relayMldsa65PublicKey')"
+                :value="profile.relay_mldsa65_public_key_hex || $t('none')"
+                :hash="profile.relay_mldsa65_public_key_hex"
+                type="short"
+                copy
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-descriptor-commit"
+                :title="$t('vpn.profile.fields.descriptorCommit')"
+                :value="profile.descriptor_commit_hex || $t('none')"
+                :hash="profile.descriptor_commit_hex"
+                type="short"
+                copy
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-tls"
+                :title="$t('vpn.profile.fields.tlsServerName')"
+                :value="profile.tls_server_name || $t('none')"
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-tls-spki"
+                :title="$t('vpn.profile.fields.tlsSpkiDigest')"
+                :value="profile.relay_tls_spki_sha256_hex || $t('none')"
+                :hash="profile.relay_tls_spki_sha256_hex"
+                type="short"
+                copy
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-certificate"
+                :title="$t('vpn.profile.fields.relayCertificateDigest')"
+                :value="profile.relay_certificate_sha256_hex || $t('none')"
+                :hash="profile.relay_certificate_sha256_hex"
+                type="short"
+                copy
+                monospace
+              />
+              <DataField
+                data-test="vpn-profile-directory"
+                :title="$t('vpn.profile.fields.directorySnapshot')"
+                :value="profile.directory_snapshot_digest_hex || $t('none')"
+                :hash="profile.directory_snapshot_digest_hex"
+                type="short"
+                copy
+                monospace
+              />
+            </div>
+          </div>
+        </BaseResourceState>
+      </template>
+    </BaseContentBlock>
+
+    <BaseContentBlock :title="$t('vpn.overviewTitle')">
+      <template #default>
+        <div class="vpn-stats-page__boundary" data-test="vpn-diagnostic-boundary">
+          <span class="vpn-stats-page__eyebrow">{{ $t('vpn.accessBoundary.eyebrow') }}</span>
+          <h2>{{ $t('vpn.accessBoundary.title') }}</h2>
+          <i18n-t scope="global" keypath="vpn.accessBoundary.metricsDescription" tag="p">
+            <template #metrics><code>/metrics</code></template>
+          </i18n-t>
+          <p>{{ $t('vpn.accessBoundary.browserDescription') }}</p>
+        </div>
+      </template>
+    </BaseContentBlock>
+
+    <BaseContentBlock :title="$t('vpn.accessBoundary.contractTitle')">
+      <template #default>
+        <dl class="vpn-stats-page__requirements" data-test="vpn-auth-contract">
+          <div>
+            <dt>{{ $t('vpn.accessBoundary.endpointLabel') }}</dt>
+            <dd><code>/metrics</code></dd>
+          </div>
+          <div>
+            <dt>{{ $t('vpn.accessBoundary.toriiAdmissionLabel') }}</dt>
+            <dd>{{ $t('vpn.accessBoundary.toriiAdmissionValue') }}</dd>
+          </div>
+          <div>
+            <dt>{{ $t('vpn.accessBoundary.deploymentPolicyLabel') }}</dt>
+            <dd>{{ $t('vpn.accessBoundary.deploymentPolicyValue') }}</dd>
+          </div>
+          <div>
+            <dt>{{ $t('vpn.accessBoundary.explorerBehaviorLabel') }}</dt>
+            <dd>{{ $t('vpn.accessBoundary.explorerBehaviorValue') }}</dd>
+          </div>
+        </dl>
+      </template>
+    </BaseContentBlock>
+  </div>
+</template>
+
+<style lang="scss">
 @use '@/shared/ui/styles/main' as *;
 
 .vpn-stats-page {
   display: grid;
-  gap: size(4);
+  gap: size(3);
 
-  &__source {
-    max-width: size(42);
-    color: theme-color('content-secondary');
-    word-break: break-all;
-    text-align: right;
-    @include tpg-s4;
+  &__profile {
+    display: grid;
+    gap: size(2);
+    padding: 0 size(2);
+
+    @include sm {
+      padding: 0 size(3);
+    }
   }
 
-  &__state {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: size(20);
-    margin: 0 size(4);
-    padding: size(4);
-    border-radius: size(3);
-    border: 1px dashed theme-color('border-primary');
-    color: theme-color('content-secondary');
-    text-align: center;
-    @include tpg-s3;
+  &__description,
+  &__unavailable {
+    margin: 0;
+  }
 
-    &--error {
-      border-color: color-mix(in srgb, theme-color('warning') 35%, theme-color('border-primary'));
+  &__description {
+    color: theme-color('content-secondary');
+  }
+
+  &__unavailable {
+    border-inline-start: 3px solid theme-color('border-primary');
+    padding: size(1) size(1.5);
+    color: theme-color('content-secondary');
+    background: theme-color('surface-variant');
+  }
+
+  &__profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: size(2);
+  }
+
+  &__boundary {
+    display: grid;
+    gap: size(1.5);
+    padding: 0 size(2);
+    color: theme-color('content-secondary');
+
+    @include sm {
+      padding: 0 size(3);
+    }
+
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h2 {
+      color: theme-color('content-primary');
+      @include tpg-h4;
+    }
+
+    code {
       color: theme-color('content-primary');
     }
   }
 
-  &__card-grid {
-    display: grid;
-    gap: size(2);
-    padding: 0 size(4);
-    grid-template-columns: repeat(auto-fit, minmax(size(22), 1fr));
-
-    &--compact {
-      padding: 0;
-    }
+  &__eyebrow {
+    color: theme-color('content-tertiary');
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    @include tpg-s4;
   }
 
-  &__card {
+  &__requirements {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: size(1);
-    min-height: size(14);
-    padding: size(2.5);
-    border-radius: size(3);
-    border: 1px solid color-mix(in srgb, theme-color('border-primary') 70%, transparent);
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, theme-color('surface') 96%, white),
-      color-mix(in srgb, theme-color('surface-variant') 92%, white)
-    );
-  }
+    margin: 0;
+    padding: 0 size(2);
 
-  &__card-label {
-    color: theme-color('content-secondary');
-    @include tpg-s4;
-  }
-
-  &__card-value {
-    color: theme-color('content-primary');
-    @include tpg-h4;
-
-    &--active {
-      color: color-mix(in srgb, theme-color('success') 85%, theme-color('content-primary'));
+    @include sm {
+      padding: 0 size(3);
     }
 
-    &--stubbed {
-      color: color-mix(in srgb, theme-color('warning') 90%, theme-color('content-primary'));
+    div {
+      display: grid;
+      gap: size(0.5);
+      border: 1px solid theme-color('border-primary');
+      border-radius: size(1);
+      padding: size(1.25);
+      background: theme-color('surface-variant');
     }
 
-    &--disabled,
-    &--unknown {
-      color: theme-color('content-secondary');
-    }
-  }
-
-  &__traffic-grid {
-    display: grid;
-    gap: size(2);
-    grid-template-columns: repeat(auto-fit, minmax(size(22), 1fr));
-  }
-
-  &__traffic-card {
-    display: grid;
-    gap: size(1.25);
-    padding: size(2.5);
-    border-radius: size(3);
-    border: 1px solid color-mix(in srgb, theme-color('border-primary') 70%, transparent);
-    background: color-mix(in srgb, theme-color('surface') 94%, transparent);
-  }
-
-  &__traffic-total {
-    color: theme-color('content-primary');
-    @include tpg-h4;
-  }
-
-  &__traffic-meta {
-    display: grid;
-    gap: size(0.5);
-    color: theme-color('content-secondary');
-    @include tpg-s4;
-  }
-
-  &__countries-table {
-    display: grid;
-  }
-
-  &__countries-row {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(size(8), 1fr) minmax(size(8), 1fr);
-    gap: size(2);
-    align-items: center;
-    padding: 0 size(4);
-
-    &--header {
-      color: theme-color('content-secondary');
+    dt {
+      color: theme-color('content-tertiary');
       @include tpg-s4;
+    }
+
+    dd {
+      margin: 0;
+      color: theme-color('content-primary');
     }
   }
 }

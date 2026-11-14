@@ -5,13 +5,14 @@
       size="sm"
       class="node-settings__button"
       :pressed="dropdown.isOpen.value"
+      :disabled="isNodeLocked"
       @click="dropdown.toggle"
     >
       <span class="node-settings__label">{{ $t('settings.nodeSelector') }}</span>
     </BaseButton>
 
     <Teleport
-      v-if="dropdown.isOpen.value"
+      v-if="dropdown.isOpen.value && !isNodeLocked"
       :to="`#${PORTAL_ID}`"
     >
       <div
@@ -23,12 +24,9 @@
           v-model="toriiUrl"
           class="node-settings__input"
           type="url"
-          :readonly="forcedNode"
           :placeholder="defaultUrl"
         >
-        <span class="node-settings__hint">
-          {{ $t('settings.explorerBase') }}: {{ explorerBase }}
-        </span>
+        <span class="node-settings__hint"> {{ $t('settings.explorerBase') }}: {{ explorerBase }} </span>
         <div
           class="node-settings__health"
           :class="`node-settings__health_${availability.state.value}`"
@@ -43,7 +41,7 @@
           </span>
         </div>
         <div
-          v-if="!forcedNode && availability.state.value !== 'healthy'"
+          v-if="availability.state.value !== 'healthy'"
           class="node-settings__health-actions"
         >
           <BaseButton
@@ -58,35 +56,17 @@
           <BaseButton
             size="sm"
             variant="secondary"
-            :disabled="forcedNode"
             @click="onReset"
           >
             {{ $t('settings.reset') }}
           </BaseButton>
           <BaseButton
             size="sm"
-            :disabled="forcedNode || !toriiUrl.trim()"
+            :disabled="!toriiUrl.trim()"
             @click="onApply"
           >
             {{ $t('settings.apply') }}
           </BaseButton>
-        </div>
-        <div
-          v-if="!forcedNode"
-          class="node-settings__presets"
-        >
-          <span class="h-sm">{{ $t('settings.presets') }}</span>
-          <div class="node-settings__presets-list">
-            <BaseButton
-              v-for="preset in presets"
-              :key="preset.label"
-              size="xs"
-              variant="secondary"
-              @click="toriiUrl = preset.url"
-            >
-              {{ preset.label }}
-            </BaseButton>
-          </div>
         </div>
       </div>
     </Teleport>
@@ -103,48 +83,57 @@ import { useNodeSettingsDropdown } from '@/shared/ui/composables/header-portal';
 import {
   getToriiBaseUrl,
   getExplorerApiBase,
-  getToriiNodePresets,
+  isToriiBaseUrlForced,
   setToriiBaseUrl,
   resetToriiBaseUrl,
   retryToriiFailover,
   useToriiAvailability,
 } from '@/shared/api';
 import { useNotifications } from '@/shared/ui/composables/notifications';
-import { getRuntimeConfig } from '@/shared/runtime-config';
 
 const dropdown = useNodeSettingsDropdown();
 const notifications = useNotifications();
 const { t } = useI18n();
 const availability = useToriiAvailability();
-const forcedNode = getRuntimeConfig().toriiForceBaseUrl === true;
+const isNodeLocked = computed(() => isToriiBaseUrlForced());
 
 const dropdownTarget = ref<HTMLElement | null>(null);
 
-onClickOutside(dropdownTarget, () => {
-  if (dropdown.isOpen.value) dropdown.toggle();
-}, {
-  ignore: ['.node-settings__button'],
-});
+onClickOutside(
+  dropdownTarget,
+  () => {
+    if (dropdown.isOpen.value) dropdown.toggle();
+  },
+  {
+    ignore: ['.node-settings__button'],
+  }
+);
 
 const toriiUrl = ref(getToriiBaseUrl());
 const defaultUrl = getToriiBaseUrl();
 
-const presets = getToriiNodePresets();
-
 const explorerBase = computed(() => getExplorerApiBase());
 
 function onApply() {
-  const updated = setToriiBaseUrl(toriiUrl.value);
-  toriiUrl.value = updated;
-  notifications.success(t('settings.nodeSaved'));
-  dropdown.toggle();
+  try {
+    const updated = setToriiBaseUrl(toriiUrl.value);
+    toriiUrl.value = updated;
+    notifications.success(t('settings.nodeSaved'));
+    dropdown.toggle();
+  } catch {
+    notifications.error(t('settings.nodeInvalid'));
+  }
 }
 
 function onReset() {
-  const updated = resetToriiBaseUrl();
-  toriiUrl.value = updated;
-  notifications.success(t('settings.nodeReset'));
-  dropdown.toggle();
+  try {
+    const updated = resetToriiBaseUrl();
+    toriiUrl.value = updated;
+    notifications.success(t('settings.nodeReset'));
+    dropdown.toggle();
+  } catch {
+    notifications.error(t('settings.nodeInvalid'));
+  }
 }
 
 async function onRetryFailover() {
@@ -179,6 +168,7 @@ async function onRetryFailover() {
 
   &__dropdown {
     width: size(60);
+    max-width: calc(100vw - 24px);
     background: theme-color('surface');
     border: 1px solid theme-color('border-primary');
     border-radius: size(2);
@@ -263,18 +253,6 @@ async function onRetryFailover() {
     display: flex;
     justify-content: flex-end;
     gap: size(1);
-  }
-
-  &__presets {
-    display: flex;
-    flex-direction: column;
-    gap: size(1);
-  }
-
-  &__presets-list {
-    display: flex;
-    gap: size(1);
-    flex-wrap: wrap;
   }
 }
 </style>

@@ -30,7 +30,6 @@ vi.mock('@/shared/ui/composables/useExplorerScopeNavigation', () => ({
 
 vi.mock('@/shared/api', () => ({
   fetchNexusPublicStatus: vi.fn(),
-  fetchSumeragiStatus: vi.fn(),
   getConfiguredToriiBaseUrl: vi.fn(() => 'https://registry.example:8080'),
   normalizeToriiBaseUrl: vi.fn((raw: string, fallback: string | null = null) => {
     const trimmed = raw.trim();
@@ -125,7 +124,7 @@ describe('Dataspace details page', () => {
     await flushPromises();
 
     expect(api.fetchNexusPublicStatus).toHaveBeenCalledTimes(1);
-    expect(api.fetchSumeragiStatus).not.toHaveBeenCalled();
+    expect('fetchSumeragiStatus' in api).toBe(false);
     expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain('lane-seven (#42)');
     expect(wrapper.get('[data-test="dataspace-details-core"]').text()).toContain('restricted');
     expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.quorum'));
@@ -158,7 +157,7 @@ describe('Dataspace details page', () => {
     expect(values.map((field) => field.text())).toEqual([required ? 'Yes' : 'No', required ? 'Yes' : 'No', i18n.global.t('none')]);
     expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.quorum'));
     expect(wrapper.text()).not.toContain(i18n.global.t('dataspaces.validators'));
-    expect(api.fetchSumeragiStatus).not.toHaveBeenCalled();
+    expect('fetchSumeragiStatus' in api).toBe(false);
   });
 
   it('keeps absent public manifest observations unknown instead of turning them into No', async () => {

@@ -2,7 +2,7 @@
 
 The recovered “Neumorphic dashboards and data visualization” session's latest
 request was to make querying faster, including upstream Iroha changes where
-needed. EX-325's visual dashboards were already published; EX-330's performance
+needed. EX-347's visual dashboards were already published; EX-359's performance
 changes were still pending. This continuation preserves the existing homepage
 and dashboard design.
 

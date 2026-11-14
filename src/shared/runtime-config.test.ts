@@ -44,7 +44,6 @@ describe('runtime config', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        toriiEconometricsEndpointsEnabled: true,
         toriiBaseUrl: 'https://torii.example',
         networkId: checkedNetworkId,
         networkPrefix: 369,
@@ -64,7 +63,6 @@ describe('runtime config', () => {
 
     await module.loadRuntimeConfig();
     expect(fetchMock).toHaveBeenCalledWith('/config.json', expect.any(Object));
-    expect(module.getRuntimeConfig().toriiEconometricsEndpointsEnabled).toBe(true);
     expect(module.getRuntimeConfig().toriiBaseUrl).toBe('https://torii.example');
     expect(module.getRuntimeConfig().networkId).toBe(checkedNetworkId);
     expect(module.getRuntimeConfig().kotodamaCompilerUrl).toBe('https://compiler.example');

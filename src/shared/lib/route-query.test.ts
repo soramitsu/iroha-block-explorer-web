@@ -3,19 +3,31 @@ import { describe, expect, it } from 'vitest';
 import {
   firstRouteQueryValue,
   mergeRouteQuery,
+  parseCanonicalRoutePositiveInteger,
   parseRouteEnum,
-  parseRoutePositiveInteger,
   routeQueriesEqual,
 } from './route-query';
 
 describe('route query parsing', () => {
-  it('reads the first string and validates positive safe integers', () => {
+  it('reads the first string from a general-purpose route value', () => {
     expect(firstRouteQueryValue(['20', '50'])).toBe('20');
-    expect(parseRoutePositiveInteger('3', 1)).toBe(3);
-    expect(parseRoutePositiveInteger('0', 1)).toBe(1);
-    expect(parseRoutePositiveInteger('1.5', 1)).toBe(1);
-    expect(parseRoutePositiveInteger('20', 10, new Set([10, 20, 50]))).toBe(20);
-    expect(parseRoutePositiveInteger('30', 10, new Set([10, 20, 50]))).toBe(10);
+  });
+
+  it('distinguishes a missing canonical positive integer from explicit invalid state', () => {
+    const allowed = new Set([10, 20, 50, 100]);
+    expect(parseCanonicalRoutePositiveInteger(undefined, 10, allowed)).toEqual({
+      ok: true,
+      value: 10,
+      explicit: false,
+    });
+    expect(parseCanonicalRoutePositiveInteger('20', 10, allowed)).toEqual({
+      ok: true,
+      value: 20,
+      explicit: true,
+    });
+    for (const invalid of [null, '', '0', '+1', '01', '1.0', '9007199254740992', '30', ['20'], ['20', '50']]) {
+      expect(parseCanonicalRoutePositiveInteger(invalid, 10, allowed)).toEqual({ ok: false });
+    }
   });
 
   it('accepts only exact enum values', () => {

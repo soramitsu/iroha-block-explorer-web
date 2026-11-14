@@ -1,14 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { computed, defineComponent, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import { flushPromises } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { useCurrentExplorerScope, useScopedExplorerNavigation } from './useExplorerScopeNavigation';
 
-const toriiBaseUrlState = ref('https://nexus.mof3.sora.org:18080');
+const toriiBaseUrlState = ref('https://torii.example');
+const forcedState = { value: false };
 
 vi.mock('@/shared/api', () => ({
   getToriiBaseUrl: () => toriiBaseUrlState.value,
+  isToriiBaseUrlForced: () => forcedState.value,
 }));
 
 const Probe = defineComponent({
@@ -37,6 +39,10 @@ const NavigationProbe = defineComponent({
 });
 
 describe('useCurrentExplorerScope', () => {
+  beforeEach(() => {
+    forcedState.value = false;
+  });
+
   it('returns null without a router and does not emit vue-router injection warnings', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -77,7 +83,7 @@ describe('useCurrentExplorerScope', () => {
   });
 
   it('preserves account routes while still applying scoped explorer query params', async () => {
-    toriiBaseUrlState.value = 'https://nexus.mof3.sora.org:18080';
+    toriiBaseUrlState.value = 'https://torii.example';
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
@@ -103,5 +109,19 @@ describe('useCurrentExplorerScope', () => {
     expect(wrapper.text()).toContain('torii=https%3A%2F%2Ftaira.sora.org');
     expect(wrapper.text()).toContain('dataspaceLaneId=7');
     expect(wrapper.text()).toContain('dataspaceId=42');
+  });
+
+  it('ignores route-scoped Torii overrides when runtime config locks the origin', async () => {
+    forcedState.value = true;
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/blocks', component: { template: '<div />' } }],
+    });
+    await router.push('/blocks?torii=https%3A%2F%2Fother.example&dataspaceLaneId=7&dataspaceId=42');
+    await router.isReady();
+
+    const wrapper = mount(Probe, { global: { plugins: [router] } });
+
+    expect(wrapper.text()).toBe('null');
   });
 });

@@ -3,7 +3,7 @@
     ref="trigger"
     class="lang-dropdown__button"
     bordered
-    aria-label="lang dropdown"
+    :aria-label="$t('accessibility.languageMenu')"
     :pressed="dropdown.isOpen.value"
     role="combobox"
     aria-autocomplete="list"

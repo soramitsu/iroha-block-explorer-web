@@ -1,11 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { jsonResponse } from '../../../tests/fixtures/http-response';
 import { ToriiBrowserClient } from '@iroha/iroha-js/torii-browser';
-import {
-  fetchContractActivity,
-  fetchContractEvents,
-  streamContractEvents,
-} from './index';
+import { fetchContractActivity, fetchContractEvents, streamContractEvents } from './index';
 
 const nativeFetch = globalThis.fetch;
 
@@ -43,9 +39,9 @@ const event = {
   fee_payment: { payer: 'authority' },
 };
 
-function predicates(filter: { op: string, args: unknown[] }): unknown[][] {
+function predicates(filter: { op: string; args: unknown[] }): unknown[][] {
   return filter.op === 'and'
-    ? filter.args.flatMap((child) => predicates(child as { op: string, args: unknown[] }))
+    ? filter.args.flatMap((child) => predicates(child as { op: string; args: unknown[] }))
     : [[filter.op, ...filter.args]];
 }
 
@@ -59,9 +55,15 @@ describe('contract route API wrappers', () => {
     const spy = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ items: [activity], next_cursor: 'next' }));
     globalThis.fetch = spy;
     const result = await fetchContractActivity({
-      cursor: 'previous', limit: 20, authority: 'treasury@banking.retail',
-      contract_address: 'tairac1router', contract_alias: 'router', contract_entrypoint: 'swap',
-      since_timestamp_ms: 100, until_timestamp_ms: 200, result_ok: true,
+      cursor: 'previous',
+      limit: 20,
+      authority: 'treasury@banking.retail',
+      contract_address: 'tairac1router',
+      contract_alias: 'router',
+      contract_entrypoint: 'swap',
+      since_timestamp_ms: 100,
+      until_timestamp_ms: 200,
+      result_ok: true,
     });
     expect(new URL(String(spy.mock.calls[0][0])).pathname).toBe('/v1/contracts/activity/query');
     expect(spy.mock.calls[0][1]?.method).toBe('POST');
@@ -70,9 +72,13 @@ describe('contract route API wrappers', () => {
     expect(body.cursor).toBe('previous');
     expect(Object.keys(body).sort()).toEqual(['cursor', 'filter', 'limit']);
     expect(predicates(body.filter)).toEqual([
-      ['eq', 'authority', 'treasury@banking.retail'], ['eq', 'contract_address', 'tairac1router'],
-      ['eq', 'contract_alias', 'router'], ['eq', 'contract_entrypoint', 'swap'], ['eq', 'result_ok', true],
-      ['gte', 'timestamp_ms', 100], ['lte', 'timestamp_ms', 200],
+      ['eq', 'authority', 'treasury@banking.retail'],
+      ['eq', 'contract_address', 'tairac1router'],
+      ['eq', 'contract_alias', 'router'],
+      ['eq', 'contract_entrypoint', 'swap'],
+      ['eq', 'result_ok', true],
+      ['gte', 'timestamp_ms', 100],
+      ['lte', 'timestamp_ms', 200],
     ]);
     expect(result).toEqual({ status: 'ok', data: { items: [activity], nextCursor: 'next' } });
   });
@@ -81,32 +87,44 @@ describe('contract route API wrappers', () => {
     const spy = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ items: [event], next_cursor: null }));
     globalThis.fetch = spy;
     const result = await fetchContractEvents({
-      limit: 10, authority: 'treasury@banking.retail', contract_address: 'tairac1router',
+      limit: 10,
+      authority: 'treasury@banking.retail',
+      contract_address: 'tairac1router',
       event_kind: 'swap_failed',
-      participant: 'treasury@banking.retail', asset_id: 'usd#issuer.main', provenance: 'emitted',
-      since_timestamp_ms: 100, until_timestamp_ms: 200, result_ok: true,
+      participant: 'treasury@banking.retail',
+      asset_id: 'usd#issuer.main',
+      provenance: 'emitted',
+      since_timestamp_ms: 100,
+      until_timestamp_ms: 200,
+      result_ok: true,
     });
     expect(new URL(String(spy.mock.calls[0][0])).pathname).toBe('/v1/contracts/events/query');
     const body = JSON.parse(String(spy.mock.calls[0][1]?.body));
     expect(Object.keys(body).sort()).toEqual(['filter', 'limit']);
     expect(predicates(body.filter)).toEqual([
-      ['eq', 'authority', 'treasury@banking.retail'], ['eq', 'contract_address', 'tairac1router'],
+      ['eq', 'authority', 'treasury@banking.retail'],
+      ['eq', 'contract_address', 'tairac1router'],
       ['eq', 'event_kind', 'swap_failed'],
-      ['eq', 'participants', 'treasury@banking.retail'], ['eq', 'asset_ids', 'usd#issuer.main'],
-      ['eq', 'provenance', 'emitted'], ['eq', 'result_ok', true],
-      ['gte', 'timestamp_ms', 100], ['lte', 'timestamp_ms', 200],
+      ['eq', 'participants', 'treasury@banking.retail'],
+      ['eq', 'asset_ids', 'usd#issuer.main'],
+      ['eq', 'provenance', 'emitted'],
+      ['eq', 'result_ok', true],
+      ['gte', 'timestamp_ms', 100],
+      ['lte', 'timestamp_ms', 200],
     ]);
     expect(result).toEqual({ status: 'ok', data: { items: [event], nextCursor: null } });
   });
 
   it('rejects the retired exact-count envelope rather than fabricating a continuation', async () => {
-    globalThis.fetch = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ items: [], total: 0, has_more: false, count_mode: 'exact' }));
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ items: [], total: 0, has_more: false, count_mode: 'exact' }));
     await expect(fetchContractActivity({ limit: 10 })).rejects.toThrow();
   });
 
   it('passes one AbortSignal-backed stream through the SDK and validates decoded events', async () => {
     const controller = new AbortController();
-    const spy = vi.spyOn(ToriiBrowserClient.prototype, 'streamContractEvents').mockImplementation((async function* () {
+    const spy = vi.spyOn(ToriiBrowserClient.prototype, 'streamContractEvents').mockImplementation(async function* () {
       yield {
         event: 'contract_event',
         data: event,
@@ -114,18 +132,21 @@ describe('contract route API wrappers', () => {
         retry: null,
         raw: JSON.stringify(event),
       };
-    }) as typeof ToriiBrowserClient.prototype.streamContractEvents);
+    } as typeof ToriiBrowserClient.prototype.streamContractEvents);
 
-    const iterator = streamContractEvents({
+    const iterator = streamContractEvents(
+      {
         event_kind: 'swap_failed',
-      provenance: 'emitted',
-    }, controller.signal);
+        provenance: 'emitted',
+      },
+      controller.signal
+    );
     const first = await iterator.next();
 
     expect(spy).toHaveBeenCalledWith({
       authority: undefined,
       contractAddress: undefined,
-        eventKind: 'swap_failed',
+      eventKind: 'swap_failed',
       participant: undefined,
       assetId: undefined,
       provenance: 'emitted',
@@ -139,9 +160,9 @@ describe('contract route API wrappers', () => {
   });
 
   it('terminates a stream item that does not satisfy the contract event schema', async () => {
-    vi.spyOn(ToriiBrowserClient.prototype, 'streamContractEvents').mockImplementation((async function* () {
+    vi.spyOn(ToriiBrowserClient.prototype, 'streamContractEvents').mockImplementation(async function* () {
       yield { event: 'contract_event', data: { event_id: 'broken' }, id: null, raw: '{}' };
-    }) as typeof ToriiBrowserClient.prototype.streamContractEvents);
+    } as typeof ToriiBrowserClient.prototype.streamContractEvents);
 
     await expect(streamContractEvents({}).next()).rejects.toThrow();
   });
@@ -152,15 +173,18 @@ describe('contract route API wrappers', () => {
     const encoder = new TextEncoder();
     globalThis.fetch = vi.fn(async (_input, init) => {
       requestSignal = init?.signal;
-      return new Response(new ReadableStream({
-        start(controller) {
-          controller.enqueue(encoder.encode(`event: contract_event\ndata: ${JSON.stringify(event)}\n\n`));
-          init?.signal?.addEventListener('abort', () => controller.error(init.signal?.reason), { once: true });
-        },
-      }), {
-        status: 200,
-        headers: { 'content-type': 'text/event-stream' },
-      });
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(`event: contract_event\ndata: ${JSON.stringify(event)}\n\n`));
+            init?.signal?.addEventListener('abort', () => controller.error(init.signal?.reason), { once: true });
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'text/event-stream' },
+        }
+      );
     });
 
     const iterator = streamContractEvents({ event_kind: 'swap_filled' }, abortController.signal);

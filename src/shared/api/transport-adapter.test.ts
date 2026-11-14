@@ -3,7 +3,7 @@ import { jsonResponse } from '../../../tests/fixtures/http-response';
 
 const captured = vi.hoisted(() => ({ fetch: undefined as typeof fetch | undefined }));
 
-vi.mock('@iroha/iroha-js/torii-browser', async importOriginal => {
+vi.mock('@iroha/iroha-js/torii-browser', async (importOriginal) => {
   const sdk = await importOriginal<typeof import('@iroha/iroha-js/torii-browser')>();
   return {
     ...sdk,
@@ -17,7 +17,11 @@ vi.mock('@iroha/iroha-js/torii-browser', async importOriginal => {
 });
 
 vi.mock('@/shared/runtime-config', () => ({
-  getRuntimeConfig: () => ({ toriiBaseUrl: 'https://taira.sora.org', toriiForceBaseUrl: true, toriiRequestRetryCount: 0 }),
+  getRuntimeConfig: () => ({
+    toriiBaseUrl: 'https://taira.sora.org',
+    toriiForceBaseUrl: true,
+    toriiRequestRetryCount: 0,
+  }),
 }));
 
 let api: typeof import('./index');
@@ -28,9 +32,12 @@ beforeEach(async () => {
   fetchMock.mockReset();
   vi.stubGlobal('fetch', fetchMock);
   captured.fetch = undefined;
-  fetchMock.mockResolvedValue(jsonResponse({
-    items: [], next_cursor: null,
-  }));
+  fetchMock.mockResolvedValue(
+    jsonResponse({
+      items: [],
+      next_cursor: null,
+    })
+  );
   api = await import('./index');
   await api.fetchBlocks({ limit: 10 });
   expect(captured.fetch).toBeTypeOf('function');
@@ -43,12 +50,13 @@ afterEach(() => {
 });
 
 describe('SDK transport health reporting', () => {
-  it.each(['init', 'request'] as const)('does not classify a cancelled %s signal as a Torii outage', async source => {
+  it.each(['init', 'request'] as const)('does not classify a cancelled %s signal as a Torii outage', async (source) => {
     const caller = new AbortController();
     caller.abort();
-    const pending = source === 'init'
-      ? captured.fetch!('https://taira.sora.org/v1/explorer/blocks', { signal: caller.signal })
-      : captured.fetch!(new Request('https://taira.sora.org/v1/explorer/blocks', { signal: caller.signal }));
+    const pending =
+      source === 'init'
+        ? captured.fetch!('https://taira.sora.org/v1/explorer/blocks', { signal: caller.signal })
+        : captured.fetch!(new Request('https://taira.sora.org/v1/explorer/blocks', { signal: caller.signal }));
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(api.useToriiAvailability().state.value).toBe('healthy');

@@ -1,14 +1,25 @@
 <script setup lang="ts">
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
-import type { InstructionPresentation, InstructionPresentationField } from '@/shared/lib/instruction-presentation';
+import { useI18n } from 'vue-i18n';
+import type {
+  InstructionPresentation,
+  InstructionPresentationField,
+  InstructionPresentationMessage,
+} from '@/shared/lib/instruction-presentation';
+
+const { t } = useI18n();
 
 defineProps<{
-  presentation: InstructionPresentation;
-  compact?: boolean;
+  presentation: InstructionPresentation
+  compact?: boolean
 }>();
 
 function fieldTestId(field: InstructionPresentationField): string {
   return `instruction-semantic-field-${field.key}`;
+}
+
+function localize(message: InstructionPresentationMessage): string {
+  return t(message.key, message.params ?? {});
 }
 </script>
 
@@ -20,22 +31,31 @@ function fieldTestId(field: InstructionPresentationField): string {
   >
     <header class="instruction-semantic-card__header">
       <div>
-        <div class="instruction-semantic-card__eyebrow">{{ presentation.family }} · {{ presentation.variant }}</div>
-        <h4>{{ presentation.title }}</h4>
+        <div class="instruction-semantic-card__eyebrow">
+          {{ presentation.family }} · {{ presentation.variant }}
+        </div>
+        <h4>{{ localize(presentation.title) }}</h4>
       </div>
-      <span class="instruction-semantic-card__request">Instruction request</span>
+      <span class="instruction-semantic-card__request">{{ $t('studio.instructionPresentation.card.request') }}</span>
     </header>
 
-    <dl v-if="presentation.fields.length" class="instruction-semantic-card__fields">
+    <dl
+      v-if="presentation.fields.length"
+      class="instruction-semantic-card__fields"
+    >
       <div
         v-for="item in presentation.fields"
         :key="item.key"
         class="instruction-semantic-card__field"
         :data-test="fieldTestId(item)"
       >
-        <dt>{{ item.label }}</dt>
+        <dt>{{ localize(item.label) }}</dt>
         <dd>
-          <BaseLink v-if="item.link" :to="item.link" monospace>
+          <BaseLink
+            v-if="item.link"
+            :to="item.link"
+            monospace
+          >
             {{ item.value }}
           </BaseLink>
           <span v-else>{{ item.value }}</span>
@@ -48,7 +68,7 @@ function fieldTestId(field: InstructionPresentationField): string {
       class="instruction-semantic-card__nested"
       data-test="instruction-semantic-nested"
     >
-      <h5>Proposed instructions</h5>
+      <h5>{{ $t('studio.instructionPresentation.card.proposedInstructions') }}</h5>
       <article
         v-for="instruction in presentation.nestedInstructions"
         :key="instruction.index"
@@ -58,7 +78,7 @@ function fieldTestId(field: InstructionPresentationField): string {
         <template v-if="instruction.presentation">
           <div class="instruction-semantic-card__nested-heading">
             <span>#{{ instruction.index }}</span>
-            <strong>{{ instruction.presentation.title }}</strong>
+            <strong>{{ localize(instruction.presentation.title) }}</strong>
             <span>{{ instruction.presentation.family }} · {{ instruction.presentation.variant }}</span>
           </div>
           <dl class="instruction-semantic-card__nested-fields">
@@ -67,9 +87,13 @@ function fieldTestId(field: InstructionPresentationField): string {
               :key="item.key"
               class="instruction-semantic-card__field"
             >
-              <dt>{{ item.label }}</dt>
+              <dt>{{ localize(item.label) }}</dt>
               <dd>
-                <BaseLink v-if="item.link" :to="item.link" monospace>
+                <BaseLink
+                  v-if="item.link"
+                  :to="item.link"
+                  monospace
+                >
                   {{ item.value }}
                 </BaseLink>
                 <span v-else>{{ item.value }}</span>
@@ -80,7 +104,7 @@ function fieldTestId(field: InstructionPresentationField): string {
         <template v-else>
           <div class="instruction-semantic-card__nested-heading">
             <span>#{{ instruction.index }}</span>
-            <strong>Encoded instruction</strong>
+            <strong>{{ $t('studio.instructionPresentation.card.encodedInstruction') }}</strong>
           </div>
           <pre>{{ instruction.encoded }}</pre>
         </template>
@@ -98,9 +122,7 @@ function fieldTestId(field: InstructionPresentationField): string {
   padding: size(2.5);
   border: 1px solid color-mix(in srgb, theme-color('primary') 28%, theme-color('border-primary'));
   border-radius: size(1.5);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, theme-color('primary') 9%, transparent), transparent 55%),
-    theme-color('background-hover');
+  background: theme-color('surface');
   color: theme-color('content-primary');
 
   &_compact {

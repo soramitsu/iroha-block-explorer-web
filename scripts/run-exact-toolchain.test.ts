@@ -8,6 +8,7 @@ import {
   realpathSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { homedir, tmpdir } from 'node:os';
@@ -23,15 +24,18 @@ import {
   TAIRA_RELEASE_ATTESTATION_NONCE_ENV,
   TAIRA_GIT_VERIFY_GNUPGHOME_ENV,
   TAIRA_GIT_VERIFY_GPG_ENV,
+  TAIRA_RELEASE_SIGNER_FINGERPRINT,
   TAIRA_RELEASE_TOOL_PATH,
   assertRequiredPnpmVersion,
   createTairaReleaseAttestation,
   executeExactToolchainCommand,
   prepareTairaGitVerification,
   resolveNodeArtifact,
+  resolvePlaywrightBrowsersPath,
   resolveToolchainCache,
   sanitizedExactToolchainEnvironment,
   sanitizedTairaReleaseEnvironment,
+  validatePlaywrightBrowserCacheDirectory,
   validateToolchainCacheDirectory,
 } from './run-exact-toolchain.mjs';
 
@@ -48,6 +52,39 @@ function privateTemporaryParent() {
   chmodSync(parent, 0o700);
   cleanupRoots.push(parent);
   return parent;
+}
+
+function installHermeticGpgFixture(parent: string): string {
+  const executable = path.join(parent, 'fixture-gpg');
+  writeFileSync(
+    executable,
+    [
+      '#!/bin/sh',
+      'mode=',
+      'output=',
+      'while [ "$#" -gt 0 ]; do',
+      '  case "$1" in',
+      '    --dearmor) mode=dearmor; shift ;;',
+      '    --list-keys) mode=list; shift ;;',
+      '    --output) output=$2; shift 2 ;;',
+      '    *) shift ;;',
+      '  esac',
+      'done',
+      'if [ "$mode" = dearmor ]; then',
+      '  umask 077',
+      '  : > "$output"',
+      '  exit 0',
+      'fi',
+      'if [ "$mode" = list ]; then',
+      '  printf "pub:::::::::\\nfpr:::::::::%s:\\n" ' + JSON.stringify(TAIRA_RELEASE_SIGNER_FINGERPRINT),
+      '  exit 0',
+      'fi',
+      'exit 97',
+      '',
+    ].join('\n'),
+    { mode: 0o700 }
+  );
+  return realpathSync(executable);
 }
 
 describe('exact CI toolchain bootstrap', () => {
@@ -156,6 +193,43 @@ describe('exact CI toolchain bootstrap', () => {
     await expect(validateToolchainCacheDirectory(linkedCache)).rejects.toThrow('must be a real directory');
   });
 
+  it('persists Playwright payloads in an owner-private exact-toolchain cache', async () => {
+    const parent = privateTemporaryParent();
+    const cache = path.join(parent, 'cache');
+    const browserCache = await validatePlaywrightBrowserCacheDirectory(cache);
+
+    expect(browserCache).toBe(path.join(cache, 'ms-playwright'));
+    expect(lstatSync(browserCache).mode & 0o777).toBe(0o700);
+
+    chmodSync(browserCache, 0o755);
+    await expect(validatePlaywrightBrowserCacheDirectory(cache)).rejects.toThrow(
+      'Playwright browser cache must have mode 0700'
+    );
+
+    rmSync(browserCache, { recursive: true });
+    const linkedTarget = path.join(parent, 'browser-target');
+    mkdirSync(linkedTarget, { mode: 0o700 });
+    symlinkSync(linkedTarget, browserCache);
+    await expect(validatePlaywrightBrowserCacheDirectory(cache)).rejects.toThrow(
+      'Playwright browser cache must be a real directory'
+    );
+  });
+
+  it('resolves an unset browser path to the persistent cache and preserves an explicit image path', async () => {
+    const parent = privateTemporaryParent();
+    const cache = path.join(parent, 'cache');
+    await expect(resolvePlaywrightBrowsersPath({}, cache)).resolves.toBe(
+      path.join(cache, 'ms-playwright')
+    );
+    await expect(
+      resolvePlaywrightBrowsersPath(
+        { PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright' },
+        path.join(parent, 'unused-cache')
+      )
+    ).resolves.toBe('/ms-playwright');
+    expect(existsSync(path.join(parent, 'unused-cache'))).toBe(false);
+  });
+
   it('makes the shell-first boundary reject broad and permissive caches before Node starts', () => {
     const bootstrap = path.resolve('scripts/bootstrap-exact-toolchain.sh');
     const broadResult = spawnSync('sh', [bootstrap, 'true'], {
@@ -255,6 +329,25 @@ describe('exact CI toolchain bootstrap', () => {
     });
   });
 
+  it('uses the persistent browser cache by default and preserves an explicit CI image cache', () => {
+    const options = {
+      corepackHome: '/private/cache/corepack',
+      nodeBin: '/verified-node/bin',
+      playwrightBrowsersPath: '/private/cache/ms-playwright',
+      toolBin: '/private/cache/tool-bin',
+    };
+    expect(
+      sanitizedExactToolchainEnvironment({ PATH: '/usr/bin' }, options)
+        .PLAYWRIGHT_BROWSERS_PATH
+    ).toBe('/private/cache/ms-playwright');
+    expect(
+      sanitizedExactToolchainEnvironment(
+        { PATH: '/usr/bin', PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright' },
+        options
+      ).PLAYWRIGHT_BROWSERS_PATH
+    ).toBe('/ms-playwright');
+  });
+
   it.each([
     [
       'manifest',
@@ -342,7 +435,8 @@ describe('exact CI toolchain bootstrap', () => {
     chmodSync(toolRoot, 0o700);
     const environment: Record<string, string> = {};
     mkdirSync(path.join(toolRoot, 'home'), { mode: 0o700 });
-    await prepareTairaGitVerification({ environment, toolRoot });
+    const gpgExecutable = installHermeticGpgFixture(parent);
+    await prepareTairaGitVerification({ environment, toolRoot, gpgExecutable });
     const argv = ['rollback', `${'a'.repeat(12)}-${'b'.repeat(12)}`];
     const attestation = await createTairaReleaseAttestation({
       argv,
@@ -385,6 +479,12 @@ describe('exact CI toolchain bootstrap', () => {
     expect(dockerfile).toContain(`pnpm@${REQUIRED_PNPM_VERSION}+${REQUIRED_PNPM_INTEGRITY}`);
     expect(dockerfile).toContain('test "$(node --version)" = "v24.19.0"');
     expect(dockerfile).toContain('test "$(pnpm --version)" = "10.11.0"');
+    const sdkVerifyCopy = dockerfile.indexOf(
+      'COPY scripts/verify-iroha-sdk.mjs scripts/verify-iroha-sdk.mjs'
+    );
+    const frozenInstall = dockerfile.indexOf('RUN pnpm install --offline --frozen-lockfile');
+    expect(sdkVerifyCopy).toBeGreaterThanOrEqual(0);
+    expect(frozenInstall).toBeGreaterThan(sdkVerifyCopy);
     expect(dockerfile).not.toMatch(/^FROM (?:node|caddy):[^@\n]+$/gmu);
   });
 

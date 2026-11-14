@@ -2,9 +2,9 @@
  * Retrying is limited to uncredentialed, unsigned GET/HEAD requests, before a
  * response is handed to its consumer. Body errors never replay a request. */
 export interface ToriiRequestPolicy {
-  timeoutMs: number
-  retryCount: number
-  retryBaseDelayMs: number
+  timeoutMs: number;
+  retryCount: number;
+  retryBaseDelayMs: number;
 }
 export class RequestTimeoutError extends Error {
   constructor(timeoutMs: number) {
@@ -25,18 +25,25 @@ function cancelBody(response: Response, reason?: unknown): void {
 export function canRetryToriiRead(input: RequestInfo | URL, init: RequestInit): boolean {
   const request = typeof Request !== 'undefined' && input instanceof Request ? input : null;
   const method = (init.method ?? request?.method ?? 'GET').toUpperCase();
-  if (!['GET', 'HEAD'].includes(method) || [init.body, request?.body].some(body => body !== undefined && body !== null) ||
+  if (
+    !['GET', 'HEAD'].includes(method) ||
+    [init.body, request?.body].some((body) => body !== undefined && body !== null) ||
     (init.redirect ?? request?.redirect) === 'error' ||
-    (init.credentials ?? request?.credentials) === 'include') return false;
+    (init.credentials ?? request?.credentials) === 'include'
+  )
+    return false;
   return hasReplayableHeaders(new Headers(init.headers ?? request?.headers));
 }
 
 function hasReplayableHeaders(headers: Headers): boolean {
   let replayable = true;
   headers.forEach((_value, name) => {
-    if (['authorization', 'proxy-authorization', 'cookie', 'idempotency-key'].includes(name) ||
+    if (
+      ['authorization', 'proxy-authorization', 'cookie', 'idempotency-key'].includes(name) ||
       name.startsWith('x-iroha-') ||
-      ['x-api-key', 'x-api-token'].includes(name)) replayable = false;
+      ['x-api-key', 'x-api-token'].includes(name)
+    )
+      replayable = false;
   });
   return replayable;
 }
@@ -55,9 +62,19 @@ function validatePolicy(policy: ToriiRequestPolicy): void {
 
 function waitForRetry(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (signal.aborted) { reject(abortReason(signal)); return; }
-    const onAbort = () => { clearTimeout(timer); signal.removeEventListener('abort', onAbort); reject(abortReason(signal)); };
-    const timer = setTimeout(() => { signal.removeEventListener('abort', onAbort); resolve(); }, ms);
+    if (signal.aborted) {
+      reject(abortReason(signal));
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
+      reject(abortReason(signal));
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
     signal.addEventListener('abort', onAbort, { once: true });
   });
 }
@@ -66,47 +83,75 @@ function waitForRetry(ms: number, signal: AbortSignal): Promise<void> {
  * the real fetch still receives the combined signal and is actually aborted. */
 function requestHeaders(input: RequestInfo | URL, init: RequestInit, signal: AbortSignal): Promise<Response> {
   return new Promise((resolve, reject) => {
-    if (signal.aborted) { reject(abortReason(signal)); return; }
+    if (signal.aborted) {
+      reject(abortReason(signal));
+      return;
+    }
     let settled = false;
-    const onAbort = () => { settled = true; reject(abortReason(signal)); };
+    const onAbort = () => {
+      settled = true;
+      reject(abortReason(signal));
+    };
     signal.addEventListener('abort', onAbort, { once: true });
-    Promise.resolve().then(() => {
-      if (signal.aborted) throw abortReason(signal);
-      return fetch(input, { ...init, signal });
-    }).then(response => {
-      signal.removeEventListener('abort', onAbort);
-      if (settled || signal.aborted) { cancelBody(response, abortReason(signal)); return; }
-      settled = true; resolve(response);
-    }, error => {
-      signal.removeEventListener('abort', onAbort);
-      if (settled) return;
-      settled = true; reject(signal.aborted ? abortReason(signal) : error);
-    });
+    Promise.resolve()
+      .then(() => {
+        if (signal.aborted) throw abortReason(signal);
+        return fetch(input, { ...init, signal });
+      })
+      .then(
+        (response) => {
+          signal.removeEventListener('abort', onAbort);
+          if (settled || signal.aborted) {
+            cancelBody(response, abortReason(signal));
+            return;
+          }
+          settled = true;
+          resolve(response);
+        },
+        (error) => {
+          signal.removeEventListener('abort', onAbort);
+          if (settled) return;
+          settled = true;
+          reject(signal.aborted ? abortReason(signal) : error);
+        }
+      );
   });
 }
 
 function retainResponseMetadata(target: Response, source: Response): Response {
   Object.defineProperties(target, {
-    url: { value: source.url }, redirected: { value: source.redirected }, type: { value: source.type },
+    url: { value: source.url },
+    redirected: { value: source.redirected },
+    type: { value: source.type },
     clone: { value: () => retainResponseMetadata(Response.prototype.clone.call(target), source) },
   });
   return target;
 }
 
 function deadlineResponse(response: Response, controller: AbortController, cleanup: () => void): Response {
-  if (!response.body) { cleanup(); return response; }
+  if (!response.body) {
+    cleanup();
+    return response;
+  }
   const reader = response.body.getReader();
   const signal = controller.signal;
   let ended = false;
   let output: ReadableStreamDefaultController<Uint8Array>;
   const finish = () => {
     if (ended) return;
-    ended = true; signal.removeEventListener('abort', onAbort); cleanup();
+    ended = true;
+    signal.removeEventListener('abort', onAbort);
+    cleanup();
   };
-  const cancelReader = (reason: unknown) => { reader.cancel(reason).catch(() => {}); };
+  const cancelReader = (reason: unknown) => {
+    reader.cancel(reason).catch(() => {});
+  };
   const onAbort = () => {
     if (ended) return;
-    const reason = abortReason(signal); output.error(reason); finish(); cancelReader(reason);
+    const reason = abortReason(signal);
+    output.error(reason);
+    finish();
+    cancelReader(reason);
   };
   const stream = new ReadableStream<Uint8Array>({
     start(streamController) {
@@ -119,27 +164,43 @@ function deadlineResponse(response: Response, controller: AbortController, clean
       try {
         const result = await reader.read();
         if (ended) return;
-        if (signal.aborted) { onAbort(); return; }
-        if (result.done) { output.close(); finish(); }
-        else output.enqueue(result.value);
+        if (signal.aborted) {
+          onAbort();
+          return;
+        }
+        if (result.done) {
+          output.close();
+          finish();
+        } else output.enqueue(result.value);
       } catch (error) {
         if (ended) return;
-        output.error(signal.aborted ? abortReason(signal) : error); finish(); cancelReader(error);
+        output.error(signal.aborted ? abortReason(signal) : error);
+        finish();
+        cancelReader(error);
       }
     },
     cancel(reason) {
       if (ended) return;
-      finish(); controller.abort(reason); cancelReader(reason);
+      finish();
+      controller.abort(reason);
+      cancelReader(reason);
     },
   });
-  return retainResponseMetadata(new Response(stream, {
-    status: response.status, statusText: response.statusText, headers: response.headers,
-  }), response);
+  return retainResponseMetadata(
+    new Response(stream, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    }),
+    response
+  );
 }
 
 /** One deadline bounds all attempts, backoff, and the final response body. */
 export async function fetchToriiWithDeadline(
-  input: RequestInfo | URL, init: RequestInit, policy: ToriiRequestPolicy,
+  input: RequestInfo | URL,
+  init: RequestInit,
+  policy: ToriiRequestPolicy
 ): Promise<Response> {
   validatePolicy(policy);
   const request = typeof Request !== 'undefined' && input instanceof Request ? input : null;
@@ -150,7 +211,10 @@ export async function fetchToriiWithDeadline(
   const onCallerAbort = () => controller.abort(caller ? abortReason(caller) : undefined);
   caller?.addEventListener('abort', onCallerAbort, { once: true });
   const timer = setTimeout(() => controller.abort(new RequestTimeoutError(policy.timeoutMs)), policy.timeoutMs);
-  const cleanup = () => { clearTimeout(timer); caller?.removeEventListener('abort', onCallerAbort); };
+  const cleanup = () => {
+    clearTimeout(timer);
+    caller?.removeEventListener('abort', onCallerAbort);
+  };
   try {
     for (let attempt = 0; ; attempt++) {
       let response: Response;
@@ -164,7 +228,10 @@ export async function fetchToriiWithDeadline(
         await waitForRetry(policy.retryBaseDelayMs * (attempt + 1), controller.signal);
         continue;
       }
-      if (controller.signal.aborted) { cancelBody(response, abortReason(controller.signal)); throw abortReason(controller.signal); }
+      if (controller.signal.aborted) {
+        cancelBody(response, abortReason(controller.signal));
+        throw abortReason(controller.signal);
+      }
       if (attempt < retries && RETRY_STATUSES.has(response.status)) {
         cancelBody(response);
         await waitForRetry(policy.retryBaseDelayMs * (attempt + 1), controller.signal);
@@ -173,6 +240,7 @@ export async function fetchToriiWithDeadline(
       return deadlineResponse(response, controller, cleanup);
     }
   } catch (error) {
-    cleanup(); throw error;
+    cleanup();
+    throw error;
   }
 }

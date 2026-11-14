@@ -1,11 +1,5 @@
 <template>
-  <a
-    v-if="isExternalLink"
-    :href="externalHref"
-    target="_blank"
-    rel="noopener noreferrer"
-    class="base-link"
-  >
+  <a v-if="isExternalLink" :href="externalHref" target="_blank" rel="noopener noreferrer" class="base-link">
     <slot />
   </a>
   <router-link
@@ -24,13 +18,12 @@ import { computed } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { applyExplorerScopeToLocation } from '@/shared/lib/explorer-scope';
 import { useCurrentExplorerScope } from '@/shared/ui/composables/useExplorerScopeNavigation';
-import { getToriiBaseUrl } from '@/shared/api';
 import { normalizeAccountRoutePath } from '@/shared/lib/account-id';
 
 interface Props {
-  to: RouteLocationRaw
-  monospace?: boolean
-  customFont?: boolean
+  to: RouteLocationRaw;
+  monospace?: boolean;
+  customFont?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -43,7 +36,7 @@ const isExternalLink = computed(() => {
 const normalizedTo = computed<RouteLocationRaw>(() => {
   if (typeof props.to !== 'string') return props.to;
   if (isExternalLink.value) return props.to;
-  return normalizeAccountRoutePath(props.to, scope.value?.torii ?? getToriiBaseUrl());
+  return normalizeAccountRoutePath(props.to);
 });
 
 const externalHref = computed(() => (typeof normalizedTo.value === 'string' ? normalizedTo.value : ''));

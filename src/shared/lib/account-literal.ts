@@ -74,18 +74,8 @@ export function normalizeAccountAliasLiteral(value: string): string | null {
   return parseAccountAliasLiteral(value)?.literal ?? null;
 }
 
-export function normalizeAccountSelectorLiteral(value: string): string | null {
-  return normalizeAccountIdLiteral(value) ?? normalizeAccountAliasLiteral(value);
-}
-
-export function normalizeDisplayedAccountSelectorLiteral(value: string, _toriiBaseUrl?: string | null): string | null {
-  const accountId = normalizeAccountIdLiteral(value);
-  if (accountId) return accountId;
-
-  return normalizeAccountAliasLiteral(value);
-}
-
-export function normalizeToriiAccountSelectorLiteral(value: string, _toriiBaseUrl?: string | null): string | null {
+/** Exact selector accepted only by Torii's explicit multisig account APIs. */
+export function normalizeToriiAccountSelectorLiteral(value: string): string | null {
   const accountId = normalizeAccountIdLiteral(value);
   if (accountId) return accountId;
 
@@ -96,16 +86,8 @@ export function isEncodedAccountLiteral(value: string): boolean {
   return normalizeAccountIdLiteral(value) !== null;
 }
 
-export function isAccountSelectorLiteral(value: string): boolean {
-  return normalizeAccountSelectorLiteral(value) !== null;
-}
-
 export function normalizeEncodedAccountLiteral(value: string): string | null {
   return normalizeAccountIdLiteral(value.trim());
-}
-
-export function normalizeLooseAccountLiteral(value: string): string | null {
-  return normalizeAccountSelectorLiteral(value);
 }
 
 export function isEncodedAssetLiteral(value: string): boolean {

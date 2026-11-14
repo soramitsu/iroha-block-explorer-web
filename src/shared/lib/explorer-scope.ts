@@ -19,6 +19,7 @@ export interface ExplorerRouteScope {
 }
 
 const SCOPED_EXPLORER_ROUTE_NAMES = new Set<RouteRecordName>([
+  'home',
   'blocks-list',
   'blocks-details',
   'assets',
@@ -35,6 +36,9 @@ const SCOPED_EXPLORER_ROUTE_NAMES = new Set<RouteRecordName>([
   'transaction-details',
   'search-results',
   'tracing-workspace',
+  'dashboard-network',
+  'dashboard-activity',
+  'dashboard-ledger',
   'econometrics',
   'telemetry',
   'kaigi-relays',
@@ -42,7 +46,7 @@ const SCOPED_EXPLORER_ROUTE_NAMES = new Set<RouteRecordName>([
   'smart-contracts',
   'soracloud',
   'sorafs-registry',
-  'zk-telemetry',
+  'zk-registry',
 ]);
 
 const SCOPED_EXPLORER_PATH_PREFIXES = [
@@ -55,6 +59,7 @@ const SCOPED_EXPLORER_PATH_PREFIXES = [
   '/transactions',
   '/search',
   '/tracing',
+  '/dashboards',
   '/econometrics',
   '/telemetry',
   '/kaigi',
@@ -133,7 +138,7 @@ export function shouldPreserveExplorerScopeForPath(path: string): boolean {
   if (isExternalHref(path)) return false;
 
   const normalizedPath = normalizePath(path);
-  if (normalizedPath === '/') return false;
+  if (normalizedPath === '/') return true;
 
   return SCOPED_EXPLORER_PATH_PREFIXES.some(
     (prefix) => normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`)

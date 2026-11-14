@@ -90,9 +90,5 @@ const props = withDefaults(
       word-break: break-all;
     }
   }
-
-  &__value span:hover ~ .context-tooltip {
-    display: flex;
-  }
 }
 </style>

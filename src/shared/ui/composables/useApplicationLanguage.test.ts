@@ -69,33 +69,31 @@ describe('useApplicationLanguage', () => {
     expect(document.body.classList.contains('rtl')).toBe(false);
   });
 
-  it('keeps old Akkadian locale as LTR while applying lang attribute', async () => {
+  it.each(['akk', 'egy'])('normalizes unreviewed ancient locale %s to English', async (ancientLocale) => {
     const wrapper = mount(TestComponent, {
       global: { plugins: [i18n] },
     });
 
     const composable = wrapper.vm as any;
-    await composable.setApplicationCurrency('akk');
+    await composable.setApplicationCurrency(ancientLocale);
     await nextTick();
 
-    expect(composable.language).toBe('akk');
-    expect(document.documentElement.lang).toBe('akk');
+    expect(composable.language).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
     expect(document.documentElement.dir).toBe('ltr');
     expect(document.body.classList.contains('rtl')).toBe(false);
   });
 
-  it('keeps ancient Egyptian locale as LTR while applying lang attribute', async () => {
+  it('normalizes an unsupported saved locale to English', async () => {
     const wrapper = mount(TestComponent, {
       global: { plugins: [i18n] },
     });
 
     const composable = wrapper.vm as any;
-    await composable.setApplicationCurrency('egy');
+    await composable.setApplicationCurrency('not-a-locale');
     await nextTick();
 
-    expect(composable.language).toBe('egy');
-    expect(document.documentElement.lang).toBe('egy');
-    expect(document.documentElement.dir).toBe('ltr');
-    expect(document.body.classList.contains('rtl')).toBe(false);
+    expect(composable.language).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
   });
 });

@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  ContractActivity,
-  ContractActivityResponse,
-  ContractEvent,
-  ContractEventResponse,
-} from './schemas';
+import { ContractActivity, ContractActivityResponse, ContractEvent, ContractEventResponse } from './schemas';
 
 const activity = {
   entrypoint_hash: 'tx-hash',
@@ -34,12 +29,17 @@ describe('contract activity schemas', () => {
     expect(ContractActivity.parse(activity).contract_payload).toEqual(activity.contract_payload);
   });
 
-  it.each([null, 'opaque-contract-continuation'])('accepts native activity collections with cursor %s and no fabricated total', (nextCursor) => {
-    const parsed = ContractActivityResponse.parse({ items: [activity], nextCursor });
-    expect(parsed).toEqual({ items: [activity], nextCursor });
-    expect(parsed).not.toHaveProperty('total');
-    expect(() => ContractActivityResponse.parse({ items: [], total: 0, has_more: false, count_mode: 'exact' })).toThrow();
-  });
+  it.each([null, 'opaque-contract-continuation'])(
+    'accepts native activity collections with cursor %s and no fabricated total',
+    (nextCursor) => {
+      const parsed = ContractActivityResponse.parse({ items: [activity], nextCursor });
+      expect(parsed).toEqual({ items: [activity], nextCursor });
+      expect(parsed).not.toHaveProperty('total');
+      expect(() =>
+        ContractActivityResponse.parse({ items: [], total: 0, has_more: false, count_mode: 'exact' })
+      ).toThrow();
+    }
+  );
 
   it('rejects camelCase aliases instead of decoding a second shape', () => {
     expect(() => ContractActivity.parse({ ...activity, contractPayload: {} })).toThrow();

@@ -3,7 +3,6 @@ import { flushPromises, mount } from '@vue/test-utils';
 import LatestTransactions from './LatestTransactions.vue';
 import { i18n } from '@/shared/lib/localization';
 import { ref, defineComponent } from 'vue';
-import { historyCacheKey } from '@/shared/lib/history-cache';
 
 const SAMPLE_I105 = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
 
@@ -228,33 +227,10 @@ describe('LatestTransactions', () => {
     expect(badge.text()).toContain(i18n.global.t('telemetry.dataUnknown'));
   });
 
-  it('labels recent cached data as stale during an outage', async () => {
-    mocks.availability = 'outage';
-    mocks.setupState.data.status = 'unknown-error';
-    cache.set(historyCacheKey('latest-transactions', mocks.networkId, mocks.toriiUrl)!, JSON.stringify({
-      version: 1,
-      updated_at_ms: Date.now(),
-      items: [{
-        authority: SAMPLE_I105,
-        hash: '0xcached',
-        block: 1,
-        created_at: new Date(),
-        executable: 'Instructions',
-        status: 'Committed',
-      }],
-    }));
-    const wrapper = factory();
-    await flushPromises();
-    expect(wrapper.find('.latest-transactions__row').exists()).toBe(true);
-    const badge = wrapper.get('[data-test="latest-transactions-freshness"]');
-    expect(badge.attributes('data-tone')).toBe('stale');
-    expect(badge.text()).toContain(i18n.global.t('telemetry.dataStale'));
-  });
-
   it.each([
     'latest_transactions_cache_v2',
-    historyCacheKey('latest-transactions', mocks.networkId, 'https://another.example')!,
-    historyCacheKey('latest-transactions', `hash:${'11'.repeat(32)}#4667`, mocks.toriiUrl)!,
+    'retired-history-cache'!,
+    'retired-history-cache'!,
   ])('does not show another ledger cache as current history: %s', async (key) => {
     cache.set(key, JSON.stringify({
       version: 1,

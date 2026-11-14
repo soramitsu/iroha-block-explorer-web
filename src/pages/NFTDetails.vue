@@ -48,10 +48,10 @@ const nftDisplayName = computed(() => NFTId.value.split('$')[0] ?? NFTId.value);
       <template #default>
         <BaseResourceState
           :snapshot="nftSnapshot"
-          loading-label="Loading NFT"
-          not-found-label="NFT not found"
-          error-label="NFT could not be loaded"
-          retry-label="Retry NFT"
+          :loading-label="$t('assets.resource.loadingNft')"
+          :not-found-label="$t('assets.resource.nftNotFound')"
+          :error-label="$t('assets.resource.nftLoadError')"
+          :retry-label="$t('assets.resource.retryNft')"
           @retry="NFTScope.expose.refetch()"
         >
           <div v-if="NFT">

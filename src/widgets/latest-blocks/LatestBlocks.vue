@@ -67,7 +67,7 @@
               <TimeStamp :value="block.created_at" />
             </div>
 
-            <span class="latest-blocks__row-number row-text-monospace">{{ block.transactions_total }} txns</span>
+            <span class="latest-blocks__row-number row-text-monospace">{{ $t('widgets.transactionCount', { count: block.transactions_total }) }}</span>
           </div>
         </template>
       </div>

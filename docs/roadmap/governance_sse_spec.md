@@ -1,34 +1,30 @@
-# Governance SSE Requirements
+# Governance Explorer Authentication Boundary
 
-## Goal
-Provide a single Torii EventSource endpoint that pushes governance mutations so the Explorer can keep the dashboard panels (council, unlock stats, referenda, locks, tally, proposals) in sync without manual refreshes.
+This document supersedes the pre-release anonymous governance-dashboard proposal. Current Torii exposes
+`/v1/gov/stream` as a canonical-account-authenticated SSE protocol route, not as a public Explorer synchronization
+contract. The first-release public Explorer has no signing context and therefore does not open that stream.
 
-## Endpoint
-`GET /v1/gov/stream`
+## Current contract
 
-- Transport: SSE (text/event-stream)
-- Authentication: same as other `/v1/gov/*` handlers
-- Rate limiting: reuse explorer stream bucket
+- `/v1/gov/capabilities` requires canonical account authentication. Its response describes network governance
+  readiness and supported routes; it does not grant or report the caller's authorization.
+- `/v1/gov/stream` requires canonical account authentication and streams governance events only after that exact
+  admission check.
+- Other `/v1/gov/*` reads and writes enforce their current canonical-account, witness, or operator policy in Torii.
+- The retired `/v1/gov/council/current` route is not queried.
+- The public Explorer does not embed signing keys, issue unsigned protected reads, poll deprecated routes, or translate
+  `401`/`403` into empty governance state.
 
-## Events
-Each SSE message MUST be a JSON object with a `kind` discriminator.
+Canonical single-signature requests bind the exact account, signature, timestamp, nonce, method, path/query, body, and
+`NetworkId`. Multisig requests additionally carry the current witness contract. Signing belongs in an authenticated
+wallet/workspace, not in a static public dashboard.
 
-| Kind | Payload | Consumer action |
-| --- | --- | --- |
-| `CouncilUpdated` | `{ epoch: u64, members: [AccountId] }` | Refetch `/gov/council/current` |
-| `UnlockStatsUpdated` | `{ height_current, expired_locks_now, referenda_with_expired, last_sweep_height }` | Refetch `/gov/unlocks/stats` |
-| `ReferendumUpdated` | `{ id: ReferendumId }` | If the dashboard currently displays this referendum, refetch `/gov/referenda/{id}` |
-| `LocksUpdated` | `{ referendum_id: ReferendumId }` | If open, refetch `/gov/locks/{id}` |
-| `TallyUpdated` | `{ referendum_id: ReferendumId }` | If open, refetch `/gov/tally/{id}` |
-| `ProposalUpdated` | `{ id: ProposalId }` | If open, refetch `/gov/proposals/{id}` |
+## Explorer behavior
 
-Fields can be extended with summaries, but the `*_id` properties MUST be strings (matching the REST ids) so the Explorer can route updates.
+`GovernanceDashboard.vue` documents this boundary and the current route semantics. The deleted
+`useGovernanceEvents`/`useGovernanceMetrics` anonymous dashboard path is not a supported public capability.
 
-## Explorer handling
-- `src/shared/ui/composables/useGovernanceEvents.ts` owns the shared EventSource instance.
-- `useGovernanceMetrics` listens for `CouncilUpdated`/`UnlockStatsUpdated` and refetches the cached REST responses.
-- `GovernanceDashboard.vue` subscribes to the same stream to refetch the currently inspected referendum/proposal.
-
-## Open Items
-- Torii must emit the new `ReferendumUpdated`, `LocksUpdated`, `TallyUpdated`, and `ProposalUpdated` events.
-- Once Torii ships the events, add smoke coverage for the dashboard to ensure the auto-refresh path triggers without user input.
+If an authenticated governance workspace is added later, it must use the current browser SDK signing primitives and
+strict response DTOs, keep secrets outside persisted/browser configuration, and test every permission and replay path.
+It must consume the current authenticated `/v1/gov/stream` contract directly and must not revive any retired route or
+unsigned compatibility path.

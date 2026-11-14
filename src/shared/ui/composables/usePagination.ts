@@ -16,6 +16,14 @@ export function computeDisplayRange(params: {
       total: 0,
     };
 
+  if (!params.reversed && params.items === 0 && (params.page - 1) * params.pageSize >= params.totalItems) {
+    return {
+      start: 0,
+      end: 0,
+      total: params.totalItems,
+    };
+  }
+
   const start = (params.page - 1) * params.pageSize + 1;
   const end = params.page * params.pageSize;
 

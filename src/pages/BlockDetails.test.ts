@@ -9,13 +9,17 @@ const route = ref({ params: { heightOrHash: '42' } });
 const push = vi.fn().mockResolvedValue(undefined);
 const refetch = vi.fn();
 const expose = ref<any>();
+const scopeParamSpy = vi.hoisted(() => vi.fn());
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ currentRoute: route }),
 }));
 
 vi.mock('@vue-kakuyaku/core', () => ({
-  useParamScope: () => ref({ expose: expose.value }),
+  useParamScope: (param: { value: unknown }) => {
+    scopeParamSpy(param.value);
+    return ref({ expose: expose.value });
+  },
 }));
 
 vi.mock('@/shared/ui/composables/useExplorerScopeNavigation', () => ({
@@ -60,6 +64,7 @@ describe('BlockDetails resource states', () => {
   beforeEach(() => {
     push.mockClear();
     refetch.mockClear();
+    scopeParamSpy.mockClear();
     route.value = { params: { heightOrHash: '42' } };
     expose.value = {
       isLoading: false,
@@ -85,6 +90,15 @@ describe('BlockDetails resource states', () => {
       name: 'blocks-details',
       params: { heightOrHash: 43 },
     });
+  });
+
+  it('passes the exact route selector to the strict API boundary without numeric coercion', () => {
+    route.value = { params: { heightOrHash: '042' } };
+
+    mountPage();
+
+    expect(scopeParamSpy).toHaveBeenCalledWith('042');
+    expect(scopeParamSpy).not.toHaveBeenCalledWith(42);
   });
 
   it('renders not-found explicitly instead of a blank detail page', async () => {
@@ -117,5 +131,31 @@ describe('BlockDetails resource states', () => {
     expect(refetch).not.toHaveBeenCalled();
     await wrapper.get('[data-test="resource-retry"]').trigger('click');
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a hash-only committed-journal record as body-unavailable rather than an empty block', async () => {
+    const hashOnlyBlock = {
+      ...block,
+      created_at: null,
+      transactions_hash: null,
+      transactions_rejected: 0,
+      transactions_total: 0,
+    };
+    expose.value = {
+      isLoading: false,
+      data: { status: SUCCESSFUL_FETCHING, data: hashOnlyBlock },
+      snapshot: { status: 'ready', data: { status: SUCCESSFUL_FETCHING, data: hashOnlyBlock } },
+      refetch,
+    };
+
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(wrapper.get('[data-test="block-created-at"]').text()).toContain(
+      i18n.global.t('telemetry.dataUnknown')
+    );
+    expect(wrapper.find('[data-test="block-body-unavailable"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="block-empty"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="transactions-table"]').exists()).toBe(false);
   });
 });

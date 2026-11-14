@@ -22,7 +22,7 @@
       <button
         type="button"
         class="app-notifications__close"
-        aria-label="Dismiss notification"
+          :aria-label="$t('accessibility.dismissNotification')"
         @click="noti.close(item.id)"
       >
         <CloseIcon aria-hidden="true" />

@@ -1,345 +1,138 @@
 <template>
-  <label
+  <div
     class="search-field"
     :data-size="size"
-    :data-focused="isFocused || null"
   >
-    <SearchIcon class="search-field__icon" />
-
-    <input
-      :id="inputId"
-      v-model="request"
-      type="search"
-      :placeholder="props.placeholder"
-      class="search-field__input"
-      @keyup.enter="submit"
+    <form
+      role="search"
+      :aria-label="$t('ux.searchLabel')"
+      @submit.prevent="submit"
     >
-  </label>
+      <SearchIcon
+        class="search-field__icon"
+        aria-hidden="true"
+        focusable="false"
+      />
+      <input
+        :id="inputId"
+        v-model="request"
+        type="search"
+        :aria-label="$t('ux.searchLabel')"
+        :placeholder="placeholder ?? $t('ux.searchPlaceholder')"
+        :aria-invalid="error ? true : undefined"
+        :aria-describedby="error ? `${inputId}-error` : undefined"
+        @input="error = ''"
+      >
+      <button
+        v-if="request"
+        type="button"
+        class="icon-button"
+        :aria-label="$t('ux.clearSearch')"
+        @click="clear"
+      >
+        <svg
+          aria-hidden="true"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        ><path d="m6 6 12 12M6 18 18 6" /></svg>
+      </button>
+      <button
+        type="submit"
+        class="search-field__submit"
+      >
+        {{ $t('search') }}
+      </button>
+      <details class="search-field__help">
+        <summary :aria-label="$t('ux.searchHelp')">
+          ?
+        </summary>
+        <div><strong>{{ $t('ux.searchHelp') }}</strong><p>{{ $t('ux.searchSyntax') }}</p></div>
+      </details>
+    </form>
+    <p
+      v-if="error"
+      :id="`${inputId}-error`"
+      class="search-field__error"
+      role="alert"
+    >
+      {{ $t(error) }}
+    </p>
+  </div>
 </template>
 
 <script setup lang="ts">
 import SearchIcon from '@soramitsu-ui/icons/icomoon/basic-search-24.svg';
-import { ref, computed, useId } from 'vue';
-import { useActiveElement } from '@vueuse/core';
-import { useNotifications } from '@/shared/ui/composables/notifications';
-import { useI18n } from 'vue-i18n';
+import { ref, useId } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 import { classifySearchQuery } from './classifier';
 
-interface Props {
-  size?: 'sm' | 'md' | 'lg'
-  placeholder?: string
+defineProps<{ size?: 'sm' | 'md' | 'lg', placeholder?: string }>();
+const emit = defineEmits<{ submit: [value: string] }>();
+const navigation = useScopedExplorerNavigation();
+const inputId = useId();
+const request = ref('');
+const error = ref('');
+
+function clear() {
+  request.value = '';
+  error.value = '';
+  document.getElementById(inputId)?.focus();
 }
 
-const props = defineProps<Props>();
-const emit = defineEmits<(e: 'submit', value: string) => void>();
-
-const navigation = useScopedExplorerNavigation();
-const notifications = useNotifications();
-const { t } = useI18n({ useScope: 'global' });
-
-const request = ref('');
-
-const inputId = useId();
-const activeElement = useActiveElement();
-const isFocused = computed(() => activeElement.value?.id === inputId);
-
-function submit() {
+async function submit() {
   const value = request.value.trim();
   emit('submit', value);
-  if (!value) return;
-  if (resolveNavigation(value)) {
-    request.value = '';
+  const result = classifySearchQuery(value);
+  if (result.kind === 'unsupported') {
+    error.value = 'ux.searchInvalid';
     return;
   }
-  notifications.error(t('searchUnsupported'));
-}
-
-function resolveNavigation(value: string): boolean {
-  const result = classifySearchQuery(value);
-
+  let to: RouteLocationRaw;
   switch (result.kind) {
-    case 'hash':
-      navigateTo({ name: 'search-results', query: { q: result.value } });
-      return true;
-    case 'rwa':
-      navigateTo({ name: 'rwa-details', params: { id: result.value } });
-      return true;
-    case 'nft':
-      navigateTo({ name: 'nft-details', params: { id: result.value } });
-      return true;
-    case 'account':
-      navigateTo({ name: 'account-details', params: { id: result.value } });
-      return true;
-    case 'asset-definition':
-      navigateTo({ name: 'asset-details', params: { id: result.value } });
-      return true;
-    case 'domain':
-      navigateTo({ name: 'domain-details', params: { id: result.value } });
-      return true;
-    case 'block-height':
-      navigateTo({ name: 'blocks-details', params: { heightOrHash: result.value } });
-      return true;
-    case 'unsupported':
-      return false;
+    case 'hash': to = { name: 'search-results', query: { q: result.value } }; break;
+    case 'block-height': to = { name: 'blocks-details', params: { heightOrHash: result.value } }; break;
+    case 'account': to = { name: 'account-details', params: { id: result.value } }; break;
+    case 'asset-definition': to = { name: 'asset-details', params: { id: result.value } }; break;
+    case 'nft': to = { name: 'nft-details', params: { id: result.value } }; break;
+    case 'rwa': to = { name: 'rwa-details', params: { id: result.value } }; break;
+    case 'domain': to = { name: 'domain-details', params: { id: result.value } }; break;
   }
-}
-
-function navigateTo(to: RouteLocationRaw) {
-  const result = navigation.push(to);
-  if (result && typeof result.catch === 'function') {
-    result.catch(() => {});
+  error.value = '';
+  try {
+    const failure = await navigation.push(to);
+    if (request.value.trim() !== value) return;
+    if (failure) error.value = 'ux.searchFailed';
+    else request.value = '';
+  } catch {
+    if (request.value.trim() === value) error.value = 'ux.searchFailed';
   }
 }
 </script>
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
-
 .search-field {
-  display: flex;
-  align-items: center;
-  transition:
-    color 300ms ease-in-out,
-    box-shadow 300ms ease-in-out,
-    border-color 300ms ease-in-out,
-    background-color 300ms ease-in-out;
-
-  input {
-    color: theme-color('content-primary');
-    background: transparent;
-    border: none;
-    width: 100%;
-
-    &:focus {
-      outline: none;
-    }
-
-    &::placeholder {
-      color: theme-color('content-primary');
-    }
-
-    &::-webkit-search-cancel-button {
-      -webkit-appearance: none;
-      height: 0;
-      width: 0;
-      opacity: 0;
-      pointer-events: none;
-    }
+  position: relative; min-width: 0; width: 100%;
+  form { display: flex; align-items: center; height: 44px; border: 1px solid theme-color('border-secondary'); border-radius: 8px; background: theme-color('surface'); }
+  form:focus-within { outline: 2px solid theme-color('primary'); outline-offset: 2px; }
+  &__icon { width: 20px; height: 20px; flex: 0 0 20px; margin-inline-start: 12px; color: theme-color('content-secondary'); fill: currentColor; }
+  input { min-width: 0; flex: 1; width: 100%; height: 42px; padding: 0 10px; background: transparent; border: 0; outline: none; color: theme-color('content-primary'); font: inherit; font-size: 14px;
+    &::placeholder { color: theme-color('content-secondary'); opacity: 1; }
+    &::-webkit-search-cancel-button { display: none; }
   }
-
-  path {
-    fill: theme-color('border-secondary');
+  &__submit { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 0 10px; border: 0; background: transparent; color: theme-color('primary'); cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; }
+  &__help {
+    summary { list-style: none; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer; color: theme-color('content-secondary'); }
+    summary::-webkit-details-marker { display: none; }
+    > div { position: absolute; inset-inline: 0; top: calc(100% + 8px); z-index: 50; padding: 16px; background: theme-color('surface'); border: 1px solid theme-color('border-secondary'); border-radius: 12px; font-size: 13px; line-height: 1.6; }
+    p { margin-top: 8px; }
   }
-
-  &[data-size='lg'] {
-    width: 100%;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, theme-color('background') 80%, transparent),
-      color-mix(in srgb, theme-color('surface') 90%, transparent)
-    );
-    border: 1px solid theme-color('border-secondary');
-    backdrop-filter: blur(8px);
-    height: size(6);
-    padding: 0 size(2);
-    border-radius: size(3);
-
-    @include xs {
-      height: size(8);
-      padding: 0 size(3.5);
-      border-radius: size(4);
-    }
-
-    @include md {
-      height: size(11);
-      padding: 0 size(3.5);
-      border-radius: size(5.5);
-    }
-
-    &:hover {
-      box-shadow: 0 10px 30px color-mix(in srgb, theme-color('primary') 5%, transparent);
-    }
-
-    &[data-focused] {
-      border-color: theme-color('primary');
-      box-shadow:
-        0 10px 30px color-mix(in srgb, theme-color('primary') 12%, transparent),
-        0 0 0 4px color-mix(in srgb, theme-color('primary') 12%, transparent);
-    }
-
-    input {
-      @include tpg-s5;
-
-      @include xs {
-        @include tpg-s3;
-      }
-
-      @include md {
-        @include tpg-s2;
-      }
-    }
-
-    svg {
-      display: block;
-      margin-inline-end: size(2);
-      height: size(2);
-      width: size(2);
-      transform: translateY(1px);
-
-      @include xs {
-        height: size(4);
-        width: size(4);
-      }
-    }
-  }
-
-  &[data-size='md'] {
-    display: flex;
-    height: size(6);
-    padding: 0 size(2);
-    border-radius: size(3);
-    @include shadow-input;
-
-    @include sm {
-      width: 280px;
-    }
-
-    @include md {
-      width: 300px;
-    }
-
-    @include lg {
-      width: 230px;
-    }
-
-    @include xl {
-      width: 330px;
-    }
-
-    @include xxl {
-      width: 439px;
-    }
-
-    &:hover {
-      @include shadow-input-active;
-    }
-
-    &[data-focused] {
-      @include shadow-input-active;
-    }
-
-    input {
-      @include tpg-s3;
-    }
-
-    svg {
-      margin-inline-end: size(1);
-    }
-  }
-
-  &[data-size='sm'] {
-    display: flex;
-    height: size(6);
-    padding: 0 size(2);
-    border-radius: size(3);
-    @include shadow-input;
-    width: 210px;
-
-    &:hover {
-      @include shadow-input-active;
-    }
-
-    &[data-focused] {
-      @include shadow-input-active;
-    }
-
-    input {
-      @include tpg-s3;
-    }
-
-    svg {
-      margin-inline-end: size(1);
-    }
-  }
-}
-
-:root[dir='rtl'] .search-field {
-  direction: rtl;
-
-  svg {
-    margin-inline-start: size(1);
-    margin-inline-end: 0;
-  }
-}
-
-html:not(.dark) .search-field {
-  path {
-    fill: theme-color('content-tertiary');
-  }
-
-  input::placeholder {
-    color: theme-color('content-secondary');
-  }
-
-  &[data-size='lg'] {
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, theme-color('surface') 97%, white),
-      color-mix(in srgb, theme-color('surface-variant') 93%, white)
-    );
-    border-color: color-mix(in srgb, theme-color('border-primary') 76%, white);
-    box-shadow:
-      theme-shadow('large-input-1'),
-      theme-shadow('large-input-2'),
-      inset 1px 1px 0 rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(10px) saturate(120%);
-
-    &:hover {
-      border-color: color-mix(in srgb, theme-color('primary') 18%, theme-color('border-primary'));
-      box-shadow:
-        20px 20px 42px rgba(181, 164, 143, 0.24),
-        -14px -14px 28px rgba(255, 255, 255, 0.92),
-        inset 1px 1px 0 rgba(255, 255, 255, 0.98);
-    }
-
-    &[data-focused] {
-      border-color: color-mix(in srgb, theme-color('primary') 50%, theme-color('border-secondary'));
-      box-shadow:
-        theme-shadow('large-input-active-1'),
-        theme-shadow('large-input-active-2'),
-        inset 1px 1px 0 rgba(255, 255, 255, 0.98),
-        0 0 0 3px color-mix(in srgb, theme-color('primary') 15%, transparent);
-    }
-  }
-
-  &[data-size='md'],
-  &[data-size='sm'] {
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, theme-color('surface') 97%, white),
-      color-mix(in srgb, theme-color('surface-variant') 92%, white)
-    );
-    border: 1px solid color-mix(in srgb, theme-color('border-primary') 78%, white);
-    box-shadow:
-      theme-shadow('input-1'),
-      theme-shadow('input-2'),
-      theme-shadow('input-3');
-
-    &:hover {
-      border-color: color-mix(in srgb, theme-color('primary') 16%, theme-color('border-primary'));
-    }
-
-    &[data-focused] {
-      border-color: color-mix(in srgb, theme-color('primary') 42%, theme-color('border-secondary'));
-      box-shadow:
-        theme-shadow('input-active-1'),
-        theme-shadow('input-active-2'),
-        theme-shadow('input-active-3'),
-        inset 1px 1px 0 rgba(255, 255, 255, 0.96),
-        0 0 0 2px color-mix(in srgb, theme-color('primary') 10%, transparent);
-    }
-  }
+  &__error { position: absolute; inset-inline: 0; top: calc(100% + 8px); z-index: 51; padding: 12px; border: 1px solid theme-color('error'); border-radius: 8px; background: theme-color('surface'); color: theme-color('content-primary'); font-size: 13px; }
+  .icon-button { flex: 0 0 44px; }
 }
 </style>

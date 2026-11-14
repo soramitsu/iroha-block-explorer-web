@@ -62,7 +62,7 @@ describe('BaseButton', () => {
     });
   });
 
-  it('keeps home exit destinations unscoped', () => {
+  it('preserves scope when returning to the shared overview', () => {
     scopeState.value = {
       torii: 'https://public-node.example:8080',
       dataspaceLaneId: '7',
@@ -80,7 +80,7 @@ describe('BaseButton', () => {
       },
     });
 
-    expect(wrapper.get('[data-test="router-link"]').attributes('data-to')).toBe('/');
+    expect(wrapper.get('[data-test="router-link"]').attributes('data-to')).toBe('/?torii=https%3A%2F%2Fpublic-node.example%3A8080&dataspaceLaneId=7&dataspaceId=42');
   });
 
   it('renders a disabled button instead of a link when navigation is unavailable', () => {

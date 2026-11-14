@@ -1,7 +1,4 @@
 import BigNumber from 'bignumber.js';
-import { parseAssetIdLiteral } from './asset-definition-literal';
-import { normalizeAccountIdLiteral } from './account-literal';
-import { QuantityValue, type TransactionStatus } from '@/shared/api/schemas';
 
 export function sum(values: readonly BigNumber[]): BigNumber {
   return values.reduce((acc, value) => acc.plus(value), new BigNumber(0));
@@ -172,60 +169,11 @@ export function parseBigNumber(value: unknown): BigNumber | null {
   return null;
 }
 
-export interface AssetActivity {
-  definitionId: string
-  amount: BigNumber
-  source: string | null
-  destination: string
-}
-
-function activityRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new TypeError('Invalid native asset activity payload');
-  }
-  return value as Record<string, unknown>;
-}
-
-function activityAsset(value: unknown): NonNullable<ReturnType<typeof parseAssetIdLiteral>> {
-  const asset = typeof value === 'string' ? parseAssetIdLiteral(value) : null;
-  if (!asset || asset.literal !== value) throw new TypeError('Invalid native asset holding identifier');
-  return asset;
-}
-
-/** Decode the current Torii Asset variants; submitted batch legs are not settlement evidence. */
-export function decodeCommittedAssetActivity(
-  kind: 'Transfer' | 'Mint' | 'Burn',
-  payload: unknown,
-  status: TransactionStatus
-): AssetActivity | null {
-  if (status === 'Rejected') return null;
-  if (status !== 'Committed') throw new TypeError('Invalid asset activity transaction status');
-  const envelope = activityRecord(payload);
-  if (Object.keys(envelope).length !== 2 || !('variant' in envelope) || !('value' in envelope)) {
-    throw new TypeError('Invalid native asset activity envelope');
-  }
-  if (kind === 'Transfer' && envelope.variant === 'AssetBatch') {
-    throw new Error('Batch transfer statistics are unavailable because individual settlement results are missing.');
-  }
-  const otherVariants = kind === 'Transfer' ? ['Domain', 'AssetDefinition', 'Nft'] : ['TriggerRepetitions'];
-  if (typeof envelope.variant === 'string' && otherVariants.includes(envelope.variant)) return null;
-  if (envelope.variant !== 'Asset') throw new TypeError('Invalid native asset activity variant');
-  const value = activityRecord(envelope.value);
-  const fields = kind === 'Transfer' ? ['source', 'object', 'destination'] : ['object', 'destination'];
-  if (Object.keys(value).length !== fields.length || fields.some((field) => !(field in value))) {
-    throw new TypeError('Invalid native Asset instruction fields');
-  }
-  const assetLiteral = kind === 'Transfer' ? value.source : value.destination;
-  const asset = activityAsset(assetLiteral);
-  const amount = QuantityValue.parse(value.object);
-  if (kind !== 'Transfer') {
-    return { definitionId: asset.definitionId, amount, source: null, destination: asset.accountId };
-  }
-  const destination = typeof value.destination === 'string' ? normalizeAccountIdLiteral(value.destination) : null;
-  if (!destination || destination !== value.destination) throw new TypeError('Invalid native transfer destination');
-  return { definitionId: asset.definitionId, amount, source: asset.accountId, destination };
-}
-
+/**
+ * Theil T index for a non-negative distribution.
+ *
+ * Computed as sum(p_i * ln(p_i * n)), where p_i is the share and n is sample size.
+ */
 export function theilIndexT(rawValues: readonly BigNumber[]): number {
   const values = rawValues.filter((value) => value.isFinite() && value.gte(0));
   const n = values.length;
@@ -322,35 +270,4 @@ export function lorenzCurvePoints(rawValues: readonly BigNumber[], points = 20):
   }
 
   return out;
-}
-
-export interface ChurnStats {
-  previous: number
-  current: number
-  retained: number
-  entered: number
-  exited: number
-  retentionPrev: number | null
-  retentionCurrent: number | null
-}
-
-export function computeSetChurn(previous: readonly string[], current: readonly string[]): ChurnStats {
-  const prevSet = new Set(previous);
-  const curSet = new Set(current);
-  let retained = 0;
-  for (const value of curSet) {
-    if (prevSet.has(value)) retained += 1;
-  }
-  const entered = curSet.size - retained;
-  const exited = prevSet.size - retained;
-
-  return {
-    previous: prevSet.size,
-    current: curSet.size,
-    retained,
-    entered,
-    exited,
-    retentionPrev: prevSet.size > 0 ? retained / prevSet.size : null,
-    retentionCurrent: curSet.size > 0 ? retained / curSet.size : null,
-  };
 }

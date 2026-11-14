@@ -13,27 +13,15 @@ import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import type { HashType } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { getRuntimeConfig } from '@/shared/runtime-config';
-import { createPublicHistoryCacheKey } from '@/shared/lib/history-cache';
 import { explorerReadAccountId } from '@/shared/lib/explorer-read-auth';
 import { useI18n } from 'vue-i18n';
 import { useThrottleFn, useWindowScroll, watchDebounced } from '@vueuse/core';
 import { Transaction as TransactionSchema } from '@/shared/api/schemas';
 import type { Transaction as TransactionDto } from '@/shared/api/schemas';
 import { useExplorerTransactionsEvents } from '@/shared/ui/composables/useExplorerTransactionsEvents';
-import { normalizeAccountSelectorLiteral } from '@/shared/lib/account-literal';
+import { normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
 import { firstRouteQueryValue } from '@/shared/lib/route-query';
 import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
-
-interface TransactionsTableCachePayload {
-  version: number
-  updated_at_ms: number
-  items: unknown
-}
-
-
-const TRANSACTIONS_TABLE_CACHE_VERSION = 1;
-const TRANSACTIONS_TABLE_CACHE_LIMIT = 100;
 
 function toTransactionTimestamp(value: unknown): number {
   if (value instanceof Date) return value.getTime();
@@ -61,22 +49,6 @@ function mergeTransactions(sources: readonly (readonly TransactionDto[])[], limi
       return right.hash.localeCompare(left.hash);
     })
     .slice(0, limit);
-}
-
-function parseTransactionsTableCache(raw: string | null): TransactionDto[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as TransactionsTableCachePayload;
-    if (!parsed || typeof parsed !== 'object') return [];
-    if (parsed.version !== TRANSACTIONS_TABLE_CACHE_VERSION) return [];
-
-    const decoded = TransactionSchema.array().safeParse(parsed.items);
-    if (!decoded.success) return [];
-
-    return mergeTransactions([decoded.data], TRANSACTIONS_TABLE_CACHE_LIMIT);
-  } catch {
-    return [];
-  }
 }
 
 const props = withDefaults(
@@ -113,7 +85,7 @@ const status = computed<TransactionStatusType | null>({
 const routeAuthority = computed<string | undefined>(() => {
   const value = firstRouteQueryValue(route.query[authorityKey])?.trim();
   if (!value) return undefined;
-  return normalizeAccountSelectorLiteral(value) ?? undefined;
+  return normalizeToriiAccountSelectorLiteral(value) ?? undefined;
 });
 const routeBlock = computed<number | undefined>(() => {
   const value = firstRouteQueryValue(route.query[blockKey])?.trim();
@@ -134,36 +106,6 @@ const authorityFilterError = ref<string | null>(null);
 const blockFilterError = ref<string | null>(null);
 const streamedTransactions = ref<TransactionDto[]>([]);
 
-const cacheKey = createPublicHistoryCacheKey('transactions', getRuntimeConfig().networkId, http.getToriiBaseUrl());
-
-function readTransactionsTableCache(): TransactionDto[] {
-  const key = cacheKey();
-  if (typeof window === 'undefined' || !key) return [];
-  try {
-    return parseTransactionsTableCache(window.localStorage.getItem(key));
-  } catch {
-    return [];
-  }
-}
-
-function writeTransactionsTableCache(items: readonly TransactionDto[]) {
-  const key = cacheKey();
-  if (typeof window === 'undefined' || !key) return;
-  try {
-    window.localStorage.setItem(
-      key,
-      JSON.stringify({
-        version: TRANSACTIONS_TABLE_CACHE_VERSION,
-        updated_at_ms: Date.now(),
-        items: mergeTransactions([items], TRANSACTIONS_TABLE_CACHE_LIMIT),
-      } satisfies TransactionsTableCachePayload)
-    );
-  } catch {
-    // ignore storage quota/privacy mode failures
-  }
-}
-
-const cachedTransactions = ref<TransactionDto[]>(readTransactionsTableCache());
 let filterByInitialized = false;
 
 watch(
@@ -214,7 +156,7 @@ watchDebounced(authorityFilter, (value) => {
     updateListQuery({ [authorityKey]: null }, { history: 'replace' }).catch(() => undefined);
     return;
   }
-  const normalized = normalizeAccountSelectorLiteral(trimmed);
+  const normalized = normalizeToriiAccountSelectorLiteral(trimmed);
   if (!normalized) {
     authorityFilterError.value = t('searchUnsupported');
     return;
@@ -254,10 +196,6 @@ const scope = useParamScope(
 );
 
 const isLoading = computed(() => scope.value?.expose.isLoading);
-const availability = http.useToriiAvailability();
-const showCachedNotice = computed(() => shouldRenderLiveDefaultFeed.value && cachedTransactions.value.length > 0 && (
-  availability.state.value !== 'healthy' || (!fetchedTransactions.value.length && !streamedTransactions.value.length)
-));
 const fetchedTransactions = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
 );
@@ -273,7 +211,7 @@ const shouldRenderLiveDefaultFeed = computed(() => isDefaultFeed.value && isLate
 
 const transactions = computed(() =>
   shouldRenderLiveDefaultFeed.value
-    ? mergeTransactions([streamedTransactions.value, fetchedTransactions.value, cachedTransactions.value], limit.value)
+    ? mergeTransactions([streamedTransactions.value, fetchedTransactions.value], limit.value)
     : fetchedTransactions.value
 );
 const visibleTransactionHashes = computed(() => new Set(transactions.value.map((item) => item.hash)));
@@ -314,8 +252,7 @@ function applyPendingRefresh() {
 watch(
   () => isDefaultFeed.value,
   (isDefault) => {
-    if (isDefault) cachedTransactions.value = readTransactionsTableCache();
-    else streamedTransactions.value = [];
+    if (!isDefault) streamedTransactions.value = [];
   },
   { immediate: true }
 );
@@ -323,10 +260,6 @@ watch(
 watch(
   () => fetchedTransactions.value,
   (items) => {
-    if (shouldRenderLiveDefaultFeed.value && scope.value?.expose.data?.status === SUCCESSFUL_FETCHING) {
-      cachedTransactions.value = mergeTransactions([items], TRANSACTIONS_TABLE_CACHE_LIMIT);
-      writeTransactionsTableCache(cachedTransactions.value);
-    }
 
     if (!streamedTransactions.value.length || !items.length) return;
     const fetchedHashes = new Set(items.map((item) => item.hash));
@@ -442,13 +375,6 @@ watch(
       </BaseButton>
     </div>
 
-    <p
-      v-if="showCachedNotice"
-      role="status"
-      data-test="history-cache-stale"
-    >
-      {{ $t('telemetry.dataStale') }}
-    </p>
     <BaseTable
       v-model:cursor="cursor"
       v-model:page-size="limit"
@@ -571,17 +497,17 @@ watch(
 
     @include sm {
       display: grid;
-      grid-template-columns: 32px 0.9fr 1fr;
+      grid-template-columns: 32px minmax(0, 0.9fr) minmax(0, 1fr);
       grid-gap: size(2);
       align-items: center;
     }
 
     @include md {
-      grid-template-columns: 32px 0.5fr 1fr;
+      grid-template-columns: 32px minmax(0, 0.5fr) minmax(0, 1fr);
     }
 
     @include lg {
-      grid-template-columns: 32px 0.9fr 1fr;
+      grid-template-columns: 32px minmax(0, 0.9fr) minmax(0, 1fr);
     }
   }
 
@@ -625,6 +551,7 @@ watch(
 
   &__container {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     .content-row {
       padding: 0 size(4);
     }
@@ -663,6 +590,8 @@ watch(
 
   &__columns {
     display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
     gap: size(2);
 
     flex-direction: column;
@@ -673,6 +602,8 @@ watch(
 
   &__column {
     display: grid;
+    min-width: 0;
+    max-width: 100%;
     grid-gap: size(1) size(1);
     margin-bottom: auto;
 
@@ -688,9 +619,6 @@ watch(
     &-hash {
       @include sm {
         width: 100%;
-      }
-      @include xl {
-        width: size(82);
       }
     }
 

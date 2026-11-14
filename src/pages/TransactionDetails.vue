@@ -16,7 +16,6 @@ import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { formatTransactionRejectionReason } from '@/shared/api/rejection-reason';
 import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 import type { Instruction } from '@/shared/api/schemas';
 import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
@@ -62,20 +61,7 @@ const isSmartContractExecutable = computed(() => {
   return executable === 'Ivm' || executable === 'IvmProved' || executable === 'ContractCall';
 });
 
-function hasOpaqueErrorTag(message: string): boolean {
-  return /(?:InstructionExecutionError|ValidationFail|FindError|TransactionRejectionReason)\(\d+\)/.test(message);
-}
-
-const rejectionReason = computed(() => {
-  const reason = transaction.value?.rejection_reason;
-  if (!reason) return null;
-  const toriiMessage = reason.message.trim();
-  const decodedFallback = formatTransactionRejectionReason(reason).trim();
-
-  if (toriiMessage.length > 0 && !hasOpaqueErrorTag(toriiMessage)) return toriiMessage;
-  if (decodedFallback.length > 0) return decodedFallback;
-  return toriiMessage.length > 0 ? toriiMessage : null;
-});
+const rejectionReason = computed(() => transaction.value?.rejection_reason?.message || null);
 
 const instructionIndexFromQuery = computed(() => {
   const raw = router.currentRoute.value.query['instruction'];
@@ -131,8 +117,7 @@ async function loadSmartContractInstructions() {
 
     smartContractInstructionState.items = instructions;
     smartContractInstructionState.primary = selectPrimaryContractViewInstruction(
-      instructions,
-      transaction.value?.executable
+      instructions
     );
     if (!instructions.length) {
       smartContractInstructionState.error = '';

@@ -6,13 +6,14 @@ import {
   stripExplorerScopeFromLocation,
   type ExplorerRouteScope,
 } from '@/shared/lib/explorer-scope';
-import { getToriiBaseUrl } from '@/shared/api';
 import { normalizeAccountRoutePath } from '@/shared/lib/account-id';
+import { isToriiBaseUrlForced } from '@/shared/api';
 
 function createCurrentScopeComputed(
   router: Pick<Router, 'currentRoute'> | { currentRoute?: { value?: unknown } } | null
 ): ComputedRef<ExplorerRouteScope | null> {
   return computed(() => {
+    if (isToriiBaseUrlForced()) return null;
     const route = router?.currentRoute?.value as any;
     if (!route || typeof route !== 'object') return null;
     if (!('path' in route) || !('query' in route)) return null;
@@ -30,8 +31,7 @@ export function useScopedExplorerNavigation() {
   const scope = createCurrentScopeComputed(router);
 
   const toScopedLocation = (to: RouteLocationRaw) => {
-    const normalized =
-      typeof to === 'string' ? normalizeAccountRoutePath(to, scope.value?.torii ?? getToriiBaseUrl()) : to;
+    const normalized = typeof to === 'string' ? normalizeAccountRoutePath(to) : to;
     return applyExplorerScopeToLocation(normalized, scope.value);
   };
   const toGlobalLocation = (to: RouteLocationRaw) => stripExplorerScopeFromLocation(to);

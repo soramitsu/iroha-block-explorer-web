@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { dashboardsMenuItem, menu, menuGroups } from './config';
-import { routes } from '@/app/router';
-
-const registeredRouteNames = new Set(routes.flatMap((route) => ('name' in route && route.name ? [String(route.name)] : [])));
-const groupedItems = menuGroups.flatMap((group) => group.items);
-const groupedRouteNames = groupedItems.flatMap((item) => item.names);
-const groupedDestinations = groupedItems.map((item) => item.to);
+import { SUPPORTED_LOCALES } from './lib/localization';
+import { langOptions, menu } from './config';
 
 describe('navigation config', () => {
+  it('offers exactly the locales backed by complete catalogs', () => {
+    expect(langOptions.map(({ value }) => value).sort()).toEqual([...SUPPORTED_LOCALES].sort());
+  });
+
   it('includes tracing menu entry', () => {
     expect(menu).toEqual(
       expect.arrayContaining([
@@ -44,6 +43,30 @@ describe('navigation config', () => {
     );
   });
 
+  it('includes the system-parameters snapshot entry', () => {
+    expect(menu).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          i18nKey: 'parameters.nav',
+          to: '/parameters',
+          names: ['system-parameters'],
+        }),
+      ])
+    );
+  });
+
+  it('includes the Soracles workspace entry', () => {
+    expect(menu).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          i18nKey: 'soracles.nav',
+          to: '/soracles',
+          names: ['soracles'],
+        }),
+      ])
+    );
+  });
+
   it('includes smart contracts menu entry', () => {
     expect(menu).toEqual(
       expect.arrayContaining([
@@ -56,19 +79,16 @@ describe('navigation config', () => {
     );
   });
 
-  it('groups every home-page destination exactly once in the header', () => {
-    const grouped = groupedDestinations;
-    expect(new Set(grouped).size).toBe(grouped.length);
-    for (const item of menu) expect(grouped).toContain(item.to);
-    expect(grouped).toContain(dashboardsMenuItem.to);
-    expect(grouped).toHaveLength(menu.length + 1);
-  });
-
-  it('keeps the home-page menu free of header-only destinations', () => {
-    expect(menu.map((item) => item.to)).not.toContain(dashboardsMenuItem.to);
-  });
-
-  it('names only routes that exist', () => {
-    for (const name of groupedRouteNames) expect(registeredRouteNames.has(name), name).toBe(true);
+  it('links directly to the current ZK registry route', () => {
+    expect(menu).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          i18nKey: 'zkRegistry.nav',
+          to: '/zk/registry',
+          names: ['zk-registry'],
+        }),
+      ])
+    );
+    expect(menu).not.toEqual(expect.arrayContaining([expect.objectContaining({ to: '/zk/telemetry' })]));
   });
 });

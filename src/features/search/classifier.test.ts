@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { classifySearchQuery } from './classifier';
 
-const CANONICAL_ACCOUNT =
-  'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
+const CANONICAL_ACCOUNT = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
 
 describe('classifySearchQuery', () => {
   it('normalizes exact 32-byte hashes before considering decimal heights', () => {
@@ -55,12 +54,12 @@ describe('classifySearchQuery', () => {
       value: CANONICAL_ACCOUNT,
     });
     expect(classifySearchQuery('Treasury@Banking.Retail')).toEqual({
-      kind: 'account',
-      value: 'treasury@banking.retail',
+      kind: 'unsupported',
+      value: 'Treasury@Banking.Retail',
     });
     expect(classifySearchQuery('USD#Issuer.Main')).toEqual({
       kind: 'asset-definition',
-      value: 'usd#issuer.main',
+      value: 'USD#Issuer.Main',
     });
     expect(classifySearchQuery('Treasury.Universal')).toEqual({
       kind: 'domain',

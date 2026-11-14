@@ -5,11 +5,12 @@ import { i18n } from '@/shared/lib/localization';
 
 const SAMPLE_I105 = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
 const SAMPLE_I105_MODERN = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-const SAMPLE_LEGACY = 'ed01204164BF554923ECE1FD412D241036D863A6AE430476C898248B8237D77534CFC4@genesis';
-let toriiBaseUrl = 'https://nexus.mof3.sora.org:18080';
+const SAMPLE_ALIAS = 'Treasury@Genesis';
+let toriiBaseUrl = 'https://torii.example';
 
 vi.mock('@/shared/api', () => ({
   getToriiBaseUrl: () => toriiBaseUrl,
+  isToriiBaseUrlForced: () => false,
 }));
 
 test.each([
@@ -34,13 +35,13 @@ test.each([
   ],
   [
     {
-      hash: SAMPLE_LEGACY,
+      hash: SAMPLE_ALIAS,
       type: 'two-line' as const,
     },
-    'ed01...CFC4<br>@genesis',
+    'Trea...sury<br>@Genesis',
   ],
 ])('BaseHash content display correctness', async (props, expected) => {
-  toriiBaseUrl = 'https://nexus.mof3.sora.org:18080';
+  toriiBaseUrl = 'https://torii.example';
   const wrapper = mount(BaseHash, {
     props: {
       hash: props.hash,

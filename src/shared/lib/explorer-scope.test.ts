@@ -45,8 +45,10 @@ describe('explorer scope helpers', () => {
     expect(shouldPreserveExplorerScopeForPath('/search?q=abc')).toBe(true);
     expect(shouldPreserveExplorerScopeForPath('/contracts')).toBe(true);
     expect(shouldPreserveExplorerScopeForPath('/soracloud')).toBe(true);
+    expect(shouldPreserveExplorerScopeForPath('/zk/registry')).toBe(true);
     expect(shouldPreserveExplorerScopeForPath('/dataspaces')).toBe(false);
-    expect(shouldPreserveExplorerScopeForPath('/')).toBe(false);
+    expect(shouldPreserveExplorerScopeForPath('/')).toBe(true);
+    expect(shouldPreserveExplorerScopeForPath('/?foo=bar#activity')).toBe(true);
     expect(shouldPreserveExplorerScopeForPath('https://example.com')).toBe(false);
   });
 
@@ -64,6 +66,25 @@ describe('explorer scope helpers', () => {
   it('does not rewrite non-scoped destinations', () => {
     const target = applyExplorerScopeToLocation('/dataspaces', scope);
     expect(target).toBe('/dataspaces');
+  });
+
+  it('preserves scope on the logo path and named Overview destination', () => {
+    const pathDestination = applyExplorerScopeToLocation('/?foo=bar#activity', scope);
+    expect(pathDestination).toBe(`/?foo=bar&${new URLSearchParams(toExplorerScopeQuery(scope) as Record<string, string>)}#activity`);
+    expect(applyExplorerScopeToLocation({ name: 'home' }, scope)).toEqual({
+      name: 'home',
+      query: toExplorerScopeQuery(scope),
+    });
+    expect(applyExplorerScopeToLocation({ path: '/', query: { foo: 'bar' } }, scope)).toEqual({
+      path: '/',
+      query: { foo: 'bar', ...toExplorerScopeQuery(scope) },
+    });
+  });
+
+  it('recognizes scoped Overview routes and leaves ordinary Overview unscoped', () => {
+    expect(parseExplorerScopeFromRoute({ name: 'home', path: '/', query: toExplorerScopeQuery(scope) } as any)).toEqual(scope);
+    expect(parseExplorerScopeFromRoute({ name: undefined, path: '/', query: toExplorerScopeQuery(scope) } as any)).toEqual(scope);
+    expect(parseExplorerScopeFromRoute({ name: 'home', path: '/', query: {} })).toBeNull();
   });
 
   it('strips scope keys when exiting to global destinations', () => {
@@ -147,6 +168,13 @@ describe('explorer scope helpers', () => {
       query: toExplorerScopeQuery(scope),
     } as any);
     expect(rwaRoute).toEqual(scope);
+
+    const zkRegistryRoute = parseExplorerScopeFromRoute({
+      name: 'zk-registry',
+      path: '/zk/registry',
+      query: toExplorerScopeQuery(scope),
+    } as any);
+    expect(zkRegistryRoute).toEqual(scope);
 
     const nonScopedRoute = parseExplorerScopeFromRoute({
       name: 'dataspaces-details',

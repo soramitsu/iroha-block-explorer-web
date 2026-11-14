@@ -71,6 +71,50 @@ function copyBuildPublicAssets(publicRoot: string): Plugin {
   };
 }
 
+const EXPLORER_PROXY_GET_PATHS = [
+  /^\/v1\/parameters$/u,
+  /^\/v1\/soracles\/(?:feeds(?:\/[^/]+\/history)?|defi\/attestations\/latest)$/u,
+  /^\/v1\/confidential\/assets\/[^/]+\/transitions$/u,
+  /^\/v1\/explorer\/health$/u,
+  /^\/v1\/explorer\/accounts(?:\/[^/]+(?:\/qr)?)?$/u,
+  /^\/v1\/explorer\/(?:nfts|rwas|domains|blocks)(?:\/[^/]+)?$/u,
+  /^\/v1\/explorer\/assets(?:\/[^/]+)?$/u,
+  /^\/v1\/explorer\/asset-definitions(?:\/[^/]+\/(?:econometrics|snapshot))?$/u,
+  /^\/v1\/explorer\/transactions(?:\/(?:latest|stream|[^/]+))?$/u,
+  /^\/v1\/explorer\/instructions(?:\/(?:latest|stream|[^/]+\/\d+(?:\/contract-view)?))?$/u,
+  /^\/v1\/accounts\/[^/]+\/(?:permissions|history)$/u,
+  /^\/v1\/assets\/definitions(?:\/[^/]+)?$/u,
+  /^\/v1\/ledger\/(?:block\/[^/]+\/proof\/[^/]+|state(?:-proof)?\/[^/]+)$/u,
+  /^\/v1\/telemetry\/(?:live|peers-info)$/u,
+  /^\/v1\/vpn\/profile$/u,
+  /^\/v1\/contracts\/(?:activity|events(?:\/sse)?)$/u,
+  /^\/v1\/nexus\/dataspaces\/accounts\/[^/]+\/summary$/u,
+  /^\/v1\/sorafs\/pin(?:\/[^/]+)?$/u,
+  /^\/v1\/zk\/(?:proofs(?:\/count)?|proof\/[^/]+\/[^/]+|vk(?:\/[^/]+\/[^/]+)?)$/u,
+  /^\/v1\/connect\/ws$/u,
+] as const;
+
+const EXPLORER_PROXY_POST_PATHS = new Set(['/v1/connect/session', '/v1/multisig/spec', '/v1/multisig/proposals/query']);
+
+/** Restrict the development proxy to requests issued by current Explorer capabilities. */
+export function isExplorerToriiProxyRequestAllowed(
+  method: string | undefined,
+  requestUrl: string | undefined
+): boolean {
+  if (!method || !requestUrl) return false;
+  let pathname: string;
+  try {
+    pathname = new URL(requestUrl, 'http://explorer.invalid').pathname;
+  } catch {
+    return false;
+  }
+
+  const normalizedMethod = method.toUpperCase();
+  if (normalizedMethod === 'GET') return EXPLORER_PROXY_GET_PATHS.some((pattern) => pattern.test(pathname));
+  if (normalizedMethod === 'POST') return EXPLORER_PROXY_POST_PATHS.has(pathname);
+  return false;
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
@@ -82,9 +126,7 @@ export default defineConfig(({ mode }) => {
     : new HttpAgent({ keepAlive: true });
   const rawAppBasePath = (env.VITE_APP_BASE_PATH || '/').trim();
   const appBasePath =
-    rawAppBasePath === '' || rawAppBasePath === '/'
-      ? '/'
-      : `/${rawAppBasePath.replace(/^\/+|\/+$/g, '')}/`;
+    rawAppBasePath === '' || rawAppBasePath === '/' ? '/' : `/${rawAppBasePath.replace(/^\/+|\/+$/g, '')}/`;
 
   return {
     base: appBasePath,
@@ -107,29 +149,16 @@ export default defineConfig(({ mode }) => {
           agent: toriiProxyAgent,
           changeOrigin: true,
           ws: true,
-        },
-        '/status': {
-          target: toriiProxyTarget,
-          agent: toriiProxyAgent,
-          changeOrigin: true,
-          headers: {
-            Accept: 'application/json',
-          },
-        },
-        '/metrics': {
-          target: toriiProxyTarget,
-          agent: toriiProxyAgent,
-          changeOrigin: true,
-        },
-        '/peers': {
-          target: toriiProxyTarget,
-          agent: toriiProxyAgent,
-          changeOrigin: true,
+          bypass: (request) => (isExplorerToriiProxyRequestAllowed(request.method, request.url) ? undefined : false),
         },
       },
     },
     test: {
       environment: 'jsdom',
+      // Shared development hosts may give each worker only 5–10% of a core.
+      // Allow SDK imports and page renders to finish within the test/hook budget.
+      testTimeout: 60_000,
+      hookTimeout: 60_000,
       // Retained release candidates have their own explicit test configuration.
       // They must not run as maintained source tests against this checkout.
       exclude: [...configDefaults.exclude, 'output/**'],
@@ -165,23 +194,13 @@ export default defineConfig(({ mode }) => {
             if (/\/node_modules\/(?:vue|vue-router|vue-i18n)\//u.test(moduleId)) return 'vue';
             if (moduleId.includes('/node_modules/blockly/')) return 'studio-blockly';
             if (moduleId.includes('/node_modules/@vue-flow/')) return 'studio-flow';
-            if (moduleId.includes('/node_modules/qrcode/')) return 'qr-code';
             if (moduleId.includes('/node_modules/vue-json-pretty/')) return 'json-viewer';
-            if (moduleId.includes('/node_modules/tr46/') || moduleId.includes('/node_modules/punycode/')) return 'domain-validation';
-            if (moduleId.includes('/node_modules/buffer/')) return 'binary-buffer';
-            // Preserve the upstream lazy telemetry parser and route-only compiler.
-            // The blanket SDK bucket otherwise makes both startup dependencies.
-            if (moduleId.includes('/iroha-js/dist/sumeragiTyped.js')) return 'iroha-sumeragi';
-            if (moduleId.includes('/iroha-js/dist/kotodamaCompiler/')) return 'iroha-compiler';
+            if (moduleId.includes('/javascript/iroha_js/') || moduleId.includes('/node_modules/@iroha/iroha-js/'))
+              return 'iroha-sdk';
             if (
-              moduleId.includes('/javascript/iroha_js/')
-              || moduleId.includes('/node_modules/@iroha/iroha-js/')
-            ) return 'iroha-sdk';
-            if (
-              /\/node_modules\/(?:@vueuse\/core|@iroha\/core|zod|date-fns|date-fns-tz|bignumber\.js)\//u.test(
-                moduleId
-              )
-            ) return 'vendor';
+              /\/node_modules\/(?:@vueuse\/core|@iroha\/core|zod|date-fns|date-fns-tz|bignumber\.js)\//u.test(moduleId)
+            )
+              return 'vendor';
             return undefined;
           },
         },

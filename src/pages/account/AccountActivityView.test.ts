@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { defineComponent } from 'vue';
+import { i18n } from '@/shared/lib/localization';
 import AccountActivityView from './AccountActivityView.vue';
 
 const apiMocks = vi.hoisted(() => ({
@@ -75,7 +76,7 @@ async function factory(query: Record<string, string> = {}) {
   const wrapper = mount(AccountActivityView, {
     props: { accountId: ACCOUNT },
     global: {
-      plugins: [router],
+      plugins: [router, i18n],
       stubs: {
         BaseButton: BaseButtonStub,
         BaseContentBlock: BaseContentBlockStub,
@@ -133,7 +134,7 @@ describe('AccountActivityView', () => {
     expect(wrapper.find('a[href="/blocks/42"]').exists()).toBe(false);
     expect(wrapper.find('[data-test="activity-fanout-provenance"]').exists()).toBe(false);
     expect(wrapper.text()).toContain(EXACT_AMOUNT);
-    expect(wrapper.text()).toContain('1725000000123 ms');
+    expect(wrapper.text()).toContain('1725000000123 milliseconds');
     expect(wrapper.find(`a[href="/accounts/${encodeURIComponent(COUNTERPARTY)}"]`).exists()).toBe(true);
     expect(wrapper.find('a[href="/assets/rose%23wonderland"]').exists()).toBe(true);
     expect(wrapper.find(`a[href="/transactions/${'a'.repeat(64)}"]`).exists()).toBe(true);
@@ -204,7 +205,7 @@ describe('AccountActivityView', () => {
       'error',
       { status: 'unknown-error', error: new Error('bad payload') },
       '[data-test="activity-error"]',
-      'bad payload',
+      'Account history could not be loaded',
     ],
   ])('renders the %s state without presenting it as an empty result', async (_name, result, selector, message) => {
     apiMocks.fetchAccountHistory.mockResolvedValue(result);

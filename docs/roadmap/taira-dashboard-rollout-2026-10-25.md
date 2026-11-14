@@ -74,12 +74,12 @@ Frontend validation passed 2,029 tests (one opt-in skip), typecheck, production
 build, lint, SDK integrity and bundle limits. The corrected upstream changes
 passed seven focused Core and 17 Torii tests, followed by the canonical production
 release build and the live checks above. Independent parallel history starts
-remain deferred under EX-326 because the API lacks a shared snapshot/visibility
+remain deferred under EX-348 because the API lacks a shared snapshot/visibility
 selector. No further deployment action is pending.
 
 Later state: on 2026-11-14 the public Explorer was found serving a different
 build, published 2026-11-08, so the release above is no longer live. See the
-[2026-11-15 closeout](dashboard-closeout-2026-11-15.md) (EX-331).
+[2026-11-15 closeout](dashboard-closeout-2026-11-15.md) (EX-360).
 
 The sections below retain the chronological preparation and recovery history.
 This record follows the [local implementation report](dashboard-performance-2026-10-25.md).
@@ -116,7 +116,7 @@ is 472,985 of 540,000 gzip bytes. The frozen candidate contains 205 files and
 the freshly rendered current network configuration. Its file hashes and source
 snapshot are in `output/taira-dashboard-deploy-20261025/explorer-candidate.json`.
 
-Concurrent independent height ranges remain blocked under EX-326. Initial
+Concurrent independent height ranges remain blocked under EX-348. Initial
 requests cannot share a snapshot and reader-visibility binding through the
 current API. Height seeking alone does not establish that binding.
 

@@ -2,50 +2,52 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 
 // Select the test network explicitly before application startup.
 test.beforeEach(async ({ page }) => {
-  await page.route('**/config.json', route => route.fulfill({
-    json: {
-      toriiBaseUrl: 'https://taira.sora.org',
-      toriiForceBaseUrl: true,
-      networkId: `hash:${'AB'.repeat(32)}#B99E`,
-      networkPrefix: 369,
-    },
-  }));
+  await page.route('**/config.json', (route) =>
+    route.fulfill({
+      json: {
+        toriiBaseUrl: 'https://taira.sora.org',
+        toriiForceBaseUrl: true,
+        networkId: `hash:${'AB'.repeat(32)}#B99E`,
+        networkPrefix: 369,
+      },
+    })
+  );
 });
 import tairaHistory from '../fixtures/taira-history.json' with { type: 'json' };
+import nativeLogInstruction from '../fixtures/taira-ce5-log-instruction.json' with { type: 'json' };
 
 const HASH = '0301b76be6d3dead32484180986523173082d770bc4fd954760d0a74a434624f';
-const PARTIAL_HASH = 'a'.repeat(64);
+const PARTIAL_HASH = 'ab'.repeat(32);
 const FAILURE_HASH = 'b'.repeat(64);
 const ACCOUNT = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-const DESTINATION = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
-const ASSET_DEFINITION = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
 const CREATED_AT = '2026-07-21T12:00:00.000Z';
-const FRAMED_INSTRUCTION_SHA256 = `0x${'1'.repeat(64)}`;
 
 interface MockResponse {
-  status?: number
-  body?: unknown
-  contentType?: string
+  status?: number;
+  body?: unknown;
+  contentType?: string;
 }
 
 interface QueryFilter {
-  op: string
-  args: unknown[]
+  op: string;
+  args: unknown[];
 }
 interface CollectionQuery {
-  cursor?: string
-  limit?: number
-  filter?: QueryFilter
+  cursor?: string;
+  limit?: number;
+  filter?: QueryFilter;
 }
 interface ObservedRequest {
-  url: URL
-  method: string
-  query: CollectionQuery
+  url: URL;
+  method: string;
+  query: CollectionQuery;
 }
 type MockResolver = (url: URL, query: CollectionQuery) => MockResponse | null;
 const READ_QUERY_PATHS = new Set([
-  '/v1/explorer/blocks/query', '/v1/explorer/transactions/latest/query',
-  '/v1/explorer/instructions/query', '/v1/explorer/accounts/query',
+  '/v1/explorer/blocks/query',
+  '/v1/explorer/transactions/latest/query',
+  '/v1/explorer/instructions/query',
+  '/v1/explorer/accounts/query',
 ]);
 
 const emptyHistoryPage = (_url: URL) => ({ items: [], next_cursor: null });
@@ -79,46 +81,39 @@ function transaction(hash = HASH) {
   };
 }
 
-function transferInstruction() {
+function nativeInstruction() {
   return {
+    ...nativeLogInstruction,
     authority: ACCOUNT,
-    created_at: CREATED_AT,
-    kind: 'Transfer',
-    index: 0,
-    box: {
-      encoded: 'TlJUM-hermetic-transfer-payload',
-      framed_sha256: FRAMED_INSTRUCTION_SHA256,
-      json: {
-        kind: 'Transfer',
-        payload: {
-          variant: 'Asset',
-          value: {
-            source: `${ASSET_DEFINITION}#${ACCOUNT}`,
-            object: '100000',
-            destination: DESTINATION,
-          },
-        },
-      },
-    },
     transaction_hash: HASH,
-    transaction_status: 'Committed',
     block: 42,
+    created_at: CREATED_AT,
   };
+}
+
+async function expectNoDocumentOverflow(page: Page) {
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth))
+    .toBeLessThanOrEqual(1);
 }
 
 async function installHermeticApi(page: Page, resolver: MockResolver, requests: ObservedRequest[] = []) {
   await page.route('**/v1/**', async (route: Route) => {
     const url = new URL(route.request().url());
     const method = route.request().method();
-    const headers = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, HEAD, POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
+    const headers = {
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, HEAD, POST, OPTIONS',
+      'access-control-allow-headers': 'content-type',
+    };
     if (method === 'OPTIONS') return await route.fulfill({ status: 204, headers });
     const isCollectionRead = method === 'POST' && READ_QUERY_PATHS.has(url.pathname);
     expect(['GET', 'HEAD'].includes(method) || isCollectionRead).toBe(true);
     if (READ_QUERY_PATHS.has(url.pathname)) expect(method).toBe('POST');
-    const query = isCollectionRead ? route.request().postDataJSON() as CollectionQuery : {};
+    const query = isCollectionRead ? (route.request().postDataJSON() as CollectionQuery) : {};
     if (isCollectionRead) {
       expect(url.search).toBe('');
-      expect(Object.keys(query).every(key => ['filter', 'limit', 'cursor'].includes(key))).toBe(true);
+      expect(Object.keys(query).every((key) => ['filter', 'limit', 'cursor'].includes(key))).toBe(true);
     }
     requests.push({ url, method, query });
     const response = resolver(url, query) ?? { status: 404, body: { message: `No fixture for ${url.pathname}` } };
@@ -158,16 +153,19 @@ function countTransactionRequests(requests: ObservedRequest[], hash: string): nu
 function matchesQueryField(filter: QueryFilter | undefined, name: string, value: string): boolean {
   if (!filter) return false;
   if (filter.op === 'eq') return filter.args[0] === name && filter.args[1] === value;
-  return filter.op === 'and' && filter.args.some(child => matchesQueryField(child as QueryFilter, name, value));
+  return filter.op === 'and' && filter.args.some((child) => matchesQueryField(child as QueryFilter, name, value));
 }
 
 function requestedInstructionKind(requests: ObservedRequest[], kind: string): boolean {
-  return requests.some(({ url, query }) => url.pathname === '/v1/explorer/instructions/query' && matchesQueryField(query.filter, 'kind', kind));
+  return requests.some(
+    ({ url, query }) =>
+      url.pathname === '/v1/explorer/instructions/query' && matchesQueryField(query.filter, 'kind', kind)
+  );
 }
 
 function requestedAccountsCursor(
   requests: ObservedRequest[],
-  expected: { domain: string, cursor: string | null, limit: string }
+  expected: { domain: string; cursor: string | null; limit: string }
 ): boolean {
   return requests.some(
     ({ query }) =>
@@ -178,7 +176,7 @@ function requestedAccountsCursor(
 }
 
 test.describe('hermetic Explorer quality gates', () => {
-  test('keeps full search examples accessible and within the viewport in both directions', async ({ page }) => {
+  test('keeps search and visible navigation accessible within the viewport in both directions', async ({ page }) => {
     await installHermeticApi(page, (url) => {
       if (url.pathname === '/v1/explorer/blocks/query') return { body: tairaHistory.blocks };
       if (url.pathname === '/v1/explorer/transactions/latest/query') return { body: tairaHistory.latestTransactions };
@@ -187,49 +185,27 @@ test.describe('hermetic Explorer quality gates', () => {
     for (const colorScheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme });
       await page.goto('/');
-      const examples = page.locator('.home-page__search-tag');
-      const account = page.getByRole('button', { name: ACCOUNT, exact: true });
-      await expect(examples).toHaveCount(6);
-      await expect(account).toBeVisible();
-      await page.evaluate(async () => { await document.fonts.ready; });
-
+      const search = page.getByRole('searchbox', { name: 'Search blockchain' });
+      const menu = page.locator('.home-page__menu');
+      await expect(search).toBeVisible();
+      await expect(menu.getByRole('link')).toHaveCount(21);
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+      });
       for (const direction of ['ltr', 'rtl']) {
-        await page.evaluate((value) => { document.documentElement.dir = value; }, direction);
+        await page.evaluate((value) => {
+          document.documentElement.dir = value;
+        }, direction);
         for (const width of [320, 390, 768, 1440]) {
           await page.setViewportSize({ width, height: 1000 });
-          const bounds = await examples.evaluateAll((elements) => {
-            const rectangles = [];
-            for (const element of elements) {
-              const chip = element.getBoundingClientRect();
-              const search = element.closest('.home-page__search')!.getBoundingClientRect();
-              rectangles.push({
-                label: element.textContent?.trim(),
-                nonempty: chip.width > 0 && chip.height > 0,
-                withinSearch: chip.left >= search.left - 1 && chip.right <= search.right + 1,
-                withinViewport: chip.left >= -1 && chip.right <= document.documentElement.clientWidth + 1,
-              });
-            }
-            return rectangles;
-          });
-          for (const bound of bounds) {
-            const context = `${colorScheme}/${direction}/${width}: ${bound.label}`;
-            expect(bound.nonempty, context).toBe(true);
-            expect(bound.withinSearch, context).toBe(true);
-            expect(bound.withinViewport, context).toBe(true);
-          }
-          await expect(account).toHaveText(ACCOUNT);
-          await expect(account).toHaveAccessibleName(ACCOUNT);
-          await expect(account).toHaveAttribute('title', ACCOUNT);
-          if (width <= 390) {
-            expect(await account.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeGreaterThan(0);
-          }
+          await expectNoDocumentOverflow(page);
+          await expect(search).toBeVisible();
+          await expect(menu.getByRole('link', { name: 'Accounts', exact: true })).toBeVisible();
         }
       }
-
       await page.setViewportSize({ width: 390, height: 844 });
-      await account.focus();
-      await expect(account).toBeFocused();
-      await account.press('Enter');
+      await search.fill(ACCOUNT);
+      await search.press('Enter');
       await expect(page).toHaveURL((url) => decodeURIComponent(url.pathname) === `/accounts/${ACCOUNT}`);
     }
   });
@@ -266,7 +242,7 @@ test.describe('hermetic Explorer quality gates', () => {
       await expect(status).toHaveAttribute('aria-expanded', 'false');
       const link = row.locator('.latest-transactions__hash a');
       const identifier = await link.getAttribute('title');
-      expect(tairaHistory.latestTransactions.items.map(item => item.hash)).toContain(identifier);
+      expect(tairaHistory.latestTransactions.items.map((item) => item.hash)).toContain(identifier);
       await expect(link).toHaveAttribute('href', `/transactions/${identifier}`);
     }
   });
@@ -292,12 +268,16 @@ test.describe('hermetic Explorer quality gates', () => {
     });
 
     await page.goto('/');
-    await expect(page.locator(`a[href="/transactions/${tairaHistory.latestTransactions.items[0].hash}"]`)).toBeVisible();
+    await expect(
+      page.locator(`a[href="/transactions/${tairaHistory.latestTransactions.items[0].hash}"]`)
+    ).toBeVisible();
     await page.goto('/blocks');
     await expect(page.locator(`a[href="/blocks/${firstBlock.height}"]:visible`).first()).toBeVisible();
-    const nextRequest = page.waitForRequest((request) =>
-      new URL(request.url()).pathname === '/v1/explorer/blocks/query'
-      && request.method() === 'POST' && request.postDataJSON().cursor === cursor
+    const nextRequest = page.waitForRequest(
+      (request) =>
+        new URL(request.url()).pathname === '/v1/explorer/blocks/query' &&
+        request.method() === 'POST' &&
+        request.postDataJSON().cursor === cursor
     );
     await page.getByRole('button', { name: 'Next cursor page' }).click();
     expect((await nextRequest).postDataJSON().cursor).toBe(cursor);
@@ -327,7 +307,7 @@ test.describe('hermetic Explorer quality gates', () => {
     await expect(page.locator('[data-test="search-result-block"]')).toBeVisible();
     await expect(page.locator('[data-test="search-result-transaction-notice"]')).toHaveAttribute('role', 'alert');
     await expect(page.locator('[data-test="search-result-transaction-notice"]')).toContainText(
-      'Transaction lookup failed: {"message":"transaction index unavailable"}'
+      'Transaction lookup failed: the Explorer API returned HTTP status 500.'
     );
     expect(countTransactionRequests(requests, PARTIAL_HASH)).toBe(1);
 
@@ -336,13 +316,15 @@ test.describe('hermetic Explorer quality gates', () => {
 
     await page.goto(`/search?q=${FAILURE_HASH}`);
     await expect(page.locator('[data-test="search-results-error"]')).toContainText(
-      'The exact lookup could not be completed: {"message":"exact index unavailable"}'
+      'The exact lookup could not be completed: the Explorer API returned HTTP status 500'
     );
     await expect(page.locator('[data-test="resource-retry"]')).toHaveText('Retry exact lookup');
   });
 
-  test('shows semantic, raw, and unavailable evidence states and supports keyboard tabs', async ({ page }) => {
-    const instruction = transferInstruction();
+  test('preserves opaque native instruction bytes, reports unavailable proof, and supports keyboard tabs', async ({
+    page,
+  }) => {
+    const instruction = nativeInstruction();
     const requests: ObservedRequest[] = [];
     await installHermeticApi(
       page,
@@ -357,11 +339,7 @@ test.describe('hermetic Explorer quality gates', () => {
           };
         }
         if (url.pathname === `/v1/explorer/instructions/${HASH}/0`) return { body: instruction };
-        if (
-          url.pathname === `/v1/ledger/block/42/proof/${HASH}` ||
-          url.pathname === '/v1/ledger/state/42' ||
-          url.pathname === '/v1/ledger/state-proof/42'
-        )
+        if (url.pathname === `/v1/explorer/transactions/${HASH}/proof`)
           return { status: 404, body: { message: 'evidence unavailable in fixture node' } };
         return null;
       },
@@ -370,16 +348,18 @@ test.describe('hermetic Explorer quality gates', () => {
 
     await page.goto(`/transactions/${HASH}?instruction=0`);
 
-    await expect(page.locator('[data-test="instruction-semantic-card"]').first()).toContainText('Asset transfer');
-    await expect(page.locator('[data-test="instruction-semantic-field-amount"] dd').first()).toHaveText('100000');
+    await expect(page.locator('[data-test="instruction-semantic-card"]')).toHaveCount(0);
     await expect(page.locator('[data-test="instruction-encoded-payload"]')).toHaveText(
-      'TlJUM-hermetic-transfer-payload'
+      nativeLogInstruction.box.instruction
     );
     await expect(page.locator('.instructions-detail__json')).toContainText('Raw instruction JSON');
-    await expect(page.locator('[data-test="block-proof-unavailable"]')).toBeVisible();
-    await expect(page.locator('[data-test="state-proof-unavailable"]')).toBeVisible();
-    await expect(page.getByText("This node has no state root at the transaction's block height.")).toBeVisible();
-    await expect(page.getByText('Node-provided · BLS not verified here')).toBeVisible();
+    await expect(page.locator('.instructions-detail__json')).toContainText(nativeLogInstruction.box.wire_id);
+    await expect(page.locator('[data-test="transaction-proof-unavailable"]')).toContainText(
+      'For a private data space, use Read access to connect an authorized wallet.'
+    );
+    await expect(page.locator('[data-test="transaction-proof-claim"]')).toHaveCount(0);
+    expect(requests.some(({ url }) => url.pathname === `/v1/explorer/transactions/${HASH}/proof`)).toBe(true);
+    expect(requests.some(({ url }) => url.pathname.startsWith('/v1/ledger/'))).toBe(false);
 
     const allTab = page.getByRole('tab', { name: 'All', exact: true });
     await allTab.focus();
@@ -437,7 +417,7 @@ test.describe('hermetic Explorer quality gates', () => {
       .toBe(true);
   });
 
-  test('uses desktop columns and keeps mobile account identifiers on one line', async ({ page }, testInfo) => {
+  test('keeps adaptive identifiers on one line and exposes full identities through accessible controls', async ({ page }, testInfo) => {
     // Exact account from the captured Taira account list that exposed the split address.
     const accountId = 'testuﾛ1NiﾗNｼGﾜiｿｵ8ﾌVoXﾂﾅﾛTKﾏRｷi5ｹﾌﾊﾗﾍBﾁﾁPﾜpﾌDmQWB5Q6';
     await installHermeticApi(page, (url) => {
@@ -472,7 +452,9 @@ test.describe('hermetic Explorer quality gates', () => {
         const link = address.getByRole('link');
         await expect(card).toHaveCount(1);
         await expect(link).toBeVisible();
-        await page.evaluate(async () => { await document.fonts.ready; });
+        await page.evaluate(async () => {
+          await document.fonts.ready;
+        });
 
         for (const width of [320, 390, 480, 640]) {
           await page.setViewportSize({ width, height: 844 });
@@ -492,27 +474,41 @@ test.describe('hermetic Explorer quality gates', () => {
             const text = anchor.querySelector('span')!;
             const linkBox = anchor.getBoundingClientRect();
             const copy = element.querySelector('.base-hash__copy')!.getBoundingClientRect();
+            const reveal = element.querySelector('.base-hash__reveal')!.getBoundingClientRect();
+            const separated = (a: DOMRect, b: DOMRect) => a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top;
             const range = document.createRange();
             range.selectNodeContents(text);
             const lineTops = new Set<number>();
             for (const rect of range.getClientRects()) lineTops.add(Math.round(rect.top));
             return {
               textLines: lineTops.size,
-              noOverlap: label.right <= linkBox.left && linkBox.right <= copy.left,
-              sameRow: Math.abs((linkBox.top + linkBox.bottom) / 2 - (copy.top + copy.bottom) / 2) < 1,
-              withinRow: linkBox.left >= row.left && copy.right <= row.right + 1,
-              withinViewport: row.left >= 0 && copy.right <= document.documentElement.clientWidth,
+              noOverlap: separated(label, linkBox) && separated(linkBox, copy) && separated(copy, reveal) && separated(linkBox, reveal),
+              withinRow: [linkBox, copy, reveal].every(box => box.left >= row.left && box.right <= row.right + 1),
+              withinViewport: row.left >= 0 && [linkBox, copy, reveal].every(box => box.right <= document.documentElement.clientWidth),
               overflow: element.scrollWidth - element.clientWidth,
-              copyVisible: copy.width >= 16 && copy.height >= 16,
+              controlsAccessible: [copy, reveal].every(box => box.width >= 44 && box.height >= 44),
             };
           });
           expect(bounds, `${colorScheme}/${width}`).toEqual({
-            textLines: 1, noOverlap: true, sameRow: true, withinRow: true,
-            withinViewport: true, overflow: 0, copyVisible: true,
+            textLines: 1,
+            noOverlap: true,
+            withinRow: true,
+            withinViewport: true,
+            overflow: 0,
+            controlsAccessible: true,
           });
         }
 
-        const copy = address.getByRole('button');
+        const reveal = address.locator('.base-hash__reveal');
+        await expect(reveal).toHaveAccessibleName('Show full identifier');
+        await reveal.focus();
+        await reveal.press('Enter');
+        await expect(address.locator('.base-hash__full')).toHaveText(accountId);
+        await expect(reveal).toHaveAttribute('aria-expanded', 'true');
+        await expectNoDocumentOverflow(page);
+        await reveal.press('Enter');
+        await expect(address.locator('.base-hash__full')).toHaveCount(0);
+        const copy = address.getByRole('button', { name: 'Copy identifier' });
         await copy.focus();
         await expect(copy).toBeFocused();
         await copy.press('Enter');
@@ -529,7 +525,14 @@ test.describe('hermetic Explorer quality gates', () => {
     const dataRow = explorerTable.locator('.content-row--with-hover');
     await expect(dataRow.getByRole('cell')).toHaveCount(3);
     await expect(dataRow.getByRole('link')).toHaveCount(1);
-    await expect(dataRow.getByRole('link')).toHaveText(accountId);
+    await expect(dataRow.getByRole('link')).toHaveText(`${accountId.slice(0, 10)}...${accountId.slice(-10)}`);
+    const reveal = dataRow.locator('.base-hash__reveal');
+    await expect(reveal).toHaveAccessibleName('Show full identifier');
+    await reveal.focus();
+    await reveal.press('Enter');
+    await expect(dataRow.locator('.base-hash__full')).toHaveText(accountId);
+    await expectNoDocumentOverflow(page);
+    await reveal.press('Enter');
     await expect(dataRow.getByRole('link')).toHaveAttribute('title', accountId);
     await expect(dataRow.getByRole('link')).toHaveAttribute('href', `/accounts/${encodeURIComponent(accountId)}`);
   });

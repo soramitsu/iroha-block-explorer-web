@@ -1,68 +1,41 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import KaigiRelays from './KaigiRelays.vue';
 import { i18n } from '@/shared/lib/localization';
 
-vi.mock('@/shared/api', () => ({
-  buildToriiUrl: (path: string) => `https://torii.example/v1${path.startsWith('/') ? path : `/${path}`}`,
-  fetchKaigiRelays: vi.fn(),
-  fetchKaigiRelayHealthSnapshot: vi.fn(),
-  fetchKaigiRelayDetail: vi.fn(),
-}));
-
-vi.mock('@/shared/utils/setup-async-data', () => ({
-  setupAsyncData: vi.fn(() => ({
-    isLoading: false,
-    data: undefined,
-    refetch: vi.fn(),
-  })),
-}));
-
 const BaseContentBlockStub = {
   props: ['title'],
-  template: '<section><slot /></section>',
-};
-
-const BaseLoadingStub = {
-  template: '<div />',
-};
-
-const BaseTableStub = {
-  props: ['items', 'rowKey'],
-  template: '<div><slot name="header" /><slot name="row" v-for="item in items" :item="item" /></div>',
-};
-
-const TimeStampStub = {
-  props: ['value'],
-  template: '<time />',
-};
-
-const DataFieldStub = {
-  props: ['title', 'value'],
-  template: '<span />',
-};
-
-const KaigiRelayEventsStub = {
-  props: ['streamUrl'],
-  template: '<div data-test="kaigi-relay-events" :data-stream-url="streamUrl" />',
+  template: '<section><h1>{{ title }}</h1><slot /></section>',
 };
 
 describe('KaigiRelays', () => {
-  it('does not mount the authenticated Kaigi relay event stream in the public Explorer', () => {
+  it('does not represent operator relay topology as public explorer data', () => {
     const wrapper = mount(KaigiRelays, {
       global: {
         plugins: [i18n],
-        stubs: {
-          BaseContentBlock: BaseContentBlockStub,
-          BaseLoading: BaseLoadingStub,
-          BaseTable: BaseTableStub,
-          TimeStamp: TimeStampStub,
-          DataField: DataFieldStub,
-          KaigiRelayEvents: KaigiRelayEventsStub,
-        },
+        stubs: { BaseContentBlock: BaseContentBlockStub },
       },
     });
 
-    expect(wrapper.find('[data-test="kaigi-relay-events"]').exists()).toBe(false);
+    const boundary = wrapper.get('[data-test="kaigi-operator-boundary"]').text();
+    expect(boundary).toContain('OperatorSigningContext');
+    expect(boundary).toContain('relay event stream requires canonical account signing');
+    expect(boundary).toContain('call can be read publicly');
+    expect(boundary).toContain('makes no KAIGI request');
+  });
+
+  it('documents WebAuthn operator signing and fail-closed behavior', () => {
+    const wrapper = mount(KaigiRelays, {
+      global: {
+        plugins: [i18n],
+        stubs: { BaseContentBlock: BaseContentBlockStub },
+      },
+    });
+
+    const contract = wrapper.get('[data-test="kaigi-auth-contract"]').text();
+    expect(contract).toContain('Operator WebAuthn signing');
+    expect(contract).toContain('Canonical account signing');
+    expect(contract).toContain('Fail closed');
+    expect(contract).toContain('no unsigned fallback');
   });
 });

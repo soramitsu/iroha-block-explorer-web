@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 
 const ROADMAP_ROW_PATTERN = /^\|\s*(EX-\d{3})\s*\|([^|]*)\|\s*([^|]+?)\s*\|/gm;
 const ALLOWED_STATUSES = new Set(['TODO', 'IN PROGRESS', 'BLOCKED', 'COMPLETED']);
+const ROADMAP_HEADER_PATTERN = /^\|\s*ID\s*\|\s*Task\s*\|\s*Status\s*\|\s*Notes\s*\|\s*$/;
+const DELIMITER_CELL_PATTERN = /^:?-{3,}:?$/;
 
 export function parseRoadmapRows(source) {
   return Array.from(source.matchAll(ROADMAP_ROW_PATTERN), (match) => ({
@@ -15,6 +17,24 @@ export function validateRoadmap(source) {
   const errors = [];
   const rows = parseRoadmapRows(source);
   const seen = new Set();
+  const lines = source.split(/\r?\n/u);
+  const headerIndex = lines.findIndex((line) => ROADMAP_HEADER_PATTERN.test(line));
+
+  if (headerIndex < 0) {
+    errors.push('roadmap table must have exactly the ID, Task, Status, and Notes columns');
+  } else {
+    const delimiter = lines[headerIndex + 1] ?? '';
+    const delimiterCells =
+      delimiter.startsWith('|') && delimiter.endsWith('|')
+        ? delimiter
+            .slice(1, -1)
+            .split('|')
+            .map((cell) => cell.trim())
+        : [];
+    if (delimiterCells.length !== 4 || delimiterCells.some((cell) => !DELIMITER_CELL_PATTERN.test(cell))) {
+      errors.push('roadmap table delimiter must define exactly four Markdown columns');
+    }
+  }
 
   for (const row of rows) {
     if (seen.has(row.id)) errors.push(`duplicate roadmap id: ${row.id}`);

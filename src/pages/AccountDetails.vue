@@ -6,8 +6,8 @@ import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
 import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
-import { AccountSelectorSchema } from '@/shared/api/schemas';
-import type { Asset, Domain, NFT, RWA } from '@/shared/api/schemas';
+import { AccountIdSchema } from '@/shared/api/schemas';
+import type { AccountQrSnapshot, ExplorerAsset, Domain, NFT, RWA } from '@/shared/api/schemas';
 import { parseMetadata } from '@/shared/ui/utils/json';
 import BaseTabs from '@/shared/ui/components/BaseTabs.vue';
 import type { TabAccountTransactions } from '@/features/filter/transactions/model';
@@ -23,11 +23,9 @@ import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import { useClipboard } from '@vueuse/core';
 import { useNotifications } from '@/shared/ui/composables/notifications';
 import CopyIcon from '@/shared/ui/icons/copy.svg';
-import QRCode from 'qrcode';
 import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 import { getAssetDefinitionDisplayName } from '@/shared/lib/asset-definition-id';
 import { getDisplayedAccountId } from '@/shared/lib/account-id';
-import { normalizeAccountIdLiteral } from '@/shared/lib/account-literal';
 import { mergeRouteQuery, parseRouteEnum } from '@/shared/lib/route-query';
 import AccountActivityView from '@/pages/account/AccountActivityView.vue';
 import AccountPermissionsView from '@/pages/account/AccountPermissionsView.vue';
@@ -43,22 +41,20 @@ type AccountAssetsTab = 'assets' | 'nft' | 'rwa';
 type AccountViewTab = 'overview' | 'activity' | 'permissions' | 'multisig';
 
 const ACCOUNT_VIEW_OPTIONS: TabItem<AccountViewTab>[] = [
-  { label: 'Overview', value: 'overview' },
-  { label: 'Activity', value: 'activity' },
-  { label: 'Effective permissions', value: 'permissions' },
-  { label: 'Multisig', value: 'multisig' },
+  { i18nKey: 'accounts.views.overview', value: 'overview' },
+  { i18nKey: 'accounts.views.activity', value: 'activity' },
+  { i18nKey: 'accounts.views.permissions', value: 'permissions' },
+  { i18nKey: 'accounts.views.multisig', value: 'multisig' },
 ];
 const ACCOUNT_VIEW_VALUES = new Set<AccountViewTab>(ACCOUNT_VIEW_OPTIONS.map((item) => item.value));
 const accountView = computed<AccountViewTab>({
   get: () => parseRouteEnum(router.currentRoute.value.query.tab, ACCOUNT_VIEW_VALUES, 'overview'),
   set: (value) => {
-    router.push({
-      query: mergeRouteQuery(
-        router.currentRoute.value.query,
-        { tab: value },
-        { tab: 'overview' }
-      ),
-    }).catch(() => {});
+    router
+      .push({
+        query: mergeRouteQuery(router.currentRoute.value.query, { tab: value }, { tab: 'overview' }),
+      })
+      .catch(() => {});
   },
 });
 
@@ -71,7 +67,7 @@ const ACCOUNT_ASSETS_OPTIONS: TabItem<AccountAssetsTab>[] = [
 const accountSelector = computed(() => {
   const id = router.currentRoute.value.params['id'];
 
-  return AccountSelectorSchema.parse(id);
+  return AccountIdSchema.parse(id);
 });
 
 const accountScope = useParamScope(
@@ -88,20 +84,8 @@ const accountSnapshot = computed(() => accountScope.value.expose.snapshot);
 const account = computed(() =>
   accountScope.value.expose.data?.status === SUCCESSFUL_FETCHING ? accountScope.value?.expose.data.data : undefined
 );
-const routedAccountLiteral = computed(() => normalizeAccountIdLiteral(accountSelector.value));
-const displayAccountId = computed(() => {
-  const baseUrl = http.getToriiBaseUrl();
-  if (routedAccountLiteral.value) return getDisplayedAccountId(routedAccountLiteral.value, baseUrl);
-  if (account.value?.i105_address) return getDisplayedAccountId(account.value.i105_address, baseUrl);
-  return getDisplayedAccountId(accountSelector.value, baseUrl);
-});
-const displayI105Address = computed(() => {
-  const i105 = account.value?.i105_address?.trim();
-  if (!i105) return null;
-  if (routedAccountLiteral.value) return getDisplayedAccountId(routedAccountLiteral.value, http.getToriiBaseUrl());
-  return getDisplayedAccountId(i105, http.getToriiBaseUrl());
-});
-const accountFilterId = computed(() => displayI105Address.value ?? displayAccountId.value);
+const displayAccountId = computed(() => getDisplayedAccountId(account.value?.id ?? accountSelector.value));
+const accountFilterId = computed(() => displayAccountId.value);
 
 const domainsListState = reactive({
   cursor: null as string | null,
@@ -173,15 +157,13 @@ const assetsScope = useParamScope(
 
 const isAssetsLoading = computed(() => !!assetsScope.value?.expose.isLoading);
 const assetsPagination = computed(() =>
-  assetsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? assetsScope.value.expose.data.data
-    : null
+  assetsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? assetsScope.value.expose.data.data : null
 );
 const assets = computed(() =>
   assetsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? assetsScope.value.expose.data.data.items : []
 );
-const accountAssetRowKey = (item: Asset) => item.id;
-const accountAssetDefinitionName = (asset: Asset) => getAssetDefinitionDisplayName(asset);
+const accountAssetRowKey = (item: ExplorerAsset) => item.id;
+const accountAssetDefinitionName = (asset: ExplorerAsset) => getAssetDefinitionDisplayName(asset.definition_id);
 
 const NFTsScope = useParamScope(
   () => {
@@ -197,9 +179,7 @@ const NFTsScope = useParamScope(
 
 const isNFTsLoading = computed(() => !!NFTsScope.value?.expose.isLoading);
 const NFTsPagination = computed(() =>
-  NFTsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING
-    ? NFTsScope.value.expose.data.data
-    : null
+  NFTsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? NFTsScope.value.expose.data.data : null
 );
 const nfts = computed(() =>
   NFTsScope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? NFTsScope.value.expose.data.data.items : []
@@ -255,38 +235,53 @@ watch(
   }
 );
 
+const accountQr = ref<AccountQrSnapshot | null>(null);
+const qrGenerationFailed = ref(false);
+const qrLoading = ref(false);
+let qrLoadToken = 0;
+
+const i105Qr = computed(() => {
+  const svg = accountQr.value?.svg;
+  return svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : null;
+});
+const authoritativeAccountAddress = computed(() => accountQr.value?.literal ?? displayAccountId.value);
 const addressDetails = computed(() => {
   if (!account.value) return null;
   return {
-    networkPrefix: account.value.network_prefix,
+    networkPrefix: accountQr.value?.networkPrefix ?? account.value.network_prefix,
   };
 });
-const shouldShowAccountIdField = computed(
-  () => displayI105Address.value === null || displayI105Address.value !== displayAccountId.value
-);
-
-const i105Qr = ref<string | null>(null);
-const qrGenerationFailed = ref(false);
 
 watch(
-  () => displayI105Address.value,
-  async (i105) => {
-    if (!i105 || typeof window === 'undefined') {
-      i105Qr.value = null;
+  () => (account.value ? accountSelector.value : null),
+  async (selector, _previous, onCleanup) => {
+    const token = ++qrLoadToken;
+    accountQr.value = null;
+
+    if (!selector || typeof window === 'undefined') {
       qrGenerationFailed.value = false;
+      qrLoading.value = false;
       return;
     }
 
+    const controller = new AbortController();
+    onCleanup(() => controller.abort());
+    qrLoading.value = true;
+    qrGenerationFailed.value = false;
+
     try {
-      i105Qr.value = await QRCode.toDataURL(i105, {
-        errorCorrectionLevel: 'M',
-        margin: 1,
-        width: 256,
-      });
-      qrGenerationFailed.value = false;
+      const result = await http.fetchAccountQr(selector, controller.signal);
+      if (token !== qrLoadToken || controller.signal.aborted) return;
+      if (result.status === SUCCESSFUL_FETCHING) {
+        accountQr.value = result.data;
+      } else {
+        qrGenerationFailed.value = true;
+      }
     } catch {
-      i105Qr.value = null;
+      if (token !== qrLoadToken || controller.signal.aborted) return;
       qrGenerationFailed.value = true;
+    } finally {
+      if (token === qrLoadToken && !controller.signal.aborted) qrLoading.value = false;
     }
   },
   { immediate: true }
@@ -328,41 +323,22 @@ const assetsSection = computed(() => {
 
 <template>
   <div class="account-details-page">
-    <BaseTabs
-      v-model="accountView"
-      :items="ACCOUNT_VIEW_OPTIONS"
-      class="account-details-page__tabs"
-    />
+    <BaseTabs v-model="accountView" :items="ACCOUNT_VIEW_OPTIONS" class="account-details-page__tabs" />
 
-    <div
-      v-if="accountView === 'overview'"
-      class="account-details"
-      data-test="account-overview"
-    >
+    <div v-if="accountView === 'overview'" class="account-details" data-test="account-overview">
       <div class="account-details__personal">
-        <BaseContentBlock
-          :title="$t('accounts.accountInformation')"
-          class="account-details__personal-information"
-        >
+        <BaseContentBlock :title="$t('accounts.accountInformation')" class="account-details__personal-information">
           <template #default>
             <BaseResourceState
               :snapshot="accountSnapshot"
-              loading-label="Loading account"
-              not-found-label="Account not found"
-              error-label="Account could not be loaded"
-              retry-label="Retry account"
+              :loading-label="$t('accounts.resource.loading')"
+              :not-found-label="$t('accounts.resource.notFound')"
+              :error-label="$t('accounts.resource.loadError')"
+              :retry-label="$t('accounts.resource.retry')"
               @retry="accountScope.expose.refetch()"
             >
               <div v-if="account">
                 <div class="account-details__personal-information-row">
-                  <DataField
-                    v-if="shouldShowAccountIdField"
-                    :title="$t('accounts.accountId')"
-                    :hash="displayAccountId"
-                    copy
-                    type="full"
-                  />
-
                   <DataField
                     :title="$t('metadata')"
                     :metadata="{ display: 'short' }"
@@ -370,10 +346,7 @@ const assetsSection = computed(() => {
                   />
                 </div>
 
-                <div
-                  v-if="addressDetails && displayI105Address"
-                  class="account-details__address-card"
-                >
+                <div v-if="addressDetails && authoritativeAccountAddress" class="account-details__address-card">
                   <div class="account-details__address-heading">
                     <span class="h-sm">{{ $t('accounts.accountAddressFormats') }}</span>
                   </div>
@@ -387,27 +360,20 @@ const assetsSection = computed(() => {
                         <button
                           type="button"
                           class="account-details__address-copy"
-                          aria-label="Copy I105 address"
-                          @click.stop="copyAddress(displayI105Address)"
+                          :aria-label="$t('accounts.copyI105Address')"
+                          @click.stop="copyAddress(authoritativeAccountAddress)"
                         >
                           <CopyIcon aria-hidden="true" />
                         </button>
                       </div>
                       <p class="account-details__address-value row-text-monospace">
-                        {{ displayI105Address }}
+                        {{ authoritativeAccountAddress }}
                       </p>
                     </div>
 
-                    <div class="account-details__address-qr">
-                      <img
-                        v-if="i105Qr"
-                        :src="i105Qr"
-                        :alt="$t('accounts.accountAddressQrAlt')"
-                      >
-                      <span
-                        v-else-if="qrGenerationFailed"
-                        class="row-text"
-                      >
+                    <div class="account-details__address-qr" :aria-busy="qrLoading">
+                      <img v-if="i105Qr" :src="i105Qr" :alt="$t('accounts.accountAddressQrAlt')" />
+                      <span v-else-if="qrGenerationFailed" class="row-text">
                         {{ $t('accounts.accountAddressQrError') }}
                       </span>
                       <span class="account-details__address-qr-caption">
@@ -421,22 +387,12 @@ const assetsSection = computed(() => {
           </template>
         </BaseContentBlock>
 
-        <BaseContentBlock
-          v-if="account"
-          :title="assetsSection.title"
-          class="account-details__personal-owned"
-        >
+        <BaseContentBlock v-if="account" :title="assetsSection.title" class="account-details__personal-owned">
           <template #header-action>
-            <BaseTabs
-              v-model="assetsTab"
-              :items="ACCOUNT_ASSETS_OPTIONS"
-            />
+            <BaseTabs v-model="assetsTab" :items="ACCOUNT_ASSETS_OPTIONS" />
           </template>
           <template #default>
-            <span
-              v-if="assetsSection.isZero"
-              class="account-details__personal-owned_empty row-text"
-            >{{
+            <span v-if="assetsSection.isZero" class="account-details__personal-owned_empty row-text">{{
               assetsSection.zeroTitle
             }}</span>
             <BaseTable
@@ -452,25 +408,16 @@ const assetsSection = computed(() => {
               :breakpoint="960"
             >
               <template #header>
-                <div
-                  class="account-details__personal-owned-list-row"
-                  role="presentation"
-                >
+                <div class="account-details__personal-owned-list-row" role="presentation">
                   <span class="h-sm" role="columnheader">{{ $t('name') }}</span>
                   <span class="h-sm" role="columnheader">{{ $t('value') }}</span>
                 </div>
               </template>
 
               <template #row="{ item }">
-                <div
-                  class="account-details__personal-owned-list-row"
-                  role="presentation"
-                >
+                <div class="account-details__personal-owned-list-row" role="presentation">
                   <div role="cell">
-                    <BaseLink
-                      :to="`/assets/${encodeURIComponent(item.definition_id.toString())}`"
-                      monospace
-                    >
+                    <BaseLink :to="`/assets/${encodeURIComponent(item.definition_id.toString())}`" monospace>
                       {{ accountAssetDefinitionName(item) }}
                     </BaseLink>
                   </div>
@@ -507,24 +454,15 @@ const assetsSection = computed(() => {
               :breakpoint="960"
             >
               <template #header>
-                <div
-                  class="account-details__personal-owned-nft-list-row"
-                  role="presentation"
-                >
+                <div class="account-details__personal-owned-nft-list-row" role="presentation">
                   <span class="h-sm" role="columnheader">{{ $t('name') }}</span>
                 </div>
               </template>
 
               <template #row="{ item }">
-                <div
-                  class="account-details__personal-owned-nft-list-row"
-                  role="presentation"
-                >
+                <div class="account-details__personal-owned-nft-list-row" role="presentation">
                   <div role="cell">
-                    <BaseLink
-                      :to="`/nfts/${encodeURIComponent(item.id.toString())}`"
-                      monospace
-                    >
+                    <BaseLink :to="`/nfts/${encodeURIComponent(item.id.toString())}`" monospace>
                       {{ item.id.toString() }}
                     </BaseLink>
                   </div>
@@ -555,10 +493,7 @@ const assetsSection = computed(() => {
               :breakpoint="960"
             >
               <template #header>
-                <div
-                  class="account-details__personal-owned-list-row"
-                  role="presentation"
-                >
+                <div class="account-details__personal-owned-list-row" role="presentation">
                   <span class="h-sm" role="columnheader">{{ $t('id') }}</span>
                   <span class="h-sm" role="columnheader">{{ $t('value') }}</span>
                   <span class="h-sm" role="columnheader">{{ $t('assets.heldQuantity') }}</span>
@@ -566,15 +501,9 @@ const assetsSection = computed(() => {
               </template>
 
               <template #row="{ item }">
-                <div
-                  class="account-details__personal-owned-list-row"
-                  role="presentation"
-                >
+                <div class="account-details__personal-owned-list-row" role="presentation">
                   <div role="cell">
-                    <BaseLink
-                      :to="`/rwas/${encodeURIComponent(item.id)}`"
-                      monospace
-                    >
+                    <BaseLink :to="`/rwas/${encodeURIComponent(item.id)}`" monospace>
                       {{ item.id }}
                     </BaseLink>
                   </div>
@@ -607,16 +536,9 @@ const assetsSection = computed(() => {
           </template>
         </BaseContentBlock>
 
-        <BaseContentBlock
-          v-if="account"
-          :title="$t('accounts.accountDomains')"
-          class="account-details__personal-owned"
-        >
+        <BaseContentBlock v-if="account" :title="$t('accounts.accountDomains')" class="account-details__personal-owned">
           <template #default>
-            <span
-              v-if="!account?.owned_domains"
-              class="account-details__personal-owned_empty row-text"
-            >{{
+            <span v-if="!account?.owned_domains" class="account-details__personal-owned_empty row-text">{{
               $t('accounts.accountDoesntHaveAnyDomains')
             }}</span>
             <BaseTable
@@ -632,10 +554,7 @@ const assetsSection = computed(() => {
               :breakpoint="960"
             >
               <template #header>
-                <div
-                  class="account-details__personal-owned-list-row"
-                  role="presentation"
-                >
+                <div class="account-details__personal-owned-list-row" role="presentation">
                   <span class="h-sm" role="columnheader">{{ $t('id') }}</span>
                   <span class="h-sm" role="columnheader">{{ $t('assets.assets') }}</span>
                   <span class="h-sm" role="columnheader">{{ $t('accounts.accounts') }}</span>
@@ -643,15 +562,9 @@ const assetsSection = computed(() => {
               </template>
 
               <template #row="{ item }">
-                <div
-                  class="account-details__personal-owned-list-row"
-                  role="presentation"
-                >
+                <div class="account-details__personal-owned-list-row" role="presentation">
                   <div role="cell">
-                    <BaseLink
-                      :to="`/domains/${item.id}`"
-                      monospace
-                    >
+                    <BaseLink :to="`/domains/${item.id}`" monospace>
                       {{ item.id }}
                     </BaseLink>
                   </div>
@@ -686,19 +599,12 @@ const assetsSection = computed(() => {
       </div>
     </div>
 
-    <div
-      v-else-if="accountView === 'activity'"
-      class="account-details-page__view"
-      data-test="account-activity"
-    >
+    <div v-else-if="accountView === 'activity'" class="account-details-page__view" data-test="account-activity">
       <AccountActivityView :account-id="accountFilterId" />
       <div class="account-details__transactions account-details__transactions_activity">
         <BaseContentBlock :title="$t('accounts.accountTransactions')">
           <template #header-action>
-            <BaseTabs
-              v-model="transactionsTab"
-              :items="ACCOUNT_TRANSACTIONS_OPTIONS"
-            />
+            <BaseTabs v-model="transactionsTab" :items="ACCOUNT_TRANSACTIONS_OPTIONS" />
           </template>
           <template #default>
             <div class="account-details__transactions-table account-details__transactions-table_short">
@@ -708,11 +614,7 @@ const assetsSection = computed(() => {
                 hash-type="short"
                 show-block
               />
-              <InstructionsTable
-                v-else
-                hash-type="short"
-                :filter-by="{ kind: 'authority', value: displayAccountId }"
-              />
+              <InstructionsTable v-else hash-type="short" :filter-by="{ kind: 'authority', value: displayAccountId }" />
             </div>
           </template>
         </BaseContentBlock>

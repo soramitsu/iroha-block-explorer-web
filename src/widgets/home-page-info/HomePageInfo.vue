@@ -1,248 +1,81 @@
 <template>
-  <div class="home-page-info">
-    <div class="home-page-info__search">
-      <SearchField
-        size="lg"
-        :placeholder="$t('homePage.search.placeholder')"
-        large
-      />
-    </div>
-
-    <BaseLoading
-      v-if="isMetricsLoading"
-      class="home-page-info_loading"
-    />
-
-    <p
-      v-if="isUnavailable"
-      class="home-page-info__status"
+  <section
+    class="home-page-info"
+    :aria-label="$t('ux.network')"
+  >
+    <div
+      v-if="!metrics"
+      class="home-page-info__availability"
       role="status"
     >
-      {{ $t('telemetry.telemetryUnavailable') }}
-    </p>
-
-    <span
-      v-if="isStale"
-      class="home-page-info__status"
-      role="status"
-    >
-      {{ $t('telemetry.dataStale') }}
-    </span>
-
-    <div
-      v-if="metrics"
-      class="home-page-info__grid"
-    >
-      <div
-        v-for="item in firstSection"
-        :key="item.i18nKey"
-        class="home-page-info__item"
-      >
-        <span class="home-page-info__item-value">
-          {{ item.value }}
-        </span>
-
-        <span class="home-page-info__item-label">
-          {{ $t(item.i18nKey) }}
-        </span>
-      </div>
+      <BaseLoading v-if="isMetricsLoading" />
+      <span>{{ $t(isMetricsLoading ? 'ux.collection.loading' : 'ux.metricsUnavailable') }}</span>
+      <BaseButton @click="reconnect">
+        {{ $t('ux.collection.retry') }}
+      </BaseButton>
     </div>
-
-    <div
-      v-if="metrics"
-      class="home-page-info__grid"
-    >
+    <template v-else>
       <div
-        v-for="item in secondSection"
-        :key="item.i18nKey"
-        class="home-page-info__item"
+        v-if="isStale"
+        class="home-page-info__availability"
+        role="status"
       >
-        <span class="home-page-info__item-value">
-          {{ item.value }}
-        </span>
-
-        <span class="home-page-info__item-label">
-          {{ $t(item.i18nKey) }}
-        </span>
+        <span>{{ $t('ux.metricsStale') }}</span><BaseButton @click="reconnect">
+          {{ $t('ux.collection.retry') }}
+        </BaseButton>
       </div>
-    </div>
-  </div>
+      <dl class="home-page-info__grid">
+        <div
+          v-for="item in items"
+          :key="item.i18nKey"
+          class="home-page-info__item"
+        >
+          <dt>{{ $t(item.i18nKey) }}</dt><dd class="home-page-info__item-value">
+            {{ item.value }}
+          </dd>
+        </div>
+      </dl>
+    </template>
+  </section>
 </template>
-
 <script setup lang="ts">
-import { SearchField } from '@/features/search';
 import { computed } from 'vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
+import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import { useTelemetryMetrics } from '@/shared/ui/composables/useTelemetryMetrics';
-
-const firstSection = computed(() => {
-  if (!metrics.value) return [];
-  return [
-    { value: metrics.value.accounts, i18nKey: 'homePage.totalAccounts' },
-    { value: metrics.value.assets, i18nKey: 'homePage.totalAssets' },
-    { value: metrics.value.domains, i18nKey: 'homePage.totalDomains' },
-  ];
-});
-
-const secondSection = computed(() => {
-  if (!metrics.value) return [];
-  return [
-    { value: metrics.value.block, i18nKey: 'homePage.totalBlocks' },
-    {
-      value: metrics.value.transactions_accepted + metrics.value.transactions_rejected,
-      i18nKey: 'homePage.totalTransactions',
-    },
-    { value: metrics.value.peers, i18nKey: 'homePage.totalNodes' },
-  ];
-});
-
-const { metrics, isLoading: isMetricsLoading, isUnavailable, isStale } = useTelemetryMetrics();
+const { metrics, isLoading: isMetricsLoading, isStale, reconnect } = useTelemetryMetrics();
+const items = computed(() => [
+  { value: metrics.value?.accounts, i18nKey: 'homePage.totalAccounts' },
+  { value: metrics.value?.assets, i18nKey: 'homePage.totalAssets' },
+  { value: metrics.value?.domains, i18nKey: 'homePage.totalDomains' },
+  { value: metrics.value?.block, i18nKey: 'homePage.totalBlocks' },
+  { value: metrics.value ? metrics.value.transactions_accepted + metrics.value.transactions_rejected : null, i18nKey: 'homePage.totalTransactions' },
+  { value: metrics.value?.peers, i18nKey: 'homePage.totalNodes' },
+]);
 </script>
-
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
-
 .home-page-info {
-  height: 160px;
-  background: theme-color('surface-variant');
-  width: 100%;
-  display: grid;
-  justify-items: center;
-  margin-top: 0;
-  z-index: 1;
-  position: relative;
-  isolation: isolate;
-
-  @include xs {
-    margin-top: size(3);
-    margin-top: size(0); // #SEARCH: remove when functionality is ready
+  min-width: 0; width: 100%; min-height: 160px; display: grid; justify-items: center; align-content: center;
+  background: theme-color('surface-variant'); border-block: 1px solid theme-color('border-primary');
+  position: relative; z-index: 1; padding: 16px 8px;
+  @include sm { min-height: 210px; padding: 24px 16px; }
+  &__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 12px; width: min(1100px, 100%); }
+  &__item { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+  dt { color: theme-color('content-secondary'); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+  dd {
+    order: -1; color: theme-color('content-on-surface-variant'); font-size: 24px; line-height: 1.3;
+    font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
   }
-
-  @include sm {
-    height: 210px;
-  }
-
-  @include md {
-    margin-top: size(10);
-    margin-top: size(4); // #SEARCH: remove when functionality is ready
-  }
-
-  &_loading {
-    margin-top: 60px;
-
-    @include sm {
-      margin-top: 85px;
-    }
-  }
-
-  &__status {
-    align-self: center;
-    color: theme-color('content-on-surface-variant');
-    margin: 0;
-  }
-
-  &__search {
-    display: none; // #SEARCH: remove when functionality is ready
-
-    position: relative;
-    margin-top: size(-3);
-    width: 100%;
-    padding: 0 size(2);
-
-    @include xs {
-      margin-top: size(-4);
-    }
-
-    @include md {
-      margin-top: size(-5.5);
-      padding: 0 size(9);
-      width: $home-content-width-tablet;
-    }
-
-    @include lg {
-      padding: 0 size(12);
-      width: $home-content-width;
-    }
-  }
-
-  &__grid {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    padding: size(2) 0 size(1) 0;
-
-    @include md {
-      padding: size(2) 0;
-    }
-  }
-
-  &__item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 33%;
-
-    &-value {
-      @include tpg-h2;
-      color: theme-color('content-on-surface-variant');
-      height: size(3.5);
-
-      @include xs {
-        height: size(4);
-        @include tpg-h2;
-      }
-      @include sm {
-        @include tpg-h1;
-        height: size(5.5);
-      }
-      @include md {
-        @include tpg-d2;
-      }
-      @include lg {
-        height: size(7);
-        @include tpg-d1;
-      }
-    }
-
-    @include md {
-      width: 25%;
-    }
-    @include xl {
-      width: 20%;
-    }
-    @include xxl {
-      width: 18%;
-    }
-
-    &-label {
-      @include tpg-s5;
-      color: theme-color('content-quaternary');
-      text-align: center;
-
-      @include xs {
-        @include tpg-s4;
-      }
-    }
+  @include xs { dt { font-size: 12px; } }
+  @include sm { dd { font-size: 29px; } }
+  @include md { dd { font-size: 34px; } }
+  @include lg { dd { font-size: 40px; } }
+  &__availability {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 8px;
+    font-size: 13px; color: theme-color('content-secondary'); text-align: center;
+    .base-loading { width: 24px; height: 24px; }
   }
 }
-
-html:not(.dark) {
-  .home-page-info {
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, theme-color('surface') 98%, white),
-      color-mix(in srgb, theme-color('surface-variant') 92%, white)
-    );
-    border-top: 1px solid color-mix(in srgb, theme-color('border-secondary') 75%, white);
-    border-bottom: 1px solid color-mix(in srgb, theme-color('border-secondary') 60%, white);
-  }
-
-  .home-page-info__item-value {
-    color: theme-color('primary');
-  }
-
-  .home-page-info__item-label {
-    color: theme-color('content-secondary');
-  }
-}
+html:not(.dark) .home-page-info__item-value { color: theme-color('primary'); }
 </style>

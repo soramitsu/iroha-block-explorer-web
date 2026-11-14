@@ -50,7 +50,6 @@ function transaction(hash = HASH_A, blockHeight = 12) {
     executable: 'Instructions',
     status: 'Committed',
     rejection_reason: null,
-    executable_payload: { instruction_count: 1 },
     metadata: {},
     nonce: null,
     signature: 'signature',

@@ -10,64 +10,60 @@ import BaseTable from '@/shared/ui/components/BaseTable.vue';
 import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
 
 const props = defineProps<{
-  accountId: string
+  accountId: string;
 }>();
 
-const { cursor, limit } = useCursorListRouteQuery({
+const { cursor, limit, pagination, resetPagination } = useCursorListRouteQuery({
   cursorKey: 'permissions_cursor',
   limitKey: 'permissions_limit',
 });
 
-const permissionsResource = setupAsyncData(() =>
-  http.fetchAccountPermissions(props.accountId, {
-    cursor: cursor.value,
-    limit: limit.value,
-  })
+const permissionsResource = setupAsyncData(
+  () =>
+    http.fetchAccountPermissions(props.accountId, {
+      cursor: cursor.value,
+      limit: limit.value,
+    }),
+  { immediate: pagination.value.ok }
 );
 
-watch(
-  [() => props.accountId, cursor, limit],
-  () => {
-    permissionsResource.refetch();
-  }
-);
+watch([() => props.accountId, pagination], () => {
+  if (pagination.value.ok) permissionsResource.refetch();
+});
 
 const apiResult = computed(() => permissionsResource.data);
 const permissionDenied = computed(() => apiResult.value?.status === 'permission-denied');
-const response = computed(() =>
-  apiResult.value?.status === SUCCESSFUL_FETCHING ? apiResult.value.data : null
-);
+const response = computed(() => (apiResult.value?.status === SUCCESSFUL_FETCHING ? apiResult.value.data : null));
 const permissions = computed(() => response.value?.items ?? []);
 </script>
 
 <template>
-  <BaseContentBlock
-    title="Effective permissions"
-    class="account-permissions"
-  >
+  <BaseContentBlock :title="$t('accounts.permissions.title')" class="account-permissions">
     <template #default>
-      <div
-        class="account-permissions__semantics row-text"
-        data-test="permissions-provenance-notice"
-      >
+      <div class="account-permissions__semantics row-text" data-test="permissions-provenance-notice">
         <p>
-          Torii returns the effective set: direct grants and permissions inherited from assigned roles are
-          combined. The endpoint does not provide per-entry provenance, so this view does not label a grant as
-          direct or role-inherited.
+          {{ $t('accounts.permissions.description') }}
         </p>
         <p>
-          This is an unsigned, caller-visible read. Dataspace-scoped grants outside this route's visibility can
-          be omitted.
+          {{ $t('accounts.permissions.visibility') }}
         </p>
       </div>
 
       <div
-        v-if="permissionsResource.isLoading && !apiResult"
+        v-if="!pagination.ok"
         class="account-permissions__state"
-        role="status"
+        role="alert"
+        data-test="permissions-invalid-pagination"
       >
+        <span>{{ $t('table.invalidCursorPagination') }}</span>
+        <BaseButton bordered @click="resetPagination">
+          {{ $t('table.resetPagination') }}
+        </BaseButton>
+      </div>
+
+      <div v-else-if="permissionsResource.isLoading && !apiResult" class="account-permissions__state" role="status">
         <BaseLoading />
-        <span>Loading effective permissions…</span>
+        <span>{{ $t('accounts.permissions.loading') }}</span>
       </div>
 
       <div
@@ -76,21 +72,14 @@ const permissions = computed(() => response.value?.items ?? []);
         role="alert"
         data-test="permissions-permission-denied"
       >
-        <span>Torii denied access to this account's effective permissions.</span>
-        <BaseButton
-          bordered
-          @click="permissionsResource.refetch"
-        >
-          Retry
+        <span>{{ $t('accounts.permissions.denied') }}</span>
+        <BaseButton bordered @click="permissionsResource.refetch">
+          {{ $t('accounts.permissions.retry') }}
         </BaseButton>
       </div>
 
-      <div
-        v-else-if="permissionsResource.notFound"
-        class="account-permissions__state row-text"
-        role="status"
-      >
-        No effective-permission record exists for this account.
+      <div v-else-if="permissionsResource.notFound" class="account-permissions__state row-text" role="status">
+        {{ $t('accounts.permissions.notFound') }}
       </div>
 
       <div
@@ -99,12 +88,9 @@ const permissions = computed(() => response.value?.items ?? []);
         role="alert"
         data-test="permissions-error"
       >
-        <span>Effective permissions could not be loaded: {{ permissionsResource.error.message }}</span>
-        <BaseButton
-          bordered
-          @click="permissionsResource.refetch"
-        >
-          Retry
+        <span>{{ $t('accounts.permissions.loadError') }}</span>
+        <BaseButton bordered @click="permissionsResource.refetch">
+          {{ $t('accounts.permissions.retry') }}
         </BaseButton>
       </div>
 
@@ -115,35 +101,29 @@ const permissions = computed(() => response.value?.items ?? []);
           role="status"
           data-test="permissions-empty"
         >
-          This account has no effective permissions visible to this request.
+          {{ $t('accounts.permissions.empty') }}
         </div>
 
         <BaseTable
-          v-else
+          v-if="response"
           v-model:cursor="cursor"
           v-model:page-size="limit"
-          pagination-mode="cursor"
           :loading="permissionsResource.isLoading"
+          pagination-mode="cursor"
           :cursor-pagination="response"
           :items="permissions"
           container-class="account-permissions__rows"
           :breakpoint="760"
         >
           <template #header>
-            <div
-              class="account-permissions__row account-permissions__row_header"
-              role="presentation"
-            >
-              <span role="columnheader">Permission</span>
-              <span role="columnheader">Exact payload</span>
+            <div class="account-permissions__row account-permissions__row_header" role="presentation">
+              <span role="columnheader">{{ $t('accounts.permissions.permission') }}</span>
+              <span role="columnheader">{{ $t('accounts.permissions.exactPayload') }}</span>
             </div>
           </template>
 
           <template #row="{ item }">
-            <div
-              class="account-permissions__row"
-              role="presentation"
-            >
+            <div class="account-permissions__row" role="presentation">
               <div role="cell">
                 <strong>{{ item.name }}</strong>
               </div>

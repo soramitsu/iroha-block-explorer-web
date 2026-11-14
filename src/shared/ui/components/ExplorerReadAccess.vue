@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { getToriiBaseUrl } from '@/shared/api';
 import {
   createConnectAppSession, createConnectCanonicalRequestAuth, createConnectSessionPreview,
@@ -11,6 +12,7 @@ import {
 } from '@/shared/lib/explorer-read-auth';
 import BaseButton from './BaseButton.vue';
 
+const { t } = useI18n();
 const open = ref(false);
 const pending = ref(false);
 const error = ref<string | null>(null);
@@ -61,7 +63,7 @@ async function connect() {
     appSession = connected;
     let revokeActiveSession: ((reason?: string) => void) | undefined;
     const socketEnded = () => {
-      const reason = 'The wallet connection ended. Reconnect to continue private reads.';
+      const reason = t('accounts.multisigWorkspace.sessionClosed');
       revokeActiveSession?.(reason);
       if (attempt === generation) {
         error.value = reason;
@@ -81,7 +83,7 @@ async function connect() {
   } catch (cause) {
     if (attempt !== generation) return;
     disconnect();
-    error.value = cause instanceof Error ? cause.message : 'Wallet authentication failed.';
+    error.value = cause instanceof Error ? cause.message : t('accounts.multisigWorkspace.sessionError');
   } finally {
     if (attempt === generation) pending.value = false;
   }
@@ -107,28 +109,28 @@ onBeforeUnmount(() => {
       :aria-expanded="open"
       @click="open = !open"
     >
-      {{ explorerReadFailure ? 'Access ended' : explorerReadAccountId ? 'Connected' : 'Read access' }}
+      {{ explorerReadFailure ? $t('telemetry.disconnected') : explorerReadAccountId ? $t('telemetry.connected') : $t('readAccess.title') }}
     </BaseButton>
     <section
       v-if="open"
       class="explorer-read-access__panel"
-      aria-label="Explorer read access"
+      :aria-label="$t('readAccess.title')"
     >
-      <strong>Private data space access</strong>
-      <p>Connect a wallet whose account has access to this data space. Public transactions and proofs remain available without a wallet.</p>
+      <strong>{{ $t('readAccess.title') }}</strong>
+      <p>{{ $t('readAccess.description') }}</p>
       <template v-if="explorerReadFailure">
         <p role="alert" data-test="read-access-failure">{{ explorerReadFailure }}</p>
-        <BaseButton bordered data-test="read-access-public" @click="disconnect">Continue publicly</BaseButton>
+        <BaseButton bordered data-test="read-access-public" @click="disconnect">{{ $t('readAccess.public') }}</BaseButton>
       </template>
       <template v-if="explorerReadAccountId">
-        <p>Connected account</p>
+        <p>{{ $t('accounts.multisigWorkspace.authenticatedReader') }}</p>
         <code data-test="read-access-account">{{ explorerReadAccountId }}</code>
         <BaseButton
           bordered
           data-test="read-access-disconnect"
           @click="disconnect"
         >
-          Disconnect
+          {{ $t('readAccess.disconnect') }}
         </BaseButton>
       </template>
       <template v-else-if="configuration.available">
@@ -138,7 +140,7 @@ onBeforeUnmount(() => {
           :disabled="pending"
           @click="connect"
         >
-          {{ pending ? 'Waiting for wallet approval…' : explorerReadFailure ? 'Reconnect wallet' : 'Connect wallet' }}
+          {{ pending ? $t('accounts.multisigWorkspace.waiting') : explorerReadFailure ? $t('accounts.multisigWorkspace.retryAuthentication') : $t('accounts.multisigWorkspace.createSession') }}
         </BaseButton>
         <template v-if="walletUri">
           <img
@@ -146,13 +148,13 @@ onBeforeUnmount(() => {
             :src="qrCode"
             width="224"
             height="224"
-            alt="Scan with your Iroha Connect wallet"
+            :alt="$t('accounts.multisigWorkspace.openWallet')"
           >
           <a
             :href="walletUri"
             data-test="read-access-wallet"
-          >Open wallet</a>
-          <p>Approve read access in your wallet. Your account permissions determine which records are visible.</p>
+          >{{ $t('accounts.multisigWorkspace.openWallet') }}</a>
+          <p>{{ $t('accounts.multisigWorkspace.waiting') }}</p>
         </template>
         <BaseButton
           v-if="pending"
@@ -160,7 +162,7 @@ onBeforeUnmount(() => {
           data-test="read-access-cancel"
           @click="disconnect"
         >
-          Cancel
+          {{ $t('ux.close') }}
         </BaseButton>
       </template>
       <p

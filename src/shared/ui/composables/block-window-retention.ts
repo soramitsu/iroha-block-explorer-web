@@ -1,8 +1,9 @@
 import { getToriiBaseUrl } from '@/shared/api';
 import { parseBlockWindow, serializeBlockWindow } from '@/shared/lib/block-window-cache';
 import type { CanonicalBlockSample } from '@/shared/lib/chain-analytics';
-import { createPublicHistoryCacheKey } from '@/shared/lib/history-cache';
+import { explorerReadAuthRevision, explorerReadIsPublic } from '@/shared/lib/explorer-read-auth';
 import type { HistoryScanCursor } from '@/shared/lib/history-scan';
+import { isCanonicalIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
 import { getRuntimeConfig } from '@/shared/runtime-config';
 
 /** A block window kept for the next dashboard or visit. */
@@ -35,6 +36,28 @@ export const RETAINED_WINDOW_MAX_AGE_MS = 30 * 60_000;
 
 const sessionWindows = new Map<string, RetainedBlockWindow>();
 
+function storageKey(kind: string, networkId: string | undefined, toriiUrl: string): string | null {
+  if (!networkId || !isCanonicalIrohaHashLiteral32(networkId)) return null;
+  try {
+    const endpoint = new URL(toriiUrl);
+    if (!['http:', 'https:'].includes(endpoint.protocol) || endpoint.username || endpoint.password) return null;
+  } catch {
+    return null;
+  }
+  return `iroha-history-v1:${kind}:${encodeURIComponent(networkId)}:${encodeURIComponent(toriiUrl)}`;
+}
+
+/**
+ * The window's key while its reader stays anonymous and unchanged: the exact
+ * canonical NetworkId plus a credential-free http(s) Torii endpoint. `null`
+ * means the window must be neither kept nor read.
+ */
+export function publicBlockWindowKey(kind: string, networkId: string | undefined, toriiUrl: string): () => string | null {
+  const readerRevision = explorerReadAuthRevision.value;
+  const key = explorerReadIsPublic.value ? storageKey(kind, networkId, toriiUrl) : null;
+  return () => (explorerReadIsPublic.value && explorerReadAuthRevision.value === readerRevision ? key : null);
+}
+
 function storedWindow(key: string): RetainedBlockWindow | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -48,12 +71,13 @@ function storedWindow(key: string): RetainedBlockWindow | null {
 /**
  * Keep a dashboard's block window for the next dashboard and the next visit:
  * in memory with its continuation for this page session, and in
- * localStorage as rows only across reloads. Like the other history caches,
- * only an anonymous reader's window is kept, under the exact network and
- * Torii endpoint, and never once the reader identity changes.
+ * localStorage as rows only across reloads. Only an anonymous reader's window
+ * is kept, under the exact network and Torii endpoint, and never once the
+ * reader identity changes. A kept window is shown as unreconciled until its
+ * tip matches a fresh head read by hash.
  */
 export function blockWindowRetention(kind: string, now: () => number = Date.now): BlockWindowRetention {
-  const key = createPublicHistoryCacheKey(kind, getRuntimeConfig().networkId, getToriiBaseUrl());
+  const key = publicBlockWindowKey(kind, getRuntimeConfig().networkId, getToriiBaseUrl());
   return {
     load() {
       const current = key();

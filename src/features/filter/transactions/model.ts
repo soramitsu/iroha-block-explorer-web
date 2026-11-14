@@ -26,5 +26,13 @@ export const INSTRUCTION_OPTIONS: TabItem<TabInstructions>[] = [
   { i18nKey: 'transactions.setParameter', value: 'SetParameter' },
   { i18nKey: 'transactions.upgrade', value: 'Upgrade' },
   { i18nKey: 'transactions.log', value: 'Log' },
+  {
+    i18nKey: 'studio.instructionPresentation.titles.KagemushaTopUp_KagemushaTopUp',
+    value: 'KagemushaTopUp',
+  },
+  {
+    i18nKey: 'studio.instructionPresentation.titles.KagemushaRedeem_KagemushaRedeem',
+    value: 'KagemushaRedeem',
+  },
   { i18nKey: 'transactions.custom', value: 'Custom' },
 ];

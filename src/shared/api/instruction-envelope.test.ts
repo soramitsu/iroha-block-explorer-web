@@ -19,19 +19,23 @@ describe('Native Explorer instruction envelope', () => {
   });
 
   it.each(['', 'not base64', fixture.box.instruction + '\n', fixture.box.instruction.replace(/=+$/u, '')])(
-    'rejects noncanonical encoded bytes', (instruction) => {
+    'rejects noncanonical encoded bytes',
+    (instruction) => {
       expect(() => NativeInstructionEnvelope.parse({ ...fixture.box, instruction })).toThrow();
     }
   );
 
   it.each(['0'.repeat(64), `0x${fixture.box.framed_sha256}`, fixture.box.framed_sha256.toUpperCase()])(
-    'rejects an incorrect or noncanonical digest', (framed_sha256) => {
+    'rejects an incorrect or noncanonical digest',
+    (framed_sha256) => {
       expect(() => NativeInstructionEnvelope.parse({ ...fixture.box, framed_sha256 })).toThrow();
     }
   );
 
   it('refuses missing wire identity and mixed fabricated JSON', () => {
     expect(() => NativeInstructionEnvelope.parse({ ...fixture.box, wire_id: '' })).toThrow();
-    expect(() => Instruction.parse({ ...fixture, box: { ...fixture.box, json: { kind: 'Log', payload: {} } } })).toThrow();
+    expect(() =>
+      Instruction.parse({ ...fixture, box: { ...fixture.box, json: { kind: 'Log', payload: {} } } })
+    ).toThrow();
   });
 });

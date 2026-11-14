@@ -195,9 +195,50 @@ export async function validateToolchainCacheDirectory(override = process.env.IRO
   return effectiveCacheRoot;
 }
 
+export async function validatePlaywrightBrowserCacheDirectory(
+  override = process.env.IROHA_EXPLORER_TOOLCHAIN_CACHE
+) {
+  const cacheRoot = await validateToolchainCacheDirectory(override);
+  const browserCache = path.join(cacheRoot, 'ms-playwright');
+  if (!(await pathExists(browserCache))) {
+    try {
+      await mkdir(browserCache, { mode: 0o700 });
+      await chmod(browserCache, 0o700);
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+    }
+  }
+  await inspectOwnedPrivateDirectory(browserCache, 'Playwright browser cache');
+  return browserCache;
+}
+
+function normalizePlaywrightBrowsersPath(value) {
+  const browserPath = String(value);
+  if (!path.isAbsolute(browserPath) || path.resolve(browserPath) !== browserPath) {
+    throw new Error('PLAYWRIGHT_BROWSERS_PATH must be an absolute normalized path');
+  }
+  return browserPath;
+}
+
+export async function resolvePlaywrightBrowsersPath(
+  source,
+  cacheOverride = source.IROHA_EXPLORER_TOOLCHAIN_CACHE
+) {
+  if (source.PLAYWRIGHT_BROWSERS_PATH !== undefined) {
+    return normalizePlaywrightBrowsersPath(source.PLAYWRIGHT_BROWSERS_PATH);
+  }
+  return validatePlaywrightBrowserCacheDirectory(cacheOverride);
+}
+
 export function sanitizedExactToolchainEnvironment(
   source,
-  { nodeBin, corepackHome, toolBin, toolRoot = path.dirname(corepackHome) }
+  {
+    nodeBin,
+    corepackHome,
+    playwrightBrowsersPath = undefined,
+    toolBin,
+    toolRoot = path.dirname(corepackHome),
+  }
 ) {
   for (const [value, label] of [
     [nodeBin, 'verified Node bin'],
@@ -264,12 +305,13 @@ export function sanitizedExactToolchainEnvironment(
       environment.IROHA_REPO_ROOT = irohaRoot;
     }
   }
-  if (source.PLAYWRIGHT_BROWSERS_PATH !== undefined) {
-    const browserPath = String(source.PLAYWRIGHT_BROWSERS_PATH);
-    if (!path.isAbsolute(browserPath) || path.resolve(browserPath) !== browserPath) {
-      throw new Error('PLAYWRIGHT_BROWSERS_PATH must be an absolute normalized path');
-    }
-    environment.PLAYWRIGHT_BROWSERS_PATH = browserPath;
+  const requestedBrowserPath = source.PLAYWRIGHT_BROWSERS_PATH === undefined
+    ? playwrightBrowsersPath
+    : source.PLAYWRIGHT_BROWSERS_PATH;
+  if (requestedBrowserPath !== undefined) {
+    environment.PLAYWRIGHT_BROWSERS_PATH = normalizePlaywrightBrowsersPath(
+      requestedBrowserPath
+    );
   }
   return environment;
 }
@@ -455,6 +497,10 @@ async function prepareExactToolchain() {
   resolveNodeArtifact();
   assertRequiredNodeVersion(process.versions.node);
   const cacheRoot = await validateToolchainCacheDirectory();
+  const playwrightBrowsersPath = await resolvePlaywrightBrowsersPath(
+    process.env,
+    cacheRoot
+  );
   const nodeExecutable = process.execPath;
   const nodeBin = path.dirname(nodeExecutable);
   const nodeRoot = path.dirname(nodeBin);
@@ -485,6 +531,7 @@ async function prepareExactToolchain() {
   const childEnvironment = sanitizedExactToolchainEnvironment(process.env, {
     nodeBin,
     corepackHome,
+    playwrightBrowsersPath,
     toolBin,
     toolRoot,
   });

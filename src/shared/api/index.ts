@@ -1,149 +1,137 @@
-import { fetchToriiWithDeadline } from './transport';
-import { parse as parseLosslessJson, parseNumberAndBigInt } from 'lossless-json';
-import { appendSearchParams } from './query';
+import {
+  AssetDefinitionAliasSchema,
+  NftIdSchema,
+  RwaIdSchema,
+  type AssetDefinitionSelector,
+} from '@/shared/api/schemas';
+import { normalizeDomainIdLiteral } from '@/shared/lib/rwa-id';
 import type {
-  CursorPaginationParams,
-  AssetSearchParams,
-  AssetDefinitionId,
-  AssetId,
-  TransactionSearchParams,
+  AccountQrSnapshot,
+  DefiOracleAttestationLatestParams,
+  SorafsPinManifestSearchParams,
+  ZkProofFilterParams,
+  ZkProofListParams,
+  ZkVerifyingKeyListParams,
+} from '@/shared/api/schemas';
+
+import {
+  AccountQrResponse,
+  AssetDefinitionIdSchema,
+  ConfidentialAssetPolicy,
+  ConnectSessionResponse,
+  DefiOracleAttestation,
+  DefiOracleAttestationLatestParamsSchema,
+  SoracleFeedEventRecord,
+  SoracleFeedIdSchema,
+  SoracleFeedRegistry,
+  SorafsPinManifestResponse,
+  SystemParameters,
+  VpnProfile,
+  ZkProofCount,
+  ZkProofDetail,
+  ZkProofId,
+  ZkProofRegistryItem,
+  ZkVerifyingKeyDetail,
+  ZkVerifyingKeyId,
+  ZkVerifyingKeyListItem,
+} from '@/shared/api/schemas';
+
+import type {
   AccountSearchParams,
+  AssetDefinitionId,
   AssetDefinitionSearchParams,
-  InstructionsSearchParams,
+  AssetId,
+  AssetSearchParams,
+  CursorPaginationParams,
   DomainSearchParams,
+  InstructionsSearchParams,
+  MultisigProposalStatus,
   NftId,
   NFTsSearchParams,
   RWASearchParams,
   SorafsPinRegistrySearchParams,
-  SorafsAliasSearchParams,
-  SorafsReplicationSearchParams,
-  SoracloudServiceConfigStatusQuery,
-  SoracloudServiceSecretStatusQuery,
-  SoracloudTrainingJobStatusQuery,
-  SoracloudModelWeightStatusQuery,
-  SoracloudModelArtifactStatusQuery,
-  SoracloudUploadedModelStatusQuery,
-  SoracloudPrivateInferenceStatusQuery,
-  SoracloudHfSharedLeaseStatusQuery,
-  SoracloudModelHostStatusQuery,
-  SoracloudAgentStatusQuery,
-  SoracloudAgentMailboxStatusQuery,
-  SoracloudAgentAutonomyStatusQuery,
-  ZkAttachmentSearchParams,
-  ZkProverReportSearchParams,
-  SubmitVerifiedContractSource,
-  MultisigProposalStatus,
-  SumeragiStatus,
-  SumeragiTelemetry,
-  KaigiRelaySummaryList,
-  KaigiRelayDetail,
-  KaigiRelayHealthSnapshot,
+  TransactionSearchParams,
 } from '@/shared/api/schemas';
+import { parseStrictLosslessIntegerJson } from '@/shared/lib/strict-lossless-integer-json';
+import { registerConnectSession, type BrowserConnectSessionPreview } from '@iroha/iroha-js/connect-browser';
+import { parse as parseLosslessJson, parseNumberAndBigInt } from 'lossless-json';
+import { z } from 'zod/v4';
+import { appendSearchParams } from './query';
+import { fetchToriiWithDeadline } from './transport';
+
 import {
   Account,
-  CollectionPage,
-  AssetIdSchema,
-  ExplorerAsset,
+  AccountHistoryResponse,
+  AccountPermissionsResponse,
   AssetDefinition,
-  ExplorerAssetDefinition,
-  CanonicalDataspaceId,
   AssetDefinitionEconometrics,
   AssetDefinitionSnapshot,
-  Domain,
+  AssetIdSchema,
   Block,
-  Transaction,
+  BLOCK_SAMPLE_FIELDS,
+  BlockSampleRow,
+  CanonicalDataspaceId,
+  CollectionPage,
+  ContractActivityResponse,
+  ContractCodeView,
+  ContractEvent,
+  ContractEventResponse,
   DetailedTransaction,
-  Instruction,
-  NetworkMetrics,
+  Domain,
+  ExplorerAsset,
+  ExplorerAssetDefinition,
   ExplorerHealth,
-  PeerInfo,
-  OnlinePeers,
-  PeerPropagation,
+  Instruction,
+  MultisigProposalsQueryResponse,
+  MultisigSpecResponse,
+  NexusDataspacesAccountSummary,
+  NexusPublicStatus,
   NFT,
+  NodeStatusSnapshot,
+  PeerInfo,
   PeerMetrics,
   RWA,
   SorafsPinRegistryResponse,
-  SorafsAliasResponse,
-  SorafsReplicationResponse,
-  SorafsStorageManifestResponse,
-  SorafsCidLookupResponse,
-  MinistryAgendaProposalDraftRequest,
-  MinistryAgendaProposalDraftResponse,
-  MinistryAgendaProposalGetResponse,
-  PipelineTransactionStatusResponse,
-  TransactionSubmissionReceiptResponse,
-  SoracloudStatus,
-  SoracloudServiceConfigStatusResponse,
-  SoracloudServiceSecretStatusResponse,
-  SoracloudTrainingJobStatusResponse,
-  SoracloudModelWeightStatusResponse,
-  SoracloudModelArtifactStatusResponse,
-  SoracloudUploadedModelStatusResponse,
-  SoracloudPrivateInferenceStatusResponse,
-  SoracloudHfSharedLeaseStatusResponse,
-  SoracloudModelHostStatusResponse,
-  SoracloudAgentStatusResponse,
-  SoracloudAgentMailboxStatusResponse,
-  SoracloudAgentAutonomyStatusResponse,
-  GovernanceCouncil,
-  GovernanceUnlockStats,
-  GovernanceReferendumResponse,
-  GovernanceLocksResponse,
-  GovernanceTallyResponse,
-  GovernanceProposalResponse,
-  ZkAttachment,
-  ZkProverReport,
-  CountResponse,
-  NexusDataspacesAccountSummary,
-  NexusPublicStatus,
-  NodeStatusSnapshot,
-  BlockSampleRow,
-  BLOCK_SAMPLE_FIELDS,
-  TransactionSampleRow,
-  TRANSACTION_SAMPLE_FIELDS,
-  ContractCodeView,
-  ContractVerifiedSourceJobResponse,
-  ContractActivityResponse,
-  ContractEvent,
-  ContractEventResponse,
   StateFinalityResponse,
-  AccountPermissionsResponse,
-  AccountHistoryResponse,
-  MultisigSpecResponse,
-  MultisigProposalsQueryResponse,
+  Transaction,
+  TRANSACTION_SAMPLE_FIELDS,
+  TransactionSampleRow,
 } from '@/shared/api/schemas';
+
+import type { SuccessfulFetching } from '@/shared/api/consts';
+import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
+import { normalizeAccountIdLiteral, normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
+import type { CanonicalBlockSample } from '@/shared/lib/chain-analytics';
+import { getExplorerReadAuth } from '@/shared/lib/explorer-read-auth';
+import { requireIrohaHash32, requireIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
+import { getRuntimeConfig } from '@/shared/runtime-config';
+import type { ErrorResponse } from '@/shared/utils/transform-error-response';
+import { transformErrorResponse } from '@/shared/utils/transform-error-response';
+import { NetworkId } from '@iroha/iroha-js/connect-browser';
+import type { ToriiBrowserCanonicalRequestOptions, ToriiSseEvent } from '@iroha/iroha-js/torii-browser';
+import {
+  field,
+  ToriiBrowserClient,
+  ToriiHttpError,
+  ToriiStreamGapError,
+  type Filter,
+  type ListQueryInput,
+} from '@iroha/iroha-js/torii-browser';
 import { useEventSource } from '@vueuse/core';
 import { computed, readonly, ref } from 'vue';
 import type { ZodType } from 'zod/v4';
-import type { ErrorResponse } from '@/shared/utils/transform-error-response';
-import { transformErrorResponse } from '@/shared/utils/transform-error-response';
-import type { SuccessfulFetching } from '@/shared/api/consts';
-import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR, NOT_FOUND } from '@/shared/api/consts';
-import { getRuntimeConfig } from '@/shared/runtime-config';
-import { normalizeAccountIdLiteral, normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
-import { requireIrohaHash32, requireIrohaHashLiteral32 } from '@/shared/lib/iroha-hash';
-import { getExplorerReadAuth } from '@/shared/lib/explorer-read-auth';
-import type { CanonicalBlockSample } from '@/shared/lib/chain-analytics';
-import { ToriiBrowserClient, ToriiHttpError, ToriiStreamGapError, field, type Filter, type ListQueryInput } from '@iroha/iroha-js/torii-browser';
-import { NetworkId } from '@iroha/iroha-js/connect-browser';
-import type {
-  ToriiBrowserCanonicalRequestOptions,
-  ToriiSseEvent,
-} from '@iroha/iroha-js/torii-browser';
 export { appendSearchParams } from './query';
 export { ToriiStreamGapError };
 
 const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim();
 const defaultOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-const defaultExplorerBase = (rawApiUrl.length > 0 ? rawApiUrl : `${defaultOrigin}/v1/explorer`).replace(/\/+$/, '');
+const defaultToriiOrigin = rawApiUrl.length > 0 ? rawApiUrl : defaultOrigin;
 const EXPLORER_SUFFIX = '/v1/explorer';
 const STORAGE_KEY = 'torii_base_url';
-const USE_STORED_NODE = !(rawApiUrl.startsWith('/') || rawApiUrl.startsWith('./') || rawApiUrl.startsWith('../'));
 const FAILOVER_STATUSES = new Set([502, 503, 504, 522, 524]);
 const DEFAULT_FAILOVER_THRESHOLD = 5;
 const DEFAULT_FAILOVER_WINDOW_MS = 60_000;
 const DEFAULT_FAILOVER_PROBE_TIMEOUT_MS = 1_500;
-const DEFAULT_FAILOVER_MAX_PEER_CANDIDATES = 16;
 const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
 const DEFAULT_REQUEST_RETRY_COUNT = 1;
 const DEFAULT_REQUEST_RETRY_BASE_DELAY_MS = 200;
@@ -164,13 +152,6 @@ function toriiJsonHeaders(): Record<string, string> {
   };
 }
 
-function toriiTextHeaders(): Record<string, string> {
-  return {
-    ...toriiRequiredHeaders(),
-    Accept: 'text/plain',
-  };
-}
-
 export type ToriiAvailabilityState = 'healthy' | 'degraded' | 'failing_over' | 'outage';
 
 export interface ToriiFailoverSwitch {
@@ -180,43 +161,26 @@ export interface ToriiFailoverSwitch {
   trigger: 'http_failure' | 'network_error' | 'manual';
 }
 
-export interface ToriiNodePreset {
-  label: string;
-  url: string;
-}
-
-const DEFAULT_TORII_NODE_PRESETS: ToriiNodePreset[] = [
-  { label: 'Nexus (mainnet)', url: 'https://nexus.mof3.sora.org:18080' },
-  { label: 'Testus (testnet)', url: 'https://testus.mof3.sora.org:18080' },
-];
-
-export function getToriiNodePresets(): ToriiNodePreset[] {
-  return DEFAULT_TORII_NODE_PRESETS.map((item) => ({ ...item }));
-}
-
-function stripExplorerSuffix(value: string): string {
-  return value
-    .replace(/\/+$/, '')
-    .replace(/\/v[12]\/explorer$/i, '')
-    .replace(/\/v[12]$/i, '');
-}
-
-export function normalizeToriiBaseUrl(raw: string, fallback: string | null = null): string | null {
+export function normalizeToriiBaseUrl(raw: string): string | null {
   const trimmed = raw.trim();
-  if (!trimmed) return fallback;
-  const normalized = stripExplorerSuffix(trimmed);
+  if (!trimmed) return null;
   try {
-    const relativeBase = fallback ?? undefined;
-    const url = new URL(normalized, normalized.startsWith('http') ? undefined : relativeBase);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return fallback;
-    return `${url.origin}${url.pathname}`.replace(/\/+$/, '');
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    if (url.username || url.password || url.pathname !== '/' || url.search || url.hash) return null;
+    return url.origin;
   } catch {
-    return fallback;
+    return null;
   }
 }
 
-const defaultToriiBase =
-  normalizeToriiBaseUrl(defaultExplorerBase, defaultOrigin || 'http://localhost') ?? 'http://localhost';
+const normalizedDefaultToriiBase = normalizeToriiBaseUrl(defaultToriiOrigin);
+if (!normalizedDefaultToriiBase) {
+  throw new Error(
+    'VITE_API_URL must be an absolute credential-free HTTP(S) Torii origin without a path, query, or fragment'
+  );
+}
+const defaultToriiBase: string = normalizedDefaultToriiBase;
 
 function safeReadStorage(key: string): string | null {
   if (typeof window === 'undefined') return null;
@@ -249,11 +213,12 @@ function safeWriteStorage(key: string, value: string | null) {
 
 const toriiBaseUrlState = ref(
   (() => {
-    if (!USE_STORED_NODE) {
-      return defaultToriiBase;
-    }
     const stored = safeReadStorage(STORAGE_KEY);
-    return stored ? (normalizeToriiBaseUrl(stored, defaultToriiBase) ?? defaultToriiBase) : defaultToriiBase;
+    if (!stored) return defaultToriiBase;
+    const normalized = normalizeToriiBaseUrl(stored);
+    if (normalized) return normalized;
+    safeWriteStorage(STORAGE_KEY, null);
+    return defaultToriiBase;
   })()
 );
 const routeScopedToriiBaseUrlState = ref<string | null>(null);
@@ -267,13 +232,11 @@ let failoverInFlight: Promise<boolean> | null = null;
 
 function forcedToriiBaseUrl(): string | null {
   const config = getRuntimeConfig();
-  return config.toriiForceBaseUrl === true && config.toriiBaseUrl
-    ? normalizeToriiBaseUrl(config.toriiBaseUrl, null)
-    : null;
+  return config.toriiForceBaseUrl === true && config.toriiBaseUrl ? normalizeToriiBaseUrl(config.toriiBaseUrl) : null;
 }
 
-const effectiveToriiBaseUrlState = computed(() =>
-  forcedToriiBaseUrl() ?? routeScopedToriiBaseUrlState.value ?? toriiBaseUrlState.value
+const effectiveToriiBaseUrlState = computed(
+  () => forcedToriiBaseUrl() ?? routeScopedToriiBaseUrlState.value ?? toriiBaseUrlState.value
 );
 const explorerApiBaseState = computed(() =>
   effectiveToriiBaseUrlState.value.endsWith(EXPLORER_SUFFIX)
@@ -290,13 +253,23 @@ export function getConfiguredToriiBaseUrl(): string {
 }
 
 export function setRouteScopedToriiBaseUrl(baseUrl: string | null): string | null {
-  if (forcedToriiBaseUrl() || !baseUrl?.trim()) {
+  if (!baseUrl?.trim()) {
+    routeScopedToriiBaseUrlState.value = null;
+    return null;
+  }
+  if (isToriiBaseUrlForced()) {
     routeScopedToriiBaseUrlState.value = null;
     return null;
   }
 
-  routeScopedToriiBaseUrlState.value = normalizeToriiBaseUrl(baseUrl, null);
-  return routeScopedToriiBaseUrlState.value;
+  const normalized = normalizeToriiBaseUrl(baseUrl);
+  if (!normalized) {
+    throw new Error(
+      'Torii base URL must be an absolute credential-free HTTP(S) origin without a path, query, or fragment'
+    );
+  }
+  routeScopedToriiBaseUrlState.value = normalized;
+  return normalized;
 }
 
 export function getExplorerApiBase(): string {
@@ -323,7 +296,6 @@ function failoverRuntimeConfig() {
     windowMs: config.toriiFailoverWindowMs ?? DEFAULT_FAILOVER_WINDOW_MS,
     probeTimeoutMs: config.toriiFailoverProbeTimeoutMs ?? DEFAULT_FAILOVER_PROBE_TIMEOUT_MS,
     persistSwitch: config.toriiFailoverPersistSwitch !== false,
-    maxPeerCandidates: config.toriiFailoverMaxPeerCandidates ?? DEFAULT_FAILOVER_MAX_PEER_CANDIDATES,
   };
 }
 
@@ -337,50 +309,7 @@ function requestRuntimeConfig() {
 }
 
 function normalizeCandidate(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  try {
-    const parsed = new URL(stripExplorerSuffix(trimmed));
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-    return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '');
-  } catch {
-    return null;
-  }
-}
-
-function expandCandidateSchemes(raw: string): string[] {
-  const trimmed = raw.trim();
-  if (!trimmed) return [];
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return [trimmed];
-  return [`https://${trimmed}`, `http://${trimmed}`];
-}
-
-function parsePeerEndpoint(literal: string): string | null {
-  const trimmed = literal.trim();
-  if (!trimmed) return null;
-  const separator = trimmed.lastIndexOf('@');
-  const endpoint = separator >= 0 ? trimmed.slice(separator + 1).trim() : trimmed;
-  return endpoint || null;
-}
-
-async function fetchPeerCandidates(baseUrl: string, timeoutMs: number): Promise<string[]> {
-  const controller = new AbortController();
-  const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(`${baseUrl}/peers`, {
-      cache: 'no-store',
-      headers: toriiJsonHeaders(),
-      signal: controller.signal,
-    });
-    if (!response.ok) return [];
-    const payload = await response.json();
-    if (!Array.isArray(payload)) return [];
-    return payload.filter((value): value is string => typeof value === 'string');
-  } catch {
-    return [];
-  } finally {
-    globalThis.clearTimeout(timeout);
-  }
+  return normalizeToriiBaseUrl(raw);
 }
 
 interface ToriiCandidateProbe {
@@ -389,47 +318,13 @@ interface ToriiCandidateProbe {
   latestCreatedAtMs: number | null;
 }
 
-function toProbeNumber(value: unknown): number | null {
-  const parsed = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function parseCandidateProbeMetadata(payload: unknown): Omit<ToriiCandidateProbe, 'candidate'> {
-  if (!payload || typeof payload !== 'object') {
-    return { latestHeight: null, latestCreatedAtMs: null };
-  }
-
-  const record = payload as Record<string, unknown>;
-  const healthHeight = toProbeNumber(record.head_height);
-  const healthCreatedAt = record.head_created_at;
-
-  if (healthHeight !== null || healthCreatedAt !== undefined) {
-    const latestCreatedAtMs =
-      healthCreatedAt instanceof Date
-        ? toProbeNumber(healthCreatedAt.getTime())
-        : toProbeNumber(new Date(String(healthCreatedAt ?? '')).getTime());
-    return {
-      latestHeight: healthHeight,
-      latestCreatedAtMs,
-    };
-  }
-
-  const items = record.items;
-  if (!Array.isArray(items) || !items.length) return { latestHeight: null, latestCreatedAtMs: null };
-
-  const latest = items[0];
-  if (!latest || typeof latest !== 'object') return { latestHeight: null, latestCreatedAtMs: null };
-
-  const latestHeight = toProbeNumber((latest as Record<string, unknown>).height);
-  const rawCreatedAt = (latest as Record<string, unknown>).created_at;
-  const latestCreatedAtMs =
-    rawCreatedAt instanceof Date
-      ? toProbeNumber(rawCreatedAt.getTime())
-      : toProbeNumber(new Date(String(rawCreatedAt ?? '')).getTime());
+function parseCandidateProbeMetadata(payload: unknown): Omit<ToriiCandidateProbe, 'candidate'> | null {
+  const parsed = ExplorerHealth.safeParse(payload);
+  if (!parsed.success) return null;
 
   return {
-    latestHeight,
-    latestCreatedAtMs,
+    latestHeight: parsed.data.head_height,
+    latestCreatedAtMs: parsed.data.head_created_at?.getTime() ?? null,
   };
 }
 
@@ -463,16 +358,14 @@ async function probeToriiCandidate(baseUrl: string, timeoutMs: number): Promise<
 
     try {
       const parsed = await response.json();
+      const metadata = parseCandidateProbeMetadata(parsed);
+      if (!metadata) return null;
       return {
         candidate: baseUrl,
-        ...parseCandidateProbeMetadata(parsed),
+        ...metadata,
       };
     } catch {
-      return {
-        candidate: baseUrl,
-        latestHeight: null,
-        latestCreatedAtMs: null,
-      };
+      return null;
     }
   } catch {
     return null;
@@ -481,30 +374,18 @@ async function probeToriiCandidate(baseUrl: string, timeoutMs: number): Promise<
   }
 }
 
-async function resolveFailoverCandidates(currentBase: string): Promise<string[]> {
+function resolveFailoverCandidates(currentBase: string): string[] {
   const runtime = failoverRuntimeConfig();
   const out: string[] = [];
   const pushCandidate = (raw: string) => {
-    for (const candidate of expandCandidateSchemes(raw)) {
-      const normalized = normalizeCandidate(candidate);
-      if (!normalized) continue;
-      if (normalized === currentBase) continue;
-      if (out.includes(normalized)) continue;
-      out.push(normalized);
-    }
+    const normalized = normalizeCandidate(raw);
+    if (!normalized) return;
+    if (normalized === currentBase) return;
+    if (out.includes(normalized)) return;
+    out.push(normalized);
   };
 
   runtime.nodes.forEach(pushCandidate);
-
-  const peerEndpoints = await fetchPeerCandidates(currentBase, runtime.probeTimeoutMs);
-  peerEndpoints
-    .slice(0, runtime.maxPeerCandidates)
-    .map(parsePeerEndpoint)
-    .forEach((endpoint) => {
-      if (!endpoint) return;
-      pushCandidate(endpoint);
-    });
-
   return out;
 }
 
@@ -572,7 +453,16 @@ function maybeTriggerToriiFailoverOnFailure(trigger: ToriiFailoverSwitch['trigge
 }
 
 export function setToriiBaseUrl(baseUrl: string, options?: { persist?: boolean }): string {
-  toriiBaseUrlState.value = forcedToriiBaseUrl() ?? normalizeToriiBaseUrl(baseUrl, defaultToriiBase) ?? defaultToriiBase;
+  if (isToriiBaseUrlForced()) {
+    throw new Error('Torii base URL is locked by runtime configuration');
+  }
+  const normalized = normalizeToriiBaseUrl(baseUrl);
+  if (!normalized) {
+    throw new Error(
+      'Torii base URL must be an absolute credential-free HTTP(S) origin without a path, query, or fragment'
+    );
+  }
+  toriiBaseUrlState.value = normalized;
   if (options?.persist !== false) {
     safeWriteStorage(STORAGE_KEY, toriiBaseUrlState.value);
   }
@@ -588,7 +478,13 @@ export function setToriiBaseUrlFromConfig(baseUrl: string, options?: { force?: b
   const stored = safeReadStorage(STORAGE_KEY);
   if (stored && !options?.force) return toriiBaseUrlState.value;
 
-  toriiBaseUrlState.value = forcedToriiBaseUrl() ?? normalizeToriiBaseUrl(baseUrl, defaultToriiBase) ?? defaultToriiBase;
+  const normalized = normalizeToriiBaseUrl(baseUrl);
+  if (!normalized) {
+    throw new Error(
+      'Configured Torii base URL must be an absolute credential-free HTTP(S) origin without a path, query, or fragment'
+    );
+  }
+  toriiBaseUrlState.value = normalized;
   if (stored && options?.force) {
     safeWriteStorage(STORAGE_KEY, null);
   }
@@ -597,7 +493,10 @@ export function setToriiBaseUrlFromConfig(baseUrl: string, options?: { force?: b
 }
 
 export function resetToriiBaseUrl(): string {
-  toriiBaseUrlState.value = forcedToriiBaseUrl() ?? defaultToriiBase;
+  if (isToriiBaseUrlForced()) {
+    throw new Error('Torii base URL is locked by runtime configuration');
+  }
+  toriiBaseUrlState.value = defaultToriiBase;
   safeWriteStorage(STORAGE_KEY, null);
   markToriiHealthy();
   return toriiBaseUrlState.value;
@@ -616,116 +515,16 @@ export async function retryToriiFailover(): Promise<boolean> {
   return await triggerToriiFailover('manual');
 }
 
-export function buildToriiUrl(path: string): string {
-  const relative = normalizeToriiApiPath(path);
-  return `${getToriiBaseUrl()}${relative}`;
-}
-
-export function buildExplorerUrl(path: string): string {
-  const normalized = path.startsWith('/') ? path : `/${path}`;
-  return `${getExplorerApiBase()}${normalized}`;
-}
-
-export function buildToriiWsUrl(path: string): string {
-  const httpUrl = buildToriiUrl(path);
-  try {
-    const url = new URL(httpUrl, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    return url.toString();
-  } catch {
-    return httpUrl.replace(/^http/i, 'ws');
-  }
-}
-
 type GetResult<T> = { status: SuccessfulFetching; data: T } | { status: 'error'; response: Response };
 type ResultWithStatus<T> = { status: SuccessfulFetching; data: T } | ErrorResponse;
 export type PermissionAwareResult<T> = ResultWithStatus<T> | { status: 'permission-denied'; error: Error };
-export type ToriiCanonicalRequestAuth = Pick<ToriiBrowserCanonicalRequestOptions, 'authAccountId' | 'sign' | 'nativeIdentity'>;
-interface ConflictResult<T> {
-  status: 'conflict';
-  data: T;
-}
-
-const TORII_API_PREFIXES = [
-  '/connect/',
-  '/contracts/',
-  '/events/',
-  '/gov/',
-  '/kaigi/',
-  '/ministry/',
-  '/nexus/',
-  '/pipeline/',
-  '/soracloud/',
-  '/sorafs/',
-  '/telemetry/',
-  '/sumeragi/',
-  '/zk/',
-];
-const ZK_PROVER_REPORTS_ENABLED = String(import.meta.env.VITE_ZK_PROVER_REPORTS_ENABLED ?? '').toLowerCase() === 'true';
-
-function operatorSurfaceUnavailable<T>(message: string): ResultWithStatus<T> {
-  return {
-    status: UNKNOWN_ERROR,
-    error: new Error(message),
-  };
-}
-
-function normalizeToriiApiPath(path: string): string {
-  const normalized = path.startsWith('/') ? path : `/${path}`;
-  if (/^\/v2\//i.test(normalized)) return normalized.replace(/^\/v2\//i, '/v1/');
-  if (/^\/v1\//i.test(normalized)) return normalized;
-  return `/v1${normalized}`;
-}
-
-export function resolveApiUrl(path: string): string {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  if (/^\/v[12]\//i.test(normalizedPath)) {
-    return buildToriiUrl(normalizedPath);
-  }
-  const useTorii = TORII_API_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix));
-  if (useTorii) {
-    return buildToriiUrl(normalizedPath);
-  }
-  return `${getExplorerApiBase()}${normalizedPath}`;
-}
+export type ToriiCanonicalRequestAuth = Pick<
+  ToriiBrowserCanonicalRequestOptions,
+  'authAccountId' | 'sign' | 'nativeIdentity'
+>;
 
 async function fetchWithTimeoutRetry(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
   return await fetchToriiWithDeadline(input, init, requestRuntimeConfig());
-}
-
-async function get<T>(path: string, params?: Record<string, any>): Promise<GetResult<T>> {
-  const url = new URL(resolveApiUrl(path), defaultOrigin || undefined);
-
-  appendSearchParams(url, params);
-
-  let res: Response;
-  try {
-    res = await fetchWithTimeoutRetry(url, {
-      cache: 'no-store',
-      headers: toriiJsonHeaders(),
-    });
-  } catch (error) {
-    trackToriiFailure(error instanceof Error ? error.message : String(error));
-    maybeTriggerToriiFailoverOnFailure('network_error');
-    throw error;
-  }
-
-  if (!res.ok) {
-    if (FAILOVER_STATUSES.has(res.status)) {
-      trackToriiFailure(`HTTP ${res.status}`);
-      maybeTriggerToriiFailoverOnFailure('http_failure');
-    }
-    return { status: 'error', response: res };
-  }
-
-  if (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0) {
-    markToriiHealthy();
-  }
-
-  return {
-    status: SUCCESSFUL_FETCHING,
-    data: await res.json(),
-  };
 }
 
 function normalizeAccountSelectorForApi(value: string): string;
@@ -796,81 +595,6 @@ async function fetchCollectionPage<T>(
   return response;
 }
 
-async function post(path: string, body: unknown): Promise<Response> {
-  const url = new URL(resolveApiUrl(path), defaultOrigin || undefined);
-
-  try {
-    const response = await fetchWithTimeoutRetry(url, {
-      method: 'POST',
-      cache: 'no-store',
-      headers: {
-        ...toriiJsonHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok && FAILOVER_STATUSES.has(response.status)) {
-      trackToriiFailure(`HTTP ${response.status}`);
-      maybeTriggerToriiFailoverOnFailure('http_failure');
-    } else if (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0) {
-      markToriiHealthy();
-    }
-
-    return response;
-  } catch (error) {
-    trackToriiFailure(error instanceof Error ? error.message : String(error));
-    maybeTriggerToriiFailoverOnFailure('network_error');
-    throw error;
-  }
-}
-
-async function postBinary(path: string, body: BodyInit, headers: Record<string, string>): Promise<Response> {
-  const url = new URL(resolveApiUrl(path), defaultOrigin || undefined);
-
-  try {
-    const response = await fetchWithTimeoutRetry(url, {
-      method: 'POST',
-      cache: 'no-store',
-      headers: {
-        ...toriiRequiredHeaders(),
-        ...headers,
-      },
-      body,
-    });
-
-    if (!response.ok && FAILOVER_STATUSES.has(response.status)) {
-      trackToriiFailure(`HTTP ${response.status}`);
-      maybeTriggerToriiFailoverOnFailure('http_failure');
-    } else if (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0) {
-      markToriiHealthy();
-    }
-
-    return response;
-  } catch (error) {
-    trackToriiFailure(error instanceof Error ? error.message : String(error));
-    maybeTriggerToriiFailoverOnFailure('network_error');
-    throw error;
-  }
-}
-
-async function parseTypedResponse<T>(
-  response: Response,
-  schema: ZodType<T>
-): Promise<{ data: T | null; text: string }> {
-  const text = await response.text();
-  if (!text) return { data: null, text };
-
-  try {
-    return {
-      data: schema.parse(JSON.parse(text)),
-      text,
-    };
-  } catch {
-    return { data: null, text };
-  }
-}
-
 async function toriiSdkFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   try {
     const response = await fetchWithTimeoutRetry(input, {
@@ -888,8 +612,10 @@ async function toriiSdkFetch(input: RequestInfo | URL, init?: RequestInit): Prom
     return response;
   } catch (error) {
     // A caller cancelling a read is not evidence that Torii is unhealthy.
-    const requestSignal = init?.signal === undefined && typeof Request !== 'undefined' && input instanceof Request
-      ? input.signal : init?.signal;
+    const requestSignal =
+      init?.signal === undefined && typeof Request !== 'undefined' && input instanceof Request
+        ? input.signal
+        : init?.signal;
     if (!requestSignal?.aborted) {
       trackToriiFailure(error instanceof Error ? error.message : String(error));
       maybeTriggerToriiFailoverOnFailure('network_error');
@@ -970,13 +696,18 @@ async function parsePermissionAwareToriiSdkResult<T>(
 
 export async function fetchAccounts(params?: AccountSearchParams): Promise<ResultWithStatus<CollectionPage<Account>>> {
   return await fetchCollectionPage(params, Account, (client) =>
-    client.explorerAccounts.list(collectionQuery(params, { domain: params?.domain, with_asset: params?.with_asset?.toString() }))
+    client.explorerAccounts.list(
+      collectionQuery(params, { domain: params?.domain, with_asset: params?.with_asset?.toString() })
+    )
   );
 }
 
 export async function fetchAccount(id: string): Promise<ResultWithStatus<Account>> {
-  const normalizedId = normalizeAccountSelectorForApi(id);
-  return await parseToriiSdkResult((client) => client.getExplorerAccount(normalizedId), Account);
+  const normalizedId = normalizeAccountIdForApi(id);
+  return await parseBoundToriiSdkResult((client) => client.getExplorerAccount(normalizedId), Account, {
+    matchesRequest: (data) => data.id === normalizedId,
+    resource: 'account',
+  });
 }
 
 export type AccountPermissionsSearchParams = CursorPaginationParams;
@@ -1000,7 +731,10 @@ export async function fetchAccountHistory(
   params: AccountHistorySearchParams
 ): Promise<PermissionAwareResult<AccountHistoryResponse>> {
   return await parsePermissionAwareToriiSdkResult(
-    (client) => client.accountHistory(normalizeAccountSelectorForApi(id)).list(collectionQuery(params, { asset_id: params.asset_id })),
+    (client) =>
+      client
+        .accountHistory(normalizeAccountSelectorForApi(id))
+        .list(collectionQuery(params, { asset_id: params.asset_id })),
     AccountHistoryResponse
   );
 }
@@ -1049,9 +783,17 @@ export async function fetchMultisigProposals(
   );
 }
 
-export async function fetchAssets(params?: AssetSearchParams): Promise<ResultWithStatus<CollectionPage<ExplorerAsset>>> {
+export async function fetchAssets(
+  params?: AssetSearchParams
+): Promise<ResultWithStatus<CollectionPage<ExplorerAsset>>> {
   return await fetchCollectionPage(params, ExplorerAsset, (client) =>
-    client.explorerAssets.list(collectionQuery(params, { account_id: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined, definition_id: params?.definition?.toString(), id: params?.asset_id === undefined ? undefined : normalizeAssetIdForApi(params.asset_id) }))
+    client.explorerAssets.list(
+      collectionQuery(params, {
+        account_id: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
+        definition_id: params?.definition?.toString(),
+        id: params?.asset_id === undefined ? undefined : normalizeAssetIdForApi(params.asset_id),
+      })
+    )
   );
 }
 
@@ -1061,79 +803,124 @@ export async function fetchAsset(id: AssetId): Promise<ResultWithStatus<Explorer
   if (response.status !== SUCCESSFUL_FETCHING) {
     return await transformErrorResponse(response.response);
   }
-  return { status: SUCCESSFUL_FETCHING, data: ExplorerAsset.parse(response.data) };
+  const data = ExplorerAsset.parse(response.data);
+  assertToriiResponseIdentity('asset', data.id === normalizedId);
+  return { status: SUCCESSFUL_FETCHING, data };
 }
 
-export async function fetchAssetDefinitions(params?: AssetDefinitionSearchParams): Promise<ResultWithStatus<CollectionPage<ExplorerAssetDefinition>>> {
+export async function fetchAssetDefinitions(
+  params?: AssetDefinitionSearchParams
+): Promise<ResultWithStatus<CollectionPage<ExplorerAssetDefinition>>> {
   const owningDataspace = params?.dataspace === undefined ? undefined : CanonicalDataspaceId.parse(params.dataspace);
   if (owningDataspace !== undefined && params?.domain !== undefined) {
     throw new TypeError('Asset definition home filters must select either a domain or a dataspace');
   }
   return await fetchCollectionPage(params, ExplorerAssetDefinition, (client) =>
-    client.explorerAssetDefinitions.list(collectionQuery(params, { owning_domain: params?.domain, owning_dataspace: owningDataspace, owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined }))
+    client.explorerAssetDefinitions.list(
+      collectionQuery(params, {
+        owning_domain: params?.domain,
+        owning_dataspace: owningDataspace,
+        owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
+      })
+    )
   );
 }
 
-export async function fetchAssetDefinition(id: AssetDefinitionId): Promise<ResultWithStatus<AssetDefinition>> {
-  return await parseToriiSdkResult((client) => client.getAssetDefinition(id.toString()), AssetDefinition);
+export async function fetchAssetDefinition(
+  selectorInput: AssetDefinitionSelector
+): Promise<ResultWithStatus<AssetDefinition>> {
+  const selector = AssetDefinitionDetailSelectorSchema.parse(selectorInput.toString());
+  return await parseBoundToriiSdkResult((client) => client.getAssetDefinition(selector), AssetDefinition, {
+    matchesRequest: (data) => data.id === selector || data.alias === selector,
+    resource: 'asset definition',
+  });
 }
 
 export async function fetchAssetDefinitionEconometrics(
   id: AssetDefinitionId
 ): Promise<ResultWithStatus<AssetDefinitionEconometrics>> {
-  return await parseToriiSdkResult(
-    (client) => client.getExplorerAssetDefinitionEconometrics(id.toString()),
-    AssetDefinitionEconometrics
+  const normalizedId = AssetDefinitionIdSchema.parse(id.toString());
+  return await parseBoundToriiSdkResult(
+    (client) => client.getExplorerAssetDefinitionEconometrics(normalizedId),
+    AssetDefinitionEconometrics,
+    { matchesRequest: (data) => data.definition_id === normalizedId, resource: 'asset definition econometrics' }
   );
 }
 
 export async function fetchAssetDefinitionSnapshot(
   id: AssetDefinitionId
 ): Promise<ResultWithStatus<AssetDefinitionSnapshot>> {
-  return await parseToriiSdkResult(
-    (client) => client.getExplorerAssetDefinitionSnapshot(id.toString()),
-    AssetDefinitionSnapshot
+  const normalizedId = AssetDefinitionIdSchema.parse(id.toString());
+  return await parseBoundToriiSdkResult(
+    (client) => client.getExplorerAssetDefinitionSnapshot(normalizedId),
+    AssetDefinitionSnapshot,
+    { matchesRequest: (data) => data.definition_id === normalizedId, resource: 'asset definition snapshot' }
   );
 }
 
 export async function fetchNFTs(params?: NFTsSearchParams): Promise<ResultWithStatus<CollectionPage<NFT>>> {
   return await fetchCollectionPage(params, NFT, (client) =>
-    client.explorerNfts.list(collectionQuery(params, { domain: params?.domain, owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined }))
+    client.explorerNfts.list(
+      collectionQuery(params, {
+        domain: params?.domain,
+        owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
+      })
+    )
   );
 }
 
 export async function fetchNFTById(id: NftId): Promise<ResultWithStatus<NFT>> {
-  return await parseToriiSdkResult((client) => client.getExplorerNft(id.toString()), NFT);
+  const normalizedId = NftIdSchema.parse(id.toString());
+  return await parseBoundToriiSdkResult((client) => client.getExplorerNft(normalizedId), NFT, {
+    matchesRequest: (data) => data.id === normalizedId,
+    resource: 'NFT',
+  });
 }
 
 export async function fetchRwas(params?: RWASearchParams): Promise<ResultWithStatus<CollectionPage<RWA>>> {
   return await fetchCollectionPage(params, RWA, (client) =>
-    client.explorerRwas.list(collectionQuery(params, { domain: params?.domain, owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined }))
+    client.explorerRwas.list(
+      collectionQuery(params, {
+        domain: params?.domain,
+        owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined,
+      })
+    )
   );
 }
 
 export async function fetchRwaById(id: string): Promise<ResultWithStatus<RWA>> {
-  return await parseToriiSdkResult((client) => client.getExplorerRwa(id), RWA);
+  const normalizedId = RwaIdSchema.parse(id);
+  return await parseBoundToriiSdkResult((client) => client.getExplorerRwa(normalizedId), RWA, {
+    matchesRequest: (data) => data.id === normalizedId,
+    resource: 'RWA',
+  });
 }
 
 export async function fetchDomains(params?: DomainSearchParams): Promise<ResultWithStatus<CollectionPage<Domain>>> {
   return await fetchCollectionPage(params, Domain, (client) =>
-    client.explorerDomains.list(collectionQuery(params, { owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined }))
+    client.explorerDomains.list(
+      collectionQuery(params, { owned_by: normalizeAccountSelectorForApi(params?.owned_by) ?? undefined })
+    )
   );
 }
 
 export async function fetchDomain(id: string): Promise<ResultWithStatus<Domain>> {
-  return await parseToriiSdkResult((client) => client.getExplorerDomain(id), Domain);
+  const normalizedId = normalizeDomainIdLiteral(id);
+  if (!normalizedId) throw new TypeError('Domain ID must be a canonical domain.dataspace literal');
+  return await parseBoundToriiSdkResult((client) => client.getExplorerDomain(normalizedId), Domain, {
+    matchesRequest: (data) => data.id === normalizedId,
+    resource: 'domain',
+  });
 }
 
 export async function fetchBlocks(params?: CursorPaginationParams): Promise<ResultWithStatus<CollectionPage<Block>>> {
-  return await fetchCollectionPage(params, Block, (client) =>
-    client.explorerBlocks.list(collectionQuery(params))
-  );
+  return await fetchCollectionPage(params, Block, (client) => client.explorerBlocks.list(collectionQuery(params)));
 }
 
 /** One newest-first page of projected block summaries; counts follow the caller's visibility. */
-export async function fetchBlockSamples(params: CursorPaginationParams): Promise<ResultWithStatus<CollectionPage<CanonicalBlockSample>>> {
+export async function fetchBlockSamples(
+  params: CursorPaginationParams
+): Promise<ResultWithStatus<CollectionPage<CanonicalBlockSample>>> {
   return await fetchCollectionPage(params, BlockSampleRow, (client) =>
     client.explorerBlocks.list({ ...collectionQuery(params), select: [...BLOCK_SAMPLE_FIELDS] })
   );
@@ -1149,10 +936,13 @@ export async function fetchTransactionSamples(
 }
 
 export async function fetchBlock(heightOrHash: number | string): Promise<ResultWithStatus<Block>> {
-  return await parseToriiSdkResult((client) => client.getExplorerBlock(
-    typeof heightOrHash === 'number' || /^[1-9][0-9]{0,19}$/u.test(heightOrHash)
-      ? heightOrHash : requireIrohaHash32(heightOrHash)
-  ), Block);
+  const isHeight = typeof heightOrHash === 'number' || /^[1-9][0-9]{0,19}$/u.test(heightOrHash);
+  const selector = isHeight ? heightOrHash : requireIrohaHash32(heightOrHash as string);
+  return await parseBoundToriiSdkResult((client) => client.getExplorerBlock(selector), Block, {
+    resource: 'block',
+    matchesRequest: (data) =>
+      isHeight ? String(data.height) === String(selector) : requireIrohaHash32(data.hash) === selector,
+  });
 }
 
 export type TransactionProof = Awaited<ReturnType<ToriiBrowserClient['getExplorerTransactionProof']>>;
@@ -1175,11 +965,12 @@ export async function fetchTransactionProof(transactionHash: string): Promise<Re
           expected: error.expected,
           code: error.code,
           rejectCode: error.rejectCode,
-          errorMessage: error.status === 401
-            ? 'Transaction evidence requires authenticated access.'
-            : error.status === 403
-              ? 'This account cannot read the transaction evidence.'
-              : 'Transaction evidence request failed.',
+          errorMessage:
+            error.status === 401
+              ? 'Transaction evidence requires authenticated access.'
+              : error.status === 403
+                ? 'This account cannot read the transaction evidence.'
+                : 'Transaction evidence request failed.',
         }),
       };
     }
@@ -1195,151 +986,72 @@ export async function fetchLedgerStateProof(blockHeight: number): Promise<Result
   return await parseToriiSdkResult((client) => client.getLedgerStateProof(blockHeight), StateFinalityResponse);
 }
 
-export async function fetchNetworkMetrics(): Promise<ResultWithStatus<NetworkMetrics>> {
-  return await parseToriiSdkResult((client) => client.getExplorerMetrics(), NetworkMetrics);
-}
-
 export async function fetchExplorerHealth(): Promise<ResultWithStatus<ExplorerHealth>> {
   return await parseToriiSdkResult((client) => client.getExplorerHealth(), ExplorerHealth);
 }
 
-export async function fetchToriiMetricsText(): Promise<ResultWithStatus<string>> {
-  const url = new URL(`${getToriiBaseUrl()}/metrics`, defaultOrigin || undefined);
-  let res: Response;
-  try {
-    res = await fetchWithTimeoutRetry(url, {
-      cache: 'no-store',
-      headers: toriiTextHeaders(),
-    });
-  } catch (error) {
-    trackToriiFailure(error instanceof Error ? error.message : String(error));
-    maybeTriggerToriiFailoverOnFailure('network_error');
-    throw error;
-  }
-
-  if (!res.ok) {
-    if (FAILOVER_STATUSES.has(res.status)) {
-      trackToriiFailure(`HTTP ${res.status}`);
-      maybeTriggerToriiFailoverOnFailure('http_failure');
-    }
-    return await transformErrorResponse(res);
-  }
-
-  if (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0) {
-    markToriiHealthy();
-  }
-
-  return {
-    status: SUCCESSFUL_FETCHING,
-    data: await res.text(),
-  };
-}
-
-export function streamTelemetryMetrics() {
-  const telemetryLiveUrl = computed(() => buildToriiUrl('/telemetry/live'));
-  const { data: streamedMetrics, status } = useEventSource(telemetryLiveUrl, [], {
-    autoReconnect: true,
-  });
-
-  return {
-    data: computed(() => {
-      if (!streamedMetrics.value) return null;
-      try {
-        return PeerMetrics.parse(JSON.parse(streamedMetrics.value));
-      } catch (error) {
-        console.warn('[streamTelemetryMetrics] Failed to parse SSE payload', error);
-        return null;
-      }
-    }),
-    status,
-  };
-}
-
-export async function fetchSumeragiStatus(): Promise<ResultWithStatus<SumeragiStatus>> {
-  return operatorSurfaceUnavailable(
-    'Authoritative Sumeragi status requires an operator-signed Torii client and is unavailable in the public Explorer.'
-  );
-}
-
-export function streamSumeragiStatus() {
-  return {
-    data: computed(() => null),
-    status: ref<'CONNECTING' | 'OPEN' | 'CLOSED'>('CLOSED'),
-  };
-}
-
-export async function fetchSumeragiTelemetry(): Promise<ResultWithStatus<SumeragiTelemetry>> {
-  return operatorSurfaceUnavailable(
-    'Aggregate Sumeragi telemetry was removed from Torii; the authoritative replacement requires an operator-signed client and is unavailable in the public Explorer.'
-  );
-}
-
 export async function fetchPeersInfo(): Promise<ResultWithStatus<PeerInfo[]>> {
-  const res = await get('/telemetry/peers-info');
+  const res = await get('/v1/telemetry/peers-info');
   if (res.status === SUCCESSFUL_FETCHING)
     return { status: SUCCESSFUL_FETCHING, data: PeerInfo.array().parse(res.data) };
 
   return await transformErrorResponse(res.response);
 }
 
-export async function fetchOnlinePeers(): Promise<ResultWithStatus<OnlinePeers>> {
-  const url = new URL(`${getToriiBaseUrl()}/peers`, defaultOrigin || undefined);
-  let res: Response;
-  try {
-    res = await fetchWithTimeoutRetry(url, {
-      cache: 'no-store',
-      headers: toriiJsonHeaders(),
-    });
-  } catch (error) {
-    trackToriiFailure(error instanceof Error ? error.message : String(error));
-    maybeTriggerToriiFailoverOnFailure('network_error');
-    throw error;
-  }
-  if (!res.ok) {
-    if (FAILOVER_STATUSES.has(res.status)) {
-      trackToriiFailure(`HTTP ${res.status}`);
-      maybeTriggerToriiFailoverOnFailure('http_failure');
-    }
-    return await transformErrorResponse(res);
-  }
-
-  if (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0) {
-    markToriiHealthy();
-  }
-
-  return {
-    status: SUCCESSFUL_FETCHING,
-    data: OnlinePeers.parse(await res.json()),
-  };
-}
-
-export async function fetchTelemetryPropagation(): Promise<ResultWithStatus<PeerPropagation[]>> {
-  const res = await get('/telemetry/propagation');
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: PeerPropagation.array().parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchTransactions(params?: TransactionSearchParams): Promise<ResultWithStatus<CollectionPage<Transaction>>> {
+export async function fetchTransactions(
+  params?: TransactionSearchParams
+): Promise<ResultWithStatus<CollectionPage<Transaction>>> {
   return await fetchCollectionPage(params, Transaction, (client) =>
-    client.explorerTransactions.list(collectionQuery(params, { authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, block: params?.block, status: params?.status, asset_id: params?.asset_id?.toString() }))
+    client.explorerTransactions.list(
+      collectionQuery(params, {
+        authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined,
+        block: params?.block,
+        status: params?.status,
+        asset_id: params?.asset_id?.toString(),
+      })
+    )
   );
 }
 
-export async function fetchLatestTransactions(params?: TransactionSearchParams): Promise<ResultWithStatus<CollectionPage<Transaction>>> {
+export async function fetchLatestTransactions(
+  params?: TransactionSearchParams
+): Promise<ResultWithStatus<CollectionPage<Transaction>>> {
   return await fetchCollectionPage(params, Transaction, (client) =>
-    client.explorerLatestTransactions.list(collectionQuery(params, { authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, block: params?.block, status: params?.status, asset_id: params?.asset_id?.toString() }))
+    client.explorerLatestTransactions.list(
+      collectionQuery(params, {
+        authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined,
+        block: params?.block,
+        status: params?.status,
+        asset_id: params?.asset_id?.toString(),
+      })
+    )
   );
 }
 
 export async function fetchTransaction(hash: string): Promise<ResultWithStatus<DetailedTransaction>> {
-  return await parseToriiSdkResult((client) => client.getExplorerTransaction(requireIrohaHash32(hash)), DetailedTransaction);
+  const normalizedHash = requireIrohaHash32(hash);
+  return await parseBoundToriiSdkResult(
+    (client) => client.getExplorerTransaction(normalizedHash),
+    DetailedTransaction,
+    { matchesRequest: (data) => requireIrohaHash32(data.hash) === normalizedHash, resource: 'transaction' }
+  );
 }
 
-export async function fetchInstructions(params?: InstructionsSearchParams): Promise<ResultWithStatus<CollectionPage<Instruction>>> {
+export async function fetchInstructions(
+  params?: InstructionsSearchParams
+): Promise<ResultWithStatus<CollectionPage<Instruction>>> {
   return await fetchCollectionPage(params, Instruction, (client) =>
-    client.explorerInstructions.list(collectionQuery(params, { account: normalizeAccountSelectorForApi(params?.account) ?? undefined, authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, kind: params?.kind, transaction_hash: params?.transaction_hash ? requireIrohaHash32(params.transaction_hash) : undefined, transaction_status: params?.transaction_status, block: params?.block, asset_id: params?.asset_id?.toString() }))
+    client.explorerInstructions.list(
+      collectionQuery(params, {
+        account: normalizeAccountSelectorForApi(params?.account) ?? undefined,
+        authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined,
+        kind: params?.kind,
+        transaction_hash: params?.transaction_hash ? requireIrohaHash32(params.transaction_hash) : undefined,
+        transaction_status: params?.transaction_status,
+        block: params?.block,
+        asset_id: params?.asset_id?.toString(),
+      })
+    )
   );
 }
 
@@ -1384,12 +1096,19 @@ function contractEventSdkOptions(params: ContractEventFilters) {
   };
 }
 
-function contractCollectionQuery(params: CursorPaginationParams & ContractActivityFilters & Partial<ContractEventFilters>): ListQueryInput {
+function contractCollectionQuery(
+  params: CursorPaginationParams & ContractActivityFilters & Partial<ContractEventFilters>
+): ListQueryInput {
   const query = collectionQuery(params, {
-    authority: params.authority, contract_address: params.contract_address,
-    contract_alias: params.contract_alias, contract_entrypoint: params.contract_entrypoint,
-    event_kind: params.event_kind, participants: params.participant,
-    asset_ids: params.asset_id, provenance: params.provenance, result_ok: params.result_ok,
+    authority: params.authority,
+    contract_address: params.contract_address,
+    contract_alias: params.contract_alias,
+    contract_entrypoint: params.contract_entrypoint,
+    event_kind: params.event_kind,
+    participants: params.participant,
+    asset_ids: params.asset_id,
+    provenance: params.provenance,
+    result_ok: params.result_ok,
   });
   let filter = query.filter as Filter | undefined;
   for (const predicate of [
@@ -1401,12 +1120,22 @@ function contractCollectionQuery(params: CursorPaginationParams & ContractActivi
   return { ...query, ...(filter ? { filter } : {}) };
 }
 
-export async function fetchContractActivity(params: ContractActivitySearchParams): Promise<ResultWithStatus<ContractActivityResponse>> {
-  return await parseToriiSdkResult((client) => client.contractActivity.list(contractCollectionQuery(params)), ContractActivityResponse);
+export async function fetchContractActivity(
+  params: ContractActivitySearchParams
+): Promise<ResultWithStatus<ContractActivityResponse>> {
+  return await parseToriiSdkResult(
+    (client) => client.contractActivity.list(contractCollectionQuery(params)),
+    ContractActivityResponse
+  );
 }
 
-export async function fetchContractEvents(params: ContractEventSearchParams): Promise<ResultWithStatus<ContractEventResponse>> {
-  return await parseToriiSdkResult((client) => client.contractEvents.list(contractCollectionQuery(params)), ContractEventResponse);
+export async function fetchContractEvents(
+  params: ContractEventSearchParams
+): Promise<ResultWithStatus<ContractEventResponse>> {
+  return await parseToriiSdkResult(
+    (client) => client.contractEvents.list(contractCollectionQuery(params)),
+    ContractEventResponse
+  );
 }
 
 export type ContractEventStreamMessage = Omit<ToriiSseEvent<unknown>, 'data'> & { data: ContractEvent };
@@ -1426,9 +1155,21 @@ export async function* streamContractEvents(
   }
 }
 
-export async function fetchLatestInstructions(params?: InstructionsSearchParams): Promise<ResultWithStatus<CollectionPage<Instruction>>> {
+export async function fetchLatestInstructions(
+  params?: InstructionsSearchParams
+): Promise<ResultWithStatus<CollectionPage<Instruction>>> {
   return await fetchCollectionPage(params, Instruction, (client) =>
-    client.explorerLatestInstructions.list(collectionQuery(params, { account: normalizeAccountSelectorForApi(params?.account) ?? undefined, authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined, kind: params?.kind, transaction_hash: params?.transaction_hash ? requireIrohaHash32(params.transaction_hash) : undefined, transaction_status: params?.transaction_status, block: params?.block, asset_id: params?.asset_id?.toString() }))
+    client.explorerLatestInstructions.list(
+      collectionQuery(params, {
+        account: normalizeAccountSelectorForApi(params?.account) ?? undefined,
+        authority: normalizeAccountSelectorForApi(params?.authority) ?? undefined,
+        kind: params?.kind,
+        transaction_hash: params?.transaction_hash ? requireIrohaHash32(params.transaction_hash) : undefined,
+        transaction_status: params?.transaction_status,
+        block: params?.block,
+        asset_id: params?.asset_id?.toString(),
+      })
+    )
   );
 }
 
@@ -1436,87 +1177,46 @@ export async function fetchInstructionDetail(
   transactionHash: string,
   index: number
 ): Promise<ResultWithStatus<Instruction>> {
-  return await parseToriiSdkResult((client) => client.getExplorerInstruction(requireIrohaHash32(transactionHash), index), Instruction);
+  const normalizedHash = requireIrohaHash32(transactionHash);
+  const normalizedIndex = normalizeInstructionIndexForApi(index);
+  return await parseBoundToriiSdkResult(
+    (client) => client.getExplorerInstruction(normalizedHash, normalizedIndex),
+    Instruction,
+    {
+      matchesRequest: (data) =>
+        requireIrohaHash32(data.transaction_hash) === normalizedHash && data.index === normalizedIndex,
+      resource: 'instruction',
+    }
+  );
 }
 
 export async function fetchInstructionContractView(
   transactionHash: string,
   index: number
 ): Promise<ResultWithStatus<ContractCodeView>> {
+  const normalizedHash = requireIrohaHash32(transactionHash);
+  const normalizedIndex = normalizeInstructionIndexForApi(index);
   return await parseToriiSdkResult(
-    (client) => client.getExplorerInstructionContractView(requireIrohaHash32(transactionHash), index),
+    (client) => client.getExplorerInstructionContractView(normalizedHash, normalizedIndex),
     ContractCodeView
   );
-}
-
-export async function fetchContractCodeView(codeHash: string): Promise<ResultWithStatus<ContractCodeView>> {
-  const res = await get<ContractCodeView>(`/contracts/code/${codeHash}/contract-view`);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: ContractCodeView.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchVerifiedContractSourceJob(
-  codeHash: string,
-  jobId: string
-): Promise<ResultWithStatus<ContractVerifiedSourceJobResponse>> {
-  const res = await get<ContractVerifiedSourceJobResponse>(`/contracts/code/${codeHash}/verified-source-jobs/${jobId}`);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return {
-      status: SUCCESSFUL_FETCHING,
-      data: ContractVerifiedSourceJobResponse.parse(res.data),
-    };
-  }
-
-  return await transformErrorResponse(res.response);
-}
-
-export type SubmitVerifiedContractSourceResult =
-  | { ok: true; statusCode: number; data: ContractVerifiedSourceJobResponse }
-  | { ok: false; statusCode: number; data: ContractVerifiedSourceJobResponse | null; error: Error | null };
-
-export async function submitVerifiedContractSource(
-  codeHash: string,
-  payload: SubmitVerifiedContractSource
-): Promise<SubmitVerifiedContractSourceResult> {
-  const response = await post(`/contracts/code/${codeHash}/verified-source/jobs`, payload);
-  const { data, text } = await parseTypedResponse(response, ContractVerifiedSourceJobResponse);
-
-  if (data) {
-    if (response.ok) {
-      return {
-        ok: true,
-        statusCode: response.status,
-        data,
-      };
-    }
-
-    return {
-      ok: false,
-      statusCode: response.status,
-      data,
-      error: null,
-    };
-  }
-
-  return {
-    ok: false,
-    statusCode: response.status,
-    data: null,
-    error: new Error(text || `Request failed with status ${response.status}`),
-  };
 }
 
 export async function fetchNexusDataspacesAccountSummary(
   literal: string
 ): Promise<ResultWithStatus<NexusDataspacesAccountSummary>> {
-  const trimmed = normalizeToriiAccountSelectorLiteral(literal) ?? literal.trim();
+  const normalized = normalizeAccountIdForApi(literal);
   const res = await get<NexusDataspacesAccountSummary>(
-    `/nexus/dataspaces/accounts/${encodeURIComponent(trimmed)}/summary`
+    `/v1/nexus/dataspaces/accounts/${encodeURIComponent(normalized)}/summary`
   );
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: NexusDataspacesAccountSummary.parse(res.data) };
+  if (res.status === SUCCESSFUL_FETCHING) {
+    const data = NexusDataspacesAccountSummary.parse(res.data);
+    assertToriiResponseIdentity(
+      'Nexus dataspaces account summary',
+      data.account === normalized && data.account_id === normalized
+    );
+    return { status: SUCCESSFUL_FETCHING, data };
+  }
 
   return await transformErrorResponse(res.response);
 }
@@ -1566,456 +1266,570 @@ export async function fetchNodeStatus(): Promise<ResultWithStatus<NodeStatusSnap
   return await fetchToriiStatus(NodeStatusSnapshot);
 }
 
-export async function fetchKaigiRelays(): Promise<ResultWithStatus<KaigiRelaySummaryList>> {
-  return operatorSurfaceUnavailable(
-    'Kaigi relay inventory requires an operator-signed Torii client and is unavailable in the public Explorer.'
-  );
+const EXACT_JSON_MEDIA_TYPE_PATTERN =
+  /^[ \t]*application\/json(?:[ \t]*;[ \t]*[!#$%&'*+\-.^_`|~0-9A-Za-z]+=(?:[!#$%&'*+\-.^_`|~0-9A-Za-z]+|"(?:[ \t!#-\[\]-~\u0080-\u00ff]|\\[ \t!-~\u0080-\u00ff])*"))*[ \t]*$/iu;
+
+export function buildToriiUrl(path: string): string {
+  return `${getToriiBaseUrl()}${requireCanonicalToriiV1Path(path)}`;
 }
 
-export async function fetchKaigiRelayDetail(_relayId: string): Promise<ResultWithStatus<KaigiRelayDetail>> {
-  return operatorSurfaceUnavailable(
-    'Kaigi relay detail requires an operator-signed Torii client and is unavailable in the public Explorer.'
-  );
+export function buildToriiWsUrl(path: string): string {
+  const url = new URL(buildToriiUrl(path));
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  return url.toString();
 }
 
-export async function fetchKaigiRelayHealthSnapshot(): Promise<ResultWithStatus<KaigiRelayHealthSnapshot>> {
-  return operatorSurfaceUnavailable(
-    'Kaigi relay health requires an operator-signed Torii client and is unavailable in the public Explorer.'
+function requireCanonicalToriiV1Path(path: string): string {
+  const hasInvalidSegment = path.split('/').some((segment) => segment === '.' || segment === '..');
+  if (
+    !path.startsWith('/v1/') ||
+    path.endsWith('/') ||
+    path.includes('//') ||
+    path.includes('\\') ||
+    path.includes('?') ||
+    path.includes('#') ||
+    /[\u0000-\u0020\u007f]/u.test(path) ||
+    hasInvalidSegment
+  ) {
+    throw new TypeError(`Torii API path must be an exact canonical /v1 pathname: ${path}`);
+  }
+  return path;
+}
+
+export function resolveApiUrl(path: string): string {
+  return buildToriiUrl(path);
+}
+
+async function getWithResponseParser<T>(
+  path: string,
+  params?: Record<string, any>,
+  {
+    options = {},
+    parseResponse = (response) => response.json() as Promise<T>,
+  }: {
+    options?: Pick<RequestInit, 'signal'>;
+    parseResponse?: (response: Response, url: URL) => Promise<T>;
+  } = {}
+): Promise<GetResult<T>> {
+  const url = new URL(resolveApiUrl(path), defaultOrigin || undefined);
+
+  appendSearchParams(url, params);
+
+  let res: Response;
+  try {
+    res = await fetchWithTimeoutRetry(url, {
+      cache: 'no-store',
+      headers: toriiJsonHeaders(),
+      signal: options.signal,
+    });
+  } catch (error) {
+    if (!options.signal?.aborted) {
+      trackToriiFailure(error instanceof Error ? error.message : String(error));
+      maybeTriggerToriiFailoverOnFailure('network_error');
+    }
+    throw error;
+  }
+
+  if (!res.ok) {
+    if (FAILOVER_STATUSES.has(res.status)) {
+      trackToriiFailure(`HTTP ${res.status}`);
+      maybeTriggerToriiFailoverOnFailure('http_failure');
+    }
+    return { status: 'error', response: res };
+  }
+
+  if (toriiAvailabilityState.value !== 'healthy' || toriiFailureCountState.value > 0) {
+    markToriiHealthy();
+  }
+
+  return {
+    status: SUCCESSFUL_FETCHING,
+    data: await parseResponse(res, url),
+  };
+}
+
+async function get<T>(
+  path: string,
+  params?: Record<string, any>,
+  options: Pick<RequestInit, 'signal'> = {}
+): Promise<GetResult<T>> {
+  return await getWithResponseParser(path, params, { options });
+}
+
+async function getLosslessIntegerJson<T>(
+  path: string,
+  params?: Record<string, any>,
+  options: Pick<RequestInit, 'signal'> = {}
+): Promise<GetResult<T>> {
+  return await getWithResponseParser(path, params, {
+    options,
+    parseResponse: async (response, url) => {
+      const context = `GET ${url.pathname} response`;
+      if (!EXACT_JSON_MEDIA_TYPE_PATTERN.test(response.headers.get('content-type') ?? '')) {
+        throw new TypeError(`${context} must use the application/json media type`);
+      }
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      let source: string;
+      try {
+        source = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      } catch {
+        throw new TypeError(`${context} must be valid UTF-8`);
+      }
+      return parseStrictLosslessIntegerJson(source, context) as T;
+    },
+  });
+}
+
+function normalizeAccountIdForApi(value: string): string;
+function normalizeAccountIdForApi(value: null | undefined): undefined;
+function normalizeAccountIdForApi(value: string | null | undefined): string | undefined;
+function normalizeAccountIdForApi(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== 'string') throw new TypeError('Account ID must be a string');
+
+  const normalized = normalizeAccountIdLiteral(value);
+  if (!normalized) {
+    throw new TypeError('Account ID must be an exact canonical halfwidth i105 literal');
+  }
+  return normalized;
+}
+
+function assertToriiResponseIdentity(resource: string, matchesRequest: boolean): void {
+  if (!matchesRequest) {
+    throw new Error(`Torii ${resource} response identity does not match the requested resource`);
+  }
+}
+
+export async function fetchAccountQr(id: string, signal?: AbortSignal): Promise<ResultWithStatus<AccountQrSnapshot>> {
+  const normalizedId = normalizeAccountIdForApi(id);
+  const result = await get<unknown>(`/v1/explorer/accounts/${encodeURIComponent(normalizedId)}/qr`, undefined, {
+    signal,
+  });
+  if (result.status === SUCCESSFUL_FETCHING) {
+    const data = AccountQrResponse.parse(result.data);
+    if (data.canonicalId !== normalizedId) {
+      throw new Error('Torii account QR response canonical_id does not match the requested account ID');
+    }
+    return { status: SUCCESSFUL_FETCHING, data };
+  }
+  return await transformErrorResponse(result.response);
+}
+
+export async function fetchConfidentialAssetTransitions(
+  id: AssetDefinitionId
+): Promise<ResultWithStatus<ConfidentialAssetPolicy>> {
+  const normalizedId = AssetDefinitionIdSchema.parse(id.toString());
+  const result = await getLosslessIntegerJson<unknown>(
+    `/v1/confidential/assets/${encodeURIComponent(normalizedId)}/transitions`
+  );
+  if (result.status === SUCCESSFUL_FETCHING) {
+    const data = ConfidentialAssetPolicy.parse(result.data);
+    assertToriiResponseIdentity('confidential asset policy', data.asset_id === normalizedId);
+    return { status: SUCCESSFUL_FETCHING, data };
+  }
+  return await transformErrorResponse(result.response);
+}
+
+export async function fetchSystemParameters(): Promise<ResultWithStatus<SystemParameters>> {
+  const res = await get<unknown>('/v1/parameters');
+  if (res.status === SUCCESSFUL_FETCHING) {
+    return { status: SUCCESSFUL_FETCHING, data: SystemParameters.parse(res.data) };
+  }
+  return await transformErrorResponse(res.response);
+}
+
+export async function fetchSoracleFeeds(): Promise<ResultWithStatus<SoracleFeedRegistry>> {
+  const res = await getLosslessIntegerJson<unknown>('/v1/soracles/feeds');
+  if (res.status === SUCCESSFUL_FETCHING) {
+    return { status: SUCCESSFUL_FETCHING, data: SoracleFeedRegistry.parse(res.data) };
+  }
+  return await transformErrorResponse(res.response);
+}
+
+export async function fetchSoracleFeedHistory(feedId: string): Promise<ResultWithStatus<SoracleFeedEventRecord[]>> {
+  const canonicalFeedId = SoracleFeedIdSchema.parse(feedId);
+  const res = await getLosslessIntegerJson<unknown>(
+    `/v1/soracles/feeds/${encodeURIComponent(canonicalFeedId)}/history`
+  );
+  if (res.status === SUCCESSFUL_FETCHING) {
+    const history = SoracleFeedEventRecord.array().parse(res.data);
+    if (history.some((record) => record.event.feed_id[0] !== canonicalFeedId)) {
+      throw new Error('Soracles history response identity does not match the requested feed');
+    }
+    return { status: SUCCESSFUL_FETCHING, data: history };
+  }
+  return await transformErrorResponse(res.response);
+}
+
+export async function fetchLatestDefiOracleAttestation(
+  params: DefiOracleAttestationLatestParams
+): Promise<ResultWithStatus<DefiOracleAttestation>> {
+  const query = DefiOracleAttestationLatestParamsSchema.parse(params);
+  const res = await getLosslessIntegerJson<unknown>('/v1/soracles/defi/attestations/latest', query);
+  if (res.status === SUCCESSFUL_FETCHING) {
+    const attestation = DefiOracleAttestation.parse(res.data);
+    if (
+      attestation.key.domain !== query.domain ||
+      attestation.key.subject_id !== query.subject_id ||
+      (query.status !== undefined && attestation.status_flags !== query.status)
+    ) {
+      throw new Error('DeFi oracle attestation response identity does not match the requested key');
+    }
+    return { status: SUCCESSFUL_FETCHING, data: attestation };
+  }
+  return await transformErrorResponse(res.response);
+}
+
+export function streamTelemetryMetrics() {
+  const telemetryLiveUrl = computed(() => buildToriiUrl('/v1/telemetry/live'));
+  const {
+    data: streamedMetrics,
+    status,
+    open,
+  } = useEventSource(telemetryLiveUrl, [], {
+    autoReconnect: true,
+  });
+
+  return {
+    data: computed(() => {
+      if (!streamedMetrics.value) return null;
+      try {
+        return PeerMetrics.parse(JSON.parse(streamedMetrics.value));
+      } catch (error) {
+        console.warn('[streamTelemetryMetrics] Failed to parse SSE payload', error);
+        return null;
+      }
+    }),
+    status,
+    reconnect: open,
+  };
+}
+
+export async function fetchVpnProfile(): Promise<ResultWithStatus<VpnProfile>> {
+  const res = await get<unknown>('/v1/vpn/profile');
+  if (res.status === SUCCESSFUL_FETCHING) {
+    return { status: SUCCESSFUL_FETCHING, data: VpnProfile.parse(res.data) };
+  }
+  return await transformErrorResponse(res.response);
+}
+
+const EXACT_HEX_32 = /^[0-9a-f]{64}$/u;
+
+/** Validate and preserve Torii's finalized keyset query without offset emulation. */
+export function normalizeSorafsPinRegistryParams(
+  params: SorafsPinRegistrySearchParams = {}
+): SorafsPinRegistrySearchParams {
+  if (params.limit !== undefined && (!Number.isSafeInteger(params.limit) || params.limit < 1 || params.limit > 256)) {
+    throw new TypeError('SoraFS pin limit must be an integer between 1 and 256');
+  }
+  if (
+    params.max_bytes !== undefined &&
+    (!Number.isSafeInteger(params.max_bytes) || params.max_bytes < 1024 || params.max_bytes > 256 * 1024)
+  ) {
+    throw new TypeError('SoraFS pin max_bytes must be an integer between 1024 and 262144');
+  }
+  if (
+    params.after_digest_hex !== undefined &&
+    (!EXACT_HEX_32.test(params.after_digest_hex) || /^0+$/u.test(params.after_digest_hex))
+  ) {
+    throw new TypeError('SoraFS pin after_digest_hex must be non-zero lowercase 32-byte hex');
+  }
+
+  const hasExpectedHeight = params.expected_finalized_height !== undefined;
+  const hasExpectedHash = params.expected_finalized_block_hash_hex !== undefined;
+  if (hasExpectedHeight !== hasExpectedHash) {
+    throw new TypeError('SoraFS pin finalized height and block hash must be supplied together');
+  }
+  if (
+    params.expected_finalized_height !== undefined &&
+    (!Number.isSafeInteger(params.expected_finalized_height) || params.expected_finalized_height < 1)
+  ) {
+    throw new TypeError('SoraFS pin expected_finalized_height must be a positive safe integer');
+  }
+  if (
+    params.expected_finalized_block_hash_hex !== undefined &&
+    (!EXACT_HEX_32.test(params.expected_finalized_block_hash_hex) ||
+      /^0+$/u.test(params.expected_finalized_block_hash_hex))
+  ) {
+    throw new TypeError('SoraFS pin expected_finalized_block_hash_hex must be non-zero lowercase 32-byte hex');
+  }
+
+  return { ...params };
+}
+
+function sorafsFinalizedCursorMatchesRequest(
+  cursor: { height: number; block_hash: string },
+  request: SorafsPinManifestSearchParams
+): boolean {
+  return (
+    request.expected_finalized_height === undefined ||
+    (cursor.height === request.expected_finalized_height &&
+      cursor.block_hash === request.expected_finalized_block_hash_hex)
   );
 }
 
 export async function fetchSorafsPinRegistry(
-  params: SorafsPinRegistrySearchParams
+  params: SorafsPinRegistrySearchParams = {}
 ): Promise<ResultWithStatus<SorafsPinRegistryResponse>> {
-  const res = await get<SorafsPinRegistryResponse>('/sorafs/pin', params);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: SorafsPinRegistryResponse.parse(res.data) };
+  const request = normalizeSorafsPinRegistryParams(params);
+  const res = await get<SorafsPinRegistryResponse>('/v1/sorafs/pin', request);
+  if (res.status === SUCCESSFUL_FETCHING) {
+    const data = SorafsPinRegistryResponse.parse(res.data);
+    assertToriiResponseIdentity(
+      'SoraFS pin registry snapshot',
+      sorafsFinalizedCursorMatchesRequest(data.finalized_cursor, request)
+    );
+    return { status: SUCCESSFUL_FETCHING, data };
+  }
 
   return await transformErrorResponse(res.response);
 }
 
-export async function fetchSorafsAliases(
-  params: SorafsAliasSearchParams
-): Promise<ResultWithStatus<SorafsAliasResponse>> {
-  const res = await get<SorafsAliasResponse>('/sorafs/aliases', params);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: SorafsAliasResponse.parse(res.data) };
+export function normalizeSorafsPinManifestRequest(
+  digestHex: string,
+  params: SorafsPinManifestSearchParams = {}
+): { digestHex: string; params: SorafsPinManifestSearchParams } {
+  if (!EXACT_HEX_32.test(digestHex) || /^0+$/u.test(digestHex)) {
+    throw new TypeError('SoraFS pin digest must be non-zero lowercase 32-byte hex');
+  }
+  const normalized = normalizeSorafsPinRegistryParams(params);
+  return {
+    digestHex,
+    params: {
+      expected_finalized_height: normalized.expected_finalized_height,
+      expected_finalized_block_hash_hex: normalized.expected_finalized_block_hash_hex,
+    },
+  };
+}
+
+export async function fetchSorafsPinManifest(
+  digestHex: string,
+  params: SorafsPinManifestSearchParams = {}
+): Promise<ResultWithStatus<SorafsPinManifestResponse>> {
+  const request = normalizeSorafsPinManifestRequest(digestHex, params);
+  const res = await get<SorafsPinManifestResponse>(`/v1/sorafs/pin/${request.digestHex}`, request.params);
+  if (res.status === SUCCESSFUL_FETCHING) {
+    const data = SorafsPinManifestResponse.parse(res.data);
+    assertToriiResponseIdentity(
+      'SoraFS pin manifest',
+      data.manifest.digest === request.digestHex &&
+        sorafsFinalizedCursorMatchesRequest(data.finalized_cursor, request.params)
+    );
+    return { status: SUCCESSFUL_FETCHING, data };
+  }
 
   return await transformErrorResponse(res.response);
 }
 
-export async function fetchSorafsReplicationOrders(
-  params: SorafsReplicationSearchParams
-): Promise<ResultWithStatus<SorafsReplicationResponse>> {
-  const res = await get<SorafsReplicationResponse>('/sorafs/replication', params);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: SorafsReplicationResponse.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
+export async function createConnectSession(
+  preview: BrowserConnectSessionPreview
+): Promise<ResultWithStatus<ConnectSessionResponse>> {
+  try {
+    const data = await registerConnectSession(getToriiBaseUrl(), preview, {
+      fetchImpl: toriiSdkFetch,
+      node: preview.node,
+    });
+    return {
+      status: SUCCESSFUL_FETCHING,
+      data: ConnectSessionResponse.parse(data),
+    };
+  } catch (error) {
+    return {
+      status: UNKNOWN_ERROR,
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
 }
 
-export async function fetchSorafsStorageManifest(
-  manifestIdHex: string
-): Promise<ResultWithStatus<SorafsStorageManifestResponse>> {
-  const res = await get<SorafsStorageManifestResponse>(`/sorafs/storage/manifest/${manifestIdHex}`);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: SorafsStorageManifestResponse.parse(res.data) };
+const ZkQueryHeight = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const ZK_PROOF_FILTER_QUERY_SHAPE = {
+  backend: ZkProofId.shape.backend.optional(),
+  status: z.enum(['Submitted', 'Verified', 'Rejected']).optional(),
+  bridge_only: z.boolean().optional(),
+  bridge_start_from_height: ZkQueryHeight.optional(),
+  bridge_end_until_height: ZkQueryHeight.optional(),
+  has_tag: z
+    .string()
+    .regex(/^[\x21-\x7e]{4}$/u, 'has_tag must be exactly 4 ASCII graphic characters')
+    .optional(),
+  verified_from_height: ZkQueryHeight.optional(),
+  verified_until_height: ZkQueryHeight.optional(),
+} as const;
 
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchSorafsCidLookup(cid: string): Promise<ResultWithStatus<SorafsCidLookupResponse>> {
-  const res = await get<SorafsCidLookupResponse>(`/sorafs/cid/${cid}`);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: SorafsCidLookupResponse.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function draftMinistryAgendaProposal(
-  input: MinistryAgendaProposalDraftRequest
-): Promise<ResultWithStatus<MinistryAgendaProposalDraftResponse> | ConflictResult<MinistryAgendaProposalGetResponse>> {
-  const response = await post('/ministry/agenda/proposals/draft', MinistryAgendaProposalDraftRequest.parse(input));
-
-  if (response.status === 409) {
-    const { data, text } = await parseTypedResponse(response, MinistryAgendaProposalGetResponse);
-    if (data) {
-      return {
-        status: 'conflict',
-        data,
-      };
+const ZkProofFilterQuery = z
+  .object(ZK_PROOF_FILTER_QUERY_SHAPE)
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.verified_from_height !== undefined &&
+      value.verified_until_height !== undefined &&
+      value.verified_from_height > value.verified_until_height
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['verified_until_height'],
+        message: 'verified_until_height must be greater than or equal to verified_from_height',
+      });
     }
+    if (
+      value.bridge_start_from_height !== undefined &&
+      value.bridge_end_until_height !== undefined &&
+      value.bridge_start_from_height > value.bridge_end_until_height
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['bridge_end_until_height'],
+        message: 'bridge_end_until_height must be greater than or equal to bridge_start_from_height',
+      });
+    }
+  });
 
-    return {
-      status: UNKNOWN_ERROR,
-      error: new Error(text || 'ministry agenda proposal duplicate response missing JSON body'),
-    };
+const ZkProofListQuery = ZkProofFilterQuery.safeExtend({
+  limit: z.number().int().min(1).max(200).optional(),
+  offset: z.number().int().nonnegative().max(99_999).optional(),
+  order: z.enum(['asc', 'desc']).optional(),
+  ids_only: z.boolean().optional(),
+})
+  .strict()
+  .superRefine((value, context) => {
+    if ((value.offset ?? 0) + (value.limit ?? 200) > 100_000) {
+      context.addIssue({
+        code: 'custom',
+        path: ['offset'],
+        message: 'offset plus limit must not exceed the 100000-row proof query window',
+      });
+    }
+  });
+
+const ZkProofLookup = z
+  .object({
+    backend: ZkProofId.shape.backend,
+    hash: z
+      .string()
+      .regex(/^(?:0x)?[0-9a-fA-F]{64}$/u, 'hash must contain exactly 32 hexadecimal bytes')
+      .transform((value) => value.replace(/^0x/u, '').toLowerCase()),
+  })
+  .strict();
+
+const ZkVerifyingKeyListQuery = z
+  .object({
+    backend: ZkVerifyingKeyId.shape.backend.optional(),
+    status: z.enum(['Active', 'Proposed', 'Withdrawn']).optional(),
+    name_contains: z.string().min(1).optional(),
+    limit: z.number().int().min(1).max(500).optional(),
+    offset: z.number().int().nonnegative().max(499).optional(),
+    order: z.enum(['asc', 'desc']).optional(),
+    ids_only: z.boolean().optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if ((value.offset ?? 0) + (value.limit ?? 100) > 500) {
+      context.addIssue({
+        code: 'custom',
+        path: ['offset'],
+        message: 'offset plus limit must not exceed the 500-row verifying-key query window',
+      });
+    }
+  });
+
+export async function fetchZkProofs(
+  params?: ZkProofListParams & { ids_only?: false }
+): Promise<ResultWithStatus<ZkProofRegistryItem[]>>;
+export async function fetchZkProofs(
+  params: ZkProofListParams & { ids_only: true }
+): Promise<ResultWithStatus<ZkProofId[]>>;
+export async function fetchZkProofs(
+  params: ZkProofListParams = {}
+): Promise<ResultWithStatus<ZkProofRegistryItem[] | ZkProofId[]>> {
+  const query = ZkProofListQuery.parse(params);
+  const res = await get<unknown>('/v1/zk/proofs', query);
+  if (res.status === SUCCESSFUL_FETCHING) {
+    const schema = query.ids_only ? ZkProofId.array() : ZkProofRegistryItem.array();
+    return { status: SUCCESSFUL_FETCHING, data: schema.parse(res.data) };
   }
 
-  if (!response.ok) {
-    return await transformErrorResponse(response);
-  }
-
-  const { data, text } = await parseTypedResponse(response, MinistryAgendaProposalDraftResponse);
-  if (data) {
-    return {
-      status: SUCCESSFUL_FETCHING,
-      data,
-    };
-  }
-
-  return {
-    status: UNKNOWN_ERROR,
-    error: new Error(text || 'ministry agenda proposal draft response missing JSON body'),
-  };
+  return await transformErrorResponse(res.response);
 }
 
-export async function getMinistryAgendaProposal(
-  proposalId: string
-): Promise<ResultWithStatus<MinistryAgendaProposalGetResponse>> {
-  const normalizedProposalId = proposalId.trim();
-  if (!normalizedProposalId) {
-    return {
-      status: UNKNOWN_ERROR,
-      error: new Error('proposalId must not be empty'),
-    };
+export async function fetchZkProofCount(params: ZkProofFilterParams = {}): Promise<ResultWithStatus<ZkProofCount>> {
+  const query = ZkProofFilterQuery.parse(params);
+  const res = await get<unknown>('/v1/zk/proofs/count', query);
+  if (res.status === SUCCESSFUL_FETCHING) {
+    return { status: SUCCESSFUL_FETCHING, data: ZkProofCount.parse(res.data) };
   }
 
-  const response = await get<MinistryAgendaProposalGetResponse>(
-    `/ministry/agenda/proposals/${encodeURIComponent(normalizedProposalId)}`
+  return await transformErrorResponse(res.response);
+}
+
+export async function fetchZkProof(backend: string, hash: string): Promise<ResultWithStatus<ZkProofDetail>> {
+  const lookup = ZkProofLookup.parse({ backend, hash });
+  const res = await get<unknown>(
+    `/v1/zk/proof/${encodeURIComponent(lookup.backend)}/${encodeURIComponent(lookup.hash)}`
   );
-
-  if (response.status === SUCCESSFUL_FETCHING) {
-    return {
-      status: SUCCESSFUL_FETCHING,
-      data: MinistryAgendaProposalGetResponse.parse(response.data),
-    };
-  }
-
-  if (response.response.status === 404) {
-    return {
-      status: SUCCESSFUL_FETCHING,
-      data: {
-        found: false,
-        record: null,
-      },
-    };
-  }
-
-  return await transformErrorResponse(response.response);
-}
-
-export async function submitSignedTransaction(
-  signedTransaction: Uint8Array
-): Promise<ResultWithStatus<TransactionSubmissionReceiptResponse>> {
-  const response = await postBinary('/pipeline/transactions', signedTransaction as unknown as BodyInit, {
-    Accept: 'application/json',
-    'Content-Type': 'application/x-norito',
-  });
-
-  if (!response.ok) {
-    return await transformErrorResponse(response);
-  }
-
-  const { data, text } = await parseTypedResponse(response, TransactionSubmissionReceiptResponse);
-  if (data) {
-    return {
-      status: SUCCESSFUL_FETCHING,
-      data,
-    };
-  }
-
-  return {
-    status: UNKNOWN_ERROR,
-    error: new Error(text || 'transaction submission receipt missing JSON body'),
-  };
-}
-
-export async function fetchPipelineTransactionStatus(
-  hashHex: string,
-  scope: 'local' | 'auto' | 'global' = 'auto'
-): Promise<ResultWithStatus<PipelineTransactionStatusResponse | null>> {
-  const response = await get<PipelineTransactionStatusResponse>('/pipeline/transactions/status', {
-    hash: requireIrohaHash32(hashHex),
-    scope,
-  });
-
-  if (response.status === SUCCESSFUL_FETCHING) {
-    return {
-      status: SUCCESSFUL_FETCHING,
-      data: PipelineTransactionStatusResponse.parse(response.data),
-    };
-  }
-
-  if (response.response.status === 404) {
-    return {
-      status: SUCCESSFUL_FETCHING,
-      data: null,
-    };
-  }
-
-  return await transformErrorResponse(response.response);
-}
-
-export async function fetchSoracloudStatus(): Promise<ResultWithStatus<SoracloudStatus>> {
-  const res = await get<SoracloudStatus>('/soracloud/status');
-  if (res.status === SUCCESSFUL_FETCHING) return { status: SUCCESSFUL_FETCHING, data: SoracloudStatus.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchSoracloudServiceConfigStatus(
-  params: SoracloudServiceConfigStatusQuery
-): Promise<ResultWithStatus<SoracloudServiceConfigStatusResponse>> {
-  const res = await get<SoracloudServiceConfigStatusResponse>('/soracloud/service/config/status', params);
   if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudServiceConfigStatusResponse.parse(res.data) };
+    const data = ZkProofDetail.parse(res.data);
+    assertToriiResponseIdentity('ZK proof', data.backend === lookup.backend && data.proof_hash === lookup.hash);
+    return { status: SUCCESSFUL_FETCHING, data };
   }
 
   return await transformErrorResponse(res.response);
 }
 
-export async function fetchSoracloudServiceSecretStatus(
-  params: SoracloudServiceSecretStatusQuery
-): Promise<ResultWithStatus<SoracloudServiceSecretStatusResponse>> {
-  const res = await get<SoracloudServiceSecretStatusResponse>('/soracloud/service/secret/status', params);
+export async function fetchZkVerifyingKeys(
+  params?: ZkVerifyingKeyListParams & { ids_only?: false }
+): Promise<ResultWithStatus<ZkVerifyingKeyListItem[]>>;
+export async function fetchZkVerifyingKeys(
+  params: ZkVerifyingKeyListParams & { ids_only: true }
+): Promise<ResultWithStatus<ZkVerifyingKeyId[]>>;
+export async function fetchZkVerifyingKeys(
+  params: ZkVerifyingKeyListParams = {}
+): Promise<ResultWithStatus<ZkVerifyingKeyListItem[] | ZkVerifyingKeyId[]>> {
+  const query = ZkVerifyingKeyListQuery.parse(params);
+  const res = await get<unknown>('/v1/zk/vk', query);
   if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudServiceSecretStatusResponse.parse(res.data) };
+    const schema = query.ids_only ? ZkVerifyingKeyId.array() : ZkVerifyingKeyListItem.array();
+    return { status: SUCCESSFUL_FETCHING, data: schema.parse(res.data) };
   }
 
   return await transformErrorResponse(res.response);
 }
 
-export async function fetchSoracloudTrainingJobStatus(
-  params: SoracloudTrainingJobStatusQuery
-): Promise<ResultWithStatus<SoracloudTrainingJobStatusResponse>> {
-  const res = await get<SoracloudTrainingJobStatusResponse>('/soracloud/training/job/status', params);
+export async function fetchZkVerifyingKey(
+  backend: string,
+  name: string
+): Promise<ResultWithStatus<ZkVerifyingKeyDetail>> {
+  const lookup = ZkVerifyingKeyId.parse({ backend, name });
+  const res = await get<unknown>(`/v1/zk/vk/${encodeURIComponent(lookup.backend)}/${encodeURIComponent(lookup.name)}`);
   if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudTrainingJobStatusResponse.parse(res.data) };
+    const data = ZkVerifyingKeyDetail.parse(res.data);
+    assertToriiResponseIdentity('ZK verifying key', data.id.backend === lookup.backend && data.id.name === lookup.name);
+    return { status: SUCCESSFUL_FETCHING, data };
   }
 
   return await transformErrorResponse(res.response);
 }
 
-export async function fetchSoracloudModelWeightStatus(
-  params: SoracloudModelWeightStatusQuery
-): Promise<ResultWithStatus<SoracloudModelWeightStatusResponse>> {
-  const res = await get<SoracloudModelWeightStatusResponse>('/soracloud/model/weight/status', params);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudModelWeightStatusResponse.parse(res.data) };
+export function isToriiBaseUrlForced(): boolean {
+  return getRuntimeConfig().toriiForceBaseUrl === true;
+}
+
+async function parseBoundToriiSdkResult<T>(
+  request: (client: ToriiBrowserClient) => Promise<unknown>,
+  schema: ZodType<T>,
+  binding: { matchesRequest: (data: T) => boolean; resource: string }
+): Promise<ResultWithStatus<T>> {
+  const result = await parseToriiSdkResult(request, schema);
+  if (result.status === SUCCESSFUL_FETCHING) {
+    assertToriiResponseIdentity(binding.resource, binding.matchesRequest(result.data));
   }
-
-  return await transformErrorResponse(res.response);
+  return result;
 }
 
-export async function fetchSoracloudModelArtifactStatus(
-  params: SoracloudModelArtifactStatusQuery
-): Promise<ResultWithStatus<SoracloudModelArtifactStatusResponse>> {
-  const res = await get<SoracloudModelArtifactStatusResponse>('/soracloud/model/artifact/status', params);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudModelArtifactStatusResponse.parse(res.data) };
+function normalizeInstructionIndexForApi(index: number): number {
+  if (!Number.isInteger(index) || index < 0 || index > 0xffff_ffff) {
+    throw new TypeError('Instruction index must be a u32');
   }
-
-  return await transformErrorResponse(res.response);
+  return index;
 }
 
-export async function fetchSoracloudUploadedModelStatus(
-  params: SoracloudUploadedModelStatusQuery
-): Promise<ResultWithStatus<SoracloudUploadedModelStatusResponse>> {
-  const res = await get<SoracloudUploadedModelStatusResponse>('/soracloud/model/upload/status', params);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudUploadedModelStatusResponse.parse(res.data) };
-  }
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchSoracloudPrivateCompileStatus(
-  params: SoracloudUploadedModelStatusQuery
-): Promise<ResultWithStatus<SoracloudUploadedModelStatusResponse>> {
-  const res = await get<SoracloudUploadedModelStatusResponse>('/soracloud/model/compile/status', params);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudUploadedModelStatusResponse.parse(res.data) };
-  }
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchSoracloudPrivateInferenceStatus(
-  params: SoracloudPrivateInferenceStatusQuery
-): Promise<ResultWithStatus<SoracloudPrivateInferenceStatusResponse>> {
-  const res = await get<SoracloudPrivateInferenceStatusResponse>('/soracloud/model/run-status', params);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudPrivateInferenceStatusResponse.parse(res.data) };
-  }
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchSoracloudHfSharedLeaseStatus(
-  params: SoracloudHfSharedLeaseStatusQuery
-): Promise<ResultWithStatus<SoracloudHfSharedLeaseStatusResponse>> {
-  const res = await get<SoracloudHfSharedLeaseStatusResponse>('/soracloud/hf/status', params);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudHfSharedLeaseStatusResponse.parse(res.data) };
-  }
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchSoracloudModelHostStatus(
-  params: SoracloudModelHostStatusQuery = {}
-): Promise<ResultWithStatus<SoracloudModelHostStatusResponse>> {
-  const res = await get<SoracloudModelHostStatusResponse>('/soracloud/model-host/status', params);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudModelHostStatusResponse.parse(res.data) };
-  }
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchSoracloudAgentStatus(
-  params: SoracloudAgentStatusQuery = {}
-): Promise<ResultWithStatus<SoracloudAgentStatusResponse>> {
-  const res = await get<SoracloudAgentStatusResponse>('/soracloud/agent/status', params);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudAgentStatusResponse.parse(res.data) };
-  }
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchSoracloudAgentMailboxStatus(
-  params: SoracloudAgentMailboxStatusQuery
-): Promise<ResultWithStatus<SoracloudAgentMailboxStatusResponse>> {
-  const res = await get<SoracloudAgentMailboxStatusResponse>('/soracloud/agent/mailbox/status', params);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudAgentMailboxStatusResponse.parse(res.data) };
-  }
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchSoracloudAgentAutonomyStatus(
-  params: SoracloudAgentAutonomyStatusQuery
-): Promise<ResultWithStatus<SoracloudAgentAutonomyStatusResponse>> {
-  const res = await get<SoracloudAgentAutonomyStatusResponse>('/soracloud/agent/autonomy/status', params);
-  if (res.status === SUCCESSFUL_FETCHING) {
-    return { status: SUCCESSFUL_FETCHING, data: SoracloudAgentAutonomyStatusResponse.parse(res.data) };
-  }
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchGovernanceCouncil(): Promise<ResultWithStatus<GovernanceCouncil>> {
-  const res = await get<GovernanceCouncil>('/gov/council/current');
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: GovernanceCouncil.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchGovernanceUnlockStats(): Promise<ResultWithStatus<GovernanceUnlockStats>> {
-  const res = await get<GovernanceUnlockStats>('/gov/unlocks/stats');
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: GovernanceUnlockStats.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchGovernanceReferendum(id: string): Promise<ResultWithStatus<GovernanceReferendumResponse>> {
-  const res = await get<GovernanceReferendumResponse>(`/gov/referenda/${encodeURIComponent(id)}`);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: GovernanceReferendumResponse.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchGovernanceLocks(id: string): Promise<ResultWithStatus<GovernanceLocksResponse>> {
-  const res = await get<GovernanceLocksResponse>(`/gov/locks/${encodeURIComponent(id)}`);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: GovernanceLocksResponse.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchGovernanceTally(id: string): Promise<ResultWithStatus<GovernanceTallyResponse>> {
-  const res = await get<GovernanceTallyResponse>(`/gov/tally/${encodeURIComponent(id)}`);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: GovernanceTallyResponse.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchGovernanceProposal(id: string): Promise<ResultWithStatus<GovernanceProposalResponse>> {
-  const res = await get<GovernanceProposalResponse>(`/gov/proposals/${encodeURIComponent(id)}`);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: GovernanceProposalResponse.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchZkAttachments(params: ZkAttachmentSearchParams): Promise<ResultWithStatus<ZkAttachment[]>> {
-  const res = await get<ZkAttachment[]>('/zk/attachments', params);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: ZkAttachment.array().parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchZkAttachmentCount(
-  params: Omit<ZkAttachmentSearchParams, 'limit' | 'offset' | 'order'>
-): Promise<ResultWithStatus<CountResponse>> {
-  const res = await get<CountResponse>('/zk/attachments/count', params);
-  if (res.status === SUCCESSFUL_FETCHING) return { status: SUCCESSFUL_FETCHING, data: CountResponse.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchZkProverReports(
-  params: ZkProverReportSearchParams
-): Promise<ResultWithStatus<ZkProverReport[]>> {
-  if (!ZK_PROVER_REPORTS_ENABLED) {
-    return { status: SUCCESSFUL_FETCHING, data: [] };
-  }
-
-  const query: Record<string, any> = {
-    limit: params.limit,
-    offset: params.offset,
-    content_type: params.content_type,
-    has_tag: params.has_tag,
-    since_ms: params.since_ms,
-    before_ms: params.before_ms,
-    order: params.order,
-  };
-  if (params.status === 'ok') query.ok_only = true;
-  if (params.status === 'failed') query.failed_only = true;
-
-  const res = await get<ZkProverReport[]>('/zk/prover/reports', query);
-  if (res.status === SUCCESSFUL_FETCHING)
-    return { status: SUCCESSFUL_FETCHING, data: ZkProverReport.array().parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
-
-export async function fetchZkProverReportCount(
-  params: Omit<ZkProverReportSearchParams, 'limit' | 'offset' | 'order'>
-): Promise<ResultWithStatus<CountResponse>> {
-  if (!ZK_PROVER_REPORTS_ENABLED) {
-    return { status: SUCCESSFUL_FETCHING, data: { count: 0 } };
-  }
-
-  const query: Record<string, any> = {
-    content_type: params.content_type,
-    has_tag: params.has_tag,
-    since_ms: params.since_ms,
-    before_ms: params.before_ms,
-  };
-  if (params.status === 'ok') query.ok_only = true;
-  if (params.status === 'failed') query.failed_only = true;
-
-  const res = await get<CountResponse>('/zk/prover/reports/count', query);
-  if (res.status === SUCCESSFUL_FETCHING) return { status: SUCCESSFUL_FETCHING, data: CountResponse.parse(res.data) };
-
-  return await transformErrorResponse(res.response);
-}
+const AssetDefinitionDetailSelectorSchema = z.union([AssetDefinitionIdSchema, AssetDefinitionAliasSchema]);

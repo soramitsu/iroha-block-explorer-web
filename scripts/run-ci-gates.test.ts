@@ -1,4 +1,6 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, realpathSync, statSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -8,9 +10,22 @@ import {
   executeCiGates,
   sanitizedCiEnvironment,
   withIsolatedCiStore,
+  withPreservedNodeModules,
 } from './run-ci-gates.mjs';
 
 const testStore = path.resolve('/tmp/iroha-explorer-ci-test-store');
+const canonicalTemporaryRoot = realpathSync(tmpdir());
+const nodeModulesBackupPrefix = '.iroha-explorer-ci-node-modules-';
+
+async function createTemporaryRepository() {
+  return await mkdtemp(
+    path.join(canonicalTemporaryRoot, 'iroha-explorer-ci-repository-')
+  );
+}
+
+function isNodeModulesBackup(entry: string) {
+  return entry.startsWith(nodeModulesBackupPrefix);
+}
 
 describe('ordered CI gates', () => {
   it('checks exact versions and pins before an isolated frozen dependency operation', () => {
@@ -190,6 +205,28 @@ describe('ordered CI gates', () => {
     });
   });
 
+  it('passes an explicit browser cache through the isolated environment to Playwright', () => {
+    const spawn = vi.fn(() => ({ status: 0 }));
+    const gate = buildCiGates({ storeDir: testStore }).slice(-1);
+    executeCiGates(gate, spawn, {
+      environment: {
+        PATH: '/usr/bin',
+        PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright',
+      },
+      isolatedRoot: '/tmp/iroha-explorer-ci-private',
+    });
+
+    expect(spawn).toHaveBeenCalledWith('pnpm', ['test:playwright:hermetic'], {
+      cwd: CI_REPOSITORY_ROOT,
+      env: expect.objectContaining({
+        CI: '1',
+        PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright',
+        PLAYWRIGHT_REUSE_BUILD: '1',
+      }),
+      stdio: 'inherit',
+    });
+  });
+
   it('stops at the first failed gate', () => {
     const spawn = vi
       .fn()
@@ -199,6 +236,87 @@ describe('ordered CI gates', () => {
       executeCiGates(buildCiGates({ storeDir: testStore }).slice(0, 3), spawn)
     ).toThrow('exact SDK archive integrity exited with status 7');
     expect(spawn).toHaveBeenCalledTimes(2);
+  });
+
+  it('atomically restores the pre-existing node_modules tree after successful gates', async () => {
+    const repositoryRoot = await createTemporaryRepository();
+    try {
+      const nodeModules = path.join(repositoryRoot, 'node_modules');
+      const originalMarker = path.join(nodeModules, 'original.txt');
+      const gateMarker = path.join(nodeModules, 'isolated.txt');
+      await mkdir(nodeModules);
+      await writeFile(originalMarker, 'original dependency tree');
+      const originalInode = statSync(nodeModules).ino;
+
+      const result = await withPreservedNodeModules(
+        async () => {
+          expect(existsSync(nodeModules)).toBe(false);
+          const backup = (await readdir(repositoryRoot)).find(isNodeModulesBackup);
+          expect(backup).toBeDefined();
+          expect(statSync(path.join(repositoryRoot, backup!)).mode & 0o777).toBe(0o700);
+          await mkdir(nodeModules);
+          await writeFile(gateMarker, 'isolated dependency tree');
+          return 'complete';
+        },
+        { repositoryRoot }
+      );
+
+      expect(result).toBe('complete');
+      expect(statSync(nodeModules).ino).toBe(originalInode);
+      await expect(readFile(originalMarker, 'utf8')).resolves.toBe('original dependency tree');
+      expect(existsSync(gateMarker)).toBe(false);
+      expect((await readdir(repositoryRoot)).some(isNodeModulesBackup)).toBe(false);
+    } finally {
+      await rm(repositoryRoot, { force: true, recursive: true });
+    }
+  });
+
+  it('restores pre-existing node_modules when a gate fails', async () => {
+    const repositoryRoot = await createTemporaryRepository();
+    try {
+      const nodeModules = path.join(repositoryRoot, 'node_modules');
+      const originalMarker = path.join(nodeModules, 'original.txt');
+      await mkdir(nodeModules);
+      await writeFile(originalMarker, 'original dependency tree');
+      const originalInode = statSync(nodeModules).ino;
+
+      await expect(
+        withPreservedNodeModules(
+          async () => {
+            await mkdir(nodeModules);
+            await writeFile(path.join(nodeModules, 'isolated.txt'), 'isolated dependency tree');
+            throw new Error('injected gate failure');
+          },
+          { repositoryRoot }
+        )
+      ).rejects.toThrow('injected gate failure');
+
+      expect(statSync(nodeModules).ino).toBe(originalInode);
+      await expect(readFile(originalMarker, 'utf8')).resolves.toBe('original dependency tree');
+      expect(existsSync(path.join(nodeModules, 'isolated.txt'))).toBe(false);
+    } finally {
+      await rm(repositoryRoot, { force: true, recursive: true });
+    }
+  });
+
+  it('removes the isolated dependency tree when no node_modules existed before the gates', async () => {
+    const repositoryRoot = await createTemporaryRepository();
+    try {
+      const nodeModules = path.join(repositoryRoot, 'node_modules');
+
+      await withPreservedNodeModules(
+        async () => {
+          await mkdir(nodeModules);
+          await writeFile(path.join(nodeModules, 'isolated.txt'), 'isolated dependency tree');
+        },
+        { repositoryRoot }
+      );
+
+      expect(existsSync(nodeModules)).toBe(false);
+      expect(await readdir(repositoryRoot)).toEqual([]);
+    } finally {
+      await rm(repositoryRoot, { force: true, recursive: true });
+    }
   });
 
   it('uses an owner-only per-run store and removes it after success or failure', async () => {

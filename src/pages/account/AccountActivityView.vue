@@ -13,10 +13,10 @@ import BaseTable from '@/shared/ui/components/BaseTable.vue';
 import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
 
 const props = defineProps<{
-  accountId: string
+  accountId: string;
 }>();
 
-const { route, cursor, limit, updateListQuery } = useCursorListRouteQuery({
+const { route, cursor, limit, pagination, resetPagination, updateListQuery } = useCursorListRouteQuery({
   cursorKey: 'activity_cursor',
   limitKey: 'activity_limit',
 });
@@ -28,51 +28,44 @@ const assetFilter = computed({
   },
 });
 
-const historyResource = setupAsyncData(() =>
-  http.fetchAccountHistory(props.accountId, {
-    cursor: cursor.value,
-    limit: limit.value,
-    asset_id: assetFilter.value || undefined,
-  })
+const historyResource = setupAsyncData(
+  () =>
+    http.fetchAccountHistory(props.accountId, {
+      cursor: cursor.value,
+      limit: limit.value,
+      asset_id: assetFilter.value || undefined,
+    }),
+  { immediate: pagination.value.ok }
 );
 
-watch(
-  [() => props.accountId, cursor, limit, assetFilter],
-  () => {
-    historyResource.refetch();
-  }
-);
+watch([() => props.accountId, pagination, assetFilter], () => {
+  if (pagination.value.ok) historyResource.refetch();
+});
 
 const apiResult = computed(() => historyResource.data);
-const history = computed(() =>
-  apiResult.value?.status === SUCCESSFUL_FETCHING ? apiResult.value.data : null
-);
+const history = computed(() => (apiResult.value?.status === SUCCESSFUL_FETCHING ? apiResult.value.data : null));
 const permissionDenied = computed(() => apiResult.value?.status === 'permission-denied');
 const historyItems = computed(() => history.value?.items ?? []);
 const rowKey = (item: AccountHistoryItem) => item.id;
 </script>
 
 <template>
-  <BaseContentBlock
-    title="Account activity"
-    class="account-activity"
-  >
+  <BaseContentBlock :title="$t('accounts.activity.title')" class="account-activity">
     <template #default>
-      <p
-        class="account-activity__notice row-text"
-        data-test="activity-visibility-notice"
-      >
-        Visibility is limited to routes readable by this unsigned Explorer request. Activity in private
-        dataspaces can be omitted by Torii. Every row keeps its server-provided source and direction.
+      <p class="account-activity__notice row-text" data-test="activity-visibility-notice">
+        {{ $t('accounts.activity.visibility') }}
       </p>
 
-      <div
-        v-if="historyResource.isLoading && !apiResult"
-        class="account-activity__state"
-        role="status"
-      >
+      <div v-if="!pagination.ok" class="account-activity__state" role="alert" data-test="activity-invalid-pagination">
+        <span>{{ $t('table.invalidCursorPagination') }}</span>
+        <BaseButton bordered @click="resetPagination">
+          {{ $t('table.resetPagination') }}
+        </BaseButton>
+      </div>
+
+      <div v-else-if="historyResource.isLoading && !apiResult" class="account-activity__state" role="status">
         <BaseLoading />
-        <span>Loading account activity…</span>
+        <span>{{ $t('accounts.activity.loading') }}</span>
       </div>
 
       <div
@@ -81,47 +74,32 @@ const rowKey = (item: AccountHistoryItem) => item.id;
         role="alert"
         data-test="activity-permission-denied"
       >
-        <span>Torii denied access to this account history.</span>
-        <BaseButton
-          bordered
-          @click="historyResource.refetch"
-        >
-          Retry
+        <span>{{ $t('accounts.activity.denied') }}</span>
+        <BaseButton bordered @click="historyResource.refetch">
+          {{ $t('accounts.activity.retry') }}
         </BaseButton>
       </div>
 
-      <div
-        v-else-if="historyResource.notFound"
-        class="account-activity__state row-text"
-        role="status"
-      >
-        No indexed history is available for this account.
+      <div v-else-if="historyResource.notFound" class="account-activity__state row-text" role="status">
+        {{ $t('accounts.activity.notFound') }}
       </div>
 
-      <div
-        v-else-if="historyResource.error"
-        class="account-activity__state"
-        role="alert"
-        data-test="activity-error"
-      >
-        <span>Account history could not be loaded: {{ historyResource.error.message }}</span>
-        <BaseButton
-          bordered
-          @click="historyResource.refetch"
-        >
-          Retry
+      <div v-else-if="historyResource.error" class="account-activity__state" role="alert" data-test="activity-error">
+        <span>{{ $t('accounts.activity.loadError') }}</span>
+        <BaseButton bordered @click="historyResource.refetch">
+          {{ $t('accounts.activity.retry') }}
         </BaseButton>
       </div>
 
       <template v-else-if="history">
         <label class="account-activity__filter">
-          <span>Asset ID, definition ID, or active alias</span>
+          <span>{{ $t('accounts.activity.assetFilter') }}</span>
           <input
             v-model.lazy="assetFilter"
             data-test="activity-asset-filter"
             type="text"
-            placeholder="Exact asset selector"
-          >
+            :placeholder="$t('accounts.activity.assetFilterAria')"
+          />
         </label>
 
         <div
@@ -130,15 +108,15 @@ const rowKey = (item: AccountHistoryItem) => item.id;
           role="status"
           data-test="activity-empty"
         >
-          No account activity matches this view.
+          {{ $t('accounts.activity.noMatches') }}
         </div>
 
         <BaseTable
-          v-else
+          v-if="history"
           v-model:cursor="cursor"
           v-model:page-size="limit"
-          pagination-mode="cursor"
           :loading="historyResource.isLoading"
+          pagination-mode="cursor"
           :cursor-pagination="history"
           :items="historyItems"
           :row-key
@@ -146,26 +124,24 @@ const rowKey = (item: AccountHistoryItem) => item.id;
           :breakpoint="1180"
         >
           <template #header>
-            <div
-              class="account-activity__row account-activity__row_header"
-              role="presentation"
-            >
-              <span role="columnheader">Activity</span>
-              <span role="columnheader">Source / direction</span>
-              <span role="columnheader">Entities</span>
-              <span role="columnheader">Value / status</span>
+            <div class="account-activity__row account-activity__row_header" role="presentation">
+              <span role="columnheader">{{ $t('accounts.activity.columns.activity') }}</span>
+              <span role="columnheader">{{ $t('accounts.activity.columns.sourceDirection') }}</span>
+              <span role="columnheader">{{ $t('accounts.activity.columns.entities') }}</span>
+              <span role="columnheader">{{ $t('accounts.activity.columns.valueStatus') }}</span>
             </div>
           </template>
 
           <template #row="{ item }">
-            <div
-              class="account-activity__row"
-              role="presentation"
-            >
+            <div class="account-activity__row" role="presentation">
               <div role="cell">
                 <strong>{{ item.type }}</strong>
                 <code>{{ item.id }}</code>
-                <span>{{ item.timestamp_ms === undefined ? 'Timestamp not provided' : `${item.timestamp_ms} ms` }}</span>
+                <span>{{
+                  item.timestamp_ms === undefined
+                    ? $t('accounts.activity.timestampMissing')
+                    : $t('units.milliseconds', { value: item.timestamp_ms })
+                }}</span>
               </div>
               <div role="cell">
                 <span>{{ item.source }}</span>
@@ -190,17 +166,10 @@ const rowKey = (item: AccountHistoryItem) => item.id;
                 <code v-if="item.operation_id">{{ item.operation_id }}</code>
               </div>
               <div role="cell">
-                <span
-                  v-if="item.amount !== undefined"
-                  class="row-text-monospace"
-                >{{ item.amount }}</span>
+                <span v-if="item.amount !== undefined" class="row-text-monospace">{{ item.amount }}</span>
                 <span>{{ item.status }}</span>
                 <span v-if="item.result_ok !== undefined">result_ok: {{ String(item.result_ok) }}</span>
-                <BaseLink
-                  v-if="item.tx_hash"
-                  :to="`/transactions/${encodeURIComponent(item.tx_hash)}`"
-                  monospace
-                >
+                <BaseLink v-if="item.tx_hash" :to="`/transactions/${encodeURIComponent(item.tx_hash)}`" monospace>
                   {{ item.tx_hash }}
                 </BaseLink>
               </div>
@@ -212,7 +181,9 @@ const rowKey = (item: AccountHistoryItem) => item.id;
               <strong>{{ item.type }}</strong>
               <code>{{ item.id }}</code>
               <span>{{ item.source }} · {{ item.direction }} · {{ item.status }}</span>
-              <span v-if="item.amount !== undefined">Amount: {{ item.amount }}</span>
+              <span v-if="item.amount !== undefined">{{
+                $t('accounts.activity.amount', { amount: item.amount })
+              }}</span>
               <BaseLink
                 v-if="item.counterparty_account_id"
                 :to="`/accounts/${encodeURIComponent(item.counterparty_account_id)}`"
@@ -220,11 +191,7 @@ const rowKey = (item: AccountHistoryItem) => item.id;
               >
                 {{ item.counterparty_account_id }}
               </BaseLink>
-              <BaseLink
-                v-if="item.tx_hash"
-                :to="`/transactions/${encodeURIComponent(item.tx_hash)}`"
-                monospace
-              >
+              <BaseLink v-if="item.tx_hash" :to="`/transactions/${encodeURIComponent(item.tx_hash)}`" monospace>
                 {{ item.tx_hash }}
               </BaseLink>
             </div>

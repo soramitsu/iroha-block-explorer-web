@@ -3,11 +3,14 @@ import type { KotodamaStudioWorkspaceSummary } from '@/shared/lib/kotodama-studi
 
 export type StudioToolboxMode = 'basic' | 'advanced';
 export type StudioTemplateId = 'reward' | 'watchdog' | 'subscription';
+export type StudioTranslate = (key: string, params?: Readonly<Record<string, string | number>>) => string;
+
+const untranslatedStudioKey: StudioTranslate = (key) => key;
 
 export interface StudioSections {
-  stateSection: string
-  entrypointSection: string
-  triggerSection: string
+  stateSection: string;
+  entrypointSection: string;
+  triggerSection: string;
 }
 
 export interface StudioWorkspaceIssue {
@@ -17,26 +20,26 @@ export interface StudioWorkspaceIssue {
     | 'duplicate_trigger'
     | 'invalid_account_literal'
     | 'invalid_asset_literal'
-    | 'raw_query_payload'
-  severity: 'error' | 'warning'
-  message: string
+    | 'raw_query_payload';
+  severity: 'error' | 'warning';
+  message: string;
 }
 
 interface StudioToolboxBlockItem {
-  kind: 'block'
-  type: string
+  kind: 'block';
+  type: string;
 }
 
 interface StudioToolboxCategory {
-  kind: 'category'
-  name: string
-  categorystyle: string
-  contents: StudioToolboxBlockItem[]
+  kind: 'category';
+  name: string;
+  categorystyle: string;
+  contents: StudioToolboxBlockItem[];
 }
 
 interface StudioToolboxInfo {
-  kind: 'categoryToolbox'
-  contents: StudioToolboxCategory[]
+  kind: 'categoryToolbox';
+  contents: StudioToolboxCategory[];
 }
 
 const STUDIO_STATE_CHECK = 'StudioState';
@@ -51,8 +54,19 @@ const STUDIO_BLOB_CHECK = 'StudioBlob';
 const STUDIO_STATE_VALUE_CHECK = 'StudioStateValue';
 const STUDIO_SCALAR_AND_STATE_CHECKS = ['String', 'Number', 'Boolean', STUDIO_STATE_VALUE_CHECK];
 const STUDIO_DETAIL_VALUE_CHECKS = [...STUDIO_SCALAR_AND_STATE_CHECKS, STUDIO_JSON_CHECK];
-const STUDIO_INFO_VALUE_CHECKS = [...STUDIO_DETAIL_VALUE_CHECKS, STUDIO_ACCOUNT_CHECK, STUDIO_ASSET_CHECK, STUDIO_NAME_CHECK];
-const STUDIO_STATE_DEFAULT_CHECKS = ['Number', 'Boolean', STUDIO_JSON_CHECK, STUDIO_BLOB_CHECK, STUDIO_STATE_VALUE_CHECK];
+const STUDIO_INFO_VALUE_CHECKS = [
+  ...STUDIO_DETAIL_VALUE_CHECKS,
+  STUDIO_ACCOUNT_CHECK,
+  STUDIO_ASSET_CHECK,
+  STUDIO_NAME_CHECK,
+];
+const STUDIO_STATE_DEFAULT_CHECKS = [
+  'Number',
+  'Boolean',
+  STUDIO_JSON_CHECK,
+  STUDIO_BLOB_CHECK,
+  STUDIO_STATE_VALUE_CHECK,
+];
 const STUDIO_COMPARABLE_CHECKS = ['String', 'Number', 'Boolean', STUDIO_STATE_VALUE_CHECK];
 const STUDIO_EMPTY_REFERENCE_VALUE = '__studio_missing_reference__';
 const STUDIO_INVALID_REFERENCE_REASON = 'STUDIO_INVALID_REFERENCE';
@@ -159,10 +173,8 @@ function collectStudioPublicEntrypointNames(workspace: Blockly.Workspace): strin
 }
 
 function studioIdentifierValidator(fallback: string) {
-  return (value: string | number | null | undefined) => normalizeStudioIdentifier(
-    typeof value === 'string' ? value : String(value ?? ''),
-    fallback
-  );
+  return (value: string | number | null | undefined) =>
+    normalizeStudioIdentifier(typeof value === 'string' ? value : String(value ?? ''), fallback);
 }
 
 function studioTrimmedLiteralValidator(fallback: string) {
@@ -177,13 +189,21 @@ function hasStudioAssetLiteralShape(value: string): boolean {
   return /^[^\s#]+#[^\s#]+$/.test(value.trim());
 }
 
-function buildStudioReferenceOptions(values: string[], currentValue: string, emptyLabel: string): Array<[string, string]> {
+function buildStudioReferenceOptions(
+  values: string[],
+  currentValue: string,
+  emptyLabel: string
+): Array<[string, string]> {
   const options = uniqueStudioValues(values).map((value) => [value, value] as [string, string]);
   if (!options.length) {
     return [[emptyLabel, STUDIO_EMPTY_REFERENCE_VALUE]];
   }
 
-  if (currentValue.length > 0 && currentValue !== STUDIO_EMPTY_REFERENCE_VALUE && !options.some(([, value]) => value === currentValue)) {
+  if (
+    currentValue.length > 0 &&
+    currentValue !== STUDIO_EMPTY_REFERENCE_VALUE &&
+    !options.some(([, value]) => value === currentValue)
+  ) {
     return [[`${currentValue} (missing)`, currentValue], ...options];
   }
 
@@ -194,7 +214,7 @@ function createStudioReferenceDropdown(
   getValues: (workspace: Blockly.Workspace) => string[],
   emptyLabel: string
 ): Blockly.FieldDropdown {
-  return new Blockly.FieldDropdown(function(this: Blockly.FieldDropdown) {
+  return new Blockly.FieldDropdown(function (this: Blockly.FieldDropdown) {
     const sourceBlock = this.getSourceBlock();
     const workspace = sourceBlock?.workspace;
     return buildStudioReferenceOptions(workspace ? getValues(workspace) : [], this.getValue() ?? '', emptyLabel);
@@ -220,28 +240,27 @@ function findNearestStudioStatementAncestor(block: Blockly.Block): Blockly.Block
   return null;
 }
 
-function reconcileStudioReferenceField(
-  block: Blockly.Block,
-  fieldName: string,
-  validValues: string[]
-): boolean {
+function reconcileStudioReferenceField(block: Blockly.Block, fieldName: string, validValues: string[]): boolean {
   const field = block.getField(fieldName);
   if (field instanceof Blockly.FieldDropdown && field.isOptionListDynamic()) {
     field.getOptions(false);
   }
 
   const currentValue = block.getFieldValue(fieldName) ?? '';
-  const nextValue = validValues.length > 0
-    ? validValues.includes(currentValue) ? currentValue : validValues[0]!
-    : STUDIO_EMPTY_REFERENCE_VALUE;
+  const nextValue =
+    validValues.length > 0
+      ? validValues.includes(currentValue)
+        ? currentValue
+        : validValues[0]!
+      : STUDIO_EMPTY_REFERENCE_VALUE;
 
   if (currentValue === nextValue) return false;
   block.setFieldValue(nextValue, fieldName);
   return true;
 }
 
-function registerBlocks() {
-  Blockly.Extensions.register('studio_state_identifier_extension', function(this: Blockly.Block) {
+function registerBlocks(translate: StudioTranslate) {
+  Blockly.Extensions.register('studio_state_identifier_extension', function (this: Blockly.Block) {
     const field = this.getField('NAME');
     if (field instanceof Blockly.FieldTextInput) {
       field.setValidator(studioIdentifierValidator('counter'));
@@ -249,7 +268,7 @@ function registerBlocks() {
     }
   });
 
-  Blockly.Extensions.register('studio_entrypoint_identifier_extension', function(this: Blockly.Block) {
+  Blockly.Extensions.register('studio_entrypoint_identifier_extension', function (this: Blockly.Block) {
     const field = this.getField('NAME');
     if (field instanceof Blockly.FieldTextInput) {
       field.setValidator(studioIdentifierValidator('celebrate'));
@@ -257,7 +276,7 @@ function registerBlocks() {
     }
   });
 
-  Blockly.Extensions.register('studio_query_alias_extension', function(this: Blockly.Block) {
+  Blockly.Extensions.register('studio_query_alias_extension', function (this: Blockly.Block) {
     const field = this.getField('ALIAS');
     if (field instanceof Blockly.FieldTextInput) {
       field.setValidator(studioIdentifierValidator('result'));
@@ -265,7 +284,7 @@ function registerBlocks() {
     }
   });
 
-  Blockly.Extensions.register('studio_entrypoint_permission_extension', function(this: Blockly.Block) {
+  Blockly.Extensions.register('studio_entrypoint_permission_extension', function (this: Blockly.Block) {
     const field = this.getField('PERMISSION');
     if (field instanceof Blockly.FieldTextInput) {
       field.setValidator(studioIdentifierValidator('Builder'));
@@ -273,7 +292,7 @@ function registerBlocks() {
     }
   });
 
-  Blockly.Extensions.register('studio_account_literal_extension', function(this: Blockly.Block) {
+  Blockly.Extensions.register('studio_account_literal_extension', function (this: Blockly.Block) {
     const field = this.getField('VALUE');
     if (field instanceof Blockly.FieldTextInput) {
       field.setValidator(studioTrimmedLiteralValidator('alice@play.main'));
@@ -281,7 +300,7 @@ function registerBlocks() {
     }
   });
 
-  Blockly.Extensions.register('studio_asset_literal_extension', function(this: Blockly.Block) {
+  Blockly.Extensions.register('studio_asset_literal_extension', function (this: Blockly.Block) {
     const field = this.getField('VALUE');
     if (field instanceof Blockly.FieldTextInput) {
       field.setValidator(studioTrimmedLiteralValidator('gold#vault.main'));
@@ -289,7 +308,7 @@ function registerBlocks() {
     }
   });
 
-  Blockly.Extensions.register('studio_name_literal_extension', function(this: Blockly.Block) {
+  Blockly.Extensions.register('studio_name_literal_extension', function (this: Blockly.Block) {
     const field = this.getField('VALUE');
     if (field instanceof Blockly.FieldTextInput) {
       field.setValidator(studioIdentifierValidator('reward'));
@@ -297,7 +316,7 @@ function registerBlocks() {
     }
   });
 
-  Blockly.Extensions.register('studio_json_key_extension', function(this: Blockly.Block) {
+  Blockly.Extensions.register('studio_json_key_extension', function (this: Blockly.Block) {
     const field = this.getField('KEY');
     if (field instanceof Blockly.FieldTextInput) {
       field.setValidator(studioIdentifierValidator('status'));
@@ -308,19 +327,19 @@ function registerBlocks() {
   Blockly.defineBlocksWithJsonArray([
     {
       type: ROOT_BLOCK_TYPE,
-      message0: 'state %1',
+      message0: translate('studio.blockly.blocks.root.state'),
       args0: [{ type: 'input_statement', name: 'STATE', check: STUDIO_STATE_CHECK }],
-      message1: 'entrypoints %1',
+      message1: translate('studio.blockly.blocks.root.entrypoints'),
       args1: [{ type: 'input_statement', name: 'ENTRYPOINTS', check: STUDIO_ENTRYPOINT_CHECK }],
-      message2: 'triggers %1',
+      message2: translate('studio.blockly.blocks.root.triggers'),
       args2: [{ type: 'input_statement', name: 'TRIGGERS', check: STUDIO_TRIGGER_CHECK }],
       colour: '#c74b2a',
-      tooltip: 'The root organizer for your contract.',
+      tooltip: translate('studio.blockly.tooltips.root'),
       helpUrl: '',
     },
     {
       type: 'studio_state',
-      message0: 'state %1 as %2 default %3',
+      message0: translate('studio.blockly.blocks.state'),
       args0: [
         { type: 'field_input', name: 'NAME', text: 'counter' },
         {
@@ -338,48 +357,48 @@ function registerBlocks() {
       previousStatement: STUDIO_STATE_CHECK,
       nextStatement: STUDIO_STATE_CHECK,
       colour: '#a86a2b',
-      tooltip: 'Create a durable state field.',
+      tooltip: translate('studio.blockly.tooltips.state'),
       helpUrl: '',
       extensions: ['studio_state_identifier_extension'],
     },
     {
       type: 'studio_entrypoint',
-      message0: '%1 entrypoint %2 permission %3',
+      message0: translate('studio.blockly.blocks.entrypoint'),
       args0: [
         {
           type: 'field_dropdown',
           name: 'KIND',
           options: [
-            ['public', 'kotoage'],
-            ['start', 'hajimari'],
-            ['view', 'view'],
+            [translate('studio.blockly.options.public'), 'kotoage'],
+            [translate('studio.blockly.options.start'), 'hajimari'],
+            [translate('studio.blockly.options.view'), 'view'],
           ],
         },
         { type: 'field_input', name: 'NAME', text: 'celebrate' },
         { type: 'field_input', name: 'PERMISSION', text: 'Builder' },
       ],
-      message1: 'steps %1',
+      message1: translate('studio.blockly.blocks.steps'),
       args1: [{ type: 'input_statement', name: 'BODY', check: STUDIO_ACTION_CHECK }],
       previousStatement: STUDIO_ENTRYPOINT_CHECK,
       nextStatement: STUDIO_ENTRYPOINT_CHECK,
       colour: '#4f6b8a',
-      tooltip: 'Create a callable action.',
+      tooltip: translate('studio.blockly.tooltips.entrypoint'),
       helpUrl: '',
       extensions: ['studio_entrypoint_identifier_extension', 'studio_entrypoint_permission_extension'],
     },
     {
       type: 'studio_action_info',
-      message0: 'say %1',
+      message0: translate('studio.blockly.blocks.say'),
       args0: [{ type: 'input_value', name: 'MESSAGE', check: STUDIO_INFO_VALUE_CHECKS }],
       previousStatement: STUDIO_ACTION_CHECK,
       nextStatement: STUDIO_ACTION_CHECK,
       colour: '#c15b3f',
-      tooltip: 'Emit a friendly message.',
+      tooltip: translate('studio.blockly.tooltips.say'),
       helpUrl: '',
     },
     {
       type: 'studio_action_transfer_asset',
-      message0: 'transfer %1 of asset %2 from %3 to %4',
+      message0: translate('studio.blockly.blocks.transferAsset'),
       args0: [
         { type: 'input_value', name: 'AMOUNT', check: 'Number' },
         { type: 'input_value', name: 'ASSET', check: STUDIO_ASSET_CHECK },
@@ -389,12 +408,12 @@ function registerBlocks() {
       previousStatement: STUDIO_ACTION_CHECK,
       nextStatement: STUDIO_ACTION_CHECK,
       colour: '#c15b3f',
-      tooltip: 'Move an asset between accounts.',
+      tooltip: translate('studio.blockly.tooltips.transferAsset'),
       helpUrl: '',
     },
     {
       type: 'studio_action_set_detail',
-      message0: 'set detail %1 on %2 to %3',
+      message0: translate('studio.blockly.blocks.setDetail'),
       args0: [
         { type: 'input_value', name: 'KEY', check: STUDIO_NAME_CHECK },
         { type: 'input_value', name: 'ACCOUNT', check: STUDIO_ACCOUNT_CHECK },
@@ -403,12 +422,12 @@ function registerBlocks() {
       previousStatement: STUDIO_ACTION_CHECK,
       nextStatement: STUDIO_ACTION_CHECK,
       colour: '#c15b3f',
-      tooltip: 'Write account detail data.',
+      tooltip: translate('studio.blockly.tooltips.setDetail'),
       helpUrl: '',
     },
     {
       type: 'studio_action_execute_query',
-      message0: 'query %1 and save as %2',
+      message0: translate('studio.blockly.blocks.query'),
       args0: [
         { type: 'input_value', name: 'QUERY', check: ['String', STUDIO_JSON_CHECK] },
         { type: 'field_input', name: 'ALIAS', text: 'result' },
@@ -416,34 +435,34 @@ function registerBlocks() {
       previousStatement: STUDIO_ACTION_CHECK,
       nextStatement: STUDIO_ACTION_CHECK,
       colour: '#b9913d',
-      tooltip: 'Run an on-chain query.',
+      tooltip: translate('studio.blockly.tooltips.query'),
       helpUrl: '',
       extensions: ['studio_query_alias_extension'],
     },
     {
       type: 'studio_logic_if',
-      message0: 'if %1',
+      message0: translate('studio.blockly.blocks.if'),
       args0: [{ type: 'input_value', name: 'CONDITION', check: 'Boolean' }],
-      message1: 'then %1',
+      message1: translate('studio.blockly.blocks.then'),
       args1: [{ type: 'input_statement', name: 'THEN', check: STUDIO_ACTION_CHECK }],
-      message2: 'else %1',
+      message2: translate('studio.blockly.blocks.else'),
       args2: [{ type: 'input_statement', name: 'ELSE', check: STUDIO_ACTION_CHECK }],
       previousStatement: STUDIO_ACTION_CHECK,
       nextStatement: STUDIO_ACTION_CHECK,
       colour: '#7a6244',
-      tooltip: 'Choose between two paths.',
+      tooltip: translate('studio.blockly.tooltips.if'),
       helpUrl: '',
     },
     {
       type: 'studio_logic_repeat',
-      message0: 'repeat %1 times',
+      message0: translate('studio.blockly.blocks.repeat'),
       args0: [{ type: 'input_value', name: 'TIMES', check: 'Number' }],
-      message1: 'do %1',
+      message1: translate('studio.blockly.blocks.do'),
       args1: [{ type: 'input_statement', name: 'DO', check: STUDIO_ACTION_CHECK }],
       previousStatement: STUDIO_ACTION_CHECK,
       nextStatement: STUDIO_ACTION_CHECK,
       colour: '#7a6244',
-      tooltip: 'Repeat a playful action.',
+      tooltip: translate('studio.blockly.tooltips.repeat'),
       helpUrl: '',
     },
     {
@@ -467,25 +486,25 @@ function registerBlocks() {
       ],
       output: 'Boolean',
       colour: '#47657d',
-      tooltip: 'Compare two values.',
+      tooltip: translate('studio.blockly.tooltips.compare'),
       helpUrl: '',
     },
     {
       type: 'studio_text',
-      message0: 'text %1',
+      message0: translate('studio.blockly.blocks.text'),
       args0: [{ type: 'field_input', name: 'VALUE', text: 'hello world' }],
       output: 'String',
       colour: '#415c72',
-      tooltip: 'A text value.',
+      tooltip: translate('studio.blockly.tooltips.text'),
       helpUrl: '',
     },
     {
       type: 'studio_number',
-      message0: 'number %1',
+      message0: translate('studio.blockly.blocks.number'),
       args0: [{ type: 'field_number', name: 'VALUE', value: 1 }],
       output: 'Number',
       colour: '#415c72',
-      tooltip: 'A number value.',
+      tooltip: translate('studio.blockly.tooltips.number'),
       helpUrl: '',
     },
     {
@@ -496,56 +515,56 @@ function registerBlocks() {
           type: 'field_dropdown',
           name: 'VALUE',
           options: [
-            ['true', 'true'],
-            ['false', 'false'],
+            [translate('studio.blockly.options.true'), 'true'],
+            [translate('studio.blockly.options.false'), 'false'],
           ],
         },
       ],
       output: 'Boolean',
       colour: '#415c72',
-      tooltip: 'A yes or no value.',
+      tooltip: translate('studio.blockly.tooltips.boolean'),
       helpUrl: '',
     },
     {
       type: 'studio_account',
-      message0: 'account %1',
+      message0: translate('studio.blockly.blocks.account'),
       args0: [{ type: 'field_input', name: 'VALUE', text: 'alice@play.main' }],
       output: STUDIO_ACCOUNT_CHECK,
       colour: '#415c72',
-      tooltip: 'An account literal.',
+      tooltip: translate('studio.blockly.tooltips.account'),
       helpUrl: '',
       extensions: ['studio_account_literal_extension'],
     },
     {
       type: 'studio_asset',
-      message0: 'asset %1',
+      message0: translate('studio.blockly.blocks.asset'),
       args0: [{ type: 'field_input', name: 'VALUE', text: 'gold#vault.main' }],
       output: STUDIO_ASSET_CHECK,
       colour: '#415c72',
-      tooltip: 'An asset definition literal.',
+      tooltip: translate('studio.blockly.tooltips.asset'),
       helpUrl: '',
       extensions: ['studio_asset_literal_extension'],
     },
     {
       type: 'studio_name',
-      message0: 'name %1',
+      message0: translate('studio.blockly.blocks.name'),
       args0: [{ type: 'field_input', name: 'VALUE', text: 'reward' }],
       output: STUDIO_NAME_CHECK,
       colour: '#415c72',
-      tooltip: 'A Name pointer literal.',
+      tooltip: translate('studio.blockly.tooltips.name'),
       helpUrl: '',
       extensions: ['studio_name_literal_extension'],
     },
     {
       type: 'studio_json',
-      message0: 'json key %1 value %2',
+      message0: translate('studio.blockly.blocks.json'),
       args0: [
         { type: 'field_input', name: 'KEY', text: 'status' },
         { type: 'input_value', name: 'VALUE', check: STUDIO_DETAIL_VALUE_CHECKS },
       ],
       output: STUDIO_JSON_CHECK,
       colour: '#415c72',
-      tooltip: 'A small json object.',
+      tooltip: translate('studio.blockly.tooltips.json'),
       helpUrl: '',
       extensions: ['studio_json_key_extension'],
     },
@@ -554,26 +573,31 @@ function registerBlocks() {
   Blockly.Blocks['studio_trigger'] = {
     init() {
       this.appendDummyInput()
-        .appendField('trigger')
+        .appendField(translate('studio.blockly.blocks.trigger'))
         .appendField(new Blockly.FieldTextInput('sparkle', studioIdentifierValidator('sparkle')), 'ID')
-        .appendField('calls')
-        .appendField(createStudioReferenceDropdown(collectStudioPublicEntrypointNames, 'No public entrypoint yet'), 'ENTRYPOINT')
-        .appendField('on')
-        .appendField(new Blockly.FieldDropdown([
-          ['pre-commit', 'pre_commit'],
-          ['manual', 'manual'],
-          ['schedule', 'schedule'],
-        ]), 'MODE');
-      this.appendValueInput('PERIOD')
-        .setCheck('Number')
-        .appendField('every ms');
-      this.appendValueInput('START')
-        .setCheck('Number')
-        .appendField('starting at');
+        .appendField(translate('studio.blockly.blocks.calls'))
+        .appendField(
+          createStudioReferenceDropdown(
+            collectStudioPublicEntrypointNames,
+            translate('studio.blockly.empty.noEntrypoint')
+          ),
+          'ENTRYPOINT'
+        )
+        .appendField(translate('studio.blockly.blocks.on'))
+        .appendField(
+          new Blockly.FieldDropdown([
+            [translate('studio.blockly.options.preCommit'), 'pre_commit'],
+            [translate('studio.blockly.options.manual'), 'manual'],
+            [translate('studio.blockly.options.schedule'), 'schedule'],
+          ]),
+          'MODE'
+        );
+      this.appendValueInput('PERIOD').setCheck('Number').appendField(translate('studio.blockly.blocks.everyMs'));
+      this.appendValueInput('START').setCheck('Number').appendField(translate('studio.blockly.blocks.startingAt'));
       this.setPreviousStatement(true, STUDIO_TRIGGER_CHECK);
       this.setNextStatement(true, STUDIO_TRIGGER_CHECK);
       this.setStyle('trigger_blocks');
-      this.setTooltip('Wake the contract at the right time.');
+      this.setTooltip(translate('studio.blockly.tooltips.trigger'));
       this.setHelpUrl('');
     },
   };
@@ -582,13 +606,16 @@ function registerBlocks() {
     init() {
       this.appendValueInput('VALUE')
         .setCheck(STUDIO_STATE_DEFAULT_CHECKS)
-        .appendField('set state')
-        .appendField(createStudioReferenceDropdown(collectStudioStateNames, 'No state field yet'), 'STATE_NAME')
-        .appendField('to');
+        .appendField(translate('studio.blockly.blocks.setState'))
+        .appendField(
+          createStudioReferenceDropdown(collectStudioStateNames, translate('studio.blockly.empty.noState')),
+          'STATE_NAME'
+        )
+        .appendField(translate('studio.blockly.blocks.to'));
       this.setPreviousStatement(true, STUDIO_ACTION_CHECK);
       this.setNextStatement(true, STUDIO_ACTION_CHECK);
       this.setStyle('action_blocks');
-      this.setTooltip('Change a state value.');
+      this.setTooltip(translate('studio.blockly.tooltips.setState'));
       this.setHelpUrl('');
     },
   };
@@ -596,12 +623,18 @@ function registerBlocks() {
   Blockly.Blocks['studio_action_call_entrypoint'] = {
     init() {
       this.appendDummyInput()
-        .appendField('call entrypoint')
-        .appendField(createStudioReferenceDropdown(collectStudioPublicEntrypointNames, 'No public entrypoint yet'), 'ENTRYPOINT');
+        .appendField(translate('studio.blockly.blocks.callEntrypoint'))
+        .appendField(
+          createStudioReferenceDropdown(
+            collectStudioPublicEntrypointNames,
+            translate('studio.blockly.empty.noEntrypoint')
+          ),
+          'ENTRYPOINT'
+        );
       this.setPreviousStatement(true, STUDIO_ACTION_CHECK);
       this.setNextStatement(true, STUDIO_ACTION_CHECK);
       this.setStyle('action_blocks');
-      this.setTooltip('Call another contract entrypoint.');
+      this.setTooltip(translate('studio.blockly.tooltips.callEntrypoint'));
       this.setHelpUrl('');
     },
   };
@@ -609,11 +642,14 @@ function registerBlocks() {
   Blockly.Blocks['studio_state_reference'] = {
     init() {
       this.appendDummyInput()
-        .appendField('state')
-        .appendField(createStudioReferenceDropdown(collectStudioStateNames, 'No state field yet'), 'STATE_NAME');
+        .appendField(translate('studio.blockly.blocks.stateReference'))
+        .appendField(
+          createStudioReferenceDropdown(collectStudioStateNames, translate('studio.blockly.empty.noState')),
+          'STATE_NAME'
+        );
       this.setOutput(true, STUDIO_STATE_VALUE_CHECK);
       this.setStyle('value_blocks');
-      this.setTooltip('Read a state value.');
+      this.setTooltip(translate('studio.blockly.tooltips.stateReference'));
       this.setHelpUrl('');
     },
   };
@@ -669,7 +705,8 @@ STUDIO_GENERATOR.forBlock[ROOT_BLOCK_TYPE] = (block) => {
 STUDIO_GENERATOR.forBlock['studio_state'] = (block) => {
   const kind = blockField(block, 'KIND', 'int');
   const name = blockField(block, 'NAME', 'counter');
-  const fallback = kind === 'bool' ? 'false' : kind === 'Json' ? 'json!{ ready: true }' : kind === 'Blob' ? 'blob!("sparkles")' : '0';
+  const fallback =
+    kind === 'bool' ? 'false' : kind === 'Json' ? 'json!{ ready: true }' : kind === 'Blob' ? 'blob!("sparkles")' : '0';
   const initialValue = valueOrFallback(block, 'DEFAULT', fallback);
   return `  state ${kind} ${name};\n  // default ${name} = ${initialValue}\n`;
 };
@@ -679,13 +716,14 @@ STUDIO_GENERATOR.forBlock['studio_entrypoint'] = (block) => {
   const name = blockField(block, 'NAME', 'celebrate');
   const permission = blockField(block, 'PERMISSION');
   const body = statementOrEmpty(block, 'BODY') || '    info("A cheerful rule is ready.");';
-  const header = kind === 'hajimari'
-    ? '  hajimari()'
-    : kind === 'view'
-      ? `  fn ${name}()`
-      : permission.length > 0
-        ? `  kotoage fn ${name}() permission(${permission})`
-        : `  kotoage fn ${name}()`;
+  const header =
+    kind === 'hajimari'
+      ? '  hajimari()'
+      : kind === 'view'
+        ? `  fn ${name}()`
+        : permission.length > 0
+          ? `  kotoage fn ${name}() permission(${permission})`
+          : `  kotoage fn ${name}()`;
 
   return `${header} {\n${body}\n  }\n`;
 };
@@ -697,11 +735,12 @@ STUDIO_GENERATOR.forBlock['studio_trigger'] = (block) => {
   const period = valueOrFallback(block, 'PERIOD', '60000');
   const start = valueOrFallback(block, 'START', '0');
 
-  const onClause = mode === 'schedule'
-    ? `    on time schedule(${start}, ${period});`
-    : mode === 'manual'
-      ? `    execute trigger ${id};`
-      : '    on time pre_commit;';
+  const onClause =
+    mode === 'schedule'
+      ? `    on time schedule(${start}, ${period});`
+      : mode === 'manual'
+        ? `    execute trigger ${id};`
+        : '    on time pre_commit;';
 
   return `  register_trigger ${id} {\n    call ${entrypoint};\n${onClause}\n  }\n`;
 };
@@ -769,9 +808,15 @@ STUDIO_GENERATOR.forBlock['studio_compare'] = (block) => {
 STUDIO_GENERATOR.forBlock['studio_text'] = (block) => [quoted(blockField(block, 'VALUE', 'hello world')), 0];
 STUDIO_GENERATOR.forBlock['studio_number'] = (block) => [blockField(block, 'VALUE', '1'), 0];
 STUDIO_GENERATOR.forBlock['studio_boolean'] = (block) => [blockField(block, 'VALUE', 'true'), 0];
-STUDIO_GENERATOR.forBlock['studio_account'] = (block) => [ `account!(${quoted(blockField(block, 'VALUE', 'alice@play.main'))})`, 0];
-STUDIO_GENERATOR.forBlock['studio_asset'] = (block) => [ `asset_definition!(${quoted(blockField(block, 'VALUE', 'gold#vault.main'))})`, 0];
-STUDIO_GENERATOR.forBlock['studio_name'] = (block) => [ `name!(${quoted(blockField(block, 'VALUE', 'reward'))})`, 0];
+STUDIO_GENERATOR.forBlock['studio_account'] = (block) => [
+  `account!(${quoted(blockField(block, 'VALUE', 'alice@play.main'))})`,
+  0,
+];
+STUDIO_GENERATOR.forBlock['studio_asset'] = (block) => [
+  `asset_definition!(${quoted(blockField(block, 'VALUE', 'gold#vault.main'))})`,
+  0,
+];
+STUDIO_GENERATOR.forBlock['studio_name'] = (block) => [`name!(${quoted(blockField(block, 'VALUE', 'reward'))})`, 0];
 STUDIO_GENERATOR.forBlock['studio_json'] = (block) => {
   const key = blockField(block, 'KEY', 'status');
   const value = valueOrFallback(block, 'VALUE', quoted('ok'));
@@ -996,25 +1041,27 @@ function category(name: string, categorystyle: string, contents: StudioToolboxBl
   };
 }
 
-function baseToolbox(): StudioToolboxInfo {
+function baseToolbox(translate: StudioTranslate): StudioToolboxInfo {
   return {
     kind: 'categoryToolbox',
     contents: [
-      category('State', 'state_category', [blockItem('studio_state')]),
-      category('Entrypoints', 'entrypoint_category', [blockItem('studio_entrypoint')]),
-      category('Triggers', 'trigger_category', [blockItem('studio_trigger')]),
-      category('Actions', 'action_category', [
+      category(translate('studio.blockly.categories.state'), 'state_category', [blockItem('studio_state')]),
+      category(translate('studio.blockly.categories.entrypoints'), 'entrypoint_category', [
+        blockItem('studio_entrypoint'),
+      ]),
+      category(translate('studio.blockly.categories.triggers'), 'trigger_category', [blockItem('studio_trigger')]),
+      category(translate('studio.blockly.categories.actions'), 'action_category', [
         blockItem('studio_action_info'),
         blockItem('studio_action_transfer_asset'),
         blockItem('studio_action_set_detail'),
         blockItem('studio_action_set_state'),
       ]),
-      category('Logic', 'logic_category', [
+      category(translate('studio.blockly.categories.logic'), 'logic_category', [
         blockItem('studio_logic_if'),
         blockItem('studio_logic_repeat'),
         blockItem('studio_compare'),
       ]),
-      category('Values', 'value_category', [
+      category(translate('studio.blockly.categories.values'), 'value_category', [
         blockItem('studio_text'),
         blockItem('studio_number'),
         blockItem('studio_boolean'),
@@ -1028,24 +1075,24 @@ function baseToolbox(): StudioToolboxInfo {
   };
 }
 
-export function ensureStudioBlocklyRegistered() {
+export function ensureStudioBlocklyRegistered(translate: StudioTranslate = untranslatedStudioKey) {
   if (registered) return;
-  registerBlocks();
+  registerBlocks(translate);
   registered = true;
 }
 
-export function studioTheme() {
-  ensureStudioBlocklyRegistered();
+export function studioTheme(translate: StudioTranslate = untranslatedStudioKey) {
+  ensureStudioBlocklyRegistered(translate);
   return studioBlocklyTheme ?? Blockly.Themes.Zelos;
 }
 
-export function createStudioToolbox(mode: StudioToolboxMode) {
-  ensureStudioBlocklyRegistered();
-  const toolbox = baseToolbox();
+export function createStudioToolbox(mode: StudioToolboxMode, translate: StudioTranslate = untranslatedStudioKey) {
+  ensureStudioBlocklyRegistered(translate);
+  const toolbox = baseToolbox(translate);
 
   if (mode === 'advanced') {
     const actionsCategory = toolbox.contents.find(
-      (item): item is StudioToolboxCategory => item.kind === 'category' && item.name === 'Actions'
+      (item): item is StudioToolboxCategory => item.kind === 'category' && item.categorystyle === 'action_category'
     );
 
     if (actionsCategory) {
@@ -1057,11 +1104,14 @@ export function createStudioToolbox(mode: StudioToolboxMode) {
   return toolbox;
 }
 
-export function reconcileStudioWorkspaceReferences(workspace: Blockly.Workspace): {
-  correctedReferenceCount: number
-  disabledBlockCount: number
+export function reconcileStudioWorkspaceReferences(
+  workspace: Blockly.Workspace,
+  translate: StudioTranslate = untranslatedStudioKey
+): {
+  correctedReferenceCount: number;
+  disabledBlockCount: number;
 } {
-  ensureStudioBlocklyRegistered();
+  ensureStudioBlocklyRegistered(translate);
 
   let correctedReferenceCount = 0;
   let disabledBlockCount = 0;
@@ -1079,7 +1129,7 @@ export function reconcileStudioWorkspaceReferences(workspace: Blockly.Workspace)
       correctedReferenceCount += reconcileStudioReferenceField(block, 'ENTRYPOINT', publicEntrypoints) ? 1 : 0;
       if (publicEntrypoints.length === 0) {
         block.setDisabledReason(true, STUDIO_INVALID_REFERENCE_REASON);
-        block.setWarningText('Define a public entrypoint before adding a trigger.', STUDIO_REFERENCE_WARNING_ID);
+        block.setWarningText(translate('studio.blockly.warnings.triggerNeedsEntrypoint'), STUDIO_REFERENCE_WARNING_ID);
         disabledBlockCount += 1;
       }
     }
@@ -1088,7 +1138,7 @@ export function reconcileStudioWorkspaceReferences(workspace: Blockly.Workspace)
       correctedReferenceCount += reconcileStudioReferenceField(block, 'ENTRYPOINT', publicEntrypoints) ? 1 : 0;
       if (publicEntrypoints.length === 0) {
         block.setDisabledReason(true, STUDIO_INVALID_REFERENCE_REASON);
-        block.setWarningText('Define a public entrypoint before calling one.', STUDIO_REFERENCE_WARNING_ID);
+        block.setWarningText(translate('studio.blockly.warnings.callNeedsEntrypoint'), STUDIO_REFERENCE_WARNING_ID);
         disabledBlockCount += 1;
       }
     }
@@ -1097,7 +1147,7 @@ export function reconcileStudioWorkspaceReferences(workspace: Blockly.Workspace)
       correctedReferenceCount += reconcileStudioReferenceField(block, 'STATE_NAME', states) ? 1 : 0;
       if (states.length === 0) {
         block.setDisabledReason(true, STUDIO_INVALID_REFERENCE_REASON);
-        block.setWarningText('Define a state field before setting one.', STUDIO_REFERENCE_WARNING_ID);
+        block.setWarningText(translate('studio.blockly.warnings.setNeedsState'), STUDIO_REFERENCE_WARNING_ID);
         disabledBlockCount += 1;
       }
     }
@@ -1106,11 +1156,14 @@ export function reconcileStudioWorkspaceReferences(workspace: Blockly.Workspace)
       correctedReferenceCount += reconcileStudioReferenceField(block, 'STATE_NAME', states) ? 1 : 0;
       if (states.length === 0) {
         block.setDisabledReason(true, STUDIO_INVALID_REFERENCE_REASON);
-        block.setWarningText('Define a state field before reading one.', STUDIO_REFERENCE_WARNING_ID);
+        block.setWarningText(translate('studio.blockly.warnings.readNeedsState'), STUDIO_REFERENCE_WARNING_ID);
         const ancestor = findNearestStudioStatementAncestor(block);
         if (ancestor) {
           ancestor.setDisabledReason(true, STUDIO_INVALID_REFERENCE_DEPENDENCY_REASON);
-          ancestor.setWarningText('This block depends on a missing state field.', STUDIO_REFERENCE_DEPENDENCY_WARNING_ID);
+          ancestor.setWarningText(
+            translate('studio.blockly.warnings.missingStateDependency'),
+            STUDIO_REFERENCE_DEPENDENCY_WARNING_ID
+          );
         }
         disabledBlockCount += 1;
       }
@@ -1172,19 +1225,28 @@ export function buildStudioSections(workspace: Blockly.Workspace): StudioSection
   return { stateSection, entrypointSection, triggerSection };
 }
 
-export function validateStudioWorkspace(workspace: Blockly.Workspace): StudioWorkspaceIssue[] {
-  ensureStudioBlocklyRegistered();
+export function validateStudioWorkspace(
+  workspace: Blockly.Workspace,
+  translate: StudioTranslate = untranslatedStudioKey
+): StudioWorkspaceIssue[] {
+  ensureStudioBlocklyRegistered(translate);
 
   const issues: StudioWorkspaceIssue[] = [];
-  const duplicateStates = collectStudioDuplicateValues(collectStudioFieldValues(workspace, 'studio_state', 'NAME', 'counter'));
-  const duplicateEntrypoints = collectStudioDuplicateValues(collectStudioFieldValues(workspace, 'studio_entrypoint', 'NAME', 'celebrate'));
-  const duplicateTriggers = collectStudioDuplicateValues(collectStudioFieldValues(workspace, 'studio_trigger', 'ID', 'sparkle'));
+  const duplicateStates = collectStudioDuplicateValues(
+    collectStudioFieldValues(workspace, 'studio_state', 'NAME', 'counter')
+  );
+  const duplicateEntrypoints = collectStudioDuplicateValues(
+    collectStudioFieldValues(workspace, 'studio_entrypoint', 'NAME', 'celebrate')
+  );
+  const duplicateTriggers = collectStudioDuplicateValues(
+    collectStudioFieldValues(workspace, 'studio_trigger', 'ID', 'sparkle')
+  );
 
   for (const name of duplicateStates) {
     issues.push({
       code: 'duplicate_state',
       severity: 'error',
-      message: `State \`${name}\` is defined more than once.`,
+      message: translate('studio.blockly.diagnostics.duplicateState', { name }),
     });
   }
 
@@ -1192,7 +1254,7 @@ export function validateStudioWorkspace(workspace: Blockly.Workspace): StudioWor
     issues.push({
       code: 'duplicate_entrypoint',
       severity: 'error',
-      message: `Entrypoint \`${name}\` is defined more than once.`,
+      message: translate('studio.blockly.diagnostics.duplicateEntrypoint', { name }),
     });
   }
 
@@ -1200,7 +1262,7 @@ export function validateStudioWorkspace(workspace: Blockly.Workspace): StudioWor
     issues.push({
       code: 'duplicate_trigger',
       severity: 'error',
-      message: `Trigger \`${id}\` is registered more than once.`,
+      message: translate('studio.blockly.diagnostics.duplicateTrigger', { id }),
     });
   }
 
@@ -1209,7 +1271,7 @@ export function validateStudioWorkspace(workspace: Blockly.Workspace): StudioWor
     issues.push({
       code: 'invalid_account_literal',
       severity: 'error',
-      message: `Account literal \`${literal}\` should look like \`name@domain\`.`,
+      message: translate('studio.blockly.diagnostics.invalidAccount', { literal }),
     });
   }
 
@@ -1218,7 +1280,7 @@ export function validateStudioWorkspace(workspace: Blockly.Workspace): StudioWor
     issues.push({
       code: 'invalid_asset_literal',
       severity: 'error',
-      message: `Asset literal \`${literal}\` should look like \`asset#domain\`.`,
+      message: translate('studio.blockly.diagnostics.invalidAsset', { literal }),
     });
   }
 
@@ -1227,7 +1289,7 @@ export function validateStudioWorkspace(workspace: Blockly.Workspace): StudioWor
     issues.push({
       code: 'raw_query_payload',
       severity: 'warning',
-      message: 'Advanced query blocks still emit raw query payloads. Review them before compile.',
+      message: translate('studio.blockly.diagnostics.rawQueryPayload'),
     });
   }
 

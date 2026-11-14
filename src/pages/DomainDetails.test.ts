@@ -5,9 +5,9 @@ import DomainDetails from './DomainDetails.vue';
 import { i18n } from '@/shared/lib/localization';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 
-const SAMPLE_ACCOUNT_ID =
-  'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
+const SAMPLE_ACCOUNT_ID = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
 const SAMPLE_ASSET_ALIAS = 'usd#issuer.main';
+const SAMPLE_ASSET_DEFINITION_ID = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
 
 const routeState = ref({
   params: { id: 'wonderland' },
@@ -144,11 +144,12 @@ describe('DomainDetails', () => {
     setupStateQueue[2].data.data.items = [
       {
         id: SAMPLE_ACCOUNT_ID,
-        i105_address: SAMPLE_ACCOUNT_ID,
       },
     ];
     const wrapper = factory();
-    const accountAssetFilter = wrapper.get(`input[placeholder="${i18n.global.t('accounts.filters.assetPlaceholder')}"]`);
+    const accountAssetFilter = wrapper.get(
+      `input[placeholder="${i18n.global.t('accounts.filters.assetPlaceholder')}"]`
+    );
 
     expect(wrapper.text()).toContain(SAMPLE_ACCOUNT_ID);
 
@@ -161,7 +162,9 @@ describe('DomainDetails', () => {
 
   it('clears the account asset filter error after a valid asset selector is entered', async () => {
     const wrapper = factory();
-    const accountAssetFilter = wrapper.get(`input[placeholder="${i18n.global.t('accounts.filters.assetPlaceholder')}"]`);
+    const accountAssetFilter = wrapper.get(
+      `input[placeholder="${i18n.global.t('accounts.filters.assetPlaceholder')}"]`
+    );
 
     await accountAssetFilter.setValue('not-a-valid-asset-id');
     await flushPromises();
@@ -173,13 +176,11 @@ describe('DomainDetails', () => {
     expect(wrapper.text()).not.toContain(i18n.global.t('accounts.filters.assetInvalid'));
   });
 
-  it('renders domain account rows with canonical i105 ids', async () => {
-    const canonicalAccountId =
-      'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
+  it('renders domain account rows from Torii canonical ids', async () => {
+    const canonicalAccountId = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
     setupStateQueue[2].data.data.items = [
       {
-        id: 'legacy-account-id',
-        i105_address: canonicalAccountId,
+        id: canonicalAccountId,
       },
     ];
     const wrapper = factory();
@@ -193,20 +194,25 @@ describe('DomainDetails', () => {
   it('renders a domain asset as an explicit link instead of a pointer-only row', async () => {
     setupStateQueue[1].data.data.items = [
       {
-        id: SAMPLE_ASSET_ALIAS,
-        alias: SAMPLE_ASSET_ALIAS,
-        name: 'usd',
+        id: SAMPLE_ASSET_DEFINITION_ID,
+        owning_domain: 'wonderland',
         owned_by: SAMPLE_ACCOUNT_ID,
         mintable: 'Infinitely',
+        logo: null,
         metadata: {},
         assets: 1,
+        total_quantity: '1',
+        locked_quantity: null,
+        circulating_quantity: null,
       },
     ];
 
     const wrapper = factory();
     await flushPromises();
 
-    expect(wrapper.get(`a[href="/assets/${encodeURIComponent(SAMPLE_ASSET_ALIAS)}"]`).text()).toBe('usd');
+    expect(wrapper.get(`a[href="/assets/${encodeURIComponent(SAMPLE_ASSET_DEFINITION_ID)}"]`).text()).toBe(
+      SAMPLE_ASSET_DEFINITION_ID
+    );
   });
 
   it('renders not-found without misleading empty dependent sections', async () => {

@@ -42,6 +42,7 @@ vi.mock('vue-router', () => ({
 }));
 
 vi.mock('@/shared/api', () => ({
+  isToriiBaseUrlForced: () => false,
   fetchAccount: (...args: unknown[]) => apiMocks.fetchAccount(...args),
   fetchBlocks: (...args: unknown[]) => apiMocks.fetchBlocks(...args),
   fetchInstructions: (...args: unknown[]) => apiMocks.fetchInstructions(...args),

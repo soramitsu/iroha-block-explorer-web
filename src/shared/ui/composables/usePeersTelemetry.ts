@@ -2,7 +2,7 @@ import { reactive, computed, watch, onScopeDispose, getCurrentScope, effectScope
 import type { ComputedRef } from 'vue';
 import type { EffectScope } from 'vue';
 import type { PeerInfo, PeerPropagation, PeerStatus } from '@/shared/api/schemas';
-import { fetchOnlinePeers, fetchPeersInfo, fetchTelemetryPropagation } from '@/shared/api';
+import { fetchPeersInfo } from '@/shared/api';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import { useTelemetryMetrics } from './useTelemetryMetrics';
@@ -12,13 +12,12 @@ interface PeerRow {
   status: PeerStatus | null
 }
 
-type PeerTelemetrySource = 'LIVE_SSE' | 'SNAPSHOT' | 'FALLBACK' | 'MIXED' | 'NONE';
-type PeerRowOrigin = 'live' | 'snapshot' | 'fallback';
-type TelemetryOrigin = Exclude<PeerRowOrigin, 'fallback'>;
+type PeerTelemetrySource = 'LIVE_SSE' | 'SNAPSHOT' | 'MIXED' | 'NONE';
+type PeerRowOrigin = 'live' | 'snapshot';
+type TelemetryOrigin = PeerRowOrigin;
+const MAX_PROPAGATION_HISTORY = 64;
 export type PeerTelemetryEventKind =
   | 'snapshot_peers_info'
-  | 'snapshot_propagation'
-  | 'fallback_peers'
   | 'sse_first'
   | 'sse_peer_info'
   | 'sse_peer_status'
@@ -40,7 +39,6 @@ interface PeersState {
   recentEvents: ComputedRef<PeerTelemetryEvent[]>
   peerDataSource: ComputedRef<PeerTelemetrySource>
   lastPeerSampleAtMs: ComputedRef<number | null>
-  fallbackPeersCount: ComputedRef<number>
   isMetricsLoading: ReturnType<typeof useTelemetryMetrics>['isLoading']
   isPeersLoading: ComputedRef<boolean>
 }
@@ -86,10 +84,7 @@ function createPeersTelemetryState(): PeersState {
   let nextEventId = 1;
   const lastLiveSampleAtMs = ref<number | null>(null);
   const lastSnapshotSampleAtMs = ref<number | null>(null);
-  const lastFallbackSampleAtMs = ref<number | null>(null);
   const peersRequest = setupAsyncData(() => fetchPeersInfo());
-  const onlinePeersRequest = setupAsyncData(() => fetchOnlinePeers());
-  const propagationRequest = setupAsyncData(() => fetchTelemetryPropagation());
 
   const serializeEventPayload = (payload: unknown) => {
     try {
@@ -120,10 +115,6 @@ function createPeersTelemetryState(): PeersState {
     lastSnapshotSampleAtMs.value = Date.now();
   };
 
-  const markFallbackSample = () => {
-    lastFallbackSampleAtMs.value = Date.now();
-  };
-
   const applyPeerInfo = (peer: PeerInfo, origin: TelemetryOrigin) => {
     const previous = peersMap.get(peer.url) ?? { info: null, status: null };
     peersMap.set(peer.url, { ...previous, info: peer });
@@ -144,55 +135,18 @@ function createPeersTelemetryState(): PeersState {
 
   const applyPropagation = (entry: PeerPropagation) => {
     propagationMap.set(entry.block, entry);
+    if (propagationMap.size <= MAX_PROPAGATION_HISTORY) return;
+
+    const oldestBlocks = [...propagationMap.keys()]
+      .sort((left, right) => left - right)
+      .slice(0, propagationMap.size - MAX_PROPAGATION_HISTORY);
+    oldestBlocks.forEach((block) => propagationMap.delete(block));
   };
 
   const stripKind = <T extends { kind: string }>(payload: T): Omit<T, 'kind'> => {
     const next: Partial<T> = { ...payload };
     delete next.kind;
     return next as Omit<T, 'kind'>;
-  };
-
-  const applyOnlinePeer = (peer: string) => {
-    const normalized = peer.trim();
-    if (!normalized) return;
-
-    const separator = normalized.lastIndexOf('@');
-    const endpoint = separator >= 0 ? normalized.slice(separator + 1).trim() : normalized;
-    if (!endpoint) return;
-
-    const publicKey = separator > 0 ? normalized.slice(0, separator).trim() : '';
-    const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
-      ? endpoint
-      : `http://${endpoint}`;
-
-    const existingSource = rowSourceMap.get(url);
-    if (existingSource === 'live' || existingSource === 'snapshot') return;
-
-    const previous = peersMap.get(url) ?? { info: null, status: null };
-    if (previous.info) return;
-
-    peersMap.set(url, {
-      ...previous,
-      info: {
-        url,
-        connected: true,
-        telemetry_unsupported: false,
-        config: publicKey
-          ? {
-              public_key: publicKey,
-              queue_capacity: null,
-              network_block_gossip_size: null,
-              network_block_gossip_period: null,
-              network_tx_gossip_size: null,
-              network_tx_gossip_period: null,
-            }
-          : null,
-        location: null,
-        connected_peers: null,
-      },
-    });
-    rowSourceMap.set(url, 'fallback');
-    markFallbackSample();
   };
 
   storedStops = [
@@ -205,36 +159,6 @@ function createPeersTelemetryState(): PeersState {
             pushEvent('snapshot_peers_info', {
               count: response.data.length,
               peers_info: response.data,
-            });
-          }
-        }
-      },
-      { immediate: true }
-    ),
-    watch(
-      () => onlinePeersRequest.data,
-      (response) => {
-        if (response?.status === SUCCESSFUL_FETCHING) {
-          response.data.forEach(applyOnlinePeer);
-          if (response.data.length > 0) {
-            pushEvent('fallback_peers', {
-              count: response.data.length,
-              peers: response.data,
-            });
-          }
-        }
-      },
-      { immediate: true }
-    ),
-    watch(
-      () => propagationRequest.data,
-      (response) => {
-        if (response?.status === SUCCESSFUL_FETCHING) {
-          response.data.forEach(applyPropagation);
-          if (response.data.length > 0) {
-            pushEvent('snapshot_propagation', {
-              count: response.data.length,
-              propagation: response.data,
             });
           }
         }
@@ -286,9 +210,6 @@ function createPeersTelemetryState(): PeersState {
   const snapshotRowsCount = computed(() =>
     Array.from(rowSourceMap.values()).filter((source) => source === 'snapshot').length
   );
-  const fallbackRowsCount = computed(() =>
-    Array.from(rowSourceMap.values()).filter((source) => source === 'fallback').length
-  );
   const lastObservedStatusAtMs = computed<number | null>(() => {
     const observedValues = Array.from(peersMap.values())
       .map((row) => row.status?.observed_at_ms ?? null)
@@ -309,12 +230,10 @@ function createPeersTelemetryState(): PeersState {
     peerDataSource: computed<PeerTelemetrySource>(() => {
       const liveRows = liveRowsCount.value;
       const snapshotRows = snapshotRowsCount.value;
-      const fallbackRows = fallbackRowsCount.value;
 
-      if (liveRows === 0 && snapshotRows === 0 && fallbackRows === 0) return 'NONE';
-      if (liveRows > 0 && snapshotRows === 0 && fallbackRows === 0) return 'LIVE_SSE';
-      if (snapshotRows > 0 && liveRows === 0 && fallbackRows === 0) return 'SNAPSHOT';
-      if (fallbackRows > 0 && liveRows === 0 && snapshotRows === 0) return 'FALLBACK';
+      if (liveRows === 0 && snapshotRows === 0) return 'NONE';
+      if (liveRows > 0 && snapshotRows === 0) return 'LIVE_SSE';
+      if (snapshotRows > 0 && liveRows === 0) return 'SNAPSHOT';
       return 'MIXED';
     }),
     lastPeerSampleAtMs: computed(() => {
@@ -322,13 +241,11 @@ function createPeersTelemetryState(): PeersState {
         lastObservedStatusAtMs.value,
         lastLiveSampleAtMs.value,
         lastSnapshotSampleAtMs.value,
-        lastFallbackSampleAtMs.value,
       ].filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
 
       if (!candidates.length) return null;
       return Math.max(...candidates);
     }),
-    fallbackPeersCount: fallbackRowsCount,
     isMetricsLoading: telemetry.isLoading,
     isPeersLoading: computed(
       () => peersMap.size === 0 && (telemetry.streamStatus.value === 'CONNECTING' || peersRequest.isLoading)

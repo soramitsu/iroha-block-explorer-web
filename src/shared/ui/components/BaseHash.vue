@@ -13,26 +13,46 @@
     <span v-else-if="content.t === 'two-line'">{{ content.first }}<br>{{ content.second }}</span>
     <span v-else>{{ content.value }}</span>
 
-    <CopyIcon
+    <button
       v-if="props.copy"
-      role="button"
-      tabindex="0"
-      class="base-hash__copy"
+      type="button"
+      class="base-hash__copy icon-button"
+      :aria-label="$t('ux.copyIdentifier')"
       @click.stop="copyHash"
-      @keydown.enter.space.stop="copyHash"
-    />
+    >
+      <CopyIcon
+        aria-hidden="true"
+        focusable="false"
+      />
+    </button>
+    <button
+      v-if="props.type !== 'full'"
+      type="button"
+      class="base-hash__reveal icon-button"
+      :aria-label="$t(expanded ? 'ux.hideIdentifier' : 'ux.showIdentifier')"
+      :aria-expanded="expanded"
+      :aria-controls="disclosureId"
+      @click.stop="expanded = !expanded"
+    >
+      {{ expanded ? '−' : '…' }}
+    </button>
+    <span
+      v-if="expanded"
+      :id="disclosureId"
+      class="base-hash__full"
+      dir="ltr"
+    >{{ displayHash }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, useId } from 'vue';
 import CopyIcon from '@/shared/ui/icons/copy.svg';
 import { useClipboard } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import { useNotifications } from '@/shared/ui/composables/notifications';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import type { HashType } from '@/shared/ui/composables/useAdaptiveHash';
-import { getToriiBaseUrl } from '@/shared/api';
 import { getDisplayedAccountId, normalizeAccountRoutePath } from '@/shared/lib/account-id';
 
 interface Props {
@@ -44,15 +64,21 @@ interface Props {
 
 const props = defineProps<Props>();
 const clipboard = useClipboard();
+const expanded = ref(false);
+const disclosureId = useId();
 const notifications = useNotifications();
 const { t } = useI18n({ useScope: 'global' });
-const displayHash = computed(() => getDisplayedAccountId(props.hash, getToriiBaseUrl()));
-const displayLink = computed(() => (props.link ? normalizeAccountRoutePath(props.link, getToriiBaseUrl()) : undefined));
+const displayHash = computed(() => getDisplayedAccountId(props.hash));
+const displayLink = computed(() => (props.link ? normalizeAccountRoutePath(props.link) : undefined));
 
 async function copyHash() {
-  if (clipboard.isSupported) {
-    await clipboard.copy(displayHash.value);
-    notifications.success(t('clipboard.success'));
+  if (clipboard.isSupported.value) {
+    try {
+      await clipboard.copy(displayHash.value);
+      notifications.success(t('clipboard.success'));
+    } catch {
+      notifications.error(t('clipboard.error'));
+    }
   } else {
     notifications.error(t('clipboard.error'));
   }
@@ -141,20 +167,12 @@ const content = computed<Content>(() => {
 
 <style lang="scss">
 @use '@/shared/ui/styles/main' as *;
-
 .base-hash {
-  display: flex;
-  align-items: center;
-  word-break: break-all;
-
-  &__copy {
-    margin-left: size(1);
-    cursor: pointer;
-    color: theme-color('content-quaternary');
-
-    &:hover {
-      color: theme-color('content-tertiary');
-    }
-  }
+  display: flex; align-items: center; flex-wrap: wrap; min-width: 0; max-width: 100%;
+  overflow-wrap: anywhere; word-break: break-all;
+  > .base-link, > span { min-width: 0; }
+  &__copy, &__reveal { flex: 0 0 44px; }
+  &__copy svg { width: 16px; height: 16px; fill: currentColor; }
+  &__full { flex-basis: 100%; padding: 8px; margin-block: 4px; border: 1px solid theme-color('border-primary'); background: theme-color('background'); border-radius: 8px; font-family: monospace; font-size: 12px; }
 }
 </style>

@@ -7,7 +7,6 @@ import * as api from '@/shared/api';
 import type * as SharedApiModule from '@/shared/api';
 import type * as VueUse from '@vueuse/core';
 import { defineComponent, reactive, ref } from 'vue';
-import { historyCacheKey } from '@/shared/lib/history-cache';
 import { activateExplorerReadSession, disconnectExplorerReadSession } from '@/shared/lib/explorer-read-auth';
 
 const cacheScope = vi.hoisted(() => ({
@@ -17,7 +16,7 @@ const cacheScope = vi.hoisted(() => ({
 vi.mock('@/shared/runtime-config', () => ({
   getRuntimeConfig: () => ({ networkId: cacheScope.networkId, toriiBaseUrl: cacheScope.toriiUrl, toriiForceBaseUrl: true }),
 }));
-const boundCacheKey = () => historyCacheKey('transactions', cacheScope.networkId, cacheScope.toriiUrl)!;
+const boundCacheKey = () => 'retired-history-cache'!;
 
 const SAMPLE_I105 = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
 
@@ -332,58 +331,10 @@ describe('TransactionsTable', () => {
     expect(anonymous.text()).not.toContain('0xprivate-row');
   });
 
-  it.each([false, true])('labels pending cache stale and replaces it on current response (empty: %s)', async (empty) => {
-    const first = deferred<{
-      status: string
-      data: {
-        nextCursor: string | null
-        total: undefined
-        items: Array<typeof baseTransaction>
-      }
-    }>();
-
-    fetchTransactionsMock.mockImplementationOnce(() => first.promise);
-
-    window.localStorage.setItem(
-      boundCacheKey(),
-      JSON.stringify({
-        version: 1,
-        updated_at_ms: Date.now(),
-        items: [
-          {
-            ...baseTransaction,
-            hash: '0xcached',
-            created_at: new Date('2024-01-01T00:05:00Z').toISOString(),
-          },
-        ],
-      })
-    );
-
-    const wrapper = factory();
-    await flushPromises();
-
-    expect(fetchTransactionsMock).toHaveBeenCalledTimes(1);
-    expect(wrapper.text()).toContain('0xcached');
-    expect(wrapper.get('[data-test="history-cache-stale"]').text()).toContain(i18n.global.t('telemetry.dataStale'));
-
-    first.resolve({
-      status: SUCCESSFUL_FETCHING,
-      data: {
-        nextCursor: null,
-        total: undefined,
-        items: empty ? [] : [baseTransaction],
-      },
-    });
-    await flushPromises();
-    expect(wrapper.find('[data-test="history-cache-stale"]').exists()).toBe(false);
-    expect(wrapper.text()).not.toContain('0xcached');
-    expect(JSON.parse(window.localStorage.getItem(boundCacheKey())!).items).toHaveLength(empty ? 0 : 1);
-  });
-
   it.each([
     'transactions_table_cache_v2',
-    historyCacheKey('transactions', cacheScope.networkId, 'https://another.example')!,
-    historyCacheKey('transactions', `hash:${'11'.repeat(32)}#4667`, cacheScope.toriiUrl)!,
+    'retired-history-cache'!,
+    'retired-history-cache'!,
   ])('does not render cache from a different ledger identity or retired key: %s', async (key) => {
     fetchTransactionsMock.mockImplementationOnce(() => new Promise(() => {}));
     window.localStorage.setItem(key, JSON.stringify({
@@ -449,47 +400,6 @@ describe('TransactionsTable', () => {
     expect(fetchTransactionsMock).toHaveBeenCalledTimes(2);
     expect(wrapper.text()).toContain('0xolder-page');
     expect(wrapper.text()).not.toContain('0xcached-latest');
-  });
-
-  it('does not write older paginated default-feed rows back into the latest-page cache', async () => {
-    fetchTransactionsMock
-      .mockResolvedValueOnce({
-        status: SUCCESSFUL_FETCHING,
-        data: {
-        nextCursor: 'next',
-        total: undefined,
-          items: [baseTransaction],
-        },
-      })
-      .mockResolvedValueOnce({
-        status: SUCCESSFUL_FETCHING,
-        data: {
-        nextCursor: null,
-        total: undefined,
-          items: [
-            {
-              ...baseTransaction,
-              hash: '0xolder-cache-candidate',
-              block: 9,
-              created_at: new Date('2023-12-31T23:59:00Z'),
-            },
-          ],
-        },
-      });
-
-    const wrapper = factory();
-    await flushPromises();
-
-    wrapper.getComponent({ name: 'BaseTable' }).vm.$emit('update:cursor', 'next');
-    await flushPromises();
-
-    const rawCache = window.localStorage.getItem(boundCacheKey());
-    expect(rawCache).not.toBeNull();
-
-    const parsedCache = JSON.parse(rawCache!);
-    const cachedHashes = (parsedCache.items as Array<{ hash: string }>).map((item) => item.hash);
-    expect(cachedHashes).toContain('0xtx');
-    expect(cachedHashes).not.toContain('0xolder-cache-candidate');
   });
 
   it('queues a single stream-triggered refetch while a fetch is pending', async () => {

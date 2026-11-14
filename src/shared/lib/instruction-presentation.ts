@@ -1,7 +1,15 @@
 import { z } from 'zod';
-import { requireNetworkPrefix } from '@/shared/lib/network-prefix';
 import type { Instruction } from '@/shared/api/schemas';
-import { AccountSelectorSchema, AssetDefinitionSelectorSchema, AssetIdSchema, NftIdSchema } from '@/shared/api/schemas';
+import {
+  AccountIdSchema,
+  AssetDefinitionIdSchema,
+  AssetDefinitionSelectorSchema,
+  AssetIdSchema,
+  NftIdSchema,
+} from '@/shared/api/schemas';
+import { normalizeDomainIdLiteral } from '@/shared/lib/rwa-id';
+import { normalizeIrohaHash32 } from '@/shared/lib/iroha-hash';
+import { requireNetworkPrefix } from '@/shared/lib/network-prefix';
 
 type AnyRecord = Record<string, unknown>;
 type PresentationBuilder = (value: unknown) => InstructionPresentation | null;
@@ -9,9 +17,14 @@ type EntityRouteKind = 'account' | 'asset' | 'asset-definition' | 'domain' | 'nf
 
 export interface InstructionPresentationField {
   key: string;
-  label: string;
+  label: InstructionPresentationMessage;
   value: string;
   link: string | null;
+}
+
+export interface InstructionPresentationMessage {
+  key: string;
+  params?: Readonly<Record<string, string | number>>;
 }
 
 export interface NestedInstructionPresentation {
@@ -24,8 +37,8 @@ export interface InstructionPresentation {
   registryKey: string;
   family: string;
   variant: string;
-  kindLabel: string;
-  title: string;
+  kindLabel: InstructionPresentationMessage | null;
+  title: InstructionPresentationMessage;
   fields: InstructionPresentationField[];
   primaryEntity: InstructionPresentationField | null;
   nestedInstructions: NestedInstructionPresentation[];
@@ -33,10 +46,45 @@ export interface InstructionPresentation {
 
 const AnyRecordSchema = z.record(z.string(), z.unknown());
 const NonEmptyStringSchema = z.string().min(1);
-const QuantityStringSchema = z.string().min(1);
+const QuantityStringSchema = z
+  .string()
+  .max(160)
+  .superRefine((value, ctx) => {
+    if (!/^(?:0|[1-9]\d*)(?:\.\d{0,27}[1-9])?$/u.test(value)) {
+      ctx.addIssue({ code: 'custom' });
+      return;
+    }
+    const [integer, fraction = ''] = value.split('.');
+    if (BigInt(`${integer}${fraction}`) > (1n << 511n) - 1n) {
+      ctx.addIssue({ code: 'custom' });
+    }
+  });
+const PositiveAtomicUnitsSchema = z.string().regex(/^[1-9]\d*$/u);
 const NonNegativeIntegerSchema = z.number().int().nonnegative();
-const DefinedValueSchema = z.unknown().refine((value) => value !== undefined);
-const DomainIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]*\.[A-Za-z0-9][A-Za-z0-9_-]*$/u);
+const U8Schema = NonNegativeIntegerSchema.max(0xff);
+const U32Schema = NonNegativeIntegerSchema.max(0xffff_ffff);
+const LowerHex32Schema = z.string().regex(/^[0-9a-f]{64}$/u);
+const CanonicalHashLiteralSchema = z
+  .string()
+  .regex(/^hash:[0-9A-F]{64}#[0-9A-F]{4}$/u)
+  .refine((value) => normalizeIrohaHash32(value) !== null);
+const NameSchema = z
+  .string()
+  .refine(
+    (value) =>
+      value.length > 0 &&
+      new TextEncoder().encode(value).length <= 255 &&
+      value.normalize('NFC') === value &&
+      !/[\s@#$\p{Cc}]/u.test(value) &&
+      !/[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u.test(value)
+  );
+const DomainIdSchema = z.string().refine((value) => normalizeDomainIdLiteral(value) === value);
+const ExactAccountIdSchema = z.string().refine((value) => AccountIdSchema.safeParse(value).data === value);
+const ExactAssetDefinitionIdSchema = z
+  .string()
+  .refine((value) => AssetDefinitionIdSchema.safeParse(value).data === value);
+const ExactAssetIdSchema = z.string().refine((value) => AssetIdSchema.safeParse(value).data === value);
+const ExactNftIdSchema = z.string().refine((value) => NftIdSchema.safeParse(value).data === value);
 const ExplorerEnvelopeSchema = z
   .object({
     variant: NonEmptyStringSchema,
@@ -44,156 +92,146 @@ const ExplorerEnvelopeSchema = z
   })
   .strict();
 
-const RegisterValueSchema = z.object({ object: AnyRecordSchema }).passthrough();
-const UnregisterValueSchema = z.object({ object: NonEmptyStringSchema }).passthrough();
+const UnregisterValueSchema = z.object({ object: NonEmptyStringSchema }).strict();
 const QuantityDestinationSchema = z
   .object({
     object: QuantityStringSchema,
-    destination: NonEmptyStringSchema,
+    destination: ExactAssetIdSchema,
   })
-  .passthrough();
+  .strict();
 const RepetitionDestinationSchema = z
   .object({
-    object: NonNegativeIntegerSchema,
-    destination: NonEmptyStringSchema,
+    object: U32Schema,
+    destination: NameSchema,
   })
-  .passthrough();
-const TransferValueSchema = z
+  .strict();
+const AccountOwnedTransferValueSchema = z
   .object({
-    source: NonEmptyStringSchema,
+    source: ExactAccountIdSchema,
     object: NonEmptyStringSchema,
-    destination: NonEmptyStringSchema,
+    destination: ExactAccountIdSchema,
   })
-  .passthrough();
+  .strict();
+const AssetTransferValueSchema = z
+  .object({
+    source: ExactAssetIdSchema,
+    object: QuantityStringSchema,
+    destination: ExactAccountIdSchema,
+  })
+  .strict();
+const AssetBatchModeSchema = z
+  .object({
+    mode: z.enum(['Atomic', 'Independent']),
+    value: z.null(),
+  })
+  .strict();
 const AssetBatchValueSchema = z
   .object({
+    mode: AssetBatchModeSchema,
     entries: z
       .array(
         z
           .object({
-            from: NonEmptyStringSchema,
-            to: NonEmptyStringSchema,
-            asset_definition: NonEmptyStringSchema,
+            leg_id: z.string(),
+            from: ExactAccountIdSchema,
+            to: ExactAccountIdSchema,
+            asset_definition: ExactAssetDefinitionIdSchema,
             amount: QuantityStringSchema,
           })
-          .passthrough()
+          .strict()
       )
       .min(1),
   })
-  .passthrough();
+  .strict();
 const MetadataValueSchema = z
   .object({
     object: NonEmptyStringSchema,
     key: NonEmptyStringSchema,
-    value: DefinedValueSchema,
+    value: z.json(),
   })
-  .passthrough();
+  .strict();
 const AssetMetadataValueSchema = z
   .object({
-    asset: NonEmptyStringSchema,
+    asset: ExactAssetIdSchema,
     key: NonEmptyStringSchema,
-    value: DefinedValueSchema,
+    value: z.json(),
   })
-  .passthrough();
+  .strict();
 const MetadataRemovalSchema = z
   .object({
     object: NonEmptyStringSchema,
     key: NonEmptyStringSchema,
   })
-  .passthrough();
+  .strict();
 const AssetMetadataRemovalSchema = z
   .object({
-    asset: NonEmptyStringSchema,
+    asset: ExactAssetIdSchema,
     key: NonEmptyStringSchema,
   })
-  .passthrough();
+  .strict();
 const GrantRevokeValueSchema = z
   .object({
-    object: DefinedValueSchema,
-    destination: NonEmptyStringSchema,
+    object: z.unknown(),
+    destination: z.string(),
   })
-  .passthrough();
+  .strict();
+const PermissionSchema = z.object({ name: NonEmptyStringSchema, payload: z.json() }).strict();
 const ExecuteTriggerValueSchema = z
   .object({
-    trigger: NonEmptyStringSchema,
-    args: DefinedValueSchema,
+    trigger: NameSchema,
+    args: z.json(),
   })
-  .passthrough();
-const RuntimeUpgradeIdSchema = z.object({ id: NonEmptyStringSchema }).passthrough();
-const RuntimeUpgradeProposalSchema = z.object({ manifest_bytes: z.array(NonNegativeIntegerSchema) }).passthrough();
+  .strict();
+const RuntimeUpgradeProposalSchema = z.object({ manifest_bytes: z.array(U8Schema) }).strict();
 const LogValueSchema = z
   .object({
-    level: NonEmptyStringSchema,
+    level: z.enum(['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']),
     msg: z.string(),
   })
-  .passthrough();
-const ShieldValueSchema = z
-  .object({
-    asset: NonEmptyStringSchema,
-    from: NonEmptyStringSchema,
-    amount: QuantityStringSchema,
-    note_commitment: DefinedValueSchema,
-    enc_payload: DefinedValueSchema,
-  })
-  .passthrough();
-const ZkTransferValueSchema = z
-  .object({
-    asset: NonEmptyStringSchema,
-    inputs: z.array(z.unknown()),
-    outputs: z.array(z.unknown()),
-    proof: DefinedValueSchema,
-    root_hint: DefinedValueSchema,
-  })
-  .passthrough();
-const UnshieldValueSchema = z
-  .object({
-    asset: NonEmptyStringSchema,
-    to: NonEmptyStringSchema,
-    public_amount: QuantityStringSchema,
-    inputs: z.array(z.unknown()),
-    outputs: z.array(z.unknown()),
-    proof: DefinedValueSchema,
-    root_hint: DefinedValueSchema,
-  })
-  .passthrough();
+  .strict();
 const KagemushaTopUpValueSchema = z
   .object({
-    asset: NonEmptyStringSchema,
-    amount_atomic_units: QuantityStringSchema,
-    asset_scale: NonNegativeIntegerSchema,
-    note_commitment: NonEmptyStringSchema,
-    operation_id: NonEmptyStringSchema,
+    asset: ExactAssetDefinitionIdSchema,
+    amount_atomic_units: PositiveAtomicUnitsSchema,
+    asset_scale: U8Schema,
+    note_commitment: LowerHex32Schema,
+    operation_id: LowerHex32Schema,
   })
-  .passthrough();
+  .strict();
 const KagemushaRedeemValueSchema = KagemushaTopUpValueSchema.extend({
-  recipient: NonEmptyStringSchema,
-});
+  recipient: ExactAccountIdSchema,
+}).strict();
 const MultisigRegisterSchema = z
   .object({
-    account: NonEmptyStringSchema,
-    home_domain: NonEmptyStringSchema.nullable().optional(),
+    account: ExactAccountIdSchema,
+    home_domain: DomainIdSchema.nullable(),
     spec: z
       .object({
-        signatories: z.record(NonEmptyStringSchema, NonNegativeIntegerSchema),
-        quorum: z.number().int().positive(),
-        transaction_ttl_ms: z.number().int().positive(),
+        signatories: z.record(ExactAccountIdSchema, U8Schema),
+        quorum: z.number().int().min(1).max(0xffff),
+        transaction_ttl_ms: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
       })
-      .passthrough(),
+      .strict(),
   })
-  .passthrough();
+  .strict();
 const MultisigProposeSchema = z
   .object({
-    account: NonEmptyStringSchema,
-    instructions: z.array(z.string()),
-    transaction_ttl_ms: z.number().int().positive().nullable(),
+    account: ExactAccountIdSchema,
+    instructions: z.array(z.string().min(1)),
+    transaction_ttl_ms: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).nullable(),
   })
-  .passthrough();
+  .strict();
 const MultisigDecisionSchema = z
   .object({
-    account: NonEmptyStringSchema,
-    instructions_hash: NonEmptyStringSchema,
+    account: ExactAccountIdSchema,
+    instructions_hash: CanonicalHashLiteralSchema,
   })
-  .passthrough();
+  .strict();
+const MultisigInvalidateOutstandingSchema = z
+  .object({
+    account: ExactAccountIdSchema,
+  })
+  .strict();
 
 const variantEntityKinds: Readonly<Record<string, EntityRouteKind | null>> = {
   Account: 'account',
@@ -238,7 +276,7 @@ function entityRoute(kind: EntityRouteKind | null, value: string): string | null
   if (!kind) return null;
 
   if (kind === 'account') {
-    const parsed = AccountSelectorSchema.safeParse(value);
+    const parsed = AccountIdSchema.safeParse(value);
     return parsed.success ? `/accounts/${encodeURIComponent(parsed.data)}` : null;
   }
   if (kind === 'asset-definition') {
@@ -259,31 +297,42 @@ function entityRoute(kind: EntityRouteKind | null, value: string): string | null
 }
 
 function field(
-  ...[key, label, value, entityKind = null]: [
+  ...[key, label, value, entityKind = null, params]: [
     key: string,
     label: string,
     value: unknown,
     entityKind?: EntityRouteKind | null,
+    params?: Readonly<Record<string, string | number>>,
   ]
 ) {
   const text = compactJson(value);
   return {
     key,
-    label,
+    label: message(`fields.${label}`, params),
     value: text,
     link: entityRoute(entityKind, text),
   } satisfies InstructionPresentationField;
 }
 
+function message(key: string, params?: Readonly<Record<string, string | number>>): InstructionPresentationMessage {
+  return {
+    key: `studio.instructionPresentation.${key}`,
+    ...(params ? { params } : {}),
+  };
+}
+
+function titleKey(registryKey: string): InstructionPresentationMessage {
+  return message(`titles.${registryKey.replace(':', '_')}`);
+}
+
 function presentation(
-  ...[registryKey, family, variant, title, fields, options = {}]: [
+  ...[registryKey, family, variant, fields, options = {}]: [
     registryKey: string,
     family: string,
     variant: string,
-    title: string,
     fields: InstructionPresentationField[],
     options?: {
-      kindLabel?: string;
+      kindLabel?: InstructionPresentationMessage;
       primaryKey?: string;
       nestedInstructions?: NestedInstructionPresentation[];
     },
@@ -293,8 +342,8 @@ function presentation(
     registryKey,
     family,
     variant,
-    kindLabel: options.kindLabel ?? family,
-    title,
+    kindLabel: options.kindLabel ?? null,
+    title: titleKey(registryKey),
     fields,
     primaryEntity: options.primaryKey
       ? (fields.find((candidate) => candidate.key === options.primaryKey) ?? null)
@@ -303,30 +352,23 @@ function presentation(
   };
 }
 
-function registerBuilder(variant: string, noun: string): PresentationBuilder {
-  return (value) => {
-    const parsed = RegisterValueSchema.safeParse(value);
-    if (!parsed.success) return null;
-    const objectId = parsed.data.object.id;
-    const fields =
-      typeof objectId === 'string'
-        ? [field('object', noun, objectId, variantEntityKinds[variant] ?? null)]
-        : [field('object', noun, parsed.data.object)];
-    return presentation(`Register:${variant}`, 'Register', variant, `${noun} registration`, fields, {
-      primaryKey: 'object',
-    });
-  };
+function isExactEntityId(variant: string, value: string): boolean {
+  if (variant === 'Domain') return DomainIdSchema.safeParse(value).success;
+  if (variant === 'Account') return ExactAccountIdSchema.safeParse(value).success;
+  if (variant === 'AssetDefinition') return ExactAssetDefinitionIdSchema.safeParse(value).success;
+  if (variant === 'Nft') return ExactNftIdSchema.safeParse(value).success;
+  if (variant === 'Role' || variant === 'Trigger') return NameSchema.safeParse(value).success;
+  return false;
 }
 
 function unregisterBuilder(variant: string, noun: string): PresentationBuilder {
   return (value) => {
     const parsed = UnregisterValueSchema.safeParse(value);
-    if (!parsed.success) return null;
+    if (!parsed.success || !isExactEntityId(variant, parsed.data.object)) return null;
     return presentation(
       `Unregister:${variant}`,
       'Unregister',
       variant,
-      `${noun} removal`,
       [field('object', noun, parsed.data.object, variantEntityKinds[variant] ?? null)],
       { primaryKey: 'object' }
     );
@@ -341,8 +383,7 @@ function assetQuantityBuilder(family: 'Mint' | 'Burn'): PresentationBuilder {
       `${family}:Asset`,
       family,
       'Asset',
-      `Asset ${family.toLowerCase()}`,
-      [field('amount', 'Amount', parsed.data.object), field('asset', 'Asset', parsed.data.destination, 'asset')],
+      [field('amount', 'amount', parsed.data.object), field('asset', 'asset', parsed.data.destination, 'asset')],
       { primaryKey: 'asset' }
     );
   };
@@ -356,8 +397,7 @@ function triggerRepetitionBuilder(family: 'Mint' | 'Burn'): PresentationBuilder 
       `${family}:TriggerRepetitions`,
       family,
       'TriggerRepetitions',
-      `Trigger repetition ${family.toLowerCase()}`,
-      [field('repetitions', 'Repetitions', parsed.data.object), field('trigger', 'Trigger', parsed.data.destination)],
+      [field('repetitions', 'repetitions', parsed.data.object), field('trigger', 'trigger', parsed.data.destination)],
       { primaryKey: 'trigger' }
     );
   };
@@ -365,32 +405,33 @@ function triggerRepetitionBuilder(family: 'Mint' | 'Burn'): PresentationBuilder 
 
 function transferBuilder(variant: 'Domain' | 'AssetDefinition' | 'Asset' | 'Nft', noun: string): PresentationBuilder {
   return (value) => {
-    const parsed = TransferValueSchema.safeParse(value);
-    if (!parsed.success) return null;
     if (variant === 'Asset') {
+      const parsed = AssetTransferValueSchema.safeParse(value);
+      if (!parsed.success) return null;
       return presentation(
         'Transfer:Asset',
         'Transfer',
         'Asset',
-        'Asset transfer',
         [
-          field('source', 'Asset', parsed.data.source, 'asset'),
-          field('amount', 'Amount', parsed.data.object),
-          field('destination', 'Destination', parsed.data.destination, 'account'),
+          field('source', 'asset', parsed.data.source, 'asset'),
+          field('amount', 'amount', parsed.data.object),
+          field('destination', 'destination', parsed.data.destination, 'account'),
         ],
         { primaryKey: 'source' }
       );
     }
 
+    const parsed = AccountOwnedTransferValueSchema.safeParse(value);
+    if (!parsed.success || !isExactEntityId(variant, parsed.data.object)) return null;
+
     return presentation(
       `Transfer:${variant}`,
       'Transfer',
       variant,
-      `${noun} transfer`,
       [
-        field('source', 'Source', parsed.data.source, 'account'),
+        field('source', 'source', parsed.data.source, 'account'),
         field('object', noun, parsed.data.object, variantEntityKinds[variant] ?? null),
-        field('destination', 'Destination', parsed.data.destination, 'account'),
+        field('destination', 'destination', parsed.data.destination, 'account'),
       ],
       { primaryKey: 'object' }
     );
@@ -400,17 +441,21 @@ function transferBuilder(variant: 'Domain' | 'AssetDefinition' | 'Asset' | 'Nft'
 function assetBatchBuilder(value: unknown): InstructionPresentation | null {
   const parsed = AssetBatchValueSchema.safeParse(value);
   if (!parsed.success) return null;
-  const fields: InstructionPresentationField[] = [field('entries', 'Entries', parsed.data.entries.length)];
+  const fields: InstructionPresentationField[] = [
+    field('mode', 'mode', parsed.data.mode.mode),
+    field('entries', 'entries', parsed.data.entries.length),
+  ];
   parsed.data.entries.forEach((entry, index) => {
     const suffix = index + 1;
     fields.push(
-      field(`asset-${index}`, `Asset ${suffix}`, entry.asset_definition, 'asset-definition'),
-      field(`amount-${index}`, `Amount ${suffix}`, entry.amount),
-      field(`source-${index}`, `Source ${suffix}`, entry.from, 'account'),
-      field(`destination-${index}`, `Destination ${suffix}`, entry.to, 'account')
+      field(`asset-${index}`, 'indexedAsset', entry.asset_definition, 'asset-definition', { index: suffix }),
+      field(`leg-${index}`, 'indexedLeg', entry.leg_id, null, { index: suffix }),
+      field(`amount-${index}`, 'indexedAmount', entry.amount, null, { index: suffix }),
+      field(`source-${index}`, 'indexedSource', entry.from, 'account', { index: suffix }),
+      field(`destination-${index}`, 'indexedDestination', entry.to, 'account', { index: suffix })
     );
   });
-  return presentation('Transfer:AssetBatch', 'Transfer', 'AssetBatch', 'Asset batch transfer', fields, {
+  return presentation('Transfer:AssetBatch', 'Transfer', 'AssetBatch', fields, {
     primaryKey: 'asset-0',
   });
 }
@@ -419,42 +464,68 @@ function metadataBuilder(family: 'SetKeyValue' | 'RemoveKeyValue', variant: stri
   return (value) => {
     const isAsset = variant === 'Asset';
     if (family === 'SetKeyValue') {
-      const parsed = (isAsset ? AssetMetadataValueSchema : MetadataValueSchema).safeParse(value);
-      if (!parsed.success) return null;
-      const target = isAsset ? parsed.data.asset : parsed.data.object;
+      if (isAsset) {
+        const parsed = AssetMetadataValueSchema.safeParse(value);
+        if (!parsed.success) return null;
+        return presentation(
+          `${family}:${variant}`,
+          family,
+          variant,
+          [
+            field('target', noun, parsed.data.asset, 'asset'),
+            field('key', 'key', parsed.data.key),
+            field('value', 'value', parsed.data.value),
+          ],
+          { primaryKey: 'target' }
+        );
+      }
+
+      const parsed = MetadataValueSchema.safeParse(value);
+      if (!parsed.success || !isExactEntityId(variant, parsed.data.object)) return null;
       return presentation(
         `${family}:${variant}`,
         family,
         variant,
-        `${noun} metadata update`,
         [
-          field('target', noun, target, variantEntityKinds[variant] ?? null),
-          field('key', 'Key', parsed.data.key),
-          field('value', 'Value', parsed.data.value),
+          field('target', noun, parsed.data.object, variantEntityKinds[variant] ?? null),
+          field('key', 'key', parsed.data.key),
+          field('value', 'value', parsed.data.value),
         ],
         { primaryKey: 'target' }
       );
     }
 
-    const parsed = (isAsset ? AssetMetadataRemovalSchema : MetadataRemovalSchema).safeParse(value);
-    if (!parsed.success) return null;
-    const target = isAsset ? parsed.data.asset : parsed.data.object;
+    if (isAsset) {
+      const parsed = AssetMetadataRemovalSchema.safeParse(value);
+      if (!parsed.success) return null;
+      return presentation(
+        `${family}:${variant}`,
+        family,
+        variant,
+        [field('target', noun, parsed.data.asset, 'asset'), field('key', 'key', parsed.data.key)],
+        { primaryKey: 'target' }
+      );
+    }
+
+    const parsed = MetadataRemovalSchema.safeParse(value);
+    if (!parsed.success || !isExactEntityId(variant, parsed.data.object)) return null;
     return presentation(
       `${family}:${variant}`,
       family,
       variant,
-      `${noun} metadata removal`,
-      [field('target', noun, target, variantEntityKinds[variant] ?? null), field('key', 'Key', parsed.data.key)],
+      [
+        field('target', noun, parsed.data.object, variantEntityKinds[variant] ?? null),
+        field('key', 'key', parsed.data.key),
+      ],
       { primaryKey: 'target' }
     );
   };
 }
 
 function grantRevokeBuilder(
-  ...[family, variant, title, destinationLabel, destinationKind]: [
+  ...[family, variant, destinationLabel, destinationKind]: [
     family: 'Grant' | 'Revoke',
     variant: string,
-    title: string,
     destinationLabel: string,
     destinationKind: EntityRouteKind | null,
   ]
@@ -462,18 +533,22 @@ function grantRevokeBuilder(
   return (value) => {
     const parsed = GrantRevokeValueSchema.safeParse(value);
     if (!parsed.success) return null;
+    const isRoleObject = variant.includes('RoleTo') || variant.includes('RoleFrom');
+    const object = isRoleObject
+      ? NameSchema.safeParse(parsed.data.object)
+      : PermissionSchema.safeParse(parsed.data.object);
+    const destination =
+      destinationKind === 'account'
+        ? ExactAccountIdSchema.safeParse(parsed.data.destination)
+        : NameSchema.safeParse(parsed.data.destination);
+    if (!object.success || !destination.success) return null;
     return presentation(
       `${family}:${variant}`,
       family,
       variant,
-      title,
       [
-        field(
-          'object',
-          variant.includes('RoleTo') || variant.includes('RoleFrom') ? 'Role' : 'Permission',
-          parsed.data.object
-        ),
-        field('destination', destinationLabel, parsed.data.destination, destinationKind),
+        field('object', isRoleObject ? 'role' : 'permission', object.data),
+        field('destination', destinationLabel, destination.data, destinationKind),
       ],
       { primaryKey: 'destination' }
     );
@@ -495,19 +570,19 @@ function multisigRegisterBuilder(value: unknown): InstructionPresentation | null
   const parsed = MultisigRegisterSchema.safeParse(value);
   if (!parsed.success) return null;
   const fields = [
-    field('account', 'Registration account', parsed.data.account, 'account'),
-    field('quorum', 'Quorum', parsed.data.spec.quorum),
-    field('ttl', 'Default TTL (ms)', parsed.data.spec.transaction_ttl_ms),
-    field('signatories', 'Signatories', Object.keys(parsed.data.spec.signatories).length),
+    field('account', 'registrationAccount', parsed.data.account, 'account'),
+    field('quorum', 'quorum', parsed.data.spec.quorum),
+    field('ttl', 'defaultTtlMs', parsed.data.spec.transaction_ttl_ms),
+    field('signatories', 'signatories', Object.keys(parsed.data.spec.signatories).length),
   ];
   if (parsed.data.home_domain) {
-    fields.push(field('home-domain', 'Home domain', parsed.data.home_domain, 'domain'));
+    fields.push(field('home-domain', 'homeDomain', parsed.data.home_domain, 'domain'));
   }
   Object.entries(parsed.data.spec.signatories).forEach(([account, weight], index) => {
-    fields.push(field(`signatory-${index}`, `Signatory ${index + 1} (weight ${weight})`, account, 'account'));
+    fields.push(field(`signatory-${index}`, 'indexedSignatory', account, 'account', { index: index + 1, weight }));
   });
-  return presentation('Custom:Register', 'Custom', 'Register', 'Multisig registration', fields, {
-    kindLabel: 'Multisig',
+  return presentation('Custom:Register', 'Custom', 'Register', fields, {
+    kindLabel: message('kinds.multisig'),
     primaryKey: 'account',
   });
 }
@@ -515,28 +590,27 @@ function multisigRegisterBuilder(value: unknown): InstructionPresentation | null
 function multisigProposeBuilder(value: unknown): InstructionPresentation | null {
   const parsed = MultisigProposeSchema.safeParse(value);
   if (!parsed.success) return null;
-  // Torii supplies encoded nested instructions here. The canonical decoder is
-  // native-only; retain the exact bytes instead of inventing browser semantics.
+  // The current browser SDK cannot decode native nested Norito frames.
   const nestedInstructions = parsed.data.instructions.map((encoded, index) => ({
     index,
     encoded,
     presentation: null,
   }));
   const fields = [
-    field('account', 'Multisig account', parsed.data.account, 'account'),
-    field('instructions', 'Proposed instructions', parsed.data.instructions.length),
+    field('account', 'multisigAccount', parsed.data.account, 'account'),
+    field('instructions', 'proposedInstructions', parsed.data.instructions.length),
   ];
   if (parsed.data.transaction_ttl_ms !== null) {
-    fields.push(field('ttl', 'Proposal TTL (ms)', parsed.data.transaction_ttl_ms));
+    fields.push(field('ttl', 'proposalTtlMs', parsed.data.transaction_ttl_ms));
   }
-  return presentation('Custom:Propose', 'Custom', 'Propose', 'Multisig proposal', fields, {
-    kindLabel: 'Multisig',
+  return presentation('Custom:Propose', 'Custom', 'Propose', fields, {
+    kindLabel: message('kinds.multisig'),
     primaryKey: 'account',
     nestedInstructions,
   });
 }
 
-function multisigDecisionBuilder(variant: 'Approve' | 'Cancel', title: string): PresentationBuilder {
+function multisigDecisionBuilder(variant: 'Approve' | 'Cancel'): PresentationBuilder {
   return (value) => {
     const parsed = MultisigDecisionSchema.safeParse(value);
     if (!parsed.success) return null;
@@ -544,82 +618,61 @@ function multisigDecisionBuilder(variant: 'Approve' | 'Cancel', title: string): 
       `Custom:${variant}`,
       'Custom',
       variant,
-      title,
       [
-        field('account', 'Multisig account', parsed.data.account, 'account'),
-        field('hash', 'Instructions hash', parsed.data.instructions_hash),
+        field('account', 'multisigAccount', parsed.data.account, 'account'),
+        field('hash', 'instructionsHash', parsed.data.instructions_hash),
       ],
-      { kindLabel: 'Multisig', primaryKey: 'account' }
+      { kindLabel: message('kinds.multisig'), primaryKey: 'account' }
     );
   };
 }
 
+function multisigInvalidateOutstandingBuilder(value: unknown): InstructionPresentation | null {
+  const parsed = MultisigInvalidateOutstandingSchema.safeParse(value);
+  if (!parsed.success) return null;
+  return presentation(
+    'Custom:InvalidateOutstanding',
+    'Custom',
+    'InvalidateOutstanding',
+    [field('account', 'multisigAccount', parsed.data.account, 'account')],
+    { kindLabel: message('kinds.multisig'), primaryKey: 'account' }
+  );
+}
+
 const registry: Readonly<Record<string, PresentationBuilder>> = Object.freeze({
-  'Register:Peer': registerBuilder('Peer', 'Peer'),
-  'Register:Domain': registerBuilder('Domain', 'Domain'),
-  'Register:Account': registerBuilder('Account', 'Account'),
-  'Register:AssetDefinition': registerBuilder('AssetDefinition', 'Asset definition'),
-  'Register:Nft': registerBuilder('Nft', 'NFT'),
-  'Register:Role': registerBuilder('Role', 'Role'),
-  'Register:Trigger': registerBuilder('Trigger', 'Trigger'),
-  'Unregister:Peer': unregisterBuilder('Peer', 'Peer'),
-  'Unregister:Domain': unregisterBuilder('Domain', 'Domain'),
-  'Unregister:Account': unregisterBuilder('Account', 'Account'),
-  'Unregister:AssetDefinition': unregisterBuilder('AssetDefinition', 'Asset definition'),
-  'Unregister:Nft': unregisterBuilder('Nft', 'NFT'),
-  'Unregister:Role': unregisterBuilder('Role', 'Role'),
-  'Unregister:Trigger': unregisterBuilder('Trigger', 'Trigger'),
+  'Unregister:Domain': unregisterBuilder('Domain', 'domain'),
+  'Unregister:Account': unregisterBuilder('Account', 'account'),
+  'Unregister:AssetDefinition': unregisterBuilder('AssetDefinition', 'assetDefinition'),
+  'Unregister:Nft': unregisterBuilder('Nft', 'nft'),
+  'Unregister:Role': unregisterBuilder('Role', 'role'),
+  'Unregister:Trigger': unregisterBuilder('Trigger', 'trigger'),
   'Mint:Asset': assetQuantityBuilder('Mint'),
   'Mint:TriggerRepetitions': triggerRepetitionBuilder('Mint'),
   'Burn:Asset': assetQuantityBuilder('Burn'),
   'Burn:TriggerRepetitions': triggerRepetitionBuilder('Burn'),
-  'Transfer:Domain': transferBuilder('Domain', 'Domain'),
-  'Transfer:AssetDefinition': transferBuilder('AssetDefinition', 'Asset definition'),
-  'Transfer:Asset': transferBuilder('Asset', 'Asset'),
-  'Transfer:Nft': transferBuilder('Nft', 'NFT'),
+  'Transfer:Domain': transferBuilder('Domain', 'domain'),
+  'Transfer:AssetDefinition': transferBuilder('AssetDefinition', 'assetDefinition'),
+  'Transfer:Asset': transferBuilder('Asset', 'asset'),
+  'Transfer:Nft': transferBuilder('Nft', 'nft'),
   'Transfer:AssetBatch': assetBatchBuilder,
-  'SetKeyValue:Domain': metadataBuilder('SetKeyValue', 'Domain', 'Domain'),
-  'SetKeyValue:Account': metadataBuilder('SetKeyValue', 'Account', 'Account'),
-  'SetKeyValue:AssetDefinition': metadataBuilder('SetKeyValue', 'AssetDefinition', 'Asset definition'),
-  'SetKeyValue:Nft': metadataBuilder('SetKeyValue', 'Nft', 'NFT'),
-  'SetKeyValue:Trigger': metadataBuilder('SetKeyValue', 'Trigger', 'Trigger'),
-  'SetKeyValue:Asset': metadataBuilder('SetKeyValue', 'Asset', 'Asset'),
-  'RemoveKeyValue:Domain': metadataBuilder('RemoveKeyValue', 'Domain', 'Domain'),
-  'RemoveKeyValue:Account': metadataBuilder('RemoveKeyValue', 'Account', 'Account'),
-  'RemoveKeyValue:AssetDefinition': metadataBuilder('RemoveKeyValue', 'AssetDefinition', 'Asset definition'),
-  'RemoveKeyValue:Nft': metadataBuilder('RemoveKeyValue', 'Nft', 'NFT'),
-  'RemoveKeyValue:Trigger': metadataBuilder('RemoveKeyValue', 'Trigger', 'Trigger'),
-  'RemoveKeyValue:Asset': metadataBuilder('RemoveKeyValue', 'Asset', 'Asset'),
-  'Grant:PermissionToAccount': grantRevokeBuilder(
-    'Grant',
-    'PermissionToAccount',
-    'Account permission grant',
-    'Account',
-    'account'
-  ),
-  'Grant:RoleToAccount': grantRevokeBuilder('Grant', 'RoleToAccount', 'Account role grant', 'Account', 'account'),
-  'Grant:PermissionToRole': grantRevokeBuilder('Grant', 'PermissionToRole', 'Role permission grant', 'Role', null),
-  'Revoke:PermissionFromAccount': grantRevokeBuilder(
-    'Revoke',
-    'PermissionFromAccount',
-    'Account permission revocation',
-    'Account',
-    'account'
-  ),
-  'Revoke:RoleFromAccount': grantRevokeBuilder(
-    'Revoke',
-    'RoleFromAccount',
-    'Account role revocation',
-    'Account',
-    'account'
-  ),
-  'Revoke:PermissionFromRole': grantRevokeBuilder(
-    'Revoke',
-    'PermissionFromRole',
-    'Role permission revocation',
-    'Role',
-    null
-  ),
+  'SetKeyValue:Domain': metadataBuilder('SetKeyValue', 'Domain', 'domain'),
+  'SetKeyValue:Account': metadataBuilder('SetKeyValue', 'Account', 'account'),
+  'SetKeyValue:AssetDefinition': metadataBuilder('SetKeyValue', 'AssetDefinition', 'assetDefinition'),
+  'SetKeyValue:Nft': metadataBuilder('SetKeyValue', 'Nft', 'nft'),
+  'SetKeyValue:Trigger': metadataBuilder('SetKeyValue', 'Trigger', 'trigger'),
+  'SetKeyValue:Asset': metadataBuilder('SetKeyValue', 'Asset', 'asset'),
+  'RemoveKeyValue:Domain': metadataBuilder('RemoveKeyValue', 'Domain', 'domain'),
+  'RemoveKeyValue:Account': metadataBuilder('RemoveKeyValue', 'Account', 'account'),
+  'RemoveKeyValue:AssetDefinition': metadataBuilder('RemoveKeyValue', 'AssetDefinition', 'assetDefinition'),
+  'RemoveKeyValue:Nft': metadataBuilder('RemoveKeyValue', 'Nft', 'nft'),
+  'RemoveKeyValue:Trigger': metadataBuilder('RemoveKeyValue', 'Trigger', 'trigger'),
+  'RemoveKeyValue:Asset': metadataBuilder('RemoveKeyValue', 'Asset', 'asset'),
+  'Grant:PermissionToAccount': grantRevokeBuilder('Grant', 'PermissionToAccount', 'account', 'account'),
+  'Grant:RoleToAccount': grantRevokeBuilder('Grant', 'RoleToAccount', 'account', 'account'),
+  'Grant:PermissionToRole': grantRevokeBuilder('Grant', 'PermissionToRole', 'role', null),
+  'Revoke:PermissionFromAccount': grantRevokeBuilder('Revoke', 'PermissionFromAccount', 'account', 'account'),
+  'Revoke:RoleFromAccount': grantRevokeBuilder('Revoke', 'RoleFromAccount', 'account', 'account'),
+  'Revoke:PermissionFromRole': grantRevokeBuilder('Revoke', 'PermissionFromRole', 'role', null),
   'ExecuteTrigger:ExecuteTrigger': (value) => {
     const parsed = ExecuteTriggerValueSchema.safeParse(value);
     if (!parsed.success) return null;
@@ -627,116 +680,24 @@ const registry: Readonly<Record<string, PresentationBuilder>> = Object.freeze({
       'ExecuteTrigger:ExecuteTrigger',
       'ExecuteTrigger',
       'ExecuteTrigger',
-      'Trigger execution',
-      [field('trigger', 'Trigger', parsed.data.trigger), field('arguments', 'Arguments', parsed.data.args)],
+      [field('trigger', 'trigger', parsed.data.trigger), field('arguments', 'arguments', parsed.data.args)],
       { primaryKey: 'trigger' }
     );
-  },
-  'SetParameter:SetParameter': (value) => {
-    const parsed = DefinedValueSchema.safeParse(value);
-    if (!parsed.success) return null;
-    return presentation('SetParameter:SetParameter', 'SetParameter', 'SetParameter', 'Runtime parameter update', [
-      field('parameter', 'Parameter', parsed.data),
-    ]);
   },
   'Upgrade:ProposeRuntimeUpgrade': (value) => {
     const parsed = RuntimeUpgradeProposalSchema.safeParse(value);
     if (!parsed.success) return null;
-    return presentation(
-      'Upgrade:ProposeRuntimeUpgrade',
-      'Upgrade',
-      'ProposeRuntimeUpgrade',
-      'Runtime upgrade proposal',
-      [field('manifest-size', 'Manifest bytes', parsed.data.manifest_bytes.length)]
-    );
-  },
-  'Upgrade:ActivateRuntimeUpgrade': (value) => {
-    const parsed = RuntimeUpgradeIdSchema.safeParse(value);
-    if (!parsed.success) return null;
-    return presentation(
-      'Upgrade:ActivateRuntimeUpgrade',
-      'Upgrade',
-      'ActivateRuntimeUpgrade',
-      'Runtime upgrade activation',
-      [field('upgrade', 'Upgrade ID', parsed.data.id)],
-      { primaryKey: 'upgrade' }
-    );
-  },
-  'Upgrade:CancelRuntimeUpgrade': (value) => {
-    const parsed = RuntimeUpgradeIdSchema.safeParse(value);
-    if (!parsed.success) return null;
-    return presentation(
-      'Upgrade:CancelRuntimeUpgrade',
-      'Upgrade',
-      'CancelRuntimeUpgrade',
-      'Runtime upgrade cancellation',
-      [field('upgrade', 'Upgrade ID', parsed.data.id)],
-      { primaryKey: 'upgrade' }
-    );
-  },
-  'Upgrade:Upgrade': (value) => {
-    const parsed = DefinedValueSchema.safeParse(value);
-    if (!parsed.success) return null;
-    return presentation('Upgrade:Upgrade', 'Upgrade', 'Upgrade', 'Runtime upgrade', []);
+    return presentation('Upgrade:ProposeRuntimeUpgrade', 'Upgrade', 'ProposeRuntimeUpgrade', [
+      field('manifest-size', 'manifestBytes', parsed.data.manifest_bytes.length),
+    ]);
   },
   'Log:Log': (value) => {
     const parsed = LogValueSchema.safeParse(value);
     if (!parsed.success) return null;
-    return presentation('Log:Log', 'Log', 'Log', 'Log entry', [
-      field('level', 'Level', parsed.data.level),
-      field('message', 'Message', parsed.data.msg),
+    return presentation('Log:Log', 'Log', 'Log', [
+      field('level', 'level', parsed.data.level),
+      field('message', 'message', parsed.data.msg),
     ]);
-  },
-  'Shield:Shield': (value) => {
-    const parsed = ShieldValueSchema.safeParse(value);
-    if (!parsed.success) return null;
-    return presentation(
-      'Shield:Shield',
-      'Shield',
-      'Shield',
-      'Shield operation',
-      [
-        field('asset', 'Asset definition', parsed.data.asset, 'asset-definition'),
-        field('source', 'Source account', parsed.data.from, 'account'),
-        field('amount', 'Amount', parsed.data.amount),
-        field('commitment', 'Note commitment', parsed.data.note_commitment),
-      ],
-      { primaryKey: 'asset' }
-    );
-  },
-  'ZkTransfer:ZkTransfer': (value) => {
-    const parsed = ZkTransferValueSchema.safeParse(value);
-    if (!parsed.success) return null;
-    return presentation(
-      'ZkTransfer:ZkTransfer',
-      'ZkTransfer',
-      'ZkTransfer',
-      'Private transfer',
-      [
-        field('asset', 'Asset definition', parsed.data.asset, 'asset-definition'),
-        field('inputs', 'Input nullifiers', parsed.data.inputs.length),
-        field('outputs', 'Output commitments', parsed.data.outputs.length),
-      ],
-      { primaryKey: 'asset' }
-    );
-  },
-  'Unshield:Unshield': (value) => {
-    const parsed = UnshieldValueSchema.safeParse(value);
-    if (!parsed.success) return null;
-    return presentation(
-      'Unshield:Unshield',
-      'Unshield',
-      'Unshield',
-      'Unshield operation',
-      [
-        field('asset', 'Asset definition', parsed.data.asset, 'asset-definition'),
-        field('destination', 'Destination account', parsed.data.to, 'account'),
-        field('amount', 'Public amount', parsed.data.public_amount),
-        field('inputs', 'Input nullifiers', parsed.data.inputs.length),
-        field('outputs', 'Change commitments', parsed.data.outputs.length),
-      ],
-      { primaryKey: 'asset' }
-    );
   },
   'KagemushaTopUp:KagemushaTopUp': (value) => {
     const parsed = KagemushaTopUpValueSchema.safeParse(value);
@@ -745,13 +706,12 @@ const registry: Readonly<Record<string, PresentationBuilder>> = Object.freeze({
       'KagemushaTopUp:KagemushaTopUp',
       'KagemushaTopUp',
       'KagemushaTopUp',
-      'Kagemusha top-up',
       [
-        field('asset', 'Asset', parsed.data.asset, 'asset'),
-        field('amount', 'Atomic amount', parsed.data.amount_atomic_units),
-        field('scale', 'Asset scale', parsed.data.asset_scale),
-        field('commitment', 'Note commitment', parsed.data.note_commitment),
-        field('operation', 'Operation ID', parsed.data.operation_id),
+        field('asset', 'assetDefinition', parsed.data.asset, 'asset-definition'),
+        field('amount', 'atomicAmount', parsed.data.amount_atomic_units),
+        field('scale', 'assetScale', parsed.data.asset_scale),
+        field('commitment', 'noteCommitment', parsed.data.note_commitment),
+        field('operation', 'operationId', parsed.data.operation_id),
       ],
       { primaryKey: 'asset' }
     );
@@ -763,27 +723,27 @@ const registry: Readonly<Record<string, PresentationBuilder>> = Object.freeze({
       'KagemushaRedeem:KagemushaRedeem',
       'KagemushaRedeem',
       'KagemushaRedeem',
-      'Kagemusha redemption',
       [
-        field('asset', 'Asset definition', parsed.data.asset, 'asset-definition'),
-        field('recipient', 'Recipient', parsed.data.recipient, 'account'),
-        field('amount', 'Atomic amount', parsed.data.amount_atomic_units),
-        field('scale', 'Asset scale', parsed.data.asset_scale),
-        field('commitment', 'Note commitment', parsed.data.note_commitment),
-        field('operation', 'Operation ID', parsed.data.operation_id),
+        field('asset', 'assetDefinition', parsed.data.asset, 'asset-definition'),
+        field('recipient', 'recipient', parsed.data.recipient, 'account'),
+        field('amount', 'atomicAmount', parsed.data.amount_atomic_units),
+        field('scale', 'assetScale', parsed.data.asset_scale),
+        field('commitment', 'noteCommitment', parsed.data.note_commitment),
+        field('operation', 'operationId', parsed.data.operation_id),
       ],
       { primaryKey: 'asset' }
     );
   },
   'Custom:Register': multisigRegisterBuilder,
   'Custom:Propose': multisigProposeBuilder,
-  'Custom:Approve': multisigDecisionBuilder('Approve', 'Multisig approval'),
-  'Custom:Cancel': multisigDecisionBuilder('Cancel', 'Multisig cancellation'),
+  'Custom:Approve': multisigDecisionBuilder('Approve'),
+  'Custom:Cancel': multisigDecisionBuilder('Cancel'),
+  'Custom:InvalidateOutstanding': multisigInvalidateOutstandingBuilder,
 });
 
 export const INSTRUCTION_PRESENTATION_REGISTRY_KEYS = Object.freeze(Object.keys(registry));
 
-const CUSTOM_MULTISIG_VARIANTS = ['Register', 'Propose', 'Approve', 'Cancel'] as const;
+const CUSTOM_MULTISIG_VARIANTS = ['Register', 'Propose', 'Approve', 'Cancel', 'InvalidateOutstanding'] as const;
 const DECODED_BOX_VARIANTS: Readonly<Record<string, readonly string[]>> = {
   Register: ['Peer', 'Domain', 'Account', 'AssetDefinition', 'Nft', 'Role', 'Trigger'],
   Unregister: ['Peer', 'Domain', 'Account', 'AssetDefinition', 'Nft', 'Role', 'Trigger'],
@@ -797,25 +757,14 @@ const DECODED_BOX_VARIANTS: Readonly<Record<string, readonly string[]>> = {
 };
 const DECODED_DIRECT_VARIANTS: Readonly<Record<string, { family: string; variant: string }>> = {
   ExecuteTrigger: { family: 'ExecuteTrigger', variant: 'ExecuteTrigger' },
-  SetParameter: { family: 'SetParameter', variant: 'SetParameter' },
   ProposeRuntimeUpgrade: { family: 'Upgrade', variant: 'ProposeRuntimeUpgrade' },
-  ActivateRuntimeUpgrade: { family: 'Upgrade', variant: 'ActivateRuntimeUpgrade' },
-  CancelRuntimeUpgrade: { family: 'Upgrade', variant: 'CancelRuntimeUpgrade' },
-  Upgrade: { family: 'Upgrade', variant: 'Upgrade' },
   Log: { family: 'Log', variant: 'Log' },
-  Shield: { family: 'Shield', variant: 'Shield' },
-  ZkTransfer: { family: 'ZkTransfer', variant: 'ZkTransfer' },
-  Unshield: { family: 'Unshield', variant: 'Unshield' },
   KagemushaTopUp: { family: 'KagemushaTopUp', variant: 'KagemushaTopUp' },
   KagemushaRedeem: { family: 'KagemushaRedeem', variant: 'KagemushaRedeem' },
 };
 
 function buildRegisteredPresentation(
-  ...[family, variant, value]: [
-    family: string,
-    variant: string,
-    value: unknown,
-  ]
+  ...[family, variant, value, rawPayload]: [family: string, variant: string, value: unknown, rawPayload: unknown]
 ): InstructionPresentation | null {
   return registry[`${family}:${variant}`]?.(value) ?? null;
 }
@@ -834,39 +783,45 @@ export function buildInstructionPresentation(
     if (payload.data.variant !== 'Custom') return null;
     const tagged = exactTaggedValue(payload.data.value, CUSTOM_MULTISIG_VARIANTS);
     if (!tagged) return null;
-    return buildRegisteredPresentation('Custom', tagged.variant, tagged.value);
+    return buildRegisteredPresentation('Custom', tagged.variant, tagged.value, payload.data);
   }
 
-  return buildRegisteredPresentation(family, payload.data.variant, payload.data.value);
+  return buildRegisteredPresentation(family, payload.data.variant, payload.data.value, payload.data);
 }
 
-export function buildDecodedInstructionPresentation(decoded: unknown, networkPrefix: number): InstructionPresentation | null {
+export function buildDecodedInstructionPresentation(
+  decoded: unknown,
+  networkPrefix: number
+): InstructionPresentation | null {
   requireNetworkPrefix(networkPrefix);
-  return buildDecodedPresentation(decoded);
-}
-
-function buildDecodedPresentation(decoded: unknown): InstructionPresentation | null {
   const root = asRecord(decoded);
   if (!root || Object.keys(root).length !== 1) return null;
 
   if (Object.prototype.hasOwnProperty.call(root, 'Custom')) {
     const custom = asRecord(root.Custom);
-    if (!custom || Object.keys(custom).length !== 1 || !Object.prototype.hasOwnProperty.call(custom, 'payload')) return null;
+    if (!custom || Object.keys(custom).length !== 1 || !Object.prototype.hasOwnProperty.call(custom, 'payload'))
+      return null;
     const tagged = exactTaggedValue(custom.payload, CUSTOM_MULTISIG_VARIANTS);
     if (!tagged) return null;
-    return buildRegisteredPresentation('Custom', tagged.variant, tagged.value);
+    return buildRegisteredPresentation('Custom', tagged.variant, tagged.value, custom.payload);
   }
 
   for (const [family, variants] of Object.entries(DECODED_BOX_VARIANTS)) {
     if (!Object.prototype.hasOwnProperty.call(root, family)) continue;
     const tagged = exactTaggedValue(root[family], variants);
     if (!tagged) return null;
-    return buildRegisteredPresentation(family, tagged.variant, tagged.value);
+    return buildRegisteredPresentation(family, tagged.variant, tagged.value, {
+      variant: tagged.variant,
+      value: tagged.value,
+    });
   }
 
   for (const [rootVariant, target] of Object.entries(DECODED_DIRECT_VARIANTS)) {
     if (!Object.prototype.hasOwnProperty.call(root, rootVariant)) continue;
-    return buildRegisteredPresentation(target.family, target.variant, root[rootVariant]);
+    return buildRegisteredPresentation(target.family, target.variant, root[rootVariant], {
+      variant: target.variant,
+      value: root[rootVariant],
+    });
   }
 
   return null;

@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 import type { Instruction, TransactionStatus } from '@/shared/api/schemas';
-import { isEncodedAssetLiteral, normalizeLooseAccountLiteral } from './account-literal';
+import { isEncodedAssetLiteral, normalizeToriiAccountSelectorLiteral } from './account-literal';
 import { HistoryScanCursorSchema, type HistoryScanCursor } from './history-scan';
 
 export type TraceSeedType = 'account' | 'transaction';
@@ -112,13 +112,13 @@ export function parseAccountFromAssetLiteral(raw: string): string | null {
   if (!trimmed) return null;
   if (!trimmed.includes('#')) {
     if (/^norito:/i.test(trimmed)) return null;
-    return normalizeLooseAccountLiteral(trimmed);
+    return normalizeToriiAccountSelectorLiteral(trimmed);
   }
   const parts = trimmed.split('#');
   for (let idx = parts.length - 1; idx >= 0; idx -= 1) {
     const part = parts[idx]?.trim();
     if (!part) continue;
-    const normalized = normalizeLooseAccountLiteral(part);
+    const normalized = normalizeToriiAccountSelectorLiteral(part);
     if (normalized) return normalized;
   }
   return null;
@@ -129,11 +129,11 @@ function normalizeAccountObjectId(raw: Record<string, unknown>): string | null {
 
   const trimmed = normalizeWhitespace(raw.id);
   if (!trimmed) return null;
-  if (!/^norito:/i.test(trimmed)) return normalizeLooseAccountLiteral(trimmed);
+  if (!/^norito:/i.test(trimmed)) return normalizeToriiAccountSelectorLiteral(trimmed);
 
   const markers = [raw.type, raw.kind, raw.object_type, raw.entity].filter((value): value is string => typeof value === 'string');
   if (markers.some((marker) => marker.toLowerCase().includes('account'))) {
-    return normalizeLooseAccountLiteral(trimmed);
+    return normalizeToriiAccountSelectorLiteral(trimmed);
   }
 
   return null;
@@ -143,7 +143,7 @@ export function normalizeAccountLiteral(raw: unknown): string | null {
   if (typeof raw === 'string') {
     const trimmed = normalizeWhitespace(raw);
     if (!trimmed) return null;
-    const normalized = normalizeLooseAccountLiteral(trimmed);
+    const normalized = normalizeToriiAccountSelectorLiteral(trimmed);
     if (normalized) return normalized;
     if (trimmed.includes('#')) {
       const fromAssetLiteral = parseAccountFromAssetLiteral(trimmed);

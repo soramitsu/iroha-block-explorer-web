@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
+import { i18n } from '@/shared/lib/localization';
 import ExplorerReadAccess from './ExplorerReadAccess.vue';
 import { disconnectExplorerReadSession, explorerReadAccountId, explorerReadFailure, getExplorerReadAuth } from '@/shared/lib/explorer-read-auth';
 
@@ -20,7 +21,7 @@ let wrapper: ReturnType<typeof mount> | undefined;
 let socket: EventTarget;
 let close: ReturnType<typeof vi.fn>;
 function mountAccess() {
-  wrapper = mount(ExplorerReadAccess, { global: { stubs: {
+  wrapper = mount(ExplorerReadAccess, { global: { plugins: [i18n], stubs: {
     BaseButton: { emits: ['click'], template: '<button @click="$emit(\'click\')"><slot /></button>' },
   } } });
   return wrapper;
@@ -89,8 +90,8 @@ describe('Explorer Connect read access', () => {
     await flushPromises();
     expect(explorerReadAccountId.value).toBeNull();
     expect(close).toHaveBeenCalledOnce();
-    expect(view.get('[data-test="read-access-failure"]').text()).toContain('connection ended');
-    expect(() => getExplorerReadAuth(node.value, 'network-a')).toThrow('connection ended');
+    expect(view.get('[data-test="read-access-failure"]').text()).toContain('Connect session closed');
+    expect(() => getExplorerReadAuth(node.value, 'network-a')).toThrow('Connect session closed');
     await view.get('[data-test="read-access-public"]').trigger('click');
     expect(getExplorerReadAuth(node.value, 'network-a')).toBeUndefined();
     expect(view.find('[role="alert"]').exists()).toBe(false);

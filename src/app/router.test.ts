@@ -57,6 +57,28 @@ describe('router', () => {
     );
   });
 
+  it('registers the current public system-parameters snapshot route', () => {
+    expect(routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: '/parameters',
+          name: 'system-parameters',
+        }),
+      ])
+    );
+  });
+
+  it('registers the current public Soracles workspace route', () => {
+    expect(routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: '/soracles',
+          name: 'soracles',
+        }),
+      ])
+    );
+  });
+
   it('registers the smart contracts route', () => {
     expect(routes).toEqual(
       expect.arrayContaining([
@@ -66,6 +88,18 @@ describe('router', () => {
         }),
       ])
     );
+  });
+
+  it('registers only the current ZK registry route', () => {
+    expect(routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: '/zk/registry',
+          name: 'zk-registry',
+        }),
+      ])
+    );
+    expect(routes).not.toEqual(expect.arrayContaining([expect.objectContaining({ path: '/zk/telemetry' })]));
   });
 
   it('registers exact search before the final catch-all route', () => {

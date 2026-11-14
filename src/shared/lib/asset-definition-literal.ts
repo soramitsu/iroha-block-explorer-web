@@ -1,6 +1,5 @@
 import { normalizeAccountIdLiteral } from './account-literal';
 import { blake3 } from '@noble/hashes/blake3.js';
-import { normalizeAssetAliasFqn } from '@iroha/iroha-js/browser';
 
 const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]+$/;
@@ -37,7 +36,7 @@ function isIrohaNameSegment(value: string, forbidDot: boolean): boolean {
   return (
     value.length > 0 &&
     new TextEncoder().encode(value).length <= 255 &&
-    new TextEncoder().encode(normalized).length <= 255 &&
+    normalized === value &&
     !/[\s@#$]/u.test(value) &&
     !containsControlCharacters(value) &&
     !BIDI_CONTROL_RE.test(value) &&
@@ -166,12 +165,7 @@ export function normalizeAssetDefinitionAliasLiteral(value: string): string | nu
 export function normalizeAssetDefinitionSelectorLiteral(value: string): string | null {
   const id = normalizeAssetDefinitionIdLiteral(value);
   if (id) return id;
-
-  try {
-    return normalizeAssetAliasFqn(value);
-  } catch {
-    return null;
-  }
+  return normalizeAssetDefinitionAliasLiteral(value);
 }
 
 export function parseAssetIdLiteral(value: string): AssetIdLiteral | null {

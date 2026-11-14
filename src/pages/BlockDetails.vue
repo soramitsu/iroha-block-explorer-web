@@ -24,9 +24,9 @@ const metricsHashType = useAdaptiveHash({ sm: 'short', xs: 'short', xxs: 'short'
 const blockHeightOrHash = computed(() => {
   const heightOrHash = router.currentRoute.value.params['heightOrHash'];
 
-  invariant(typeof heightOrHash === 'string', 'Expected string or number');
+  invariant(typeof heightOrHash === 'string' && heightOrHash.length > 0, 'Expected one block height or hash segment');
 
-  return Number(heightOrHash) || heightOrHash;
+  return heightOrHash;
 });
 
 const blockScope = useParamScope(blockHeightOrHash, (value) => setupAsyncData(() => http.fetchBlock(value)));
@@ -37,7 +37,8 @@ const block = computed(() => {
 
   return null;
 });
-const isBlockEmpty = computed(() => !block.value?.transactions_hash);
+const hasBlockBody = computed(() => block.value?.created_at !== null);
+const isBlockEmpty = computed(() => hasBlockBody.value && !block.value?.transactions_hash);
 
 const { metrics } = useTelemetryMetrics();
 
@@ -69,7 +70,7 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
             v-if="isPreviousBlockExists"
             type="button"
             class="block-details__metrics-header-navigation"
-            aria-label="Previous block"
+            :aria-label="$t('accessibility.previousBlock')"
             data-testid="prevBlock"
             @click="handlePreviousBlockClick"
           >
@@ -80,7 +81,7 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
             v-if="isNextBlockExists"
             type="button"
             class="block-details__metrics-header-navigation"
-            aria-label="Next block"
+            :aria-label="$t('accessibility.nextBlock')"
             data-testid="nextBlock"
             @click="handleNextBlockClick"
           >
@@ -91,23 +92,15 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
       <template #default>
         <BaseResourceState
           :snapshot="blockSnapshot"
-          loading-label="Loading block"
+          :loading-label="$t('blocks.loading')"
           :not-found-label="$t('blocks.blockNotAvailableYet')"
           :error-label="$t('blocks.unknownError')"
           :retry-label="$t('transactions.retryInstruction')"
           @retry="blockScope.expose.refetch()"
         >
-          <div
-            v-if="block"
-            class="block-details__metrics-data"
-          >
+          <div v-if="block" class="block-details__metrics-data">
             <div class="block-details__metrics-data-row">
-              <DataField
-                :title="$t('blocks.blockHash')"
-                :hash="block.hash"
-                :type="metricsHashType"
-                copy
-              />
+              <DataField :title="$t('blocks.blockHash')" :hash="block.hash" :type="metricsHashType" copy />
 
               <DataField
                 v-if="block.prev_block_hash"
@@ -120,18 +113,14 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
 
               <DataField
                 class="block-details__metrics-data-row-date"
+                data-test="block-created-at"
                 :title="$t('blocks.createdAt')"
-                :value="getLocalTime(block.created_at)"
+                :value="block.created_at ? getLocalTime(block.created_at) : $t('telemetry.dataUnknown')"
                 copy
-                :tooltip="getUTCTime(block.created_at)"
+                :tooltip="block.created_at ? getUTCTime(block.created_at) : undefined"
               />
 
-              <DataField
-                :title="$t('blocks.totalTransactions')"
-                :value="block.transactions_total"
-                copy
-                monospace
-              />
+              <DataField :title="$t('blocks.totalTransactions')" :value="block.transactions_total" copy monospace />
 
               <DataField
                 :title="$t('blocks.rejectedTransactions')"
@@ -150,24 +139,20 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
         </BaseResourceState>
       </template>
     </BaseContentBlock>
-    <BaseContentBlock
-      v-if="block"
-      :title="$t('blocks.blockTransactions')"
-      class="block-details__transactions"
-    >
+    <BaseContentBlock v-if="block" :title="$t('blocks.blockTransactions')" class="block-details__transactions">
       <template #default>
         <TransactionsTable
-          v-if="block && !isBlockEmpty"
+          v-if="hasBlockBody && !isBlockEmpty"
           show-authority
           :filter-by="{ kind: 'block', value: block.height }"
           :hash-type
         />
-        <span
-          v-else-if="isBlockEmpty"
-          class="block-details__transactions_empty row-text"
-        >{{
+        <span v-else-if="isBlockEmpty" class="block-details__transactions_empty row-text" data-test="block-empty">{{
           $t('blocks.thisBlockIsEmpty')
         }}</span>
+        <span v-else class="block-details__transactions_empty row-text" data-test="block-body-unavailable">
+          {{ $t('blocks.bodyUnavailable') }}
+        </span>
       </template>
     </BaseContentBlock>
   </div>
@@ -241,10 +226,6 @@ const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full' });
       &-row {
         display: grid;
         gap: size(2);
-
-        &-date .context-tooltip {
-          left: size(31);
-        }
       }
 
       .base-link {

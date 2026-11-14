@@ -51,7 +51,16 @@ describe('Mochi Explorer seed verification', () => {
     const fetchImpl = vi.fn(async (input: URL) => {
       if (input.pathname.endsWith('/health')) return jsonResponse({ head_height: 2 });
       if (input.pathname.includes('/domains/')) return jsonResponse({ id: 'wonderland.universal' });
-      return jsonResponse({ pagination: { total_items: 1 }, items: [{}] });
+      return jsonResponse({
+        pagination: {
+          limit: 1,
+          snapshot_height: 2,
+          snapshot_hash: 'ab'.repeat(32),
+          next_cursor: null,
+          has_more: false,
+        },
+        items: [{}],
+      });
     });
 
     await expect(verifyExplorerMochiSeed({ profile, session, fetchImpl })).resolves.toEqual({
@@ -66,6 +75,12 @@ describe('Mochi Explorer seed verification', () => {
       '/v1/explorer/health',
       '/v1/explorer/transactions',
     ]);
+    const transactionUrl = fetchImpl.mock.calls.map(([url]) => url).find((url) => (
+      url.pathname === '/v1/explorer/transactions'
+    ));
+    expect(transactionUrl?.searchParams.get('limit')).toBe('1');
+    expect(transactionUrl?.searchParams.has('page')).toBe(false);
+    expect(transactionUrl?.searchParams.has('per_page')).toBe(false);
     expect(fetchImpl.mock.calls.every(([, init]) => init.headers.Accept === 'application/json')).toBe(true);
     expect(fetchImpl.mock.calls.every(([, init]) => (
       !hasHeader(init.headers, 'x-iroha-api-version')
@@ -89,7 +104,7 @@ describe('Mochi Explorer seed verification', () => {
         ? jsonResponse({ message: 'missing' }, 404)
         : input.pathname.endsWith('/health')
           ? jsonResponse({ head_height: 2 })
-          : jsonResponse({ pagination: { total_items: 1 } })
+          : jsonResponse({ items: [{}] })
     ));
     await expect(verifyExplorerMochiSeed({ profile, session, fetchImpl: missingDomain }))
       .rejects.toThrow(/Seed domain returned HTTP 404/);
@@ -99,9 +114,25 @@ describe('Mochi Explorer seed verification', () => {
         ? jsonResponse({ head_height: 1 })
         : input.pathname.includes('/domains/')
           ? jsonResponse({ id: 'wonderland.universal' })
-          : jsonResponse({ pagination: { total_items: 0 } })
+          : jsonResponse({ items: [] })
     ));
     await expect(verifyExplorerMochiSeed({ profile, session, fetchImpl: undersized }))
       .rejects.toThrow(/head height/);
+
+    const insufficientTransactions = vi.fn(async (input: URL) => (
+      input.pathname.endsWith('/health')
+        ? jsonResponse({ head_height: 2 })
+        : input.pathname.includes('/domains/')
+          ? jsonResponse({ id: 'wonderland.universal' })
+          : jsonResponse({ items: [] })
+    ));
+    await expect(verifyExplorerMochiSeed({ profile, session, fetchImpl: insufficientTransactions }))
+      .rejects.toThrow(/transaction sample/);
+
+    await expect(verifyExplorerMochiSeed({
+      profile: { ...profile, seed: { ...profile.seed, minimum_transactions: 101 } },
+      session,
+      fetchImpl: vi.fn(),
+    })).rejects.toThrow(/between 1 and 100/);
   });
 });

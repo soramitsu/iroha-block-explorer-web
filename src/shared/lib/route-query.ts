@@ -7,24 +7,23 @@ export function firstRouteQueryValue(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-export function parseRoutePositiveInteger(
+export type CanonicalRoutePositiveIntegerResult = { ok: true; value: number; explicit: boolean } | { ok: false };
+
+/** Parses one canonical positive integer without normalizing explicit invalid URL state. */
+export function parseCanonicalRoutePositiveInteger(
   value: unknown,
-  fallback: number,
+  defaultValue: number,
   allowed?: ReadonlySet<number>
-): number {
-  const raw = firstRouteQueryValue(value);
-  if (!raw || !/^\d+$/u.test(raw)) return fallback;
-  const parsed = Number(raw);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) return fallback;
-  if (allowed && !allowed.has(parsed)) return fallback;
-  return parsed;
+): CanonicalRoutePositiveIntegerResult {
+  if (value === undefined) return { ok: true, value: defaultValue, explicit: false };
+  if (Array.isArray(value) || typeof value !== 'string' || !/^[1-9]\d*$/u.test(value)) return { ok: false };
+
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || (allowed && !allowed.has(parsed))) return { ok: false };
+  return { ok: true, value: parsed, explicit: true };
 }
 
-export function parseRouteEnum<T extends string>(
-  value: unknown,
-  allowed: ReadonlySet<T>,
-  fallback: T
-): T {
+export function parseRouteEnum<T extends string>(value: unknown, allowed: ReadonlySet<T>, fallback: T): T {
   const raw = firstRouteQueryValue(value);
   return raw && allowed.has(raw as T) ? (raw as T) : fallback;
 }

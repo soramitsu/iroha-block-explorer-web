@@ -1,8 +1,20 @@
 {
   "search": "Search",
+  "appMetadata": {
+    "title": "Hyperledger Iroha Blockchain Explorer",
+    "description": "Explore blocks, transactions, accounts, assets, governance, and network telemetry on Hyperledger Iroha.",
+    "keywords": "Hyperledger Iroha, blockchain, distributed ledger, blocks, transactions",
+    "imageAlt": "Hyperledger Iroha Blockchain Explorer"
+  },
+  "errors": {
+    "invalidResponse": "The server returned an invalid response.",
+    "unknownSchema": "The server returned data in an unexpected format.",
+    "unexpected": "An unexpected error occurred."
+  },
   "widgets": {
     "latestTransactions": "Latest Transactions",
-    "latestBlocks": "Latest Blocks"
+    "latestBlocks": "Latest Blocks",
+    "transactionCount": "{count} transactions"
   },
   "noData": "No data",
   "viewAll": "view all",
@@ -13,6 +25,10 @@
     "cursorPage": "{0} rows on this page; exact total unavailable",
     "scanSample": "{0} records scanned; exact total unavailable",
     "cursorRepeated": "Pagination stopped because Torii repeated a cursor",
+    "invalidPagination": "Page and rows per page must be canonical positive integers, use 10, 20, 50, or 100 rows, and stay within Torii's first {maxFetchSize} matching rows.",
+    "invalidCursorPagination": "Cursor and rows per page must use canonical Torii values: an unpadded base64url cursor and 10, 20, 50, or 100 rows.",
+    "resetPagination": "Reset pagination",
+    "fetchWindowLimit": "Only the first {maxFetchSize} matching rows are reachable through this Torii offset route; refine the filters to narrow the result.",
     "newDataAvailable": "New data available",
     "load": "Load"
   },
@@ -30,10 +46,47 @@
   "metadata": "Metadata",
   "content": "Content",
   "none": "None",
+  "parameters": {
+    "nav": "Parameters",
+    "title": "System parameters",
+    "description": "Current executor and system limits returned by Torii's exact /v1/parameters snapshot.",
+    "loadError": "The current system parameter snapshot could not be loaded."
+  },
+  "soracles": {
+    "nav": "Soracles",
+    "title": "Soracles",
+    "description": "Inspect the current native oracle feed registry, retained feed outcomes, and latest DeFi-compatible attestations.",
+    "feeds": "Feed configurations",
+    "history": "Feed history",
+    "attestation": "Latest DeFi attestation",
+    "loadError": "Soracles feed configurations could not be loaded.",
+    "historyError": "The selected feed history could not be loaded.",
+    "attestationError": "The latest DeFi attestation could not be loaded.",
+    "selectFeed": "Select a feed"
+  },
   "transaction": "Transaction",
   "pageNotFound": "Page not found",
   "tokens": "Tokens",
   "total": "Total",
+  "accessibility": {
+    "skipToMain": "Skip to main content",
+    "mobileMenu": "Mobile menu",
+    "languageMenu": "Language menu",
+    "themeSwitcher": "Theme switcher",
+    "previousTabs": "Previous tabs",
+    "tabOptions": "View options",
+    "nextTabs": "Next tabs",
+    "pagination": "Pagination",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "cursorPagination": "Cursor pagination",
+    "previousCursorPage": "Previous cursor page",
+    "nextCursorPage": "Next cursor page",
+    "previousBlock": "Previous block",
+    "nextBlock": "Next block",
+    "dismissNotification": "Dismiss notification",
+    "pageNumber": "Page {page}"
+  },
   "clipboard": {
     "success": "Copied to clipboard",
     "error": "Unable to access the clipboard"
@@ -45,13 +98,13 @@
     "totalBlocks": "Total blocks",
     "totalTransactions": "Total transactions",
     "totalNodes": "Total nodes",
-    "searchPlaceholder": "Search by block height/hash, transaction hash, canonical halfwidth i105 account, account alias, asset Base58 ID/alias, or nft$domain",
+    "searchPlaceholder": "Search by block height/hash, transaction hash, canonical halfwidth i105 account ID, asset Base58 ID/alias, or nft$domain",
     "title": {
       "firstLine": "Hyperledger Iroha",
       "secondLine": "Blockchain Explorer"
     },
     "search": {
-      "placeholder": "Search by block height/hash, transaction hash, canonical halfwidth i105 account, account alias, asset Base58 ID/alias, or nft$domain",
+      "placeholder": "Search by block height/hash, transaction hash, canonical halfwidth i105 account ID, asset Base58 ID/alias, or nft$domain",
       "hintTitle": "Try a…",
       "samples": {
         "block": "Block 12345",
@@ -63,7 +116,26 @@
       }
     }
   },
+  "searchResults": {
+    "title": "Search results",
+    "exactHash": "Exact hash",
+    "loading": "Checking blocks and transactions…",
+    "loadError": "The exact lookup could not be completed.",
+    "loadErrorWithReason": "The exact lookup could not be completed: {reason}",
+    "retry": "Retry exact lookup",
+    "notFound": "No block or transaction matches this exact hash.",
+    "block": "Block",
+    "transaction": "Transaction",
+    "targetNotFound": "No {target} matches this hash.",
+    "targetFailed": "{target} lookup failed: {reason}.",
+    "apiUnreachable": "the Explorer API is unreachable",
+    "apiTimedOut": "the Explorer API timed out",
+    "apiHttpError": "the Explorer API returned HTTP status {status}",
+    "invalidResponse": "the Explorer API returned an invalid response",
+    "invalidHash": "Enter exactly 64 hexadecimal characters, with an optional 0x prefix"
+  },
   "time": {
+    "now": "now",
     "secAgo": "{0} sec ago",
     "secsAgo": "{0} secs ago",
     "minAgo": "{0} min ago",
@@ -72,6 +144,9 @@
     "hoursAgo": "{0} hours ago",
     "dayAgo": "{0} day ago",
     "daysAgo": "{0} days ago"
+  },
+  "units": {
+    "milliseconds": "{value} milliseconds"
   },
   "transactions": {
     "transactions": "Transactions",
@@ -109,7 +184,6 @@
     "nonce": "Nonce",
     "metadata": "Metadata",
     "signature": "Signature",
-    "transactionContainsWasm": "This transaction contains WASM smart contract. We cannot display it here in a meaningful way at the moment.",
     "authority": "Signer account",
     "executable": "Executable",
     "smartContract": "Smart contract",
@@ -123,6 +197,12 @@
     "kind": "Kind",
     "unknownError": "Unknown error occurred",
     "retryInstruction": "Retry",
+    "resource": {
+      "loading": "Loading transaction",
+      "notFound": "Transaction not found",
+      "loadError": "Transaction could not be loaded",
+      "retry": "Retry transaction"
+    },
     "copyEncodedPayload": "Copy Norito",
     "copyInstructionLink": "Copy link",
     "instructionLinkCopied": "Instruction link copied",
@@ -154,6 +234,8 @@
       "submittedAt": "Submitted at",
       "sorafsManifestId": "SoraFS manifest",
       "payloadDigest": "Payload digest",
+      "submissionBoundaryTitle": "Verified-source submission",
+      "submissionBoundaryDescription": "Current code-hash verification-job routes require canonical account authentication. This public panel reads the authoritative view from the instruction-scoped route and never submits an unsigned compiler job.",
       "verifyFormTitle": "Verify source",
       "verifyAction": "Verify source",
       "verifyActionBusy": "Verifying…",
@@ -166,6 +248,65 @@
         "conflict": "Already verified",
         "error": "Verification failed"
       }
+    },
+    "evidence": {
+      "title": "Transaction evidence",
+      "refresh": "Refresh evidence",
+      "loading": "Loading ledger evidence",
+      "loadError": "Ledger evidence could not be loaded",
+      "retry": "Retry evidence",
+      "scope": "This browser checks transaction, network and block-height identities only. The node supplies the inclusion paths and consensus certificate; Merkle paths and validator signatures are not verified here.",
+      "blockProof": "Block Merkle proof",
+      "entryVerified": "Transaction entry locally verified",
+      "verificationFailed": "Local verification failed",
+      "verificationIncomplete": "Local verification incomplete",
+      "entrypointPath": "Entrypoint path",
+      "executionResultPath": "Execution-result path",
+      "requestedTransaction": "Requested transaction",
+      "proofHeight": "Proof block height",
+      "referenceHeight": "Reference block height",
+      "transactionsRootBinding": "Transactions root binding",
+      "entrypointRoot": "Entrypoint root",
+      "resultRoot": "Result root",
+      "validEntryRoot": "Internally valid against proof entry root",
+      "validResultRoot": "Internally valid against node-provided result root",
+      "pathFailed": "Verification failed",
+      "matchesProof": "Matches proof entry",
+      "doesNotMatchProof": "Does not match proof entry",
+      "matchesHeight": "Matches requested height",
+      "doesNotMatchHeight": "Does not match requested height",
+      "couldNotCheck": "Could not be checked",
+      "matchesReference": "Matches reference block",
+      "doesNotMatchReference": "Does not match reference block",
+      "noBlockProof": "This node has no block proof for the transaction entrypoint.",
+      "blockProofRequestFailed": "The block-proof request failed.",
+      "referenceBlockHash": "Reference block hash",
+      "referenceTransactionsRoot": "Reference transactions root",
+      "noTransactionsRoot": "No transactions root",
+      "referenceUnavailable": "The reference block is unavailable, so this proof cannot be bound to block metadata.",
+      "referenceRequestFailed": "The reference-block request failed.",
+      "canonicalProof": "Canonical decoded proof",
+      "stateRoot": "State root",
+      "nodeProvidedUnverified": "Node-provided · not cryptographically verified here",
+      "source": "Source",
+      "blockHash": "Block hash",
+      "stateRootUnavailable": "This node has no state root at the transaction's block height.",
+      "stateRootRequestFailed": "The state-root request failed.",
+      "quorumCertificate": "Commit quorum certificate",
+      "nodeProvidedBlsUnverified": "Node-provided · BLS not verified here",
+      "phase": "Phase",
+      "viewEpoch": "View / epoch",
+      "validatorEntries": "Validator-set entries",
+      "signerBitmap": "Signer bitmap",
+      "validatorSetHash": "Validator-set hash",
+      "aggregateSignature": "Aggregate signature",
+      "quorumUnavailable": "No persisted commit quorum certificate is available from this node.",
+      "quorumRequestFailed": "The quorum-certificate request failed.",
+      "stateAgreement": "The node-provided state-root and state-proof envelopes identify the requested block and have identical block hashes and state roots.",
+      "stateMismatch": "Warning: the node-provided state-root and state-proof envelopes do not identify the same requested block and state root.",
+      "proofUnavailable": "This proof is unavailable to the current reader. For a private data space, use Read access to connect an authorized wallet.",
+      "transactionEntryHash": "Transaction entry hash",
+      "executionOutputHash": "Execution output hash"
     },
     "filters": {
       "authorityLabel": "Account filter",
@@ -211,6 +352,21 @@
     "healthReportsTotal": "Health reports",
     "noDomainMetrics": "No domain metrics yet",
     "liveEvents": "Live events",
+    "accessBoundary": {
+      "eyebrow": "Operator surface",
+      "title": "Relay diagnostics require signed operator access",
+      "snapshotDescription": "KAIGI relay inventory, health, and detail expose operational topology. Torii serves those snapshots only to an authenticated operator with an immutable {operatorSigningContext}.",
+      "streamDescription": "The relay event stream requires canonical account signing, while a call can be read publicly when its call ID is already known. This relay directory has neither signing context, so it makes no KAIGI request and never downgrades to unsigned access.",
+      "contractTitle": "Authentication contract",
+      "snapshotContext": "Snapshot context",
+      "snapshotContextValue": "Immutable OperatorSigningContext",
+      "snapshotCredential": "Snapshot credential",
+      "snapshotCredentialValue": "Operator WebAuthn signing",
+      "eventStream": "Event stream",
+      "eventStreamValue": "Canonical account signing",
+      "failureMode": "Failure mode",
+      "failureModeValue": "Fail closed; no unsigned fallback"
+    },
     "filterDomain": "Filter domain",
     "filterRelay": "Filter relay",
     "eventsConnected": "Connected",
@@ -265,12 +421,13 @@
     "validators": "Validators",
     "protectedNamespaces": "Protected namespaces",
     "title": "Dataspace Account Summary",
-    "accountLiteralLabel": "Account literal",
+    "accountLiteralLabel": "Canonical i105 account ID",
     "accountLiteralPlaceholder": "sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE",
     "addressFormat": "Address format",
     "lookup": "Load summary",
-    "hint": "Enter an account literal to view UAID, dataspace bindings, manifests, portfolio counters, and consensus commitments.",
-    "accountRequired": "Account literal is required",
+    "hint": "Enter an exact canonical halfwidth i105 account ID to view UAID, dataspace bindings, manifests, portfolio counters, and consensus commitments.",
+    "accountRequired": "Canonical i105 account ID is required",
+    "accountInvalid": "Account ID must be an exact canonical halfwidth i105 literal",
     "accountNotFound": "Account not found",
     "loadFailed": "Unable to load dataspace summary",
     "uaid": "UAID",
@@ -291,6 +448,12 @@
     "dataspace": "Dataspace",
     "selectedTitle": "Selected Dataspace Details",
     "accountsInDataspace": "Accounts in dataspace",
+    "accessBoundary": {
+      "diagnosticTitle": "Diagnostic telemetry stays outside the Explorer",
+      "diagnosticDescription": "Torii classifies {status} as an unauthenticated Diagnostic route, not public dataspace metadata. Its availability may still be limited by Torii's global API-token/CIDR policy; the Explorer never requests or proxies it.",
+      "governanceTitle": "Operator authentication required",
+      "governanceDescription": "Lane governance and consensus diagnostics are not public dataspace metadata. They require a signed request bound to an immutable {operatorSigningContext} and are intentionally not queried by this Explorer."
+    },
     "publicNodes": {
       "title": "Public explorer nodes",
       "label": "Label",
@@ -371,175 +534,6 @@
       "governanceRefs": "Governance references",
       "noGovernanceRefs": "No governance references recorded"
     },
-    "moderation": {
-      "status": {
-        "clear": "Available on this gateway",
-        "localBlocked": "Locally blocked on this gateway",
-        "globalBlocked": "Globally denylisted on this gateway",
-        "mixedBlocked": "Local and global denylist matches are active"
-      },
-      "summary": {
-        "clear": "Public file links are currently available on this gateway.",
-        "linksEnabled": "This CID has moderation metadata, but public delivery is still enabled here.",
-        "linksBlocked": "Manifest metadata stays visible, but this gateway will not serve the public file links while the block is active."
-      },
-      "matches": {
-        "local": {
-          "cid": "Local CID match",
-          "manifestDigest": "Local manifest digest match"
-        },
-        "global": {
-          "cid": "Global CID match",
-          "manifestDigest": "Global manifest digest match"
-        }
-      },
-      "details": {
-        "tier": "Tier: {value}",
-        "reason": "Reason: {value}",
-        "pack": "Pack: {value}",
-        "proposal": "Proposal: {value}",
-        "review": "Review: {value}",
-        "governance": "Governance: {value}",
-        "expires": "Expires: {value}",
-        "reviewDue": "Review due: {value}"
-      }
-    },
-    "connect": {
-      "title": "IrohaConnect wallet",
-      "description": "Pair a wallet on this node, approve the session, and sign the Ministry agenda submission for the selected CID.",
-      "createSession": "Create session",
-      "creatingSession": "Creating session...",
-      "unavailable": "Connect is not enabled on this Torii endpoint.",
-      "loadFailed": "Unable to load Connect status for this Torii endpoint.",
-      "sessionTtl": "Session TTL",
-      "perIpCap": "Per-IP cap",
-      "relayMode": "Relay mode",
-      "openWallet": "Open in IrohaConnect",
-      "copyLaunchLink": "Copy launch link",
-      "copySid": "Copy SID",
-      "sid": "Connect SID",
-      "approvedAccount": "Approved wallet account",
-      "noActiveSession": "No active wallet session yet.",
-      "qrAlt": "Wallet connect QR code",
-      "ttlMinutes": "{value} min",
-      "ttlSeconds": "{value} sec",
-      "ttlMilliseconds": "{value} ms",
-      "sessionStates": {
-        "idle": "Ready to submit through IrohaConnect.",
-        "waiting_for_wallet": "Waiting for wallet approval.",
-        "approved": "Wallet approved. Drafting the Ministry submission.",
-        "signing": "Waiting for the wallet signature and transaction result.",
-        "submitted": "Submission confirmed and Ministry record loaded.",
-        "wallet_rejected": "The wallet rejected the Connect session.",
-        "session_closed": "The Connect session closed before submission finished.",
-        "submission_failed": "The wallet submission flow failed."
-      },
-      "notifications": {
-        "sessionEndpointUnavailable": "Connect session endpoint unavailable.",
-        "sessionReady": "Wallet connect session ready",
-        "sessionCreateFailed": "Unable to create Connect session.",
-        "walletRejected": "The wallet rejected the session.",
-        "sessionClosed": "The Connect session was closed."
-      }
-    },
-    "proposal": {
-      "title": "CID denylist proposal",
-      "copyDraft": "Copy draft JSON",
-      "missingRootCid": "This manifest did not decode to a public root CID, so a denylist draft cannot be generated.",
-      "proposedAction": "Proposed action",
-      "gatewayStatus": "Gateway status",
-      "reason": "Reason",
-      "proposalId": "Proposal ID",
-      "submitterName": "Submitter name",
-      "submitterContact": "Submitter contact",
-      "organization": "Organization",
-      "pgpFingerprint": "PGP fingerprint",
-      "duplicateProposals": "Duplicate proposals",
-      "reviewerNote": "Reviewer note",
-      "removalRationale": "Removal rationale",
-      "reviewerNotePlaceholder": "Optional context for reviewers",
-      "removalRationalePlaceholder": "Required reviewer note for the removal request",
-      "suggestedFile": "Suggested file",
-      "validateLocally": "Validate locally",
-      "impactReport": "Impact report",
-      "downloadDraft": "Download draft JSON",
-      "copyValidateCommand": "Copy validate command",
-      "copyImpactCommand": "Copy impact command",
-      "submitWallet": "Submit via IrohaConnect",
-      "walletSubmissionUnavailable": "Wallet submission unavailable",
-      "walletSubmissionHelp": "The explorer keeps the JSON export fallback, but this button now drafts the Ministry agenda transaction, asks the approved wallet to sign it, submits it, and fetches the recorded proposal.",
-      "walletSubmissionComplete": "The Ministry submission is recorded. You can still export the draft JSON for audit or offline review.",
-      "descriptionAdd": "Generates an `AgendaProposalV1`-shaped draft for the selected root CID with an enumerated moderation reason.",
-      "descriptionRemove": "Generates an `AgendaProposalV1`-shaped draft to remove the selected CID from the denylist, reusing the active moderation references when present.",
-      "submitStates": {
-        "waiting_for_wallet": "Waiting for wallet approval...",
-        "signing": "Signing and submitting...",
-        "submitted": "Submitted"
-      },
-      "payload": {
-        "titleAdd": "Blacklist proposal for {rootCid}",
-        "titleRemove": "Denylist removal proposal for {rootCid}",
-        "motivationAdd": "{reason} review requested for manifest {manifestDigest} and its public SoraFS root CID {rootCid}.",
-        "motivationRemove": "Review requested to remove manifest {manifestDigest} and its public SoraFS root CID {rootCid} from the denylist.",
-        "expectedImpactAdd": "If accepted, this proposal would add the selected root CID to the denylist so delivery can be restricted while the evidence is reviewed.",
-        "expectedImpactRemove": "If accepted, this proposal would remove the selected root CID from the denylist so delivery can resume on participating gateways.",
-        "targetReasonAdd": "{reason} moderation report for SoraFS CID {rootCid}",
-        "targetReasonRemove": "Request to remove SoraFS CID {rootCid} from the denylist and restore delivery.",
-        "cidEvidenceDescriptionAdd": "Manifest CAR evidence for {manifestDigest}.",
-        "cidEvidenceDescriptionRemove": "Manifest CAR evidence for removal review of {manifestDigest}.",
-        "urlEvidenceDescriptionAdd": "Explorer evidence for manifest {manifestDigest}",
-        "urlEvidenceDescriptionRemove": "Removal review evidence for manifest {manifestDigest}"
-      },
-      "placeholders": {
-        "proposalId": "AC-2026-001",
-        "submitterName": "Moderator or organization",
-        "submitterContact": "Email, Matrix, or phone",
-        "organization": "Optional",
-        "pgpFingerprint": "Optional 40-hex fingerprint",
-        "duplicateProposals": "Optional AC-2025-014, AC-2025-015"
-      },
-      "reasons": {
-        "csam": "CSAM",
-        "malware": "Malware",
-        "fraud": "Fraud",
-        "harassment": "Harassment",
-        "impersonation": "Impersonation",
-        "policy-escalation": "Policy escalation",
-        "terrorism": "Terrorism",
-        "spam": "Spam"
-      },
-      "notifications": {
-        "draftRequiredForCopy": "Fill the required proposal fields before copying the draft.",
-        "draftCopied": "Draft JSON copied to clipboard",
-        "draftRequiredForDownload": "Fill the required proposal fields before downloading the draft.",
-        "draftDownloadStarted": "Draft JSON download started",
-        "draftDownloadFailed": "Unable to download the draft JSON.",
-        "validateRequired": "Fill the required proposal fields before copying the validate command.",
-        "validateCopied": "Validate command copied to clipboard",
-        "impactRequired": "Fill the required proposal fields before copying the impact command.",
-        "impactCopied": "Impact command copied to clipboard",
-        "draftRequiredForSubmit": "Fill the required proposal fields before submitting through IrohaConnect.",
-        "walletSubmitUnavailable": "Live wallet submission is unavailable on this Torii endpoint.",
-        "walletSubmitted": "CID denylist proposal submitted through IrohaConnect",
-        "walletSubmitFailed": "Unable to submit the CID denylist proposal through IrohaConnect.",
-        "alreadySubmitted": "This proposal ID is already recorded by the Ministry.",
-        "transactionRejected": "The transaction reached a terminal status of {status}.",
-        "transactionStatusTimeout": "Timed out waiting for the transaction status.",
-        "submissionRecordMissing": "The transaction finished, but the Ministry record could not be loaded."
-      },
-      "issues": {
-        "missingRootCid": "Selected manifest is missing a decodable public root CID.",
-        "missingAddReason": "A denylist reason is required for add-to-denylist proposals.",
-        "invalidProposalId": "Proposal ID must match AC-YYYY-###.",
-        "missingSubmitterName": "Submitter name is required.",
-        "missingSubmitterContact": "Submitter contact is required.",
-        "missingRemovalNote": "Reviewer note is required for denylist removals.",
-        "invalidPgpFingerprint": "PGP fingerprint must be 40 hexadecimal characters.",
-        "invalidEvidenceDigest": "Manifest payload digest must be 64 lowercase hexadecimal characters.",
-        "missingEvidence": "At least one evidence URI is required to build the draft.",
-        "invalidDuplicateReference": "Duplicate proposal references must match AC-YYYY-###."
-      }
-    },
     "manifestStatus": {
       "pending": "Pending",
       "approved": "Approved",
@@ -554,6 +548,15 @@
   "soracloud": {
     "nav": "SoraCloud",
     "title": "SoraCloud control plane",
+    "accessBoundary": {
+      "eyebrow": "Public discovery and authenticated operations",
+      "title": "SoraCloud separates public service discovery from account-scoped reads",
+      "discoveryDescription": "Torii exposes the two service-discovery routes without account authentication. Status, application, compliance, model, lease, and agent reads require canonical account authentication.",
+      "protectedDescription": "This public Explorer does not issue unsigned requests to protected routes, embed account keys, or reinterpret an authorization failure as an empty result. An authenticated workspace must bind protected requests to the connected account and exact {networkId}.",
+      "contractTitle": "Current Torii read contract",
+      "publicDiscoveryTitle": "Public discovery",
+      "authenticatedReadsTitle": "Canonical-account authenticated reads"
+    },
     "hint": "Live Soracloud runtime, routing, and control-plane stats from Torii.",
     "source": "Source",
     "refresh": "Refresh",
@@ -781,13 +784,25 @@
     "no": "No",
     "unknownAction": "Unknown",
     "validation": {
-      "accountId": "Account ID must use a canonical halfwidth i105 account selector or alias.",
+      "accountId": "Account ID must be an exact canonical halfwidth i105 literal.",
       "leaseTermMs": "Lease term must be a positive integer number of milliseconds.",
       "hex": "This field must be an even-length hexadecimal string, optionally prefixed with 0x."
     }
   },
   "governance": {
     "nav": "Governance",
+    "accessBoundary": {
+      "eyebrow": "Authenticated surface",
+      "title": "Governance requires canonical request authentication",
+      "protectedReads": "Torii protects every {governanceRoutes} read. The public Explorer does not issue unsigned governance requests and does not retry them anonymously.",
+      "capabilities": "An authenticated governance workspace can inspect network readiness and the supported governance routes through {capabilitiesRoute}. That response is not a caller-grant list; every request still uses exactly one of Torii's two canonical authentication forms.",
+      "singleSignatureTitle": "Single-signature form",
+      "singleSignatureDescription": "{accountHeader}, {signatureHeader}, {timestampHeader}, and {nonceHeader} must be sent together.",
+      "multisigWitnessTitle": "Multisig witness form",
+      "multisigWitnessDescription": "Send {witnessHeader}, optionally with a matching {accountHeader}. A witness must not be combined with {signatureHeader}, {timestampHeader}, or {nonceHeader}.",
+      "contractTitle": "Current contract",
+      "contractDescription": "Parliament attempts and transitions, citizens, referenda, locks, tallies, proposals, and event streams are available only after canonical request authentication succeeds. Capability discovery reports the network contract and readiness; it does not authorize the caller."
+    },
     "council": {
       "title": "Sora Parliament roster",
       "epoch": "Session epoch",
@@ -846,81 +861,184 @@
   "contracts": {
     "nav": "Smart Contracts",
     "title": "Smart contracts",
-    "hint": "Inventory of deployed contract instances derived from committed ActivateContractInstance history.",
+    "explorerHint": "Inspect committed contract calls, indexed event history, and live contract events.",
+    "tabs": {
+      "activity": "Activity",
+      "events": "Events"
+    },
+    "filters": {
+      "authority": "Authority",
+      "authorityPlaceholder": "Canonical I105 account ID",
+      "contractAddress": "Contract address",
+      "contractAddressPlaceholder": "irohac1…",
+      "contractAlias": "Contract alias",
+      "contractAliasPlaceholder": "router::universal",
+      "entrypoint": "Entrypoint",
+      "entrypointPlaceholder": "swap",
+      "module": "Module",
+      "modulePlaceholder": "router",
+      "eventKind": "Event kind",
+      "eventKindPlaceholder": "swap_filled",
+      "participant": "Participant",
+      "participantPlaceholder": "Account ID or alias",
+      "asset": "Asset",
+      "assetPlaceholder": "Asset ID or alias",
+      "provenance": "Provenance",
+      "result": "Result",
+      "since": "Since (Unix ms)",
+      "until": "Until (Unix ms)",
+      "any": "Any",
+      "emitted": "Emitted",
+      "derived": "Derived",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "apply": "Apply filters",
+      "clear": "Clear",
+      "clearInvalid": "Clear invalid filters"
+    },
+    "states": {
+      "loadingActivity": "Loading contract activity…",
+      "noActivity": "No committed contract calls match these filters.",
+      "activityError": "Contract activity could not be loaded.",
+      "loadingEvents": "Loading contract events…",
+      "noEvents": "No indexed contract events match these filters.",
+      "eventError": "Contract events could not be loaded.",
+      "invalidListResponse": "Torii did not return a contract list.",
+      "retry": "Retry"
+    },
+    "validation": {
+      "invalidFilters": "Invalid contract filters: {details}",
+      "providedOnce": "{field} must be provided once",
+      "stringValue": "{field} must be a string value",
+      "nonEmpty": "{field} must be non-empty and contain no surrounding whitespace",
+      "canonicalInteger": "{field} must be a canonical non-negative integer",
+      "safeIntegerRange": "{field} exceeds the safe integer range",
+      "canonicalAccountId": "{field} must be an exact canonical {standard} account ID",
+      "canonicalContractAddress": "{field} must be an exact canonical {standard} contract address",
+      "canonicalContractAlias": "{field} must be an exact canonical scoped contract alias",
+      "noritoStringValue": "{field} must not be null, a boolean, or a finite number because Torii would not preserve it as a string",
+      "booleanValue": "{field} must be {trueValue} or {falseValue}",
+      "timestampOrder": "{sinceField} must not be greater than {untilField}",
+      "provenanceValue": "{field} must be {emittedValue} or {derivedValue}"
+    },
     "columns": {
-      "address": "Contract address",
-      "codeHash": "Code hash",
-      "deployer": "Deployer",
       "block": "Block",
-      "createdAt": "Created at",
-      "transaction": "Transaction"
+      "transaction": "Transaction",
+      "contractEntrypoint": "Contract / entrypoint",
+      "authority": "Authority",
+      "result": "Result",
+      "timestamp": "Timestamp",
+      "decodedCallData": "Decoded call data",
+      "event": "Event",
+      "contract": "Contract",
+      "participantsAssets": "Participants / assets",
+      "decodedEventData": "Decoded event data"
+    },
+    "decoded": {
+      "view": "View decoded data",
+      "contractPayload": "Contract payload",
+      "feePayment": "Fee payment",
+      "payload": "Payload",
+      "numericFields": "Numeric fields"
+    },
+    "noAlias": "No alias",
+    "unknownEntrypoint": "Unknown entrypoint",
+    "live": {
+      "title": "Live events",
+      "hint": "One non-replayable Torii stream using the filters below.",
+      "start": "Start live stream",
+      "stop": "Stop",
+      "resync": "Reload history and resync",
+      "connecting": "Connecting to Torii…",
+      "oneRetained": "Live · {count} event retained",
+      "manyRetained": "Live · {count} events retained",
+      "stopped": "Stream stopped by the user.",
+      "stale": "Live view is stale.",
+      "streamFailed": "The live event stream stopped unexpectedly.",
+      "code": "Code: {code}",
+      "dropped": "Dropped messages: {count}",
+      "noReplay": "This stream cannot replay and will not reconnect automatically.",
+      "block": "block {height}",
+      "decodedEvent": "Decoded event data",
+      "history": "Indexed event history",
+      "streamEnded": "The contract event stream ended unexpectedly and cannot be resumed.",
+      "historyReloadFailed": "History reload failed; the live view remains stale."
     }
   },
-  "zkTelemetry": {
-    "nav": "ZK Telemetry",
-    "stream": {
-      "title": "Proof stream",
-      "backend": "Backend filter",
-      "backendPlaceholder": "groth16",
-      "verifiedTotal": "Verified proofs",
-      "rejectedTotal": "Rejected proofs",
-      "throughputLabel": "Avg {0} proofs/min (past 60s)",
-      "status": {
-        "open": "Connected to proof stream",
-        "connecting": "Connecting to proof stream…",
-        "closed": "Stream disconnected"
-      },
-      "labels": {
-        "verified": "Verified",
-        "rejected": "Rejected"
-      },
-      "columns": {
-        "event": "Event",
-        "backend": "Backend",
-        "proofHash": "Proof hash",
-        "callHash": "Call hash",
-        "envelopeHash": "Envelope hash",
-        "observedAt": "Observed at"
-      }
+  "zkRegistry": {
+    "nav": "ZK Registry",
+    "status": {
+      "submitted": "Submitted",
+      "verified": "Verified",
+      "rejected": "Rejected",
+      "active": "Active",
+      "proposed": "Proposed",
+      "withdrawn": "Withdrawn"
     },
-    "attachments": {
-      "title": "Proof attachments",
-      "contentType": "Content type",
-      "contentTypePlaceholder": "application/json",
-      "hasTag": "Requires tag",
-      "tagPlaceholder": "e.g. PROF",
-      "order": "Order",
-      "orderNewest": "Newest first",
-      "orderOldest": "Oldest first",
-      "download": "Download",
-      "columns": {
-        "id": "Attachment",
-        "contentType": "Content type",
-        "size": "Size",
-        "created": "Created",
-        "tenant": "Tenant",
-        "actions": "Actions"
-      }
-    },
-    "reports": {
-      "title": "Prover reports",
+    "filters": {
+      "backend": "Backend",
+      "backendPlaceholder": "halo2/ipa",
       "status": "Status",
-      "statusAll": "All",
-      "statusOk": "OK",
-      "statusFailed": "Failed",
-      "contentType": "Content type",
-      "contentTypePlaceholder": "application/zk1",
-      "hasTag": "Requires tag",
-      "tagPlaceholder": "e.g. PROF",
-      "columns": {
-        "id": "Report",
-        "status": "Status",
-        "processed": "Processed",
-        "latency": "Latency",
-        "contentType": "Content type",
-        "tags": "Tags",
-        "error": "Error"
-      }
+      "allStatuses": "All statuses",
+      "tag": "ZK1 tag",
+      "tagPlaceholder": "PROF",
+      "tagInvalid": "A ZK1 tag must be exactly four printable ASCII characters.",
+      "order": "Order",
+      "newest": "Newest verification first",
+      "oldest": "Oldest verification first",
+      "nameAscending": "Name A–Z",
+      "nameDescending": "Name Z–A",
+      "bridgeOnly": "Proof family",
+      "allProofs": "All proofs",
+      "bridgeProofs": "Bridge proofs only",
+      "name": "Key name contains",
+      "namePlaceholder": "transfer",
+      "apply": "Apply filters"
+    },
+    "columns": {
+      "backend": "Backend",
+      "proofHash": "Proof hash",
+      "status": "Status",
+      "height": "Verified at height",
+      "verifyingKey": "Verifying key",
+      "bridge": "Bridge payload",
+      "name": "Name",
+      "circuit": "Circuit",
+      "namespace": "Namespace",
+      "activation": "Activation height"
+    },
+    "proofs": {
+      "title": "Proof registry",
+      "snapshotNote": "A strict snapshot of the proof records exposed by the selected Torii node. Counts and rows use the same current filters.",
+      "filteredCount": "Matching proofs",
+      "currentPage": "Current page",
+      "visibleRows": "Visible rows",
+      "detailTitle": "Proof details",
+      "vkCommitment": "Verifying-key commitment",
+      "bridgeDetail": "Bridge proof metadata"
+    },
+    "verifyingKeys": {
+      "title": "Verifying-key registry",
+      "snapshotNote": "Current verifying-key records, including lifecycle, circuit binding, commitments, and the canonical Norito record archive.",
+      "pagination": "Verifying-key pages",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {0}",
+      "detailTitle": "Verifying-key details",
+      "curve": "Curve",
+      "commitment": "Key commitment",
+      "schemaHash": "Public-input schema hash",
+      "keyBytes": "Verifying-key bytes",
+      "maxProofBytes": "Maximum proof bytes",
+      "activation": "Activation height",
+      "withdrawal": "Withdrawal height",
+      "noritoArchive": "Canonical Norito record"
+    },
+    "errors": {
+      "proofs": "The proof registry snapshot could not be loaded from this Torii node.",
+      "proofDetail": "The selected proof record could not be loaded.",
+      "verifyingKeys": "The verifying-key registry snapshot could not be loaded from this Torii node.",
+      "verifyingKeyDetail": "The selected verifying-key record could not be loaded."
     }
   },
   "accounts": {
@@ -941,6 +1059,115 @@
     "accountAddressQrCaption": "I105 QR payload",
     "accountAddressQrError": "Unable to render QR for this I105 address.",
     "accountAddressQrAlt": "QR code containing the I105 address",
+    "copyI105Address": "Copy I105 address",
+    "views": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "permissions": "Effective permissions",
+      "multisig": "Multisig"
+    },
+    "resource": {
+      "loading": "Loading account",
+      "notFound": "Account not found",
+      "loadError": "Account could not be loaded",
+      "retry": "Retry account"
+    },
+    "activity": {
+      "title": "Account activity",
+      "visibility": "Visibility is limited to routes readable by this unsigned Explorer request. Activity in private dataspaces can be omitted by Torii. Every row keeps its server-provided source and direction.",
+      "loading": "Loading account activity…",
+      "denied": "Torii denied access to this account history.",
+      "retry": "Retry",
+      "notFound": "No indexed history is available for this account.",
+      "loadError": "Account history could not be loaded.",
+      "singleSource": "Source: {source} (single route)",
+      "indexedHeight": "Indexed height:",
+      "indexedBlockHash": "Indexed block hash: {hash}",
+      "indexedBlockMissing": "not provided",
+      "multipleSource": "Source: {source} (multiple Nexus routes)",
+      "mergedRoutes": "Torii merged this page across multiple readable routes; no single index checkpoint applies.",
+      "assetFilter": "Asset ID, definition ID, or active alias",
+      "assetFilterAria": "Exact asset selector",
+      "noMatches": "No account activity matches this view.",
+      "columns": {
+        "activity": "Activity",
+        "sourceDirection": "Source / direction",
+        "entities": "Entities",
+        "valueStatus": "Value / status"
+      },
+      "amount": "Amount: {amount}",
+      "timestampMissing": "Timestamp not provided"
+    },
+    "permissions": {
+      "title": "Effective permissions",
+      "description": "Torii returns the effective set: direct grants and permissions inherited from assigned roles are combined. The endpoint does not provide per-entry provenance, so this view does not label a grant as direct or role-inherited.",
+      "visibility": "This is an unsigned, caller-visible read. Dataspace-scoped grants outside this route's visibility can be omitted.",
+      "loading": "Loading effective permissions…",
+      "denied": "Torii denied access to this account's effective permissions.",
+      "retry": "Retry",
+      "notFound": "No effective-permission record exists for this account.",
+      "loadError": "Effective permissions could not be loaded.",
+      "empty": "This account has no effective permissions visible to this request.",
+      "permission": "Permission",
+      "exactPayload": "Exact payload"
+    },
+    "multisigWorkspace": {
+      "title": "Iroha Connect · read-only access",
+      "signedReadDescription": "Torii requires an account-signed canonical request for multisig reads. Explorer asks the wallet only for {signRaw} under {domainTag}. This workspace has no proposal, approval, rejection, cancellation, fee, private-key, or submission controls.",
+      "networkDescription": "Connect-backed reads require the deployment to pin the node's exact genesis-derived NetworkId in {configFile}. Explorer never derives network identity from a node URL or chain label.",
+      "sessionId": "Session ID",
+      "openWallet": "Open wallet",
+      "authenticate": "Authenticate and load",
+      "sessionError": "The Connect session could not be created.",
+      "proposalError": "The proposal query failed.",
+      "loadError": "The multisig workspace could not be loaded.",
+      "sessionUnavailable": "The Torii Connect session endpoint is unavailable.",
+      "accountMismatch": "Torii returned different resolved account IDs for the multisig spec and proposals.",
+      "walletAppName": "Iroha Explorer · read-only multisig",
+      "creatingSession": "Creating session…",
+      "createSession": "Create Connect session",
+      "workspaceTitle": "Multisig specification and proposals",
+      "idle": "Create a Connect session, open it in the wallet, then authenticate to read this workspace.",
+      "waiting": "Waiting for wallet approval…",
+      "loading": "Requesting signed read-only data…",
+      "denied": "Torii denied this authenticated multisig read.",
+      "retryAuthentication": "Retry authentication",
+      "notFound": "This account has no readable active multisig specification.",
+      "walletRejected": "The wallet declined this read-only session.",
+      "sessionClosed": "The Connect session closed before the read completed.",
+      "loadErrorWithReason": "The multisig workspace could not be loaded.",
+      "resolvedAccount": "Resolved multisig account",
+      "authenticatedReader": "Authenticated reader",
+      "notProvided": "Not provided",
+      "quorumWeight": "Quorum weight",
+      "transactionTtl": "Transaction TTL",
+      "signatories": "Required signatories (server-provided, unverified)",
+      "signatoriesDescription": "These account/weight entries are copied from Torii's active spec. Explorer does not independently verify the spec and does not infer which subset is required for any proposal.",
+      "signatoryRole": "Role: Signatory",
+      "signatoryWeight": "Weight: {weight}",
+      "status": "Status",
+      "statuses": {
+        "all": "All statuses",
+        "collectingSignatures": "Collecting signatures",
+        "finalized": "Finalized",
+        "canceled": "Canceled",
+        "expired": "Expired"
+      },
+      "firstPage": "First page",
+      "nextPage": "Next page",
+      "cursor": "Current opaque cursor: {cursor}",
+      "empty": "No proposals match this authenticated query.",
+      "instructionsHash": "Instructions hash",
+      "proposedAt": "Proposed at",
+      "expiresAt": "Expires at",
+      "terminalAt": "Terminal at",
+      "notTerminal": "not terminal",
+      "approvals": "Approvals",
+      "noApprovals": "No approvals recorded.",
+      "decodedInstructions": "Decoded instructions",
+      "instructionNumber": "Instruction #{index}",
+      "canonicalJson": "Canonical proposal JSON"
+    },
     "accountAssets": "Account assets",
     "accountNFTs": "Account NFTs",
     "accountDomains": "Account domains",
@@ -977,6 +1204,34 @@
     "frozen": "Frozen",
     "frozenYes": "Yes",
     "frozenNo": "No",
+    "definitionFields": {
+      "name": "Name",
+      "description": "Description",
+      "alias": "Alias",
+      "aliasStatus": "Alias status",
+      "aliasLeaseExpiry": "Alias lease expiry",
+      "aliasGraceUntil": "Alias grace until",
+      "aliasBoundAt": "Alias bound at",
+      "balanceScopePolicy": "Balance scope policy",
+      "confidentialPolicy": "Confidential policy",
+      "logo": "Logo",
+      "numericSpec": "Numeric specification",
+      "totalQuantity": "Total quantity"
+    },
+    "resource": {
+      "loadingDefinition": "Loading asset definition",
+      "definitionNotFound": "Asset definition not found",
+      "definitionLoadError": "Asset definition could not be loaded",
+      "retryDefinition": "Retry asset definition",
+      "loadingNft": "Loading NFT",
+      "nftNotFound": "NFT not found",
+      "nftLoadError": "NFT could not be loaded",
+      "retryNft": "Retry NFT",
+      "loadingRwaProvenance": "Loading RWA provenance",
+      "rwaNotFound": "RWA not found",
+      "rwaProvenanceLoadError": "RWA provenance could not be loaded",
+      "retryRwaProvenance": "Retry RWA provenance"
+    },
     "filters": {
       "domainLabel": "Domain filter",
       "domainPlaceholder": "wonderland",
@@ -993,26 +1248,18 @@
     "assetLabel": "Asset definition",
     "assetPlaceholder": "usd#issuer.main",
     "assetInvalid": "Enter a valid asset definition ID or alias",
-    "maxHoldersLabel": "Max holders to scan",
-    "maxTransfersLabel": "Max transfers to scan",
-    "maxIssuanceLabel": "Max issuance to scan",
     "fetchError": "Unable to fetch econometrics data",
     "loading": "Loading...",
-    "loadingHolders": "Fetching holders {0}/{1}",
-    "loadingTransfers": "Scanning transfers {0}, matched {1}",
-    "loadingIssuance": "Scanning issuance: mints {0} (matched {1}), burns {2} (matched {3})",
     "empty": "Enter an asset definition id and click Compute.",
     "snapshotTitle": "Snapshot",
-    "activityTitle": "Activity (Transfer sample)",
+    "activityTitle": "Activity",
     "topHoldersTitle": "Top holders",
+    "topHoldersCoverage": "Top {0} of {1} holders",
     "velocityTitle": "Velocity (windows)",
-    "velocityNote": "Velocity metrics are computed server-side when available; otherwise the UI scans Transfer instructions (subject to scan limits). Coverage is per-window; sampled means the scan limit was reached before the window start. Turnover/velocity uses circulating supply when Torii provides it (governance voting asset); otherwise it falls back to definition total supply, then scanned holder supply.",
+    "velocityNote": "Torii computes velocity from the authoritative transaction history. Turnover uses the current asset-definition supply.",
     "issuanceTitle": "Supply dynamics (Mint/Burn)",
     "issuanceCaption": "Net issuance by day (last {0} days)",
-    "issuanceNote": "Issuance metrics are computed server-side when available; otherwise the UI scans Mint/Burn instructions (subject to scan limits). Coverage is per-window; sampled means the scan limit was reached before the window start. Net issuance depends on amount extraction from instruction payloads.",
-    "churnTitle": "Holder churn",
-    "churnEmpty": "No previous snapshot available yet. Compute again later to estimate churn.",
-    "churnNote": "Churn is computed from local, browser-stored snapshots and reflects the holder list sample used for the snapshot.",
+    "issuanceNote": "Torii computes mint, burn, and net issuance from the authoritative transaction history.",
     "assetDefinition": "Asset definition",
     "holders": "Holders",
     "totalSupplyDefinition": "Total supply (definition)",
@@ -1061,14 +1308,7 @@
     "minted": "Minted",
     "burned": "Burned",
     "netIssuance": "Net issuance",
-    "previousSnapshot": "Previous snapshot",
-    "snapshotDelta": "Snapshot delta",
-    "retained": "Retained",
-    "entered": "Entered",
-    "exited": "Exited",
-    "retentionPrev": "Retention (prev)",
-    "retentionCurrent": "Retention (current)",
-    "activityNote": "Activity metrics are computed from a recent sample of Transfer instructions and may be incomplete if payloads omit amounts or object ids."
+    "activityNote": "Torii computes activity metrics from committed, visible transactions in the current fixed windows."
   },
   "blocks": {
     "age": "Age",
@@ -1085,7 +1325,9 @@
     "rejectedTransactions": "Rejected transactions",
     "merkleRootHash": "Transaction's Merkle Root Hash",
     "thisBlockIsEmpty": "This block is empty",
+    "bodyUnavailable": "Transaction body data is unavailable for this committed block hash.",
     "blockNotAvailableYet": "This block is not available yet in explorer",
+    "loading": "Loading block",
     "unknownError": "Unknown error occurred"
   },
   "domains": {
@@ -1100,6 +1342,12 @@
     "domainDoesntHaveAnyNFTs": "Domain doesn't have any NFTs",
     "domainAccounts": "Domain Accounts",
     "domainDoesntHaveAnyAccounts": "Domain doesn't have any accounts",
+    "resource": {
+      "loading": "Loading domain",
+      "notFound": "Domain not found",
+      "loadError": "Domain could not be loaded",
+      "retry": "Retry domain"
+    },
     "domainTransactions": "Domain Transactions",
     "domainDoesntHaveAnyTransactions": "Domain doesn't have any transactions"
   },
@@ -1120,6 +1368,28 @@
     "averageBlockTime": "Average block time",
     "averageBlockCommitTime": "Average block commit time",
     "lastBlock": "Last block",
+    "healthSampledAt": "Health sampled at",
+    "firstSeenAt": "First seen at",
+    "lastSeenAt": "Last seen at",
+    "observedAt": "Observed at",
+    "details": "Details",
+    "queueCapacity": "Queue capacity",
+    "statusRtt": "Status RTT",
+    "statusRttAverage": "Average status RTT",
+    "statusRttP95": "P95 status RTT",
+    "propagationTime": "Propagation time",
+    "peers": "Peers",
+    "domains": "Domains",
+    "accounts": "Accounts",
+    "assets": "Assets",
+    "acceptedTransactions": "Accepted transactions",
+    "rejectedTransactions": "Rejected transactions",
+    "operatorBoundary": {
+      "title": "Operator diagnostics",
+      "protected": "Protected by Torii operator authentication",
+      "description": "Consensus status, Sumeragi diagnostics, and node internals are intentionally excluded from the public explorer. They require a signed request bound to an immutable OperatorSigningContext.",
+      "publicDescription": "This page uses the public Explorer health snapshot, the exact `/v1/telemetry/peers-info` snapshot, and the `/v1/telemetry/live` SSE stream. Propagation history is available only inside the initial and live SSE payloads; there is no separate propagation snapshot route and no anonymous fallback for operator endpoints."
+    },
     "publicKey": "Public key",
     "connectedPeers": "Connected peers",
     "publicUrl": "Public URL",
@@ -1283,13 +1553,11 @@
     "queueMedian": "Median queue usage",
     "pingFromCommit": "Ping (status RTT)",
     "estimatedPropagation": "Observed propagation",
-    "ethstatsDerivedFromCommit": "RTT comes from peer /status round-trip sampling; propagation uses first/last per-block peer observations (with fallback estimates when unavailable).",
     "noNodeTelemetry": "No node telemetry available yet",
     "dataTrustSource": "Source",
     "dataTrustSampleAge": "Sample age",
     "dataSourceLiveSse": "Live SSE",
     "dataSourceSnapshot": "Snapshot",
-    "dataSourceFallbackPeers": "Fallback /peers",
     "dataSourceMixed": "Mixed",
     "dataSourceUnavailable": "Unavailable",
     "dataFreshnessScale": "Fresh <= {0}s · Delayed <= {1}s",
@@ -1297,7 +1565,6 @@
     "dataDelayed": "delayed",
     "dataStale": "stale",
     "dataUnknown": "unknown",
-    "peerFallbackNotice": "Detailed peer telemetry is incomplete. Showing online nodes from /peers fallback where needed.",
     "noFilteredNodes": "No nodes match this filter",
     "pinNode": "Pin",
     "unpinNode": "Unpin",
@@ -1316,7 +1583,6 @@
     "noEvents": "No events captured yet",
     "eventSnapshotPeersInfo": "Snapshot peers info",
     "eventSnapshotPropagation": "Snapshot propagation",
-    "eventFallbackPeers": "Fallback /peers",
     "eventSseFirst": "SSE bootstrap",
     "eventSsePeerInfo": "SSE peer info",
     "eventSsePeerStatus": "SSE peer status",
@@ -1328,6 +1594,53 @@
     "nav": "VPN",
     "title": "VPN stats",
     "overviewTitle": "VPN overview",
+    "profile": {
+      "title": "Public VPN profile",
+      "description": "Torii publishes the current relay and lease profile without credentials. Quote, session, and receipt operations still require canonical account signing.",
+      "unavailable": "The VPN control plane is not currently available.",
+      "loadError": "The public VPN profile could not be loaded.",
+      "fields": {
+        "availability": "Availability",
+        "relayEndpoint": "Relay endpoint",
+        "exitClasses": "Exit classes",
+        "leaseDuration": "Lease duration",
+        "billing": "Billing profile",
+        "operatorAccount": "Operator account",
+        "tlsServerName": "TLS server name",
+        "directorySnapshot": "Directory snapshot",
+        "defaultExitClass": "Default exit class",
+        "dnsPushInterval": "DNS push interval",
+        "meterFamily": "Meter family",
+        "routePushes": "Pushed routes",
+        "excludedRoutes": "Excluded routes",
+        "dnsServers": "DNS servers",
+        "tunnelAddresses": "Tunnel addresses",
+        "mtuBytes": "MTU",
+        "leaseFee": "Lease fee",
+        "settlementGrace": "Settlement grace",
+        "flowLabelBits": "Flow-label bits",
+        "paddingBudget": "Padding budget",
+        "relayId": "Relay identity",
+        "relayMldsa65PublicKey": "Relay ML-DSA-65 public key",
+        "descriptorCommit": "Descriptor commitment",
+        "tlsSpkiDigest": "TLS SPKI SHA-256",
+        "relayCertificateDigest": "Relay certificate SHA-256"
+      }
+    },
+    "accessBoundary": {
+      "eyebrow": "Diagnostic route boundary",
+      "title": "Diagnostic telemetry stays outside the Explorer",
+      "metricsDescription": "Torii classifies {metrics} as an unauthenticated Diagnostic route, not a typed VPN API. Its availability may still be limited by Torii's global API-token/CIDR policy; the Explorer never requests or proxies it.",
+      "browserDescription": "The Explorer does not request, scrape, or proxy that diagnostic stream and never embeds credentials. Torii access policy and operator credentials stay outside the browser bundle.",
+      "contractTitle": "Current contract",
+      "endpointLabel": "Endpoint",
+      "toriiAdmissionLabel": "Torii classification",
+      "toriiAdmissionValue": "Unauthenticated Diagnostic route",
+      "deploymentPolicyLabel": "Torii access policy",
+      "deploymentPolicyValue": "May require Torii API token or admitted CIDR",
+      "explorerBehaviorLabel": "Explorer behavior",
+      "explorerBehaviorValue": "No Prometheus request, scrape, or proxy"
+    },
     "breakdownTitle": "Traffic breakdown",
     "countriesTitle": "Countries",
     "trafficClassesTitle": "Traffic classes",
@@ -1397,7 +1710,33 @@
     "importHint": "Import a previously exported trace bundle (JSON) to continue analysis.",
     "bundleExported": "Trace bundle exported.",
     "bundleImported": "Trace bundle imported.",
-    "importError": "Failed to import trace bundle."
+    "importError": "Failed to import trace bundle.",
+    "inflow": "Inflow",
+    "outflow": "Outflow",
+    "noInflows": "No inflows yet",
+    "noOutflows": "No outflows yet",
+    "noTransactionsMatch": "No transactions match current filter.",
+    "loadingRejections": "Loading rejection details…",
+    "rejectionUnavailable": "Unavailable",
+    "rejectionDetailsUnavailable": "Some rejection details are unavailable.",
+    "transactionCount": "Transactions: {count}",
+    "authorities": "Authorities: {authorities}",
+    "noRejectedTransactions": "No rejected transactions in current trace.",
+    "expandNode": "Expand",
+    "expandedNode": "Expanded",
+    "collapseNode": "Collapse",
+    "flowCount": "{count} interactions",
+    "transactionActivity": "{instructions} instructions · {events} events",
+    "eventPosition": "Block {block} · instruction {index}",
+    "riskSignals": {
+      "highFanOut": "High fan-out",
+      "highFanIn": "High fan-in",
+      "hubActivity": "Hub activity",
+      "highActivity": "High activity",
+      "rapidHops": "Rapid hops",
+      "manualRiskyLabel": "Manually marked risky",
+      "unknown": "Unknown signal ({flag})"
+    }
   },
   "studio": {
     "nav": "Kotodama Studio",
@@ -1489,13 +1828,894 @@
     "compileMode": "Compile mode",
     "codeHash": "Code hash",
     "abiHash": "ABI hash",
-    "compilerFingerprint": "Compiler fingerprint"
+    "compilerFingerprint": "Compiler fingerprint",
+    "deploymentUnavailable": "Deployment is unavailable in this Explorer build because the exact linked Iroha JavaScript SDK does not provide an approved browser signing and submission API. No signing key is accepted or transmitted.",
+    "compileDisabled": "Compilation is disabled until an operator configures a trusted canonical Rust compiler service URL.",
+    "compileFixErrors": "Fix the graph errors before compiling.",
+    "compileRunning": "Compiling graph-generated Kotodama source with the canonical Rust service.",
+    "compileProblems": "The canonical Rust compiler found problems. Select a diagnostic to jump to the graph node.",
+    "compileSucceeded": "Contract bundle compiled by the canonical Rust service.",
+    "compilePrompt": "Compile the graph-generated source to refresh the canonical artifact hashes.",
+    "templates": {
+      "stablecoin": {
+        "label": "Stablecoin",
+        "description": "Collateral checks, minting, and returned quotes."
+      },
+      "thresholdEscrow": {
+        "label": "Escrow",
+        "description": "State machine with shared guards and releases."
+      },
+      "assetOps": {
+        "label": "Asset Ops",
+        "description": "Mint, transfer, and burn from one entrypoint."
+      },
+      "subscription": {
+        "label": "Subscription",
+        "description": "Scheduled billing and durable state."
+      },
+      "irohaSwapReduced": {
+        "label": "IrohaSwap Lite",
+        "description": "Pool maps, guards, branches, and swaps."
+      }
+    },
+    "notifications": {
+      "compilerNotConfigured": "Kotodama compiler service URL is not configured. Configure a trusted canonical Rust compiler service before compiling.",
+      "compilerProblems": "The canonical Rust compiler found problems.",
+      "compileFailed": "Unable to compile the graph-generated source.",
+      "importSucceeded": "Studio graph imported.",
+      "importInvalidJson": "The selected studio file is not valid JSON."
+    },
+    "instructionPresentation": {
+      "card": {
+        "request": "Instruction request",
+        "proposedInstructions": "Proposed instructions",
+        "encodedInstruction": "Encoded instruction",
+        "rawJson": "Raw instruction JSON"
+      },
+      "kinds": {
+        "multisig": "Multisig"
+      },
+      "titles": {
+        "Register_Peer": "Peer registration",
+        "Register_Domain": "Domain registration",
+        "Register_Account": "Account registration",
+        "Register_AssetDefinition": "Asset definition registration",
+        "Register_Nft": "NFT registration",
+        "Register_Role": "Role registration",
+        "Register_Trigger": "Trigger registration",
+        "Unregister_Peer": "Peer removal",
+        "Unregister_Domain": "Domain removal",
+        "Unregister_Account": "Account removal",
+        "Unregister_AssetDefinition": "Asset definition removal",
+        "Unregister_Nft": "NFT removal",
+        "Unregister_Role": "Role removal",
+        "Unregister_Trigger": "Trigger removal",
+        "Mint_Asset": "Asset mint",
+        "Mint_TriggerRepetitions": "Trigger repetition mint",
+        "Burn_Asset": "Asset burn",
+        "Burn_TriggerRepetitions": "Trigger repetition burn",
+        "Transfer_Domain": "Domain transfer",
+        "Transfer_AssetDefinition": "Asset definition transfer",
+        "Transfer_Asset": "Asset transfer",
+        "Transfer_Nft": "NFT transfer",
+        "Transfer_AssetBatch": "Asset batch transfer",
+        "SetKeyValue_Domain": "Domain metadata update",
+        "SetKeyValue_Account": "Account metadata update",
+        "SetKeyValue_AssetDefinition": "Asset definition metadata update",
+        "SetKeyValue_Nft": "NFT metadata update",
+        "SetKeyValue_Trigger": "Trigger metadata update",
+        "SetKeyValue_Asset": "Asset metadata update",
+        "RemoveKeyValue_Domain": "Domain metadata removal",
+        "RemoveKeyValue_Account": "Account metadata removal",
+        "RemoveKeyValue_AssetDefinition": "Asset definition metadata removal",
+        "RemoveKeyValue_Nft": "NFT metadata removal",
+        "RemoveKeyValue_Trigger": "Trigger metadata removal",
+        "RemoveKeyValue_Asset": "Asset metadata removal",
+        "Grant_PermissionToAccount": "Account permission grant",
+        "Grant_RoleToAccount": "Account role grant",
+        "Grant_PermissionToRole": "Role permission grant",
+        "Revoke_PermissionFromAccount": "Account permission revocation",
+        "Revoke_RoleFromAccount": "Account role revocation",
+        "Revoke_PermissionFromRole": "Role permission revocation",
+        "ExecuteTrigger_ExecuteTrigger": "Trigger execution",
+        "SetParameter_SetParameter": "Runtime parameter update",
+        "Upgrade_ProposeRuntimeUpgrade": "Runtime upgrade proposal",
+        "Upgrade_ActivateRuntimeUpgrade": "Runtime upgrade activation",
+        "Upgrade_CancelRuntimeUpgrade": "Runtime upgrade cancellation",
+        "Upgrade_Upgrade": "Runtime upgrade",
+        "Log_Log": "Log entry",
+        "Shield_Shield": "Shield operation",
+        "ZkTransfer_ZkTransfer": "Private transfer",
+        "Unshield_Unshield": "Unshield operation",
+        "KagemushaTopUp_KagemushaTopUp": "Kagemusha top-up",
+        "KagemushaRedeem_KagemushaRedeem": "Kagemusha redemption",
+        "Custom_Register": "Multisig registration",
+        "Custom_Propose": "Multisig proposal",
+        "Custom_Approve": "Multisig approval",
+        "Custom_Cancel": "Multisig cancellation",
+        "Custom_InvalidateOutstanding": "Invalidate multisig proposals"
+      },
+      "fields": {
+        "peer": "Peer",
+        "domain": "Domain",
+        "account": "Account",
+        "assetDefinition": "Asset definition",
+        "nft": "NFT",
+        "role": "Role",
+        "trigger": "Trigger",
+        "asset": "Asset",
+        "amount": "Amount",
+        "repetitions": "Repetitions",
+        "destination": "Destination",
+        "source": "Source",
+        "entries": "Entries",
+        "mode": "Settlement mode",
+        "indexedAsset": "Asset {index}",
+        "indexedAmount": "Amount {index}",
+        "indexedSource": "Source {index}",
+        "indexedDestination": "Destination {index}",
+        "indexedLeg": "Leg ID {index}",
+        "key": "Key",
+        "value": "Value",
+        "permission": "Permission",
+        "registrationAccount": "Registration account",
+        "quorum": "Quorum",
+        "defaultTtlMs": "Default TTL (ms)",
+        "signatories": "Signatories",
+        "homeDomain": "Home domain",
+        "indexedSignatory": "Signatory {index} (weight {weight})",
+        "multisigAccount": "Multisig account",
+        "proposedInstructions": "Proposed instructions",
+        "proposalTtlMs": "Proposal TTL (ms)",
+        "instructionsHash": "Instructions hash",
+        "arguments": "Arguments",
+        "parameter": "Parameter",
+        "manifestBytes": "Manifest bytes",
+        "upgradeId": "Upgrade ID",
+        "level": "Level",
+        "message": "Message",
+        "sourceAccount": "Source account",
+        "noteCommitment": "Note commitment",
+        "inputNullifiers": "Input nullifiers",
+        "outputCommitments": "Output commitments",
+        "destinationAccount": "Destination account",
+        "publicAmount": "Public amount",
+        "changeCommitments": "Change commitments",
+        "atomicAmount": "Atomic amount",
+        "assetScale": "Asset scale",
+        "operationId": "Operation ID",
+        "recipient": "Recipient"
+      }
+    },
+    "graph": {
+      "paletteTitle": "Typed palette",
+      "paletteHint": "Add real contract constructs to the graph.",
+      "canvasTitle": "Contract graph",
+      "blockingCount": "{count} blocking",
+      "ready": "Graph ready",
+      "nodeTitle": "Node title",
+      "nodeDetail": "Node detail",
+      "typedPorts": "Typed ports",
+      "parameters": "Parameters",
+      "add": "Add",
+      "remove": "Remove",
+      "parameterName": "Parameter name",
+      "parameterType": "Parameter type",
+      "outgoingFlow": "Outgoing flow",
+      "edgeLabel": "Edge label",
+      "removeNode": "Remove node",
+      "untitledNode": "Untitled",
+      "validationTitle": "Graph",
+      "summary": "{entrypoints} entrypoints, {states} state fields, {triggers} triggers.",
+      "groups": {
+        "declarations": "Declarations",
+        "logic": "Logic",
+        "values": "Values",
+        "irohaEffects": "Iroha Effects"
+      },
+      "palette": {
+        "state": "State",
+        "mapState": "State map",
+        "helper": "Helper function",
+        "entrypoint": "Public entrypoint",
+        "trigger": "Trigger",
+        "guard": "Guard/assert",
+        "branch": "If/else branch",
+        "loop": "While loop",
+        "formula": "Formula",
+        "assignState": "Set state",
+        "mapWrite": "Set map value",
+        "return": "Return",
+        "effect": "Iroha effect",
+        "note": "Note"
+      },
+      "severity": {
+        "error": "Error",
+        "warning": "Warning"
+      },
+      "badges": {
+        "permission": "permission {permission}",
+        "call": "call {entrypoint}",
+        "value": "value",
+        "void": "void"
+      },
+      "edgeLabels": {
+        "then": "Then",
+        "else": "Else",
+        "next": "Next",
+        "body": "Body"
+      },
+      "ports": {
+        "flowIn": "Flow in",
+        "argument": "Argument {index}"
+      },
+      "portDirections": {
+        "input": "Input",
+        "output": "Output"
+      },
+      "diagnosticLocation": {
+        "lineColumn": "Line {line}, column {column}",
+        "line": "Line {line}"
+      },
+      "fields": {
+        "contractTitle": "Contract title",
+        "stateName": "State name",
+        "type": "Type",
+        "mapName": "Map name",
+        "keyType": "Key type",
+        "valueType": "Value type",
+        "functionName": "Function name",
+        "parameters": "Parameters",
+        "returnType": "Return type",
+        "entrypointName": "Entrypoint name",
+        "permission": "Permission",
+        "triggerId": "Trigger ID",
+        "entrypoint": "Entrypoint",
+        "mode": "Mode",
+        "scheduleStartMs": "Schedule start (ms)",
+        "schedulePeriodMs": "Schedule period (ms)",
+        "condition": "Condition",
+        "failureMessage": "Failure message",
+        "loopWhile": "Loop while",
+        "localName": "Local name",
+        "outputType": "Output type",
+        "expression": "Expression",
+        "formulaLeft": "Formula left operand",
+        "formulaOperator": "Formula operator",
+        "formulaRight": "Formula right operand",
+        "value": "Value",
+        "key": "Key",
+        "effect": "Effect",
+        "arguments": "Arguments",
+        "fromAccount": "From account",
+        "toAccount": "To account",
+        "account": "Account",
+        "assetDefinition": "Asset definition",
+        "amount": "Amount",
+        "detailKey": "Detail key",
+        "detailValue": "Detail value",
+        "queryPayload": "Query payload",
+        "instructionPayload": "Instruction payload",
+        "functionArguments": "Function arguments",
+        "customStatement": "Custom statement",
+        "returnValue": "Return value",
+        "note": "Note"
+      },
+      "options": {
+        "preCommit": "Pre-commit",
+        "manual": "Manual",
+        "schedule": "Schedule",
+        "inferFromExpression": "Infer from expression",
+        "customExpression": "Custom expression",
+        "callFunction": "Call function",
+        "customStatement": "Custom statement"
+      },
+      "diagnostics": {
+        "contractMissingTitle": "Contract title must be a valid identifier.",
+        "duplicateFunction": "Function or entrypoint \"{name}\" is defined more than once.",
+        "duplicateState": "State \"{name}\" is defined more than once.",
+        "invalidEdge": "Link \"{id}\" points to a missing graph node.",
+        "invalidFlowPort": "Link \"{id}\" has an invalid or duplicate \"{label}\" flow port.",
+        "invalidTypedConnection": "Link \"{id}\" violates the typed flow-port rules.",
+        "functionMissingName": "Function nodes need a valid name.",
+        "stateMissingName": "State nodes need a valid name.",
+        "triggerInvalidEntrypoint": "Trigger must target an existing public entrypoint.",
+        "triggerInvalidPeriod": "Scheduled triggers need a positive period in milliseconds.",
+        "conditionMissing": "Logic nodes need a condition.",
+        "conditionTypeMismatch": "Condition must be bool, but the graph infers {actual}.",
+        "formulaMissingName": "Formula nodes need a local variable name.",
+        "formulaMissingExpression": "Formula nodes need an expression.",
+        "formulaTypeMismatch": "Formula is declared as {expected}, but the expression looks like {actual}.",
+        "stateTargetMissing": "Set-state nodes must target an existing scalar state.",
+        "stateValueTypeMismatch": "State \"{name}\" expects {expected}, but this value looks like {actual}.",
+        "mapTargetMissing": "Map-write nodes must target an existing map state.",
+        "mapKeyTypeMismatch": "Map \"{name}\" keys expect {expected}, but this key looks like {actual}.",
+        "mapValueTypeMismatch": "Map \"{name}\" values expect {expected}, but this value looks like {actual}.",
+        "effectMissingArgs": "{effect} needs arguments.",
+        "effectMissingStatement": "Custom effects need a statement.",
+        "effectArgCountMismatch": "{effect} expects {count} typed arguments.",
+        "effectArgTypeMismatch": "{effect} argument {index} expects {expected}, but this value looks like {actual}.",
+        "returnVoidValue": "This function does not declare a return type, so the return node must be empty.",
+        "returnMissingValue": "This function returns {expected}; the return node needs a value.",
+        "returnTypeMismatch": "Return expects {expected}, but this value looks like {actual}."
+      },
+      "defaultMetadataDescription": "A deployable Kotodama contract built from a typed graph.",
+      "defaultNodes": {
+        "state": {
+          "title": "State field",
+          "detail": "Durable scalar value"
+        },
+        "map_state": {
+          "title": "State map",
+          "detail": "Durable keyed value"
+        },
+        "helper": {
+          "title": "Helper function",
+          "detail": "Reusable internal logic"
+        },
+        "entrypoint": {
+          "title": "Public entrypoint",
+          "detail": "Callable contract action"
+        },
+        "trigger": {
+          "title": "Trigger",
+          "detail": "Schedules or reacts to an entrypoint"
+        },
+        "guard": {
+          "title": "Guard",
+          "detail": "Stop when a condition fails",
+          "failureMessage": "invalid amount"
+        },
+        "branch": {
+          "title": "Branch",
+          "detail": "Route logic by condition"
+        },
+        "loop": {
+          "title": "Loop",
+          "detail": "Repeat while true"
+        },
+        "formula": {
+          "title": "Formula",
+          "detail": "Create a local value"
+        },
+        "assign_state": {
+          "title": "Set state",
+          "detail": "Write a durable scalar"
+        },
+        "map_write": {
+          "title": "Set map value",
+          "detail": "Write durable keyed state"
+        },
+        "effect": {
+          "title": "Iroha effect",
+          "detail": "Execute a chain side effect",
+          "message": "hello"
+        },
+        "return": {
+          "title": "Return",
+          "detail": "Finish with a value"
+        },
+        "note": {
+          "title": "Note",
+          "detail": "Design note",
+          "body": "Explain this step."
+        }
+      },
+      "templateDescriptions": {
+        "assetOps": "Mint, transfer, and burn one asset definition.",
+        "subscription": "Schedule a recurring subscription charge.",
+        "thresholdEscrow": "Open, fund, release, and refund a threshold escrow.",
+        "irohaSwapReduced": "Reduced XYK pool graph for pool setup and swaps.",
+        "stablecoin": "Mint stable assets when collateral ratio checks pass."
+      },
+      "templateNodes": {
+        "asset_ops": {
+          "entry_execute": {
+            "title": "execute",
+            "detail": "Public asset operation entrypoint"
+          },
+          "let_alice": {
+            "title": "Authority as alice",
+            "detail": "Cache the caller account"
+          },
+          "let_bob": {
+            "title": "Authority as bob",
+            "detail": "Demo recipient account"
+          },
+          "let_coin": {
+            "title": "Asset definition",
+            "detail": "Typed asset pointer"
+          },
+          "mint": {
+            "title": "Mint asset",
+            "detail": "Mint initial balance"
+          },
+          "transfer": {
+            "title": "Transfer asset",
+            "detail": "Move part of the balance"
+          },
+          "burn": {
+            "title": "Burn asset",
+            "detail": "Remove a portion from supply"
+          }
+        },
+        "subscription": {
+          "state_renewals": {
+            "title": "renewals",
+            "detail": "Number of renewal attempts"
+          },
+          "entry_bill": {
+            "title": "bill",
+            "detail": "Charge the customer and update state"
+          },
+          "charge": {
+            "title": "Charge customer",
+            "detail": "Transfer billing asset"
+          },
+          "renew": {
+            "title": "Record renewal",
+            "detail": "Update renewal counter"
+          },
+          "trigger_monthly": {
+            "title": "Monthly trigger",
+            "detail": "Runs the billing entrypoint"
+          }
+        },
+        "threshold_escrow": {
+          "state_payer": {
+            "title": "payer_account",
+            "detail": "Escrow payer"
+          },
+          "state_recipient": {
+            "title": "recipient_account",
+            "detail": "Escrow recipient"
+          },
+          "state_escrow_account": {
+            "title": "escrow_account_id",
+            "detail": "Escrow account"
+          },
+          "state_asset": {
+            "title": "escrow_asset_definition",
+            "detail": "Escrow asset"
+          },
+          "state_target": {
+            "title": "target_amount_value",
+            "detail": "Funding target"
+          },
+          "state_funded": {
+            "title": "funded_amount_value",
+            "detail": "Funded amount"
+          },
+          "state_open": {
+            "title": "is_open",
+            "detail": "Open flag"
+          },
+          "state_released": {
+            "title": "is_released",
+            "detail": "Released flag"
+          },
+          "state_refunded": {
+            "title": "is_refunded",
+            "detail": "Refunded flag"
+          },
+          "helper_open": {
+            "title": "assert_open",
+            "detail": "Shared open-state guard"
+          },
+          "guard_open": {
+            "title": "Escrow is open",
+            "detail": "Require open escrow",
+            "failureMessage": "escrow is not open"
+          },
+          "guard_not_released": {
+            "title": "Not released",
+            "detail": "Prevent double release",
+            "failureMessage": "escrow already released"
+          },
+          "guard_not_refunded": {
+            "title": "Not refunded",
+            "detail": "Prevent double refund",
+            "failureMessage": "escrow already refunded"
+          },
+          "helper_payer": {
+            "title": "assert_payer",
+            "detail": "Caller must be payer"
+          },
+          "guard_payer": {
+            "title": "Only payer",
+            "detail": "Authority matches payer",
+            "failureMessage": "only payer may call this entrypoint"
+          },
+          "entry_open": {
+            "title": "open_escrow",
+            "detail": "Initialize escrow terms"
+          },
+          "guard_target": {
+            "title": "Target positive",
+            "detail": "Require a positive funding target",
+            "failureMessage": "target_amount must be positive"
+          },
+          "set_payer": {
+            "title": "Set payer",
+            "detail": "Store payer authority"
+          },
+          "set_recipient": {
+            "title": "Set recipient",
+            "detail": "Store recipient"
+          },
+          "set_escrow_account": {
+            "title": "Set escrow account",
+            "detail": "Store escrow account"
+          },
+          "set_asset": {
+            "title": "Set asset",
+            "detail": "Store asset definition"
+          },
+          "set_target": {
+            "title": "Set target",
+            "detail": "Store target amount"
+          },
+          "set_funded_zero": {
+            "title": "Clear funded",
+            "detail": "Reset funding"
+          },
+          "set_open": {
+            "title": "Mark open",
+            "detail": "Open the escrow"
+          },
+          "set_released_false": {
+            "title": "Clear released",
+            "detail": "Reset release flag"
+          },
+          "set_refunded_false": {
+            "title": "Clear refunded",
+            "detail": "Reset refund flag"
+          },
+          "entry_deposit": {
+            "title": "deposit",
+            "detail": "Fund escrow"
+          },
+          "call_open": {
+            "title": "Assert open",
+            "detail": "Use shared guard"
+          },
+          "call_payer": {
+            "title": "Assert payer",
+            "detail": "Use payer guard"
+          },
+          "guard_amount": {
+            "title": "Positive deposit",
+            "detail": "Require positive amount",
+            "failureMessage": "amount must be positive"
+          },
+          "next_funded": {
+            "title": "Next funded",
+            "detail": "Compute post-deposit amount"
+          },
+          "guard_target_max": {
+            "title": "Within target",
+            "detail": "Avoid overfunding",
+            "failureMessage": "deposit exceeds target_amount"
+          },
+          "deposit_transfer": {
+            "title": "Transfer deposit",
+            "detail": "Move funds into escrow"
+          },
+          "set_funded_next": {
+            "title": "Update funded",
+            "detail": "Store funded total"
+          },
+          "entry_release": {
+            "title": "release_if_ready",
+            "detail": "Release when fully funded"
+          },
+          "release_open": {
+            "title": "Assert open",
+            "detail": "Use shared guard"
+          },
+          "release_ready": {
+            "title": "Fully funded",
+            "detail": "Require target funded",
+            "failureMessage": "escrow is not fully funded"
+          },
+          "release_transfer": {
+            "title": "Release funds",
+            "detail": "Move escrow to recipient"
+          },
+          "release_close": {
+            "title": "Close escrow",
+            "detail": "Mark no longer open"
+          },
+          "release_flag": {
+            "title": "Mark released",
+            "detail": "Set release flag"
+          }
+        },
+        "irohaswap_reduced": {
+          "map_asset_a": {
+            "title": "PoolAssetA",
+            "detail": "Pool asset A"
+          },
+          "map_asset_b": {
+            "title": "PoolAssetB",
+            "detail": "Pool asset B"
+          },
+          "map_account": {
+            "title": "PoolAccount",
+            "detail": "Pool account"
+          },
+          "map_reserve_a": {
+            "title": "ReserveA",
+            "detail": "Reserve A"
+          },
+          "map_reserve_b": {
+            "title": "ReserveB",
+            "detail": "Reserve B"
+          },
+          "entry_init_pool": {
+            "title": "init_pool",
+            "detail": "Create a new pool"
+          },
+          "guard_assets_different": {
+            "title": "Assets differ",
+            "detail": "Pool cannot use same asset twice",
+            "failureMessage": "identical assets"
+          },
+          "write_asset_a": {
+            "title": "Store asset A",
+            "detail": "PoolAssetA[pool]"
+          },
+          "write_asset_b": {
+            "title": "Store asset B",
+            "detail": "PoolAssetB[pool]"
+          },
+          "write_account": {
+            "title": "Store pool account",
+            "detail": "PoolAccount[pool]"
+          },
+          "write_ra": {
+            "title": "Zero reserve A",
+            "detail": "ReserveA[pool]"
+          },
+          "write_rb": {
+            "title": "Zero reserve B",
+            "detail": "ReserveB[pool]"
+          },
+          "entry_swap": {
+            "title": "swap",
+            "detail": "Swap one side of the pool"
+          },
+          "guard_amount_in": {
+            "title": "Positive input",
+            "detail": "Reject empty swaps",
+            "failureMessage": "invalid amount"
+          },
+          "let_asset_a": {
+            "title": "Load asset A",
+            "detail": "Read pool metadata"
+          },
+          "let_asset_b": {
+            "title": "Load asset B",
+            "detail": "Read pool metadata"
+          },
+          "let_pool_account": {
+            "title": "Load pool account",
+            "detail": "Read pool account"
+          },
+          "let_reserve_a": {
+            "title": "Reserve A",
+            "detail": "Read reserve A"
+          },
+          "let_reserve_b": {
+            "title": "Reserve B",
+            "detail": "Read reserve B"
+          },
+          "let_is_a": {
+            "title": "Input side",
+            "detail": "Check side"
+          },
+          "let_effective": {
+            "title": "Fee-adjusted input",
+            "detail": "0.3 percent fee"
+          },
+          "let_out": {
+            "title": "Output quote",
+            "detail": "Reduced quote expression"
+          },
+          "guard_slippage": {
+            "title": "Slippage guard",
+            "detail": "Require min output",
+            "failureMessage": "slippage"
+          },
+          "branch_side": {
+            "title": "Which side?",
+            "detail": "Update reserves by input side"
+          },
+          "write_a_in": {
+            "title": "Add reserve A",
+            "detail": "A input path"
+          },
+          "write_b_out": {
+            "title": "Remove reserve B",
+            "detail": "A input path"
+          },
+          "transfer_a_in": {
+            "title": "Transfer A in",
+            "detail": "Trader pays A"
+          },
+          "transfer_b_out": {
+            "title": "Transfer B out",
+            "detail": "Pool pays B"
+          },
+          "write_b_in": {
+            "title": "Add reserve B",
+            "detail": "B input path"
+          },
+          "write_a_out": {
+            "title": "Remove reserve A",
+            "detail": "B input path"
+          },
+          "transfer_b_in": {
+            "title": "Transfer B in",
+            "detail": "Trader pays B"
+          },
+          "transfer_a_out": {
+            "title": "Transfer A out",
+            "detail": "Pool pays A"
+          },
+          "return_out": {
+            "title": "Return output",
+            "detail": "Expose swap result"
+          }
+        },
+        "stablecoin": {
+          "entry_mintable": {
+            "title": "mintable_amount",
+            "detail": "Return collateral-limited mint amount"
+          },
+          "value": {
+            "title": "Collateral value",
+            "detail": "collateral_amount * price"
+          },
+          "max_mint": {
+            "title": "Max mint",
+            "detail": "Target-ratio limited amount"
+          },
+          "return_max": {
+            "title": "Return max mint",
+            "detail": "Expose computed amount"
+          },
+          "entry_mint_stable": {
+            "title": "mint_stable",
+            "detail": "Lock collateral and mint stable asset"
+          },
+          "move_collateral": {
+            "title": "Move collateral",
+            "detail": "Transfer collateral into vault"
+          },
+          "stable_value": {
+            "title": "Collateral value",
+            "detail": "Compute collateral value"
+          },
+          "post_ratio": {
+            "title": "Post ratio",
+            "detail": "Basis-point collateral ratio"
+          },
+          "ratio_ok": {
+            "title": "Ratio check",
+            "detail": "Require minimum collateral ratio",
+            "failureMessage": "insufficient collateral"
+          },
+          "mint_stable": {
+            "title": "Mint stable",
+            "detail": "Mint stablecoin to user"
+          }
+        }
+      }
+    },
+    "blockly": {
+      "categories": {
+        "state": "State",
+        "entrypoints": "Entrypoints",
+        "triggers": "Triggers",
+        "actions": "Actions",
+        "logic": "Logic",
+        "values": "Values"
+      },
+      "blocks": {
+        "root": {
+          "state": "state %1",
+          "entrypoints": "entrypoints %1",
+          "triggers": "triggers %1"
+        },
+        "state": "state %1 as %2 default %3",
+        "entrypoint": "%1 entrypoint %2 permission %3",
+        "steps": "steps %1",
+        "say": "say %1",
+        "transferAsset": "transfer %1 of asset %2 from %3 to %4",
+        "setDetail": "set detail %1 on %2 to %3",
+        "query": "query %1 and save as %2",
+        "if": "if %1",
+        "then": "then %1",
+        "else": "else %1",
+        "repeat": "repeat %1 times",
+        "do": "do %1",
+        "text": "text %1",
+        "number": "number %1",
+        "account": "account %1",
+        "asset": "asset %1",
+        "name": "name %1",
+        "json": "json key %1 value %2",
+        "trigger": "trigger",
+        "calls": "calls",
+        "on": "on",
+        "everyMs": "every ms",
+        "startingAt": "starting at",
+        "setState": "set state",
+        "to": "to",
+        "callEntrypoint": "call entrypoint",
+        "stateReference": "state"
+      },
+      "tooltips": {
+        "root": "The root organizer for your contract.",
+        "state": "Create a durable state field.",
+        "entrypoint": "Create a callable action.",
+        "say": "Emit a friendly message.",
+        "transferAsset": "Move an asset between accounts.",
+        "setDetail": "Write account detail data.",
+        "query": "Run an on-chain query.",
+        "if": "Choose between two paths.",
+        "repeat": "Repeat an action.",
+        "compare": "Compare two values.",
+        "text": "A text value.",
+        "number": "A number value.",
+        "boolean": "A yes or no value.",
+        "account": "An account literal.",
+        "asset": "An asset definition literal.",
+        "name": "A Name pointer literal.",
+        "json": "A small JSON object.",
+        "trigger": "Wake the contract at the right time.",
+        "setState": "Change a state value.",
+        "callEntrypoint": "Call another contract entrypoint.",
+        "stateReference": "Read a state value."
+      },
+      "options": {
+        "public": "public",
+        "start": "start",
+        "view": "view",
+        "true": "true",
+        "false": "false",
+        "preCommit": "pre-commit",
+        "manual": "manual",
+        "schedule": "schedule"
+      },
+      "empty": {
+        "noEntrypoint": "No public entrypoint yet",
+        "noState": "No state field yet"
+      },
+      "warnings": {
+        "triggerNeedsEntrypoint": "Define a public entrypoint before adding a trigger.",
+        "callNeedsEntrypoint": "Define a public entrypoint before calling one.",
+        "setNeedsState": "Define a state field before setting one.",
+        "readNeedsState": "Define a state field before reading one.",
+        "missingStateDependency": "This block depends on a missing state field."
+      },
+      "diagnostics": {
+        "duplicateState": "State `{name}` is defined more than once.",
+        "duplicateEntrypoint": "Entrypoint `{name}` is defined more than once.",
+        "duplicateTrigger": "Trigger `{id}` is registered more than once.",
+        "invalidAccount": "Account literal `{literal}` should look like `name@domain`.",
+        "invalidAsset": "Asset literal `{literal}` should look like `asset#domain`.",
+        "rawQueryPayload": "Advanced query blocks still emit raw query payloads. Review them before compile."
+      }
+    }
   },
   "settings": {
     "nodeSelector": "Node",
     "language": "Language",
     "theme": "Theme",
     "nodeLabel": "Torii base URL",
+    "nodeInvalid": "Enter an absolute HTTP(S) Torii URL without credentials, query parameters, or fragments.",
     "explorerBase": "Explorer base",
     "retryFailover": "Retry failover",
     "failoverSwitched": "Switched to a healthy node",
@@ -1512,21 +2732,46 @@
     "nodeReset": "Node reset to default",
     "presets": "Presets"
   },
-  "navigation": {
-    "menu": "Menu",
-    "groups": {
-      "explore": "Explore",
-      "analytics": "Analytics",
-      "network": "Network",
-      "build": "Build",
-      "services": "Services"
+  "ux": {
+    "overview": "Overview",
+    "explore": "Explore",
+    "analysis": "Analysis",
+    "network": "Network",
+    "develop": "Develop",
+    "navigation": "Primary navigation",
+    "close": "Close",
+    "node": "Node",
+    "searchLabel": "Search blockchain",
+    "searchPlaceholder": "Search blocks, transactions, accounts…",
+    "clearSearch": "Clear search",
+    "searchHelp": "Search help",
+    "searchSyntax": "Enter a positive block height, a complete block or transaction hash, a canonical account address, an asset definition ID or alias, a full NFT or RWA identifier, or a domain name. Identifiers are exact; partial text is not searched.",
+    "searchInvalid": "Enter a complete supported identifier. Open Search help for accepted formats.",
+    "searchFailed": "The page could not be opened. Your search has been kept; try again.",
+    "metricsUnavailable": "Network statistics are unavailable.",
+    "metricsStale": "Connection lost. Showing previously received statistics.",
+    "copyIdentifier": "Copy identifier",
+    "showIdentifier": "Show full identifier",
+    "hideIdentifier": "Hide full identifier",
+    "moreInformation": "More information",
+    "collection": {
+      "loading": "Loading records…",
+      "error": "Unable to load records from {node}.",
+      "stale": "Refresh failed. Showing previously loaded records from {node}.",
+      "empty": "No records yet.",
+      "filteredEmpty": "No records match these filters.",
+      "resetFilters": "Clear filters",
+      "retry": "Retry"
     },
-    "hints": {
-      "explore": "Browse ledger records",
-      "analytics": "Dashboards and economic measures",
-      "network": "Peers, consensus and network services",
-      "build": "Write, inspect and trace contracts",
-      "services": "Storage and compute on SORA Nexus"
+    "transaction": {
+      "requestedActions": "Requested actions",
+      "rejectedActions": "This transaction was rejected. These actions were requested and did not execute.",
+      "actionsUnavailable": "An action summary is unavailable for this instruction.",
+      "actionsEmpty": "No instruction evidence is available for this transaction.",
+      "moreActions": "More instructions are available.",
+      "allInstructions": "View all instructions",
+      "technicalDetails": "Technical details",
+      "ttl": "Time to live (ms)"
     }
   },
   "dashboards": {
@@ -1716,8 +2961,8 @@
         "caption": "Accounts registered in each domain; top {count} shown."
       },
       "definitionsByBalances": {
-        "title": "Asset definitions by balances",
-        "caption": "Balances recorded for each asset definition; one account can hold several. Top {count} shown."
+        "title": "Balance entries per asset definition",
+        "caption": "Top {count} by balance-entry count."
       },
       "mintability": {
         "title": "Mintability",
@@ -1752,5 +2997,28 @@
       "countsStale": "Last totals from the telemetry stream; it is reconnecting",
       "countsUnavailable": "The telemetry stream is unavailable"
     }
+  },
+  "navigation": {
+    "menu": "Menu",
+    "groups": {
+      "explore": "Explore",
+      "analytics": "Analytics",
+      "network": "Network",
+      "build": "Build",
+      "services": "Services"
+    },
+    "hints": {
+      "explore": "Browse ledger records",
+      "analytics": "Dashboards and economic measures",
+      "network": "Peers, consensus and network services",
+      "build": "Write, inspect and trace contracts",
+      "services": "Storage and compute on SORA Nexus"
+    }
+  },
+  "readAccess": {
+    "title": "Read access",
+    "description": "Connect a wallet to read records allowed by your account permissions.",
+    "disconnect": "Disconnect",
+    "public": "Continue publicly"
   }
 }

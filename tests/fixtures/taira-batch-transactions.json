@@ -1,0 +1,56 @@
+{
+  "_source": "Taira Torii responses captured 2026-11-08: POST /v1/explorer/transactions/query {filter: block = 12340, limit: 10} and GET /v1/explorer/transactions/9FCEEAFEC84A5589AAE0EEEEC079E5810D6A383AF068D57A2578899A7A46A195",
+  "block_12340_page": {
+    "items": [
+      {
+        "authority": "testuﾛ1PﾇヱﾅｽRuｹｳgヱﾐxHｶgRﾆﾁZﾏｷgn8XNd2ﾁｸAｾﾊtfﾊ9C23A9C5",
+        "block": 12340,
+        "created_at": "2026-11-08T01:57:10.536Z",
+        "executable": "Batch",
+        "hash": "hash:96D92E78DA43F7930263A8FE84B4FC405323A48BE53EDDE1B499EDA1B3E13EB7#43D8",
+        "status": "Committed"
+      }
+    ],
+    "next_cursor": null
+  },
+  "batch_detail": {
+    "authority": "testuﾛ1PﾂｾﾐEﾌfQkｲﾘQﾄﾕitﾀzqdfWCﾎXSgﾉﾒSBUBﾜ2gﾅYﾄ6997AC",
+    "hash": "hash:9FCEEAFEC84A5589AAE0EEEEC079E5810D6A383AF068D57A2578899A7A46A195#4C3C",
+    "block": 12418,
+    "created_at": "2026-11-08T02:04:53.632Z",
+    "executable": "Batch",
+    "status": "Committed",
+    "rejection_reason": null,
+    "executable_payload": {
+      "item_count": 1,
+      "instruction_count": 0,
+      "contract_call_count": 1
+    },
+    "metadata": {
+      "contract_batch_binding_v1": {
+        "binding": {
+          "items": [
+            {
+              "abi_hash_hex": "7531b45dd9d79aabc3a0f64ab30a053af847dfe248078cff839ab2e14e3261a7",
+              "arguments_digest_hex": "9c85ff0273562c9e8de91baca125b57c67c1374f94bfa3eecbc628e6c2dd18bb",
+              "code_hash_hex": "d017a83deffcbed641bcf8a9c2391362b41dc82f7fe7f361fdf5120999d2a85d",
+              "contract_address": "irohac1qyqqqqqqqqqqqq9mt24eltc4lprsdw0x9fpdf88us4srtcgvzmpd2",
+              "dataspace": "universal",
+              "entrypoint": "record_wallet_consent",
+              "index": 0,
+              "kind": "contract_call",
+              "payload_digest_hex": "82abdba207c25026953ead0482409845713d5252bda6c3a109a009b6e3dfb46e"
+            }
+          ],
+          "version": 1
+        },
+        "binding_digest_hex": "2806e984a11bec0c3f82770ca1cfe0a5eb6ed95e7182a4bb6f0c5854b69ce88f"
+      }
+    },
+    "nonce": null,
+    "signature": "9e80995687b9f08700901c5358ca2e303e35fb95e200a00d427b0947ded7fa03f545888241b759549eae1a65a9b044b04487b7906f0f40b44a65163c6de8590b",
+    "time_to_live": {
+      "ms": 600000
+    }
+  }
+}

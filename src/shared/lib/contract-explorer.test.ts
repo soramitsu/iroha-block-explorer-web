@@ -15,49 +15,60 @@ import {
   unwrapContractListSnapshot,
 } from './contract-explorer';
 
-const accountAlias = 'treasury@banking.retail';
+const canonicalAccountId = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
+const participantAlias = 'treasury@banking.retail';
+const contractAddress = 'irohac1qyqqqqqqqqqqqq95fes93ygegsv5enq9mqsz6x4lv4vp9gg4yxgjw';
+const contractAlias = 'router::universal';
+const problemMessages = { invalidListResponse: 'localized invalid list response' };
 
 function event(eventId: string): ContractEvent {
   return {
     event_id: eventId,
     schema_version: 1,
+    provenance: 'emitted',
+    execution_hash_hex: 'a'.repeat(64),
     output_index: 0,
     emission_index: 0,
-    emission: null,
-    provenance: 'emitted',
-    execution_hash_hex: `tx-${eventId}`,
+    emission: {},
     block_height: 12,
-    block_hash_hex: 'block-hash',
+    block_hash_hex: 'b'.repeat(64),
     result_ok: true,
-    contract_address: 'tairac1router',
+    contract_address: contractAddress,
     event_kind: 'swap',
   };
 }
 
 describe('contract explorer route state', () => {
-  it('parses URL-addressable tabs and defaults unknown values to deployments', () => {
+  it('parses only authoritative URL-addressable tabs and defaults unknown values to activity', () => {
     expect(parseContractExplorerTab('activity')).toBe('activity');
     expect(parseContractExplorerTab(['events'])).toBe('events');
-    expect(parseContractExplorerTab('unknown')).toBe('deployments');
+    expect(parseContractExplorerTab('deployments')).toBe('activity');
+    expect(parseContractExplorerTab('unknown')).toBe('activity');
   });
 
   it('maps exact activity filters and pagination to Torii parameters', () => {
-    expect(parseContractActivitySearchParams({
-      authority: accountAlias,
-      contract_address: 'tairac1router',
-      contract_alias: 'router',
-      contract_entrypoint: 'swap',
-      since_timestamp_ms: '0',
-      until_timestamp_ms: '200',
-      result_ok: 'false',
-    }, 'opaque-next', 20)).toEqual({
+    expect(
+      parseContractActivitySearchParams(
+        {
+          authority: canonicalAccountId,
+          contract_address: contractAddress,
+          contract_alias: contractAlias,
+          contract_entrypoint: 'swap',
+          since_timestamp_ms: '0',
+          until_timestamp_ms: '200',
+          result_ok: 'false',
+        },
+        'cursor-3',
+        20
+      )
+    ).toEqual({
       ok: true,
       value: {
-        cursor: 'opaque-next',
+        cursor: 'cursor-3',
         limit: 20,
-        authority: accountAlias,
-        contract_address: 'tairac1router',
-        contract_alias: 'router',
+        authority: canonicalAccountId,
+        contract_address: contractAddress,
+        contract_alias: contractAlias,
         contract_entrypoint: 'swap',
         since_timestamp_ms: 0,
         until_timestamp_ms: 200,
@@ -67,34 +78,119 @@ describe('contract explorer route state', () => {
   });
 
   it.each([
-    [{ authority: ' padded' }, 'authority'],
-    [{ result_ok: 'yes' }, 'result_ok'],
-    [{ since_timestamp_ms: '01' }, 'canonical non-negative integer'],
-    [{ since_timestamp_ms: '20', until_timestamp_ms: '10' }, 'must not be greater'],
-    [{ contract_alias: ['one', 'two'] }, 'provided once'],
-    [{ contract_address: null }, 'must be a string value'],
-  ])('rejects invalid or ambiguous activity query filters %#', (query, message) => {
+    [{ authority: ' padded' }, { code: 'nonEmpty', params: { field: 'authority' } }],
+    [
+      { authority: participantAlias },
+      {
+        code: 'canonicalAccountId',
+        params: { field: 'authority', standard: 'I105' },
+      },
+    ],
+    [
+      { result_ok: 'yes' },
+      {
+        code: 'booleanValue',
+        params: { field: 'result_ok', trueValue: 'true', falseValue: 'false' },
+      },
+    ],
+    [
+      { since_timestamp_ms: '01' },
+      {
+        code: 'canonicalInteger',
+        params: { field: 'since_timestamp_ms' },
+      },
+    ],
+    [
+      { since_timestamp_ms: '20', until_timestamp_ms: '10' },
+      {
+        code: 'timestampOrder',
+        params: { sinceField: 'since_timestamp_ms', untilField: 'until_timestamp_ms' },
+      },
+    ],
+    [
+      { contract_alias: ['one', 'two'] },
+      {
+        code: 'providedOnce',
+        params: { field: 'contract_alias' },
+      },
+    ],
+    [
+      { contract_address: null },
+      {
+        code: 'stringValue',
+        params: { field: 'contract_address' },
+      },
+    ],
+    [
+      { contract_address: `tairac${contractAddress.slice('irohac'.length)}` },
+      {
+        code: 'canonicalContractAddress',
+        params: { field: 'contract_address', standard: 'irohac Bech32m V1' },
+      },
+    ],
+    [
+      { contract_alias: 'router' },
+      {
+        code: 'canonicalContractAlias',
+        params: { field: 'contract_alias' },
+      },
+    ],
+    [
+      { contract_entrypoint: 'null' },
+      {
+        code: 'noritoStringValue',
+        params: { field: 'contract_entrypoint' },
+      },
+    ],
+  ])('returns a locale-neutral issue for invalid or ambiguous filters %#', (query, issue) => {
     const parsed = parseContractActivitySearchParams(query, null, 10);
-    expect(parsed.ok).toBe(false);
-    if (!parsed.ok) expect(parsed.error).toContain(message);
+    expect(parsed).toEqual({ ok: false, issues: [issue] });
+  });
+
+  it('retains every issue as typed data without constructing display prose', () => {
+    expect(
+      parseContractActivitySearchParams(
+        {
+          authority: participantAlias,
+          result_ok: 'yes',
+          since_timestamp_ms: '9007199254740992',
+        },
+        null,
+        10
+      )
+    ).toEqual({
+      ok: false,
+      issues: [
+        { code: 'safeIntegerRange', params: { field: 'since_timestamp_ms' } },
+        { code: 'canonicalAccountId', params: { field: 'authority', standard: 'I105' } },
+        {
+          code: 'booleanValue',
+          params: { field: 'result_ok', trueValue: 'true', falseValue: 'false' },
+        },
+      ],
+    });
   });
 
   it('maps all event-only filters and strips pagination for the live stream', () => {
-    const parsed = parseContractEventSearchParams({
+    const parsed = parseContractEventSearchParams(
+      {
         event_kind: 'swap_filled',
-      participant: accountAlias,
-      asset_id: 'usd#issuer.main',
-      provenance: 'emitted',
-      result_ok: 'true',
-    }, 'event-next', 50);
+        participant: participantAlias,
+        asset_id: 'usd#issuer.main',
+        provenance: 'emitted',
+        result_ok: 'true',
+      },
+      'cursor-2',
+      50
+    );
 
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     expect(contractEventFiltersFromSearchParams(parsed.value)).toEqual({
       authority: undefined,
       contract_address: undefined,
-        event_kind: 'swap_filled',
-      participant: accountAlias,
+      event_kind: 'swap_filled',
+      participant: participantAlias,
       asset_id: 'usd#issuer.main',
       provenance: 'emitted',
       since_timestamp_ms: undefined,
@@ -103,60 +199,127 @@ describe('contract explorer route state', () => {
     });
   });
 
-  it.each(['module', 'contract_alias'])('rejects unsupported event filter %s', (key) => {
-    const parsed = parseContractEventSearchParams({ [key]: 'router' }, null, 10);
-    expect(parsed.ok).toBe(false);
-    if (!parsed.ok) expect(parsed.error).toContain(`${key} is not a contract event filter`);
-  });
+  it.each(['null', 'NULL', 'true', '123', '1e3'])(
+    'rejects an event selector Torii would scalar-coerce before DTO decoding: %s',
+    (eventKind) => {
+      expect(parseContractEventSearchParams({ event_kind: eventKind }, null, 10)).toEqual({
+        ok: false,
+        issues: [{ code: 'noritoStringValue', params: { field: 'event_kind' } }],
+      });
+    }
+  );
 
-  it.each(['derived', 'synthetic'])('rejects event provenance %s outside the native contract', (provenance) => {
-    const parsed = parseContractEventSearchParams({ provenance }, null, 10);
-    expect(parsed.ok).toBe(false);
-    if (!parsed.ok) expect(parsed.error).toContain('provenance must be emitted');
+  it('rejects an event provenance outside the route contract', () => {
+    const parsed = parseContractEventSearchParams({ provenance: 'synthetic' }, null, 10);
+    expect(parsed).toEqual({
+      ok: false,
+      issues: [
+        {
+          code: 'provenanceValue',
+          params: { field: 'provenance', emittedValue: 'emitted', derivedValue: 'derived' },
+        },
+      ],
+    });
   });
 });
 
 describe('contract list resource states', () => {
   it('unwraps non-empty exact results and retains refresh metadata', () => {
-    expect(unwrapContractListSnapshot({
-      status: 'ready',
-      data: {
-        status: 'ok',
-        data: { items: [event('one')], total: 1, has_more: false, count_mode: 'exact' as const },
-      },
-      isRefreshing: true,
-      refreshError: { kind: 'network', message: 'refresh failed' },
-    })).toMatchObject({
+    expect(
+      unwrapContractListSnapshot(
+        {
+          status: 'ready',
+          data: {
+            status: 'ok',
+            data: { items: [event('one')], nextCursor: null },
+          },
+          isRefreshing: true,
+          refreshError: { kind: 'network', message: 'refresh failed' },
+        },
+        problemMessages
+      )
+    ).toMatchObject({
       status: 'ready',
       isRefreshing: true,
       refreshError: { kind: 'network' },
-      data: { total: 1 },
+      data: { nextCursor: null },
     });
   });
 
   it('turns successful empty lists into an explicit not-found state', () => {
-    expect(unwrapContractListSnapshot({
+    expect(
+      unwrapContractListSnapshot(
+        {
+          status: 'ready',
+          data: {
+            status: 'ok',
+            data: { items: [], nextCursor: null },
+          },
+          isRefreshing: false,
+          refreshError: null,
+        },
+        problemMessages
+      )
+    ).toEqual({ status: 'not-found' });
+  });
+
+  it('keeps an empty nonterminal page ready so its continuation remains available', () => {
+    expect(
+      unwrapContractListSnapshot(
+        {
+          status: 'ready',
+          data: {
+            status: 'ok',
+            data: { items: [], nextCursor: 'more' },
+          },
+          isRefreshing: false,
+          refreshError: null,
+        },
+        problemMessages
+      )
+    ).toMatchObject({
       status: 'ready',
-      data: {
-        status: 'ok',
-        data: { items: [], total: 0, has_more: false, count_mode: 'exact' as const },
-      },
-      isRefreshing: false,
-      refreshError: null,
-    })).toEqual({ status: 'not-found' });
+      data: { items: [], nextCursor: 'more' },
+    });
   });
 
   it('gives route validation errors precedence over network state', () => {
-    expect(unwrapContractListSnapshot({ status: 'initial-loading' }, 'bad bookmark')).toEqual({
+    expect(
+      unwrapContractListSnapshot(
+        { status: 'initial-loading' },
+        {
+          ...problemMessages,
+          validationError: 'localized invalid bookmark',
+        }
+      )
+    ).toEqual({
       status: 'error',
-      problem: { kind: 'invalid-response', message: 'bad bookmark' },
+      problem: { kind: 'invalid-response', message: 'localized invalid bookmark' },
+    });
+  });
+
+  it('requires the caller-provided localized invalid-list message', () => {
+    expect(
+      unwrapContractListSnapshot(
+        {
+          status: 'ready',
+          data: { status: 'unexpected' },
+          isRefreshing: false,
+          refreshError: null,
+        },
+        problemMessages
+      )
+    ).toEqual({
+      status: 'error',
+      problem: { kind: 'invalid-response', message: 'localized invalid list response' },
     });
   });
 });
 
 describe('contract explorer semantic links and live state', () => {
   it('only emits links for recognized account and asset selectors', () => {
-    expect(contractAccountPath(accountAlias)).toBe('/accounts/treasury%40banking.retail');
+    expect(contractAccountPath(canonicalAccountId)).toBe(`/accounts/${encodeURIComponent(canonicalAccountId)}`);
+    expect(contractAccountPath(participantAlias)).toBeNull();
     expect(contractAccountPath('not an account')).toBeNull();
     expect(contractAssetPath('usd#issuer.main')).toBe('/assets/usd%23issuer.main');
     expect(contractAssetPath('not an asset')).toBeNull();
@@ -170,11 +333,13 @@ describe('contract explorer semantic links and live state', () => {
   });
 
   it('preserves typed stream-gap evidence and marks replay unavailable', () => {
-    const state = contractStreamStaleState(new ToriiStreamGapError('events were lost', {
-      code: 'stream_lagged',
-      droppedMessages: 4,
-      replayAvailable: false,
-    }));
+    const state = contractStreamStaleState(
+      new ToriiStreamGapError('events were lost', {
+        code: 'stream_lagged',
+        droppedMessages: 4,
+        replayAvailable: false,
+      })
+    );
     expect(state).toEqual({
       status: 'stale',
       message: 'events were lost',

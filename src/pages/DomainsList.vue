@@ -3,84 +3,129 @@
     :title="$t('domains.domains')"
     class="domains-list-page"
   >
-    <BaseTable
-      v-model:cursor="cursor"
-      v-model:page-size="limit"
-      :loading="isLoading"
-      pagination-mode="cursor"
-      :cursor-pagination="domainsPagination"
-      :items="domains"
-      :row-key="domainRowKey"
-      container-class="domains-list-page__container"
+    <div
+      v-if="!pagination.ok"
+      class="domains-list-page__pagination-error content-row"
+      data-test="domains-invalid-pagination"
+      role="alert"
     >
-      <template #header>
-        <div
-          class="domains-list-page__row"
-          role="presentation"
-        >
-          <span class="h-sm cell" role="columnheader">{{ $t('name') }}</span>
-          <span class="h-sm" role="columnheader">{{ $t('domains.ownedBy') }}</span>
-          <span class="h-sm" role="columnheader">{{ $t('domains.totalAccounts') }}</span>
-          <span class="h-sm" role="columnheader">{{ $t('domains.totalAssets') }}</span>
-        </div>
-      </template>
-
-      <template #row="{ item }">
-        <div
-          class="domains-list-page__row"
-          role="presentation"
-        >
-          <div class="cell" role="cell">
-            <BaseLink :to="`/domains/${item.id}`">
-              {{ item.id }}
-            </BaseLink>
+      <span class="row-text">{{ $t('table.invalidCursorPagination') }}</span>
+      <BaseButton
+        bordered
+        @click="resetPagination"
+      >
+        {{ $t('table.resetPagination') }}
+      </BaseButton>
+    </div>
+    <BaseCollectionState
+      v-if="pagination.ok && scope"
+      v-slot="{ emptyLabel }"
+      table
+      :snapshot="scope.expose.snapshot"
+      :count="domains.length"
+      @retry="scope.expose.refetch()"
+    >
+      <BaseTable
+        v-model:cursor="cursor"
+        v-model:page-size="limit"
+        :empty-label
+        :loading="isLoading"
+        pagination-mode="cursor"
+        :cursor-pagination="domainsPagination"
+        :items="domains"
+        :row-key="domainRowKey"
+        container-class="domains-list-page__container"
+      >
+        <template #header>
+          <div
+            class="domains-list-page__row"
+            role="presentation"
+          >
+            <span
+              class="h-sm cell"
+              role="columnheader"
+            >{{ $t('name') }}</span>
+            <span
+              class="h-sm"
+              role="columnheader"
+            >{{ $t('domains.ownedBy') }}</span>
+            <span
+              class="h-sm"
+              role="columnheader"
+            >{{ $t('domains.totalAccounts') }}</span>
+            <span
+              class="h-sm"
+              role="columnheader"
+            >{{ $t('domains.totalAssets') }}</span>
           </div>
+        </template>
 
-          <div role="cell">
-            <BaseHash
-              :hash="item.owned_by.toString()"
-              :link="`/accounts/${item.owned_by}`"
-              :type="hashType"
-              copy
-            />
+        <template #row="{ item }">
+          <div
+            class="domains-list-page__row"
+            role="presentation"
+          >
+            <div
+              class="cell"
+              role="cell"
+            >
+              <BaseLink :to="`/domains/${item.id}`">
+                {{ item.id }}
+              </BaseLink>
+            </div>
+
+            <div role="cell">
+              <BaseHash
+                :hash="item.owned_by.toString()"
+                :link="`/accounts/${item.owned_by}`"
+                :type="hashType"
+                copy
+              />
+            </div>
+
+            <span
+              class="row-text-monospace"
+              role="cell"
+            >{{ item.accounts }}</span>
+            <span
+              class="row-text-monospace"
+              role="cell"
+            >{{ item.assets + item.nfts }}</span>
           </div>
+        </template>
 
-          <span class="row-text-monospace" role="cell">{{ item.accounts }}</span>
-          <span class="row-text-monospace" role="cell">{{ item.assets + item.nfts }}</span>
-        </div>
-      </template>
+        <template #mobile-card="{ item }">
+          <div class="domains-list-page__mobile-card">
+            <div class="domains-list-page__mobile-row">
+              <span class="h-sm domains-list-page__mobile-label">{{ $t('name') }}</span>
 
-      <template #mobile-card="{ item }">
-        <div class="domains-list-page__mobile-card">
-          <div class="domains-list-page__mobile-row">
-            <span class="h-sm domains-list-page__mobile-label">{{ $t('name') }}</span>
+              <BaseLink :to="`/domains/${item.id}`">
+                {{ item.id }}
+              </BaseLink>
+            </div>
 
-            <BaseLink :to="`/domains/${item.id}`">
-              {{ item.id }}
-            </BaseLink>
+            <div class="domains-list-page__mobile-row">
+              <span class="h-sm domains-list-page__mobile-label">{{ $t('domains.ownedBy') }}</span>
+              <BaseHash
+                :hash="item.owned_by.toString()"
+                :link="`/accounts/${item.owned_by}`"
+                :type="hashType"
+                copy
+              />
+            </div>
+
+            <div class="domains-list-page__mobile-row">
+              <span class="h-sm domains-list-page__mobile-label">{{ $t('domains.totalAccounts') }}</span>
+              <span class="row-text-monospace">{{ item.accounts }}</span>
+            </div>
+            <div class="domains-list-page__mobile-row">
+              <span class="h-sm domains-list-page__mobile-label">{{ $t('domains.totalAssets') }}</span>
+              <span class="row-text-monospace">{{ item.assets + item.nfts }}</span>
+            </div>
           </div>
-
-          <div class="domains-list-page__mobile-row">
-            <span class="h-sm domains-list-page__mobile-label">{{ $t('domains.ownedBy') }}</span>
-            <BaseHash
-              :hash="item.owned_by.toString()"
-              :link="`/accounts/${item.owned_by}`"
-              :type="hashType"
-              copy
-            />
-          </div>
-
-          <div class="domains-list-page__mobile-row">
-            <span class="h-sm domains-list-page__mobile-label">{{ $t('domains.totalAccounts') }}</span>
-            <span class="row-text-monospace">{{ item.accounts }}</span>
-          </div>
-          <div class="domains-list-page__mobile-row">
-            <span class="h-sm domains-list-page__mobile-label">{{ $t('domains.totalAssets') }}</span>
-            <span class="row-text-monospace">{{ item.assets + item.nfts }}</span>
-          </div>
-        </div>
-      </template>
-    </BaseTable>
+        </template>
+      </BaseTable>
+    </BaseCollectionState>
   </BaseContentBlock>
 </template>
 
@@ -88,8 +133,10 @@
 import * as http from '@/shared/api';
 import BaseLink from '@/shared/ui/components/BaseLink.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
+import BaseCollectionState from '@/shared/ui/components/BaseCollectionState.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseHash from '@/shared/ui/components/BaseHash.vue';
+import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import { computed } from 'vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
@@ -100,11 +147,14 @@ import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQue
 
 const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full', sm: 'medium', xxs: 'two-line' });
 
-const { cursor, limit } = useCursorListRouteQuery();
-const listParams = computed(() => ({ cursor: cursor.value, limit: limit.value }));
+const { cursor, limit, pagination, resetPagination } = useCursorListRouteQuery();
+const listParams = computed(() =>
+  pagination.value.ok ? { cursor: pagination.value.cursor, limit: pagination.value.limit } : null
+);
 
 const scope = useParamScope(
   () => {
+    if (listParams.value === null) return null;
     return {
       key: JSON.stringify(listParams.value),
       payload: listParams.value,
@@ -113,7 +163,7 @@ const scope = useParamScope(
   ({ payload }) => setupAsyncData(() => http.fetchDomains(payload))
 );
 
-const isLoading = computed(() => scope.value?.expose.isLoading);
+const isLoading = computed(() => Boolean(scope.value?.expose.isLoading));
 const domainsPagination = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data : null
 );

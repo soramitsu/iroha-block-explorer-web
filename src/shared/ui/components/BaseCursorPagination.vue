@@ -26,21 +26,34 @@ const selectedPageSize = computed({
     pageSize.value = next;
   },
 });
+const cursorTrail = ref<Array<string | null>>([]);
 const visitedCursors = ref(new Set<string>());
-const knownSuccessors = new Map<string, string>();
+const knownSuccessors = new Map<string | null, string>();
+let pendingCursor: string | null | undefined;
 watch(
   cursor,
   (value) => {
-    if (value === null) {
+    if (pendingCursor !== undefined && value === pendingCursor) {
+      pendingCursor = undefined;
+    } else if (value === null) {
+      cursorTrail.value = [];
       visitedCursors.value = new Set();
       knownSuccessors.clear();
+    } else if (!visitedCursors.value.has(value)) {
+      // A bookmarked cursor has no discoverable predecessor. Keep navigation
+      // honest by offering only a return to the collection start.
+      cursorTrail.value = [];
+      visitedCursors.value = new Set([value]);
+      knownSuccessors.clear();
+    }
+    if (value === null) {
       return;
     }
     visitedCursors.value.add(value);
   },
   { immediate: true }
 );
-const canReturnToStart = computed(() => cursor.value !== null);
+const canGoPrevious = computed(() => cursor.value !== null);
 const repeatsVisitedCursor = computed(() => {
   const nextCursor = props.pagination?.nextCursor;
   if (nextCursor === null || nextCursor === undefined || !visitedCursors.value.has(nextCursor)) return false;
@@ -52,15 +65,20 @@ const canGoNext = computed(
     !repeatsVisitedCursor.value
 );
 
-function goToStart() {
-  if (!canReturnToStart.value) return;
-  cursor.value = null;
+function goPrevious() {
+  if (!canGoPrevious.value) return;
+  const previousCursor = cursorTrail.value.pop() ?? null;
+  pendingCursor = previousCursor;
+  cursor.value = previousCursor;
 }
 
 function goNext() {
   const nextCursor = props.pagination?.nextCursor;
   if (!canGoNext.value || nextCursor === null || nextCursor === undefined) return;
-  if (cursor.value !== null) knownSuccessors.set(cursor.value, nextCursor);
+  knownSuccessors.set(cursor.value, nextCursor);
+  cursorTrail.value.push(cursor.value);
+  pendingCursor = nextCursor;
+  visitedCursors.value.add(nextCursor);
   cursor.value = nextCursor;
 }
 </script>
@@ -68,7 +86,7 @@ function goNext() {
 <template>
   <nav
     class="base-cursor-pagination"
-    aria-label="Cursor pagination"
+    :aria-label="$t('accessibility.cursorPagination')"
   >
     <div class="base-cursor-pagination__summary">
       <span data-testid="cursor-page-summary">{{ t('table.cursorPage', [props.items]) }}</span>
@@ -89,18 +107,18 @@ function goNext() {
     <div class="base-cursor-pagination__arrows">
       <button
         type="button"
-        data-testid="cursor-first"
-        aria-label="First cursor page"
-        :aria-disabled="!canReturnToStart"
-        :disabled="!canReturnToStart"
-        @click="goToStart"
+        data-testid="cursor-previous"
+      :aria-label="$t('accessibility.previousCursorPage')"
+        :aria-disabled="!canGoPrevious"
+        :disabled="!canGoPrevious"
+        @click="goPrevious"
       >
         <ArrowIcon aria-hidden="true" />
       </button>
       <button
         type="button"
         data-testid="cursor-next"
-        aria-label="Next cursor page"
+      :aria-label="$t('accessibility.nextCursorPage')"
         :aria-disabled="!canGoNext"
         :disabled="!canGoNext"
         @click="goNext"
@@ -156,7 +174,7 @@ function goNext() {
       border-radius: 999px;
       cursor: pointer;
 
-      &[data-testid='cursor-first'] svg {
+      &[data-testid='cursor-previous'] svg {
         transform: rotateY(180deg);
       }
 

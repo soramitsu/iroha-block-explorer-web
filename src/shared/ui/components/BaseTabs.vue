@@ -5,7 +5,7 @@
       type="button"
       class="base-tabs__arrow"
       data-testid="prev"
-      aria-label="Previous tabs"
+      :aria-label="$t('accessibility.previousTabs')"
       @click="handleArrowPrevClick"
     >
       <ArrowIcon aria-hidden="true" />
@@ -14,7 +14,7 @@
     <div
       class="base-tabs__list"
       role="tablist"
-      aria-label="View options"
+      :aria-label="$t('accessibility.tabOptions')"
     >
       <button
         v-for="(item, index) in adaptiveOptions"
@@ -37,7 +37,7 @@
       type="button"
       class="base-tabs__arrow"
       data-testid="next"
-      aria-label="Next tabs"
+      :aria-label="$t('accessibility.nextTabs')"
       @click="handleArrowNextClick"
     >
       <ArrowIcon aria-hidden="true" />
@@ -138,7 +138,9 @@ watch(
 @use '@/shared/ui/styles/main' as *;
 
 .base-tabs {
-  display: grid;
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
   grid-gap: size(0.5);
   grid-auto-flow: column;
   width: fit-content;
@@ -147,10 +149,12 @@ watch(
   border-radius: size(2);
   background: theme-color('background');
 
-  @include shadow-input;
+  border: 1px solid theme-color('border-secondary');
 
   &__list {
-    display: grid;
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
     grid-auto-flow: column;
     grid-gap: size(0.5);
     align-items: center;
@@ -159,12 +163,13 @@ watch(
   &__arrow {
     padding: 0;
     border: 0;
-    border-radius: 50%;
+    border-radius: 8px;
+    flex: 0 0 44px;
     font: inherit;
-    color: theme-color('content-on-surface-variant');
-    background: theme-color('content-quaternary');
-    width: size(2);
-    height: size(2);
+    color: theme-color('primary');
+    background: theme-color('primary-background');
+    width: 44px;
+    height: 44px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -178,7 +183,7 @@ watch(
     }
 
     svg {
-      fill: theme-color('content-on-surface-variant');
+      fill: theme-color('primary');
       width: size(2);
       height: size(2);
     }
@@ -186,14 +191,17 @@ watch(
 
   &__tab {
     border: 0;
+    min-height: 44px;
+    min-width: 44px;
+    flex: 0 0 auto;
     padding: size(0.5) size(1);
-    border-radius: size(1.5);
+    border-radius: 8px;
     font: inherit;
     background: transparent;
     @include tpg-s4;
     cursor: pointer;
     user-select: none;
-    transition: all 300ms ease-in-out;
+    transition: background-color 120ms, color 120ms;
     color: theme-color('content-quaternary');
 
     &:hover {
@@ -201,11 +209,11 @@ watch(
     }
 
     &--active {
-      background: theme-color('content-quaternary');
-      color: theme-color('content-on-surface-variant');
+      background: theme-color('primary-background');
+      color: theme-color('primary');
 
       &:hover {
-        background: theme-color('content-quaternary');
+        background: theme-color('primary-background');
       }
     }
   }

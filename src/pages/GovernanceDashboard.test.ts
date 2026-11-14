@@ -1,70 +1,45 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { ref, nextTick } from 'vue';
-import type * as VueUseCore from '@vueuse/core';
 import GovernanceDashboard from './GovernanceDashboard.vue';
 import { i18n } from '@/shared/lib/localization';
 
-const refetchFn = vi.fn();
-const useIntervalResume = vi.fn();
-const useIntervalPause = vi.fn();
-
-vi.mock('@/shared/ui/composables/useGovernanceMetrics', () => ({
-  useGovernanceMetrics: () => ({
-    council: ref({ epoch: 1, members: [] }),
-    unlockStats: ref(null),
-    isCouncilLoading: ref(false),
-    isUnlocksLoading: ref(false),
-  }),
-}));
-
-vi.mock('@/shared/ui/composables/useGovernanceEvents', () => ({
-  useGovernanceEvents: () => ({ data: ref(null), status: ref('OPEN') }),
-}));
-
-vi.mock('@vue-kakuyaku/core', () => ({
-  useParamScope: () =>
-    ref({
-      expose: {
-        refetch: refetchFn,
-        isLoading: false,
-        data: null,
-      },
-    }),
-}));
-
-vi.mock('@vueuse/core', async () => {
-  const actual = await vi.importActual<typeof VueUseCore>('@vueuse/core');
-  return {
-    ...actual,
-    useIntervalFn: () => ({
-      pause: useIntervalPause,
-      resume: useIntervalResume,
-    }),
-  };
-});
+const BaseContentBlockStub = {
+  props: ['title'],
+  template: '<section><h1>{{ title }}</h1><slot /></section>',
+};
 
 describe('GovernanceDashboard', () => {
-  beforeEach(() => {
-    refetchFn.mockClear();
-    useIntervalResume.mockClear();
-    useIntervalPause.mockClear();
-  });
-
-  it('auto-refetches governance data when a referendum is active and starts interval', async () => {
+  it('presents governance as a canonical-request-authenticated surface', () => {
     const wrapper = mount(GovernanceDashboard, {
       global: {
         plugins: [i18n],
-        stubs: ['BaseContentBlock', 'BaseLoading', 'BaseHash', 'BaseLink', 'BaseButton', 'BaseTable'],
+        stubs: { BaseContentBlock: BaseContentBlockStub },
       },
     });
 
-    // set a referendum id to activate refresh
-    (wrapper.vm as any).referendumQuery.id = '42';
-    await nextTick();
+    const boundary = wrapper.get('[data-test="governance-auth-boundary"]').text();
+    expect(boundary).toContain('/v1/gov/*');
+    expect(boundary).toContain('/v1/gov/capabilities');
+    expect(boundary).toContain('network readiness');
+    expect(boundary).toContain('not a caller-grant list');
+    expect(boundary).toContain('X-Iroha-Account');
+    expect(boundary).toContain('X-Iroha-Signature');
+    expect(boundary).toContain('X-Iroha-Timestamp-Ms');
+    expect(boundary).toContain('X-Iroha-Nonce');
+    expect(boundary).toContain('X-Iroha-Witness');
+    expect(wrapper.get('[data-test="governance-signature-auth"]').text()).toContain('must be sent together');
+    expect(wrapper.get('[data-test="governance-witness-auth"]').text()).toContain('must not be combined');
+  });
 
-    expect(refetchFn).toHaveBeenCalled();
-    expect(useIntervalResume).toHaveBeenCalled();
-    expect(useIntervalPause).toHaveBeenCalled();
+  it('documents the current authenticated contract without an unsigned fallback', () => {
+    const wrapper = mount(GovernanceDashboard, {
+      global: {
+        plugins: [i18n],
+        stubs: { BaseContentBlock: BaseContentBlockStub },
+      },
+    });
+
+    expect(wrapper.get('[data-test="governance-auth-boundary"]').text()).toContain('does not retry them anonymously');
+    expect(wrapper.get('[data-test="governance-current-contract"]').text()).toContain('does not authorize the caller');
   });
 });

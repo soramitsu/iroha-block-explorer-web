@@ -48,12 +48,13 @@ const BaseTableStub = defineComponent({
   name: 'BaseTableStub',
   props: {
     items: { type: Array, default: () => [] },
-    cursor: { type: String, default: null },
+    page: { type: Number, default: 0 },
     pageSize: { type: Number, default: 10 },
+    total: { type: Number, default: 0 },
     loading: { type: Boolean, default: false },
     containerClass: { type: String, default: '' },
   },
-  emits: ['update:cursor', 'update:pageSize', 'click:row'],
+  emits: ['update:page', 'update:pageSize', 'click:row'],
   template: `
     <div data-test="base-table">
       <slot name="header" />
@@ -141,7 +142,13 @@ describe('Transactions data smoke', () => {
     fetchTransactionsMock.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 37, snapshot_hash: 'ab'.repeat(32), next_cursor: null, has_more: false },
+        pagination: {
+          limit: 10,
+          snapshot_height: 37,
+          snapshot_hash: 'c'.repeat(64),
+          next_cursor: null,
+          has_more: false,
+        },
         items: [
           {
             authority: liveStyleAuthority,
@@ -179,5 +186,5 @@ describe('Transactions data smoke', () => {
     expect(row.text()).toContain(liveStyleAuthority);
     expect(row.text()).toContain('37');
     expect(row.text()).toContain('Instructions');
-  }, 20000);
+  });
 });

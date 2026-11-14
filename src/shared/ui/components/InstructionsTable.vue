@@ -67,7 +67,8 @@ function getInstructionPresentation(item: Instruction): InstructionPresentation 
 }
 
 function getInstructionKindLabel(item: Instruction): string {
-  return getInstructionPresentation(item)?.kindLabel ?? item.kind;
+  const label = getInstructionPresentation(item)?.kindLabel;
+  return label ? t(label.key, label.params ?? {}) : item.kind;
 }
 
 function getInstructionPrimaryEntity(item: Instruction): InstructionPresentationField | null {
@@ -580,7 +581,7 @@ watch(
                   class="instructions-table__raw-disclosure"
                   data-test="instruction-row-raw-json"
                 >
-                  <summary>Raw instruction JSON</summary>
+                  <summary>{{ $t('studio.instructionPresentation.card.rawJson') }}</summary>
                   <BaseJson
                     class="instructions-table__value-json"
                     :value="instructionPayloadView(item)"
@@ -711,7 +712,7 @@ watch(
 
         <div class="instructions-detail__json">
           <div class="instructions-table__label">
-            Raw instruction JSON
+            {{ $t('studio.instructionPresentation.card.rawJson') }}
           </div>
           <BaseJson
             class="instructions-detail__json-tree"

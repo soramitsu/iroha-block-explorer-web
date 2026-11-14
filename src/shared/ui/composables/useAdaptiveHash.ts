@@ -1,4 +1,4 @@
-import { useWindowSize } from '@vueuse/core';
+import { useElementSize } from '@vueuse/core';
 import { computed } from 'vue';
 import {
   LG_WINDOW_SIZE,
@@ -24,7 +24,8 @@ export function useAdaptiveHash(
   defaultDisplay?: HashType
 ) {
   const defaultHashType = defaultDisplay ?? 'short';
-  const { width } = useWindowSize();
+  const workspace = computed(() => document.getElementById('main-content'));
+  const { width } = useElementSize(workspace);
 
   return computed(() => {
     if (width.value >= XXL_WINDOW_SIZE) return sizes.xxl ?? defaultHashType;

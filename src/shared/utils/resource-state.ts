@@ -1,19 +1,19 @@
 import { NOT_FOUND, SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 
 export type ApiProblem =
-  | { kind: 'http', status: number, message: string }
-  | { kind: 'network' | 'timeout' | 'invalid-response', message: string };
+  | { kind: 'http'; status: number; message: string }
+  | { kind: 'network' | 'timeout' | 'invalid-response'; message: string };
 
 export type ResourceSnapshot<T> =
   | { status: 'idle' }
   | { status: 'initial-loading' }
-  | { status: 'ready', data: T, isRefreshing: boolean, refreshError: ApiProblem | null }
+  | { status: 'ready'; data: T; isRefreshing: boolean; refreshError: ApiProblem | null }
   | { status: 'not-found' }
-  | { status: 'error', problem: ApiProblem };
+  | { status: 'error'; problem: ApiProblem };
 
 interface ResultRecord {
-  status: string
-  error?: unknown
+  status: string;
+  error?: unknown;
 }
 
 function isResultRecord(value: unknown): value is ResultRecord {
@@ -22,7 +22,7 @@ function isResultRecord(value: unknown): value is ResultRecord {
 
 export function apiProblemFromError(error: unknown): ApiProblem {
   if (isResultRecord(error) && error.status === UNKNOWN_ERROR) {
-    return apiProblemFromError(error.error ?? new Error('Invalid response'));
+    return apiProblemFromError(error.error ?? new Error());
   }
 
   if (error && typeof error === 'object') {
@@ -51,7 +51,7 @@ export function resourceResultStatus(value: unknown): 'ready' | 'not-found' | 'e
 
 export function resourceResultProblem(value: unknown): ApiProblem {
   if (isResultRecord(value) && value.status === UNKNOWN_ERROR) {
-    return apiProblemFromError(value.error ?? new Error('Invalid response'));
+    return apiProblemFromError(value.error ?? new Error());
   }
   return apiProblemFromError(value);
 }

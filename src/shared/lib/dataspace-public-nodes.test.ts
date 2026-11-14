@@ -6,7 +6,7 @@ import {
 } from './dataspace-public-nodes';
 
 const scope = {
-  registryNode: 'https://registry.example:8080/v1/explorer',
+  registryNode: 'https://registry.example:8080',
   laneId: 7,
   dataspaceId: 42,
 } as const;
@@ -21,7 +21,7 @@ describe('dataspace public-node storage', () => {
   it('normalizes urls and dedupes entries by normalized url', () => {
     upsertDataspacePublicNode(scope, {
       label: 'Node A',
-      url: 'https://public-node.example:8080/v1/explorer',
+      url: 'https://public-node.example:8080',
     });
     upsertDataspacePublicNode(scope, {
       label: 'Node A Updated',
@@ -75,7 +75,7 @@ describe('dataspace public-node storage', () => {
   it('removes entries by normalized url', () => {
     upsertDataspacePublicNode(scope, {
       label: 'To remove',
-      url: 'https://public-node.example:8080/v1/explorer',
+      url: 'https://public-node.example:8080',
     });
 
     expect(listDataspacePublicNodes(scope)).toHaveLength(1);
@@ -83,16 +83,29 @@ describe('dataspace public-node storage', () => {
     expect(listDataspacePublicNodes(scope)).toHaveLength(0);
   });
 
-  it('provides test-environment defaults for known custom dataspaces', () => {
-    const seeded = listDataspacePublicNodes({
+  it('does not seed deployment-specific nodes for a fresh scope', () => {
+    const entries = listDataspacePublicNodes({
       registryNode: 'https://torii.soramitsu.io',
       laneId: 0,
       dataspaceId: 10,
     });
 
-    expect(seeded.map((item) => item.url)).toEqual([
-      'https://torii-sbp.soramitsu.io',
-      'https://torii-aed.soramitsu.io',
-    ]);
+    expect(entries).toEqual([]);
+  });
+
+  it.each([
+    'registry.example',
+    'ftp://registry.example',
+    'https://user:secret@registry.example',
+    'https://registry.example/v1/explorer',
+  ])('rejects an inexact registry node scope: %s', (registryNode) => {
+    expect(() => listDataspacePublicNodes({ registryNode, laneId: 0, dataspaceId: 10 })).toThrow(
+      'Dataspace registry node must be an exact absolute Torii base URL'
+    );
+  });
+
+  it('does not persist an invalid public node URL', () => {
+    expect(upsertDataspacePublicNode(scope, { label: 'Invalid', url: 'relative-node' })).toEqual([]);
+    expect(listDataspacePublicNodes(scope)).toEqual([]);
   });
 });

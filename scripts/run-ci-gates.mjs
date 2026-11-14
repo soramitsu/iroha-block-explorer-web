@@ -6,7 +6,9 @@ import {
   mkdir,
   mkdtemp,
   realpath,
+  rename,
   rm,
+  rmdir,
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -322,6 +324,91 @@ function returnOrThrowCiGateResult(actionResult, actionError, cleanupError) {
   return actionResult;
 }
 
+function isMissingPathError(error) {
+  return error !== null
+    && typeof error === 'object'
+    && error.code === 'ENOENT';
+}
+
+/**
+ * Keep an existing dependency tree byte-for-byte while pnpm links the isolated
+ * CI install into the repository. The backup is a sibling on the same
+ * filesystem, so both moves are atomic and do not depend on the temporary
+ * store's mount.
+ */
+export async function withPreservedNodeModules(
+  action,
+  {
+    chmodFn = chmod,
+    lstatFn = lstat,
+    mkdtempFn = mkdtemp,
+    removeFn = rm,
+    renameFn = rename,
+    repositoryRoot = CI_REPOSITORY_ROOT,
+    rmdirFn = rmdir,
+  } = {}
+) {
+  assertCanonicalDirectory(repositoryRoot, 'CI repository root');
+  const nodeModulesPath = path.join(repositoryRoot, 'node_modules');
+  const backupPrefix = path.join(
+    repositoryRoot,
+    '.iroha-explorer-ci-node-modules-'
+  );
+  const backupRoot = await mkdtempFn(backupPrefix);
+  if (
+    path.dirname(backupRoot) !== repositoryRoot
+    || !path.basename(backupRoot).startsWith('.iroha-explorer-ci-node-modules-')
+  ) {
+    throw new Error(`mkdtemp returned an unexpected node_modules backup root: ${backupRoot}`);
+  }
+  const backupNodeModulesPath = path.join(backupRoot, 'node_modules');
+
+  let originalMoved = false;
+  let setupError = null;
+  try {
+    await chmodFn(backupRoot, 0o700);
+    try {
+      await lstatFn(nodeModulesPath);
+      await renameFn(nodeModulesPath, backupNodeModulesPath);
+      originalMoved = true;
+    } catch (error) {
+      if (!isMissingPathError(error)) throw error;
+    }
+  } catch (error) {
+    setupError = error;
+  }
+  if (setupError) {
+    let setupCleanupError = null;
+    try {
+      await rmdirFn(backupRoot);
+    } catch (error) {
+      setupCleanupError = error;
+    }
+    return returnOrThrowCiGateResult(undefined, setupError, setupCleanupError);
+  }
+
+  let actionResult;
+  let actionError = null;
+  try {
+    actionResult = await action();
+  } catch (error) {
+    actionError = error;
+  }
+
+  let restoreError = null;
+  try {
+    await removeFn(nodeModulesPath, { force: true, recursive: true });
+    if (originalMoved) {
+      await renameFn(backupNodeModulesPath, nodeModulesPath);
+    }
+    await rmdirFn(backupRoot);
+  } catch (error) {
+    restoreError = error;
+  }
+
+  return returnOrThrowCiGateResult(actionResult, actionError, restoreError);
+}
+
 export async function withIsolatedCiStore(
   action,
   {
@@ -386,9 +473,11 @@ async function main() {
     console.log('CI GATE: live Mochi not requested; set RUN_LIVE_MOCHI_E2E=1 to enable it');
   }
   await withIsolatedCiStore(async ({ environment, isolatedRoot, storeDir }) => {
-    executeCiGates(buildCiGates({ runLiveMochi, storeDir }), spawnSync, {
-      environment,
-      isolatedRoot,
+    await withPreservedNodeModules(() => {
+      executeCiGates(buildCiGates({ runLiveMochi, storeDir }), spawnSync, {
+        environment,
+        isolatedRoot,
+      });
     });
   });
 }

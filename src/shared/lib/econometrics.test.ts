@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 import BigNumber from 'bignumber.js';
 import {
   concentrationTopN,
-  computeSetChurn,
-  decodeCommittedAssetActivity,
   giniCoefficient,
   herfindahlIndex,
   lorenzCurvePoints,
@@ -16,11 +14,6 @@ import {
   normalizedEntropy,
   effectiveNumberFromEntropy,
 } from './econometrics';
-
-const SAMPLE_I105 =
-  'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-const SAMPLE_ASSET_DEFINITION_ID = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
-const SAMPLE_ASSET_ID = `${SAMPLE_ASSET_DEFINITION_ID}#${SAMPLE_I105}`;
 
 describe('econometrics', () => {
   it('computes gini coefficient', () => {
@@ -115,75 +108,4 @@ describe('econometrics', () => {
     expect(concentrated[4]!.share).toBeCloseTo(1, 10);
   });
 
-  it('computes set churn', () => {
-    const churn = computeSetChurn(['a', 'b', 'c'], ['b', 'c', 'd', 'd']);
-    expect(churn.previous).toBe(3);
-    expect(churn.current).toBe(3);
-    expect(churn.retained).toBe(2);
-    expect(churn.entered).toBe(1);
-    expect(churn.exited).toBe(1);
-    expect(churn.retentionPrev).toBeCloseTo(2 / 3, 10);
-    expect(churn.retentionCurrent).toBeCloseTo(2 / 3, 10);
-  });
-
-  it('decodes the exact native committed Transfer Asset shape', () => {
-    const activity = decodeCommittedAssetActivity('Transfer', {
-      variant: 'Asset', value: { source: SAMPLE_ASSET_ID, object: '12.5', destination: SAMPLE_I105 },
-    }, 'Committed');
-    expect(activity?.definitionId).toBe(SAMPLE_ASSET_DEFINITION_ID);
-    expect(activity?.amount.toString()).toBe('12.5');
-    expect(activity?.source).toBe(SAMPLE_I105);
-    expect(activity?.destination).toBe(SAMPLE_I105);
-  });
-
-  it.each(['Mint', 'Burn'] as const)('decodes the exact native %s Asset destination and quantity', (kind) => {
-    const activity = decodeCommittedAssetActivity(kind, {
-      variant: 'Asset', value: { object: '0.25', destination: SAMPLE_ASSET_ID },
-    }, 'Committed');
-    expect(activity?.definitionId).toBe(SAMPLE_ASSET_DEFINITION_ID);
-    expect(activity?.amount.toString()).toBe('0.25');
-    expect(activity?.source).toBeNull();
-  });
-
-  it('excludes rejected transactions and unrelated valid instruction variants', () => {
-    expect(decodeCommittedAssetActivity('Transfer', {
-      variant: 'Asset', value: { source: SAMPLE_ASSET_ID, object: '10', destination: SAMPLE_I105 },
-    }, 'Rejected')).toBeNull();
-    expect(decodeCommittedAssetActivity('Transfer', { variant: 'Domain', value: {} }, 'Committed')).toBeNull();
-    expect(decodeCommittedAssetActivity('Mint', { variant: 'TriggerRepetitions', value: {} }, 'Committed')).toBeNull();
-  });
-
-  it.each([null, 42, {}, ` ${SAMPLE_ASSET_ID}`, `${SAMPLE_ASSET_ID} `])(
-    'rejects an invalid or non-exact asset holding identifier %#',
-    (holding) => {
-      expect(() => decodeCommittedAssetActivity('Transfer', {
-        variant: 'Asset', value: { source: holding, object: '1', destination: SAMPLE_I105 },
-      }, 'Committed')).toThrow('Invalid native asset holding identifier');
-      expect(() => decodeCommittedAssetActivity('Mint', {
-        variant: 'Asset', value: { object: '1', destination: holding },
-      }, 'Committed')).toThrow('Invalid native asset holding identifier');
-    }
-  );
-
-  it.each([
-    { object: SAMPLE_ASSET_ID, value: '10' },
-    { variant: 'Asset', value: { object: SAMPLE_ASSET_ID, source: SAMPLE_I105, destination: SAMPLE_I105 } },
-    { variant: 'Asset', value: { source: SAMPLE_ASSET_ID, amount: '10', destination: SAMPLE_I105 } },
-    { variant: 'Asset', value: { source: SAMPLE_ASSET_ID, object: 10, destination: SAMPLE_I105 } },
-    { variant: 'Asset', value: { source: SAMPLE_ASSET_ID, object: '1.00', destination: SAMPLE_I105 } },
-    { variant: 'Asset', value: { source: SAMPLE_ASSET_ID, object: '-1', destination: SAMPLE_I105 } },
-    { variant: 'Asset', value: { source: 'usd#issuer.main', object: '1', destination: SAMPLE_I105 } },
-    { variant: 'Asset', value: { source: SAMPLE_ASSET_ID, object: '1', destination: 'treasury@banking.main' } },
-  ])('rejects obsolete or noncanonical asset activity %#', (payload) => {
-    expect(() => decodeCommittedAssetActivity('Transfer', payload, 'Committed')).toThrow();
-  });
-
-  it.each(['Atomic', 'Independent'])('does not infer settled %s batch amounts from transaction commitment', (mode) => {
-    expect(() => decodeCommittedAssetActivity('Transfer', {
-      variant: 'AssetBatch', value: { mode, entries: [{
-        leg_id: 'leg-1', from: SAMPLE_I105, to: SAMPLE_I105,
-        asset_definition: SAMPLE_ASSET_DEFINITION_ID, amount: '100',
-      }] },
-    }, 'Committed')).toThrow('individual settlement results are missing');
-  });
 });

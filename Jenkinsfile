@@ -3,7 +3,7 @@
 def pipeline = new org.js.AppPipeline(
     packageManager:     'pnpm',
     buildCmds:          [
-        'sh scripts/bootstrap-exact-toolchain.sh node scripts/run-ci-gates.mjs',
+        'PLAYWRIGHT_BROWSERS_PATH=/ms-playwright sh scripts/bootstrap-exact-toolchain.sh node scripts/run-ci-gates.mjs',
     ],
     steps:              this,
     test:               false,

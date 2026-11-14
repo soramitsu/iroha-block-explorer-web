@@ -22,7 +22,9 @@
         v-if="diagnostics.length"
         class="kotodama-graph-node__status"
       >
-        {{ diagnostics.some((diagnostic) => diagnostic.severity === 'error') ? 'Error' : 'Warning' }}
+        {{ diagnostics.some((diagnostic) => diagnostic.severity === 'error')
+          ? $t('studio.graph.severity.error')
+          : $t('studio.graph.severity.warning') }}
       </span>
     </div>
 
@@ -51,6 +53,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Handle, Position, type NodeProps } from '@vue-flow/core';
 import type { KotodamaStudioGraphDiagnostic, KotodamaStudioGraphNodeData } from '@/shared/lib/kotodama-studio-graph';
 
@@ -59,10 +62,28 @@ type GraphNodeData = KotodamaStudioGraphNodeData & {
 };
 
 const props = defineProps<NodeProps<GraphNodeData>>();
+const { t } = useI18n();
 
 const diagnostics = computed(() => props.data.diagnostics ?? []);
 
-const kindLabel = computed(() => props.data.kind.replace(/_/g, ' '));
+const kindLabelKeys: Record<KotodamaStudioGraphNodeData['kind'], string> = {
+  state: 'studio.graph.palette.state',
+  map_state: 'studio.graph.palette.mapState',
+  helper: 'studio.graph.palette.helper',
+  entrypoint: 'studio.graph.palette.entrypoint',
+  trigger: 'studio.graph.palette.trigger',
+  guard: 'studio.graph.palette.guard',
+  branch: 'studio.graph.palette.branch',
+  loop: 'studio.graph.palette.loop',
+  formula: 'studio.graph.palette.formula',
+  assign_state: 'studio.graph.palette.assignState',
+  map_write: 'studio.graph.palette.mapWrite',
+  effect: 'studio.graph.palette.effect',
+  return: 'studio.graph.palette.return',
+  note: 'studio.graph.palette.note',
+};
+
+const kindLabel = computed(() => t(kindLabelKeys[props.data.kind]));
 
 const badges = computed(() => {
   const config = props.data.config;
@@ -72,11 +93,11 @@ const badges = computed(() => {
     case 'map_state':
       return [config.name, `Map<${config.keyType ?? 'Name'}, ${config.valueType ?? 'int'}>`].filter(Boolean);
     case 'entrypoint':
-      return [config.name, config.permission ? `perm ${config.permission}` : '', config.returnType ? `-> ${config.returnType}` : ''].filter(Boolean);
+      return [config.name, config.permission ? t('studio.graph.badges.permission', { permission: config.permission }) : '', config.returnType ? `-> ${config.returnType}` : ''].filter(Boolean);
     case 'helper':
       return [config.name, config.returnType ? `-> ${config.returnType}` : ''].filter(Boolean);
     case 'trigger':
-      return [config.id, config.mode, config.entrypoint ? `call ${config.entrypoint}` : ''].filter(Boolean);
+      return [config.id, config.mode, config.entrypoint ? t('studio.graph.badges.call', { entrypoint: config.entrypoint }) : ''].filter(Boolean);
     case 'effect':
       return [config.effect].filter(Boolean);
     case 'formula':
@@ -89,7 +110,7 @@ const badges = computed(() => {
     case 'map_write':
       return [config.target].filter(Boolean);
     case 'return':
-      return [config.value ? 'value' : 'void'];
+      return [config.value ? t('studio.graph.badges.value') : t('studio.graph.badges.void')];
     case 'note':
       return [];
     default:
@@ -111,11 +132,8 @@ const badges = computed(() => {
   padding: size(1.15) size(1.25);
   border: 1px solid color-mix(in srgb, var(--graph-node-accent) 30%, rgba(42, 38, 34, 0.18));
   border-radius: size(1.25);
-  background:
-    linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(246, 239, 226, 0.96));
-  box-shadow:
-    0 16px 34px rgba(37, 33, 28, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.72) inset;
+  background: theme-color('surface');
+  box-shadow: none;
   color: #271f19;
   font-family: var(--app-font-family, 'Sora'), sans-serif;
 
@@ -179,9 +197,7 @@ const badges = computed(() => {
     height: 24px;
     border: 2px solid rgba(255, 252, 246, 0.96);
     background: var(--graph-node-accent);
-    box-shadow:
-      0 0 0 8px rgba(255, 252, 246, 0.38),
-      0 8px 16px rgba(37, 33, 28, 0.18);
+    box-shadow: none;
   }
 
   &__handle.vue-flow__handle-left {
@@ -221,10 +237,7 @@ const badges = computed(() => {
   }
 
   &--selected {
-    transform: translateY(-1px);
-    box-shadow:
-      0 20px 40px rgba(37, 33, 28, 0.14),
-      0 0 0 3px color-mix(in srgb, var(--graph-node-accent) 34%, rgba(255, 252, 246, 0.88));
+    box-shadow: none;
   }
 
   &--error {
@@ -237,12 +250,10 @@ const badges = computed(() => {
 }
 
 html.dark .kotodama-graph-node {
-  background: linear-gradient(180deg, rgba(49, 43, 38, 0.98), rgba(35, 30, 27, 0.96));
+  background: theme-color('surface');
   color: #f8ead9;
   border-color: color-mix(in srgb, var(--graph-node-accent) 40%, rgba(255, 255, 255, 0.1));
-  box-shadow:
-    0 20px 42px rgba(0, 0, 0, 0.32),
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  box-shadow: none;
 
   strong {
     color: #fff2de;

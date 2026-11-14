@@ -108,7 +108,7 @@ import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import { useI18n } from 'vue-i18n';
 import type { Account } from '@/shared/api/schemas';
-import { getPreferredAccountId } from '@/shared/lib/account-id';
+import { getDisplayedAccountId } from '@/shared/lib/account-id';
 import { normalizeAssetDefinitionSelectorLiteral } from '@/shared/lib/asset-definition-literal';
 import { parseOptionalFilterCatching } from '@/shared/lib/optional-filter';
 import { firstRouteQueryValue } from '@/shared/lib/route-query';
@@ -187,7 +187,7 @@ const accountsPagination = computed(() =>
 const accounts = computed(() =>
   scope.value.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
 );
-const accountDisplayId = (item: Account) => getPreferredAccountId(item);
+const accountDisplayId = (item: Account) => getDisplayedAccountId(item.i105_address);
 const accountLink = (item: Account) => `/accounts/${encodeURIComponent(accountDisplayId(item))}`;
 const accountRowKey = (item: Account) => accountDisplayId(item);
 </script>

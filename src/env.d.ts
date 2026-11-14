@@ -7,13 +7,12 @@ declare module '*.vue' {
 }
 
 export interface ImportMetaEnv {
-  readonly VITE_API_URL?: string
-  readonly VITE_FAKE_API_ENABLED?: 'TRUE' | 'FALSE'
-  readonly VITE_KOTODAMA_COMPILER_URL?: string
+  readonly VITE_API_URL?: string;
+  readonly VITE_KOTODAMA_COMPILER_URL?: string;
 }
 
 export interface ImportMeta {
-  readonly env: ImportMetaEnv
+  readonly env: ImportMetaEnv;
 }
 
 declare module '@soramitsu-ui/icons/*' {

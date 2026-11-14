@@ -113,15 +113,11 @@ import TimeStamp from '@/shared/ui/components/TimeStamp.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { getRuntimeConfig } from '@/shared/runtime-config';
-import { createPublicHistoryCacheKey } from '@/shared/lib/history-cache';
 import { useIntervalFn, useThrottleFn } from '@vueuse/core';
 import { Transaction as TransactionSchema } from '@/shared/api/schemas';
 import type { Transaction as TransactionDto, TransactionStatus as TransactionStatusType } from '@/shared/api/schemas';
 import {
-  buildLatestTransactionsCachePayload,
   mergeLatestTransactions,
-  parseLatestTransactionsCache,
 } from '@/widgets/latest-transactions/model';
 import { classifySampleFreshness } from '@/shared/lib/freshness';
 import { useExplorerTransactionsEvents } from '@/shared/ui/composables/useExplorerTransactionsEvents';
@@ -133,31 +129,6 @@ const listState = reactive({
 
 async function fetchTransactions(params: typeof listState) {
   return await http.fetchLatestTransactions({ ...params, status: params.status ?? undefined });
-}
-
-const cacheKey = createPublicHistoryCacheKey('latest-transactions', getRuntimeConfig().networkId, http.getToriiBaseUrl());
-
-function readTransactionsCache(status: TransactionStatusType | null): TransactionDto[] {
-  const key = cacheKey();
-  if (typeof window === 'undefined' || !key) return [];
-  try {
-    return parseLatestTransactionsCache(window.localStorage.getItem(key), {
-      status,
-      limit: listState.limit,
-    });
-  } catch {
-    return [];
-  }
-}
-
-function writeTransactionsCache(items: readonly TransactionDto[]) {
-  const key = cacheKey();
-  if (typeof window === 'undefined' || !key) return;
-  try {
-    window.localStorage.setItem(key, buildLatestTransactionsCachePayload(items));
-  } catch {
-    // ignore storage quota/privacy mode failures
-  }
 }
 
 const transactionsStream = useExplorerTransactionsEvents();
@@ -199,9 +170,8 @@ const fetchedTransactions = computed(() =>
   scope.value?.expose.data?.status === SUCCESSFUL_FETCHING ? scope.value.expose.data.data.items : []
 );
 const streamedTransactions = ref<TransactionDto[]>([]);
-const cachedTransactions = ref<TransactionDto[]>(readTransactionsCache(listState.status));
 const transactions = computed(() =>
-  mergeLatestTransactions([streamedTransactions.value, fetchedTransactions.value, cachedTransactions.value], listState.limit)
+  mergeLatestTransactions([streamedTransactions.value, fetchedTransactions.value], listState.limit)
 );
 const isInitialLoading = computed(() => isLoading.value && transactions.value.length === 0);
 const availability = http.useToriiAvailability();
@@ -227,9 +197,7 @@ const latestSampleDate = computed<Date | null>(() => {
   );
 });
 const latestSampleTone = computed(() =>
-  cachedTransactions.value.length > 0 && (availability.state.value !== 'healthy' || (!fetchedTransactions.value.length && !streamedTransactions.value.length))
-    ? 'stale'
-    : classifySampleFreshness(latestSampleDate.value?.getTime() ?? null, nowMs.value)
+  classifySampleFreshness(latestSampleDate.value?.getTime() ?? null, nowMs.value)
 );
 const latestSampleToneKeyMap = {
   fresh: 'telemetry.dataFresh',
@@ -250,9 +218,8 @@ useIntervalFn(() => {
 
 watch(
   () => listState.status,
-  (status) => {
+  () => {
     streamedTransactions.value = [];
-    cachedTransactions.value = readTransactionsCache(status);
   }
 );
 
@@ -260,12 +227,6 @@ watch(
   () => fetchedTransactions.value,
   (items) => {
     if (scope.value?.expose.data?.status !== SUCCESSFUL_FETCHING) return;
-
-    cachedTransactions.value = mergeLatestTransactions([items], listState.limit);
-
-    if (!listState.status) {
-      writeTransactionsCache(items);
-    }
 
     if (!streamedTransactions.value.length) return;
     const fetchedHashes = new Set(items.map((item) => item.hash));

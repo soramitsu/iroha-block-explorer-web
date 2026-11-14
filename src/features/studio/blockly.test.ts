@@ -10,6 +10,10 @@ import {
   summarizeStudioWorkspace,
   validateStudioWorkspace,
 } from './blockly';
+import { i18n } from '@/shared/lib/localization';
+
+const translateStudio = (key: string, params?: Readonly<Record<string, string | number>>) =>
+  i18n.global.t(key, params ?? {});
 
 function canConnect(
   workspace: Blockly.Workspace,
@@ -21,7 +25,7 @@ function canConnect(
 
 describe('studio blockly helpers', () => {
   beforeEach(() => {
-    ensureStudioBlocklyRegistered();
+    ensureStudioBlocklyRegistered(translateStudio);
   });
 
   it('loads the reward template into sections and summary', () => {
@@ -156,8 +160,12 @@ describe('studio blockly helpers', () => {
   it('keeps the actions category populated in both toolbox modes', () => {
     const basicToolbox = createStudioToolbox('basic');
     const advancedToolbox = createStudioToolbox('advanced');
-    const basicActions = basicToolbox.contents.find((item) => item.kind === 'category' && item.name === 'Actions');
-    const advancedActions = advancedToolbox.contents.find((item) => item.kind === 'category' && item.name === 'Actions');
+    const basicActions = basicToolbox.contents.find(
+      (item) => item.kind === 'category' && item.categorystyle === 'action_category'
+    );
+    const advancedActions = advancedToolbox.contents.find(
+      (item) => item.kind === 'category' && item.categorystyle === 'action_category'
+    );
 
     expect(basicActions?.contents.map((item) => item.type)).toEqual([
       'studio_action_info',

@@ -136,9 +136,7 @@ describe('Accounts data smoke', () => {
 
   const mockAccounts = [
     {
-      id: 'alice@wonderland',
-      compressed_address: 'compressed',
-      network_prefix: 42,
+      i105_address: 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE',
       metadata: {},
       owned_assets: 2,
       owned_nfts: 1,
@@ -177,7 +175,7 @@ describe('Accounts data smoke', () => {
 
     const firstRow = wrapper.find('[data-test="base-table-row"]');
     expect(firstRow.exists()).toBe(true);
-    expect(firstRow.text()).toContain('alice@wonderland');
+    expect(firstRow.text()).toContain(mockAccounts[0].i105_address);
     expect(firstRow.text()).toContain(String(mockAccounts[0].owned_domains));
     expect(firstRow.text()).toContain(String(mockAccounts[0].owned_assets + mockAccounts[0].owned_nfts));
 
@@ -207,7 +205,7 @@ describe('Accounts data smoke', () => {
     expect(errorHint.text()).toBe(i18n.global.t('accounts.filters.assetInvalid'));
 
     expect(wrapper.get('[data-test="base-hash"]').attributes('data-link')).toBe(
-      `/accounts/${encodeURIComponent('alice@wonderland')}`
+      `/accounts/${encodeURIComponent(mockAccounts[0].i105_address)}`
     );
-  }, 20000);
+  });
 });

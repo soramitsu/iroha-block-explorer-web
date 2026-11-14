@@ -1,29 +1,26 @@
 <template>
-  <BaseContentBlock
-    title="Search results"
-    class="search-results-page"
-  >
+  <BaseContentBlock :title="$t('searchResults.title')" class="search-results-page">
     <div class="search-results-page__query">
-      <span class="h-sm">Exact hash</span>
+      <span class="h-sm">{{ $t('searchResults.exactHash') }}</span>
       <code data-test="search-results-query">{{ displayedQuery }}</code>
     </div>
 
     <BaseResourceState
       :snapshot
-      loading-label="Checking blocks and transactions…"
-      error-label="The exact lookup could not be completed."
-      retry-label="Retry exact lookup"
+      :loading-label="$t('searchResults.loading')"
+      :error-label="$t('searchResults.loadError')"
+      :retry-label="$t('searchResults.retry')"
       @retry="load"
     >
       <template #not-found>
         <span data-test="search-results-not-found">
-          No block or transaction matches this exact hash.
+          {{ $t('searchResults.notFound') }}
         </span>
       </template>
 
       <template #error="{ problem }">
         <span data-test="search-results-error">
-          The exact lookup could not be completed: {{ describeProblem(problem) }}
+          {{ $t('searchResults.loadErrorWithReason', { reason: describeProblem(problem) }) }}
         </span>
       </template>
 
@@ -36,23 +33,17 @@
           >
             <h3>
               <BaseLink :to="{ name: 'blocks-details', params: { heightOrHash: data.block.value.hash } }">
-                Block
+                {{ $t('searchResults.block') }}
               </BaseLink>
             </h3>
-            <DataField
-              :title="$t('blocks.height')"
-              :value="data.block.value.height"
-            />
+            <DataField :title="$t('blocks.height')" :value="data.block.value.height" />
             <DataField
               :title="$t('blocks.blockHash')"
               :hash="data.block.value.hash"
               :link="`/blocks/${encodeURIComponent(data.block.value.hash)}`"
               copy
             />
-            <DataField
-              :title="$t('blocks.totalTransactions')"
-              :value="data.block.value.transactions_total"
-            />
+            <DataField :title="$t('blocks.totalTransactions')" :value="data.block.value.transactions_total" />
           </article>
 
           <article
@@ -62,7 +53,7 @@
           >
             <h3>
               <BaseLink :to="{ name: 'transaction-details', params: { hash: data.transaction.value.hash } }">
-                Transaction
+                {{ $t('searchResults.transaction') }}
               </BaseLink>
             </h3>
             <DataField
@@ -78,7 +69,7 @@
             />
             <DataField
               :title="$t('transactions.status')"
-              :value="data.transaction.value.status"
+              :value="formatTransactionStatus(data.transaction.value.status)"
             />
           </article>
 
@@ -98,7 +89,7 @@
               data-test="search-results-partial-retry"
               @click="load"
             >
-              Retry exact lookup
+              {{ $t('searchResults.retry') }}
             </BaseButton>
           </div>
         </div>
@@ -110,6 +101,7 @@
 <script setup lang="ts">
 import { computed, onScopeDispose, shallowRef, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import * as http from '@/shared/api';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
@@ -128,12 +120,13 @@ import { apiProblemFromError, type ApiProblem, type ResourceSnapshot } from '@/s
 defineOptions({ name: 'SearchResultsPage' });
 
 interface ProbeNotice {
-  target: 'block' | 'transaction'
-  message: string
-  problem: ApiProblem | null
+  target: 'block' | 'transaction';
+  message: string;
+  problem: ApiProblem | null;
 }
 
 const route = useRoute();
+const { t } = useI18n();
 const routeQuery = computed(() => firstRouteQueryValue(route.query.q)?.trim() ?? '');
 const displayedQuery = computed(() => {
   const classified = classifySearchQuery(routeQuery.value);
@@ -143,30 +136,40 @@ const snapshot = shallowRef<ResourceSnapshot<ExactHashSearchResult>>({ status: '
 let requestGeneration = 0;
 
 function describeProblem(problem: ApiProblem): string {
-  if (problem.kind === 'http') return `HTTP ${problem.status}`;
-  if (problem.kind === 'network') return 'the Explorer API is unreachable';
-  if (problem.kind === 'timeout') return 'the Explorer API timed out';
-  return problem.message || 'the Explorer API returned an invalid response';
+  if (problem.kind === 'http') return t('searchResults.apiHttpError', { status: problem.status });
+  if (problem.kind === 'network') return t('searchResults.apiUnreachable');
+  if (problem.kind === 'timeout') return t('searchResults.apiTimedOut');
+  if (classifySearchQuery(routeQuery.value).kind !== 'hash') return t('searchResults.invalidHash');
+  return t('searchResults.invalidResponse');
+}
+
+function formatTransactionStatus(status: string): string {
+  if (status === 'Committed') return t('transactions.committed');
+  if (status === 'Rejected') return t('transactions.rejected');
+  return status;
 }
 
 function probeNotices(result: ExactHashSearchResult): ProbeNotice[] {
   const notices: ProbeNotice[] = [];
   const candidates = [
-    { target: 'block' as const, label: 'block', probe: result.block },
-    { target: 'transaction' as const, label: 'transaction', probe: result.transaction },
+    { target: 'block' as const, label: t('searchResults.block'), probe: result.block },
+    { target: 'transaction' as const, label: t('searchResults.transaction'), probe: result.transaction },
   ];
 
   for (const candidate of candidates) {
     if (candidate.probe.kind === 'not-found') {
       notices.push({
         target: candidate.target,
-        message: `No ${candidate.label} matches this hash.`,
+        message: t('searchResults.targetNotFound', { target: candidate.label }),
         problem: null,
       });
     } else if (candidate.probe.kind === 'error') {
       notices.push({
         target: candidate.target,
-        message: `${candidate.label[0]!.toUpperCase()}${candidate.label.slice(1)} lookup failed: ${describeProblem(candidate.probe.problem)}.`,
+        message: t('searchResults.targetFailed', {
+          target: candidate.label,
+          reason: describeProblem(candidate.probe.problem),
+        }),
         problem: candidate.probe.problem,
       });
     }
@@ -185,16 +188,17 @@ async function load(): Promise<void> {
       status: 'error',
       problem: {
         kind: 'invalid-response',
-        message: 'Enter exactly 64 hexadecimal characters, with an optional 0x prefix',
+        message: t('searchResults.invalidHash'),
       },
     };
     return;
   }
 
   const current = snapshot.value;
-  snapshot.value = current.status === 'ready' && current.data.query === classified.value
-    ? { status: 'ready', data: current.data, isRefreshing: true, refreshError: null }
-    : { status: 'initial-loading' };
+  snapshot.value =
+    current.status === 'ready' && current.data.query === classified.value
+      ? { status: 'ready', data: current.data, isRefreshing: true, refreshError: null }
+      : { status: 'initial-loading' };
 
   try {
     const result = await resolveExactHashSearch(classified.value, {

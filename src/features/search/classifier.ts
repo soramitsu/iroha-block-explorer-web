@@ -1,4 +1,4 @@
-import { normalizeAccountSelectorLiteral } from '@/shared/lib/account-literal';
+import { normalizeAccountIdLiteral } from '@/shared/lib/account-literal';
 import { normalizeAssetDefinitionSelectorLiteral } from '@/shared/lib/asset-definition-literal';
 import { normalizeRwaIdLiteral } from '@/shared/lib/rwa-id';
 import { NftIdSchema } from '@/shared/api/schemas';
@@ -47,7 +47,7 @@ export function classifySearchQuery(input: string): SearchClassification {
   const nft = normalizeNftId(value);
   if (nft) return { kind: 'nft', value: nft };
 
-  const account = normalizeAccountSelectorLiteral(value);
+  const account = normalizeAccountIdLiteral(value);
   if (account) return { kind: 'account', value: account };
 
   const assetDefinition = normalizeAssetDefinitionSelectorLiteral(value);

@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
+import type { LocationQueryRaw } from 'vue-router';
 import { defineComponent } from 'vue';
+import { NetworkId } from '@iroha/iroha-js/browser';
 import AccountMultisigWorkspace from './AccountMultisigWorkspace.vue';
 import { TORII_CANONICAL_REQUEST_DOMAIN_TAG } from '@/shared/lib/connect';
+import { i18n } from '@/shared/lib/localization';
 
 const apiMocks = vi.hoisted(() => ({
+  createConnectSession: vi.fn(),
   fetchMultisigSpec: vi.fn(),
   fetchMultisigProposals: vi.fn(),
 }));
@@ -13,18 +17,19 @@ const appSession = vi.hoisted(() => ({ close: vi.fn() }));
 const canonicalSign = vi.hoisted(() => vi.fn());
 const connectMocks = vi.hoisted(() => ({
   createConnectSessionPreview: vi.fn(),
-  getConnectConfiguration: vi.fn(),
-  registerConnectSession: vi.fn(),
   createConnectAppSession: vi.fn(),
   createConnectCanonicalRequestAuth: vi.fn(),
 }));
+const runtimeConfigState = vi.hoisted((): { value: Record<string, unknown> } => ({ value: {} }));
 
 vi.mock('@/shared/runtime-config', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/shared/runtime-config')>(),
+  getRuntimeConfig: () => runtimeConfigState.value,
   getRuntimeNetworkPrefix: () => 369,
 }));
 
 vi.mock('@/shared/api', () => ({
+  createConnectSession: apiMocks.createConnectSession,
   fetchMultisigSpec: apiMocks.fetchMultisigSpec,
   fetchMultisigProposals: apiMocks.fetchMultisigProposals,
   getToriiBaseUrl: () => 'https://taira.sora.org',
@@ -35,24 +40,17 @@ vi.mock('@/shared/lib/connect', async (importOriginal) => {
   return {
     ...actual,
     createConnectSessionPreview: connectMocks.createConnectSessionPreview,
-    getConnectConfiguration: connectMocks.getConnectConfiguration,
-    registerConnectSession: connectMocks.registerConnectSession,
     createConnectAppSession: connectMocks.createConnectAppSession,
     createConnectCanonicalRequestAuth: connectMocks.createConnectCanonicalRequestAuth,
   };
 });
 
-const MULTISIG_ACCOUNT =
-  'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
+const MULTISIG_ACCOUNT = 'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
 const SIGNATORY = 'sorauﾛ1PﾉｳﾇmEｴWｵebHﾑ6ﾔﾙｲヰiwuCWErJ7uｽoPGｱﾔnjﾑKﾋTCW2PV';
 const ASSET_DEFINITION = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
 const EXACT_AMOUNT = '90071992547409931234567890.000000000000000001';
-const NETWORK_ID_LITERAL = '11'.repeat(32);
-const NETWORK_ID = {
-  literal: NETWORK_ID_LITERAL,
-  toBytes: () => new Uint8Array(32).fill(0x11),
-  toString: () => NETWORK_ID_LITERAL,
-};
+const NETWORK_ID_LITERAL = 'hash:32C903E5B3497E34C2B844EBFE8A39C19E6CF8F95D44C1FFB8BA9DCB42F91149#A2F0';
+const NETWORK_ID = NetworkId.parse(NETWORK_ID_LITERAL);
 const AUTH = { authAccountId: SIGNATORY, sign: canonicalSign };
 const PREVIEW = {
   sidBase64Url: 'preview-session',
@@ -63,7 +61,7 @@ const SESSION = {
   sid: 'session-1',
   network_id: NETWORK_ID_LITERAL,
   app_pk: 'app-public-key',
-  nonce: 'nonce',
+  nonce: 'session-nonce',
   wallet_uri: 'irohaconnect://wallet/session-1',
   app_uri: 'irohaconnect://app/session-1',
   token_app: 'app-token',
@@ -136,10 +134,10 @@ const BaseJsonStub = defineComponent({
 const InstructionSemanticCardStub = defineComponent({
   name: 'InstructionSemanticCard',
   props: { presentation: { type: Object, required: true } },
-  template: '<div data-test="semantic-instruction">{{ presentation.title }}</div>',
+  template: '<div data-test="semantic-instruction">{{ presentation.title.key }}</div>',
 });
 
-async function factory(query: Record<string, string> = {}) {
+async function factory(query: LocationQueryRaw = {}) {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/account', component: { template: '<div />' } }],
@@ -150,7 +148,7 @@ async function factory(query: Record<string, string> = {}) {
   const wrapper = mount(AccountMultisigWorkspace, {
     props: { accountId: MULTISIG_ACCOUNT },
     global: {
-      plugins: [router],
+      plugins: [router, i18n],
       stubs: {
         BaseButton: BaseButtonStub,
         BaseContentBlock: BaseContentBlockStub,
@@ -187,15 +185,11 @@ function proposalsResponse(overrides: Record<string, unknown> = {}) {
 describe('AccountMultisigWorkspace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    runtimeConfigState.value = { networkId: NETWORK_ID_LITERAL };
+    apiMocks.createConnectSession.mockResolvedValue({ status: 'ok', data: SESSION });
     apiMocks.fetchMultisigSpec.mockResolvedValue({ status: 'ok', data: SPEC });
     apiMocks.fetchMultisigProposals.mockResolvedValue(proposalsResponse());
-    connectMocks.getConnectConfiguration.mockReturnValue({
-      available: true,
-      literal: NETWORK_ID_LITERAL,
-      networkId: NETWORK_ID,
-    });
     connectMocks.createConnectSessionPreview.mockReturnValue(PREVIEW);
-    connectMocks.registerConnectSession.mockResolvedValue(SESSION);
     connectMocks.createConnectAppSession.mockReturnValue(appSession);
     connectMocks.createConnectCanonicalRequestAuth.mockResolvedValue(AUTH);
   });
@@ -209,11 +203,7 @@ describe('AccountMultisigWorkspace', () => {
       networkId: NETWORK_ID,
       node: 'https://taira.sora.org',
     });
-    expect(connectMocks.registerConnectSession).toHaveBeenCalledWith(
-      'https://taira.sora.org',
-      PREVIEW,
-      { node: 'https://taira.sora.org' }
-    );
+    expect(apiMocks.createConnectSession).toHaveBeenCalledWith(PREVIEW);
     expect(connectMocks.createConnectAppSession).toHaveBeenCalledWith(
       expect.objectContaining({
         permissions: {
@@ -236,11 +226,17 @@ describe('AccountMultisigWorkspace', () => {
     expect(wrapper.get('[data-test="multisig-spec"]').text()).toContain('server-provided, unverified');
     expect(wrapper.get('[data-test="multisig-spec"]').text()).toContain('Role: Signatory');
     expect(wrapper.get('[data-test="multisig-spec"]').text()).toContain('Weight: 2');
-    expect(wrapper.get('[data-test="multisig-spec"]').text()).toContain('86400000 ms');
-    expect(wrapper.get('[data-test="multisig-proposal"]').text()).toContain('COLLECTING_SIGNATURES');
-    expect(wrapper.get('[data-test="multisig-proposal"]').text()).toContain('1725086400123 ms');
+    expect(wrapper.get('[data-test="multisig-spec"]').text()).toContain(
+      i18n.global.t('units.milliseconds', { value: SPEC.spec.transaction_ttl_ms })
+    );
+    expect(wrapper.get('[data-test="multisig-proposal"]').text()).toContain('Collecting signatures');
+    expect(wrapper.get('[data-test="multisig-proposal"]').text()).toContain(
+      i18n.global.t('units.milliseconds', { value: PROPOSAL.proposal.expires_at_ms })
+    );
     expect(wrapper.get('[data-test="multisig-proposal"]').text()).toContain(SIGNATORY);
-    expect(wrapper.get('[data-test="semantic-instruction"]').text()).toBe('Asset transfer');
+    expect(wrapper.get('[data-test="semantic-instruction"]').text()).toBe(
+      'studio.instructionPresentation.titles.Transfer_Asset'
+    );
     expect(wrapper.get('.base-json-stub').text()).toContain('treasury payment');
 
     const actionLabels = wrapper.findAll('button').map((button) => button.text().trim());
@@ -276,45 +272,41 @@ describe('AccountMultisigWorkspace', () => {
     await connectAndAuthenticate(wrapper);
 
     expect(wrapper.get('[data-test="multisig-permission-denied"]').text()).toContain(
+      'Torii denied this authenticated multisig read'
+    );
+    expect(wrapper.get('[data-test="multisig-permission-denied"]').text()).not.toContain(
       'reader lacks multisig visibility'
     );
     expect(apiMocks.fetchMultisigProposals).not.toHaveBeenCalled();
   });
 
   it('renders a successful empty proposal query without inferring any required subset', async () => {
-    apiMocks.fetchMultisigProposals.mockResolvedValue(
-      proposalsResponse({ proposals: [], next_cursor: null })
-    );
+    apiMocks.fetchMultisigProposals.mockResolvedValue(proposalsResponse({ proposals: [], next_cursor: null }));
     const { wrapper } = await factory();
 
     await connectAndAuthenticate(wrapper);
 
     expect(wrapper.get('[data-test="multisig-empty"]').text()).toContain('No proposals match');
-    expect(wrapper.get('[data-test="multisig-spec"]').text()).toContain(
-      'does not infer which subset is required'
-    );
+    expect(wrapper.get('[data-test="multisig-spec"]').text()).toContain('does not infer which subset is required');
   });
 
   it('fails closed when spec and proposal queries resolve to different accounts', async () => {
-    apiMocks.fetchMultisigProposals.mockResolvedValue(
-      proposalsResponse({ resolved_multisig_account_id: SIGNATORY })
-    );
+    apiMocks.fetchMultisigProposals.mockResolvedValue(proposalsResponse({ resolved_multisig_account_id: SIGNATORY }));
     const { wrapper } = await factory();
 
     await connectAndAuthenticate(wrapper);
 
-    expect(wrapper.get('[data-test="multisig-workspace-error"]').text()).toContain(
-      'different resolved account IDs'
-    );
+    expect(wrapper.get('[data-test="multisig-workspace-error"]').text()).toContain('different resolved account IDs');
     expect(wrapper.find('[data-test="multisig-spec"]').exists()).toBe(false);
   });
 
   it('waits for the signed spec before a URL filter change can start the proposal query', async () => {
-    let resolveSpec: ((value: { status: string, data: typeof SPEC }) => void) | undefined;
+    let resolveSpec: ((value: { status: string; data: typeof SPEC }) => void) | undefined;
     apiMocks.fetchMultisigSpec.mockImplementation(
-      () => new Promise((resolve) => {
-        resolveSpec = resolve;
-      })
+      () =>
+        new Promise((resolve) => {
+          resolveSpec = resolve;
+        })
     );
     const { router, wrapper } = await factory();
 
@@ -339,16 +331,68 @@ describe('AccountMultisigWorkspace', () => {
     );
   });
 
-  it('fails closed without an exact runtime NetworkId and dispatches no Connect request', async () => {
-    connectMocks.getConnectConfiguration.mockReturnValue({
-      available: false,
-      error: new Error('Connect is disabled until an exact Iroha NetworkId is configured.'),
+  it.each([
+    ['unknown status', { multisig_status: 'NOT_A_STATUS' }],
+    ['duplicate status', { multisig_status: ['FINALIZED', 'CANCELED'] }],
+    ['empty cursor', { multisig_cursor: '' }],
+    ['padded cursor', { multisig_cursor: 'padded=' }],
+    ['duplicate cursor', { multisig_cursor: ['cursor-a', 'cursor-b'] }],
+    ['oversized cursor', { multisig_cursor: 'a'.repeat(513) }],
+  ])('does not broaden an invalid %s bookmark into a signed proposal query', async (_label, query) => {
+    const { wrapper } = await factory(query);
+
+    await connectAndAuthenticate(wrapper);
+
+    expect(apiMocks.fetchMultisigSpec).toHaveBeenCalledWith(MULTISIG_ACCOUNT, AUTH);
+    expect(apiMocks.fetchMultisigProposals).not.toHaveBeenCalled();
+    expect(wrapper.get('[data-test="multisig-invalid-route"]').text()).toContain('Unsupported search query');
+    expect(wrapper.find('[data-test="multisig-spec"]').exists()).toBe(false);
+  });
+
+  it('queries the canonical all-status first page only after explicit invalid-route recovery', async () => {
+    const { router, wrapper } = await factory({
+      multisig_status: ['FINALIZED', 'CANCELED'],
+      multisig_cursor: 'padded=',
     });
-    const unavailable = await factory();
-    expect(unavailable.wrapper.find('[data-test="multisig-connect-unavailable"]').exists()).toBe(true);
-    expect(unavailable.wrapper.find('[data-test="multisig-create-session"]').exists()).toBe(false);
-    expect(unavailable.wrapper.text()).toContain('exact Iroha NetworkId');
-    expect(connectMocks.createConnectSessionPreview).not.toHaveBeenCalled();
-    expect(connectMocks.registerConnectSession).not.toHaveBeenCalled();
+    await connectAndAuthenticate(wrapper);
+    expect(apiMocks.fetchMultisigProposals).not.toHaveBeenCalled();
+
+    await wrapper.get('[data-test="multisig-clear-invalid-route"]').trigger('click');
+    await flushPromises();
+
+    expect(router.currentRoute.value.query.multisig_status).toBeUndefined();
+    expect(router.currentRoute.value.query.multisig_cursor).toBeUndefined();
+    expect(apiMocks.fetchMultisigProposals).toHaveBeenCalledWith(
+      MULTISIG_ACCOUNT,
+      { status: undefined, cursor: null, limit: 20 },
+      AUTH
+    );
+    expect(wrapper.find('[data-test="multisig-invalid-route"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="multisig-spec"]').exists()).toBe(true);
+  });
+
+  it('does not offer a session when the exact NetworkId is unconfigured', async () => {
+    runtimeConfigState.value = {};
+    const noNetwork = await factory();
+    expect(noNetwork.wrapper.find('[data-test="multisig-create-session"]').exists()).toBe(false);
+    expect(apiMocks.createConnectSession).not.toHaveBeenCalled();
+    expect(noNetwork.wrapper.get('[data-test="multisig-network-unconfigured"]').text()).toContain(
+      'never derives network identity'
+    );
+  });
+
+  it('discovers Connect availability by creating a session and surfaces a rejected bootstrap', async () => {
+    apiMocks.createConnectSession.mockResolvedValue({
+      status: 'error',
+      error: new Error('Connect session endpoint is disabled'),
+    });
+    const { wrapper } = await factory();
+
+    await wrapper.get('[data-test="multisig-create-session"]').trigger('click');
+    await flushPromises();
+
+    expect(apiMocks.createConnectSession).toHaveBeenCalledOnce();
+    expect(wrapper.text()).toContain('The Connect session could not be created.');
+    expect(wrapper.text()).not.toContain('Connect session endpoint is disabled');
   });
 });

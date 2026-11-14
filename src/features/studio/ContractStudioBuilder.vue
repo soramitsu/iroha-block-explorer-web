@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import * as Blockly from 'blockly';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { KotodamaStudioWorkspaceSummary } from '@/shared/lib/kotodama-studio-source';
 import {
   buildStudioSections,
@@ -33,6 +34,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { t } = useI18n();
+const translateStudio = (key: string, params?: Readonly<Record<string, string | number>>) => t(key, params ?? {});
 
 const emit = defineEmits<{
   'update:modelValue': [value: Record<string, unknown> | null]
@@ -70,11 +73,11 @@ function scheduleWorkspaceResize() {
 
 function emitWorkspaceState() {
   if (!workspace || syncing) return;
-  reconcileStudioWorkspaceReferences(workspace);
+  reconcileStudioWorkspaceReferences(workspace, translateStudio);
   emit('update:modelValue', saveStudioWorkspaceState(workspace));
   emit('update:sections', buildStudioSections(workspace));
   emit('update:summary', summarizeStudioWorkspace(workspace));
-  emit('update:issues', validateStudioWorkspace(workspace));
+  emit('update:issues', validateStudioWorkspace(workspace, translateStudio));
 }
 
 function loadState(state: Record<string, unknown> | null, templateId: StudioTemplateId) {
@@ -86,12 +89,12 @@ function loadState(state: Record<string, unknown> | null, templateId: StudioTemp
 }
 
 onMounted(() => {
-  ensureStudioBlocklyRegistered();
+  ensureStudioBlocklyRegistered(translateStudio);
   if (!workspaceEl.value) return;
 
   workspace = Blockly.inject(workspaceEl.value, {
-    toolbox: createStudioToolbox(props.toolboxMode),
-    theme: studioTheme(),
+    toolbox: createStudioToolbox(props.toolboxMode, translateStudio),
+    theme: studioTheme(translateStudio),
     grid: {
       spacing: 24,
       length: 2,
@@ -136,7 +139,7 @@ onMounted(() => {
 watch(
   () => props.toolboxMode,
   (value) => {
-    workspace?.updateToolbox(createStudioToolbox(value));
+    workspace?.updateToolbox(createStudioToolbox(value, translateStudio));
     selectDefaultToolboxCategory();
     scheduleWorkspaceResize();
   }
@@ -189,9 +192,7 @@ onBeforeUnmount(() => {
   min-height: 100%;
   display: grid;
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(255, 251, 245, 0.88), rgba(245, 235, 216, 0.96)),
-    linear-gradient(90deg, rgba(199, 75, 42, 0.08), transparent 24%, transparent 76%, rgba(199, 75, 42, 0.06));
+  background: theme-color('surface');
 
   &__workspace {
     height: 100%;
@@ -209,10 +210,9 @@ onBeforeUnmount(() => {
   }
 
   .blocklyToolboxDiv {
-    background:
-      linear-gradient(180deg, rgba(199, 75, 42, 0.12), rgba(239, 224, 196, 0.98) 18%, rgba(232, 214, 184, 0.98));
+    background: theme-color('surface');
     border-inline-end: 1px solid rgba(129, 86, 46, 0.18);
-    box-shadow: 12px 0 24px rgba(84, 49, 27, 0.08);
+    box-shadow: none;
   }
 
   .blocklyFlyout,
@@ -252,17 +252,12 @@ onBeforeUnmount(() => {
   }
 
   .blocklyTreeRow:not(.blocklyTreeSelected):hover {
-    transform: translateX(2px);
     background: rgba(199, 75, 42, 0.08);
   }
 
   .blocklyTreeSelected > .blocklyTreeRow {
-    background:
-      linear-gradient(180deg, rgba(199, 75, 42, 0.18), rgba(199, 75, 42, 0.12)),
-      rgba(255, 247, 240, 0.9);
-    box-shadow:
-      inset 3px 0 0 #c74b2a,
-      0 8px 16px rgba(84, 49, 27, 0.08);
+    background: theme-color('surface');
+    box-shadow: none;
   }
 
   .blocklyScrollbarHandle {
@@ -276,9 +271,7 @@ onBeforeUnmount(() => {
 }
 
 html.dark .contract-studio-builder {
-  background:
-    linear-gradient(180deg, rgba(43, 28, 22, 0.94), rgba(30, 22, 18, 0.98)),
-    linear-gradient(90deg, rgba(199, 75, 42, 0.12), transparent 24%, transparent 76%, rgba(199, 75, 42, 0.08));
+  background: theme-color('surface');
 
   .blocklyMainBackground {
     stroke: rgba(245, 217, 182, 0.08);
@@ -286,10 +279,9 @@ html.dark .contract-studio-builder {
   }
 
   .blocklyToolboxDiv {
-    background:
-      linear-gradient(180deg, rgba(199, 75, 42, 0.2), rgba(67, 44, 34, 0.98) 18%, rgba(44, 31, 25, 0.98));
+    background: theme-color('surface');
     border-inline-end-color: rgba(245, 217, 182, 0.08);
-    box-shadow: 12px 0 24px rgba(0, 0, 0, 0.24);
+    box-shadow: none;
   }
 
   .blocklyFlyout,
@@ -306,9 +298,7 @@ html.dark .contract-studio-builder {
   }
 
   .blocklyTreeSelected > .blocklyTreeRow {
-    background:
-      linear-gradient(180deg, rgba(199, 75, 42, 0.28), rgba(199, 75, 42, 0.16)),
-      rgba(66, 45, 35, 0.96);
+    background: theme-color('surface');
   }
 
   .blocklyScrollbarHandle {

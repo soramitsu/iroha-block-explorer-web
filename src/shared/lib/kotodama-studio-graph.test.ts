@@ -6,6 +6,7 @@ import {
   createKotodamaStudioGraphTemplate,
   findKotodamaStudioGraphNodeForLine,
   normalizeKotodamaStudioGraphDocument,
+  parseKotodamaStudioGraphDocument,
   refreshKotodamaStudioGraphPorts,
   stringifyKotodamaStudioGraphDocument,
   validateKotodamaStudioGraphDocument,
@@ -13,7 +14,11 @@ import {
 
 describe('kotodama studio graph documents', () => {
   it('generates deployable source and node ranges from a stablecoin graph', () => {
-    const document = createKotodamaStudioGraphTemplate('stablecoin');
+    const document = createKotodamaStudioGraphTemplate('stablecoin', (key) => (
+      key === 'studio.graph.templateNodes.stablecoin.ratio_ok.failureMessage'
+        ? 'insufficient collateral'
+        : key
+    ));
     const output = buildKotodamaStudioGraphSource(document);
 
     expect(output.source).toContain('seiyaku StablecoinSimple');
@@ -50,94 +55,122 @@ describe('kotodama studio graph documents', () => {
     expect(findKotodamaStudioGraphNodeForLine(output.ranges, ratioRange?.startLine)).toBe('ratio-ok');
   });
 
-  it('normalizes legacy v1 workflow documents into a graph-first document', () => {
-    const document = normalizeKotodamaStudioGraphDocument({
-      version: 1,
-      updatedAt: '2026-04-24T00:00:00.000Z',
-      metadata: {
-        title: 'LegacyContract',
-        dataspace: 'legacy',
-        authority: 'builder@legacy.main',
-      chainId: 'wonderland',
-      description: 'Imported from the storyboard editor.',
-    },
-      workspaceState: {
-        blocks: {
-          languageVersion: 0,
-          blocks: [{ type: 'studio_contract', id: 'legacy-block' }],
-        },
+  it.each([
+    { name: 'version 1', payload: { version: 1, metadata: {}, workflow: { nodes: [] } } },
+    { name: 'an unversioned document', payload: { metadata: {}, graph: { nodes: [], edges: [] } } },
+  ])('rejects $name instead of applying a compatibility conversion', ({ payload }) => {
+    expect(() => normalizeKotodamaStudioGraphDocument(payload)).toThrow('Studio graph document must use version 2');
+  });
+
+  it.each([
+    {
+      name: 'missing metadata',
+      corrupt(document: ReturnType<typeof createKotodamaStudioGraphTemplate>) {
+        return { ...document, metadata: undefined };
       },
-      workflow: {
-        nodes: [
-          {
-            id: 'trigger-legacy',
-            position: { x: 20, y: 30 },
-            data: {
-              title: 'Every block',
-              category: 'trigger',
-              binding: 'ship',
-            },
-          },
-          {
-            id: 'contract-legacy',
-            position: { x: 220, y: 30 },
-            data: {
-              title: 'Ship reward',
-              caption: 'Old contract card',
-              category: 'contract',
-              binding: 'ship',
-            },
-          },
-        ],
+      error: /missing required fields: metadata/u,
+    },
+    {
+      name: 'non-array nodes',
+      corrupt(document: ReturnType<typeof createKotodamaStudioGraphTemplate>) {
+        return { ...document, graph: { ...document.graph, nodes: {} } };
+      },
+      error: /graph\.nodes must be an array/u,
+    },
+    {
+      name: 'missing edges',
+      corrupt(document: ReturnType<typeof createKotodamaStudioGraphTemplate>) {
+        return { ...document, graph: { nodes: document.graph.nodes } };
+      },
+      error: /graph is missing required fields: edges/u,
+    },
+  ])('strictly rejects a v2 document with $name', ({ corrupt, error }) => {
+    const document = createKotodamaStudioGraphTemplate('stablecoin');
+    expect(() => parseKotodamaStudioGraphDocument(JSON.stringify(corrupt(document)))).toThrow(error);
+  });
+
+  it.each([
+    {
+      name: 'an unsupported node kind',
+      corrupt(node: ReturnType<typeof createKotodamaStudioGraphTemplate>['graph']['nodes'][number]) {
+        return { ...node, data: { ...node.data, kind: 'legacy_contract' } };
+      },
+      error: /graph\.nodes\[0\]\.data\.kind is unsupported/u,
+    },
+    {
+      name: 'a config value that the old normalizer would coerce',
+      corrupt(node: ReturnType<typeof createKotodamaStudioGraphTemplate>['graph']['nodes'][number]) {
+        return { ...node, data: { ...node.data, config: { ...node.data.config, name: 42 } } };
+      },
+      error: /graph\.nodes\[0\]\.data\.config\.name must be a string/u,
+    },
+    {
+      name: 'a non-finite position encoded as a string',
+      corrupt(node: ReturnType<typeof createKotodamaStudioGraphTemplate>['graph']['nodes'][number]) {
+        return { ...node, position: { ...node.position, x: 'NaN' } };
+      },
+      error: /graph\.nodes\[0\]\.position\.x must be finite/u,
+    },
+  ])('strictly rejects $name instead of repairing the node', ({ corrupt, error }) => {
+    const document = createKotodamaStudioGraphTemplate('stablecoin');
+    const payload = {
+      ...document,
+      graph: {
+        ...document.graph,
+        nodes: [corrupt(document.graph.nodes[0]!), ...document.graph.nodes.slice(1)],
+      },
+    };
+    expect(() => parseKotodamaStudioGraphDocument(JSON.stringify(payload))).toThrow(error);
+  });
+
+  it.each([
+    {
+      name: 'an incomplete edge shape',
+      edge: { id: 'edge-corrupt', source: 'entry-mintable', label: 'next' },
+      error: /graph\.edges\[0\] is missing required fields: target/u,
+    },
+    {
+      name: 'a dangling source that the old normalizer would drop',
+      edge: { id: 'edge-corrupt', source: 'missing-node', target: 'value', label: 'next' },
+      error: /graph\.edges\[0\]\.source references unknown node: missing-node/u,
+    },
+  ])('strictly rejects $name instead of losing the edge', ({ edge, error }) => {
+    const document = createKotodamaStudioGraphTemplate('stablecoin');
+    const payload = { ...document, graph: { ...document.graph, edges: [edge] } };
+    expect(() => parseKotodamaStudioGraphDocument(JSON.stringify(payload))).toThrow(error);
+  });
+
+  it('rejects duplicate node identities instead of accepting ambiguous edge bindings', () => {
+    const document = createKotodamaStudioGraphTemplate('stablecoin');
+    const duplicate = {
+      ...document.graph.nodes[1]!,
+      id: document.graph.nodes[0]!.id,
+    };
+    const payload = {
+      ...document,
+      graph: {
+        ...document.graph,
+        nodes: [document.graph.nodes[0]!, duplicate, ...document.graph.nodes.slice(2)],
+      },
+    };
+
+    expect(() => parseKotodamaStudioGraphDocument(JSON.stringify(payload))).toThrow(
+      /graph\.nodes contains duplicate id/u
+    );
+  });
+
+  it('keeps derived-port repair in the editor normalizer', () => {
+    const document = createKotodamaStudioGraphTemplate('stablecoin');
+    const firstNode = document.graph.nodes[0]!;
+    const normalized = normalizeKotodamaStudioGraphDocument({
+      ...document,
+      graph: {
+        ...document.graph,
+        nodes: [{ ...firstNode, data: { ...firstNode.data, ports: [] } }, ...document.graph.nodes.slice(1)],
       },
     });
 
-    expect(document.version).toBe(2);
-    expect(document.metadata).toEqual(expect.objectContaining({
-      title: 'LegacyContract',
-      dataspace: 'legacy',
-      authority: 'builder@legacy.main',
-    }));
-    expect(document.graph.nodes).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: 'entry-legacy',
-        data: expect.objectContaining({
-          kind: 'entrypoint',
-          config: expect.objectContaining({ name: 'ship' }),
-        }),
-      }),
-      expect.objectContaining({
-        data: expect.objectContaining({
-          kind: 'trigger',
-          config: expect.objectContaining({ entrypoint: 'ship' }),
-        }),
-      }),
-      expect.objectContaining({
-        data: expect.objectContaining({
-          kind: 'effect',
-          config: expect.objectContaining({ effect: 'info' }),
-        }),
-      }),
-    ]));
-    expect(document.graph.edges[0]).toEqual(expect.objectContaining({
-      source: 'entry-legacy',
-      target: 'legacy-note-2',
-    }));
-    expect(document.legacy).toEqual(expect.objectContaining({
-      sourceVersion: 1,
-      workspaceState: expect.objectContaining({
-        blocks: expect.objectContaining({
-          blocks: [expect.objectContaining({ id: 'legacy-block' })],
-        }),
-      }),
-      workflow: expect.objectContaining({
-        nodes: expect.any(Array),
-      }),
-      notes: expect.arrayContaining([
-        expect.stringContaining('Original Blockly workspace'),
-        expect.stringContaining('workflow intent'),
-      ]),
-    }));
+    expect(normalized.graph.nodes[0]?.data.ports.length).toBeGreaterThan(0);
   });
 
   it('validates duplicate declarations, broken trigger targets, and stale edges', () => {
@@ -223,7 +256,6 @@ describe('kotodama studio graph documents', () => {
         chainId: 'wonderland',
         description: 'Typed validation fixture.',
       },
-      legacy: null,
       graph: {
         nodes: [state, mapState, entry, assign, mapWrite, branch, thenEffect, duplicateThenEffect],
         edges: [
@@ -262,9 +294,9 @@ describe('kotodama studio graph documents', () => {
     }
   );
 
-  it('round-trips v2 graph documents through JSON normalization', () => {
+  it('round-trips an exact v2 graph document through strict JSON import', () => {
     const document = createKotodamaStudioGraphTemplate('asset_ops');
-    const normalized = normalizeKotodamaStudioGraphDocument(JSON.parse(stringifyKotodamaStudioGraphDocument(document)));
+    const normalized = parseKotodamaStudioGraphDocument(stringifyKotodamaStudioGraphDocument(document));
 
     expect(normalized).toEqual(document);
   });

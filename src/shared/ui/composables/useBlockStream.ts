@@ -1,6 +1,6 @@
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { useEventSource } from '@vueuse/core';
-import { buildExplorerUrl } from '@/shared/api';
+import { buildToriiUrl } from '@/shared/api';
 import { explorerReadIsPublic } from '@/shared/lib/explorer-read-auth';
 
 interface UseBlockStreamOptions {
@@ -21,7 +21,7 @@ export function useBlockStream(
   const streamUrl = computed(() => {
     if (!isSupported || !explorerReadIsPublic.value) return undefined;
     if (fromHeight.value === null) return undefined;
-    return buildExplorerUrl('/blocks/stream');
+    return buildToriiUrl('/v1/explorer/blocks/stream');
   });
 
   const { data, status, close, open } = useEventSource(streamUrl, [], {

@@ -1,88 +1,41 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
-import type * as VueI18nModule from 'vue-i18n';
+import { describe, it, expect, vi } from 'vitest';
+import { mount, flushPromises } from '@vue/test-utils';
+import { createRouter, createMemoryHistory } from 'vue-router';
+import { toExplorerScopeQuery } from '@/shared/lib/explorer-scope';
 import HomePage from './HomePage.vue';
-
-const pushSpy = vi.fn();
-
-vi.mock('vue-router', () => ({
-  useRouter: () => ({
-    push: pushSpy,
-  }),
-}));
-
-vi.mock('vue-i18n', async (importOriginal) => {
-  const actual = await importOriginal<typeof VueI18nModule>();
-
-  return {
-    ...actual,
-    useI18n: () => ({
-      t: (key: string) => key,
-    }),
-  };
-});
-
+vi.mock('@/shared/api', () => ({ getToriiBaseUrl: () => 'https://torii.example', isToriiBaseUrlForced: () => false }));
 describe('HomePage', () => {
-  const sampleAccountId =
-    'sorauﾛ1NﾗhBUd2BﾂｦﾄiﾔﾆﾂﾇKSﾃaﾘﾒﾓQﾗrﾒoﾘﾅnｳﾘbQｳQJﾆLJ5HSE';
-  const sampleAssetAlias = 'usd#issuer.main';
-
-  beforeEach(() => {
-    pushSpy.mockReset();
+  it('restores the branded landing with hero search, visible navigation and real activity', () => {
+    const wrapper = mount(HomePage, { global: {
+      mocks: { $t: (key: string) => key },
+      stubs: { HomePageInfo: true, LatestBlocks: true, LatestTransactions: true, SearchField: true, NavigationMenu: true },
+    } });
+    expect(wrapper.findAll('h1 strong').map((line) => line.text())).toEqual(['homePage.title.firstLine', 'homePage.title.secondLine']);
+    expect(wrapper.find('.home-page__logo-icon').exists()).toBe(true);
+    expect(wrapper.find('.home-page__background-logo').exists()).toBe(true);
+    expect(wrapper.get('search-field-stub').attributes('size')).toBe('lg');
+    expect(wrapper.get('navigation-menu-stub').attributes('layout')).toBe('inline');
+    expect(wrapper.text()).toContain('https://torii.example');
+    expect(wrapper.find('home-page-info-stub').exists()).toBe(true);
+    expect(wrapper.find('latest-blocks-stub').exists()).toBe(true);
+    expect(wrapper.find('latest-transactions-stub').exists()).toBe(true);
+    expect(wrapper.find('.home-page__search-tag').exists()).toBe(false);
+    expect(wrapper.find('.home-page__scope').exists()).toBe(false);
   });
 
-  const mountPage = () =>
-    mount(HomePage, {
-      global: {
-        mocks: {
-          $t: (key: string) => key,
-        },
-        stubs: {
-          ThemeSwitcher: true,
-          ExplorerReadAccess: { template: '<button data-test="read-access" />' },
-          LangDropdown: true,
-          MobileMenu: true,
-          NavigationMenu: true,
-          HomePageInfo: true,
-          LatestBlocks: true,
-          LatestTransactions: true,
-          SearchField: true,
-          BackgroundLogo: true,
-          LogoIcon: true,
-        },
-      },
-    });
-
-  it('routes to sample destinations when search tags are clicked', async () => {
-    const wrapper = mountPage();
-    expect(wrapper.find('[data-test="read-access"]').exists()).toBe(true);
-    const tags = wrapper.findAll('.home-page__search-tag');
-    expect(tags).toHaveLength(6);
-
-    await tags[0].trigger('click');
-    expect(pushSpy).toHaveBeenNthCalledWith(1, { name: 'blocks-details', params: { heightOrHash: '12345' } });
-
-    await tags[1].trigger('click');
-    expect(pushSpy).toHaveBeenNthCalledWith(2, {
-      name: 'search-results',
-      query: { q: '0301b76be6d3dead32484180986523173082d770bc4fd954760d0a74a434624f' },
-    });
-
-    await tags[2].trigger('click');
-    expect(pushSpy).toHaveBeenNthCalledWith(3, { name: 'account-details', params: { id: sampleAccountId } });
-
-    await tags[3].trigger('click');
-    expect(pushSpy).toHaveBeenNthCalledWith(4, { name: 'asset-details', params: { id: sampleAssetAlias } });
-
-    await tags[4].trigger('click');
-    expect(pushSpy).toHaveBeenNthCalledWith(5, { name: 'nft-details', params: { id: 'cool-cat$gallery.main' } });
-
-    await tags[5].trigger('click');
-    expect(pushSpy).toHaveBeenNthCalledWith(6, {
-      name: 'rwa-details',
-      params: {
-        id: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef$commodities.main',
-      },
-    });
+  it('shows the current dataspace and lane and clears that context after leaving scope', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', name: 'home', component: HomePage }] });
+    await router.push({ name: 'home', query: toExplorerScopeQuery({ torii: 'https://torii.example', dataspaceLaneId: '7', dataspaceId: '42' }) });
+    await router.isReady();
+    const wrapper = mount(HomePage, { global: {
+      plugins: [router],
+      mocks: { $t: (key: string, params?: { lane: string; dataspace: string }) => key === 'scopedExplorer.dataspaceContext' ? `Dataspace ${params?.dataspace} on lane ${params?.lane}` : key },
+      stubs: { HomePageInfo: true, LatestBlocks: true, LatestTransactions: true, SearchField: true, NavigationMenu: true },
+    } });
+    expect(wrapper.get('.home-page__scope').text()).toBe('Dataspace 42 on lane 7');
+    await router.push({ name: 'home', query: {} });
+    await flushPromises();
+    expect(wrapper.find('.home-page__scope').exists()).toBe(false);
+    expect(wrapper.text()).toContain('https://torii.example');
   });
 });

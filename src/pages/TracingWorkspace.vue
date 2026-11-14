@@ -10,8 +10,7 @@ import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import { SUCCESSFUL_FETCHING, UNKNOWN_ERROR } from '@/shared/api/consts';
 import * as http from '@/shared/api';
 import type { Instruction, TransactionStatus } from '@/shared/api/schemas';
-import { formatTransactionRejectionReason } from '@/shared/api/rejection-reason';
-import { normalizeLooseAccountLiteral } from '@/shared/lib/account-literal';
+import { normalizeToriiAccountSelectorLiteral } from '@/shared/lib/account-literal';
 import { useNotifications } from '@/shared/ui/composables/notifications';
 import TraceGraphWebGL from '@/shared/ui/components/TraceGraphWebGL.vue';
 import {
@@ -148,7 +147,7 @@ const activeSeed = computed<TraceSeed | null>(() => {
   const trimmed = rawValue.trim();
   if (!trimmed) return null;
 
-  const normalizedValue = rawType === 'account' ? normalizeLooseAccountLiteral(trimmed) : trimmed;
+  const normalizedValue = rawType === 'account' ? normalizeToriiAccountSelectorLiteral(trimmed) : trimmed;
   if (!normalizedValue) return null;
 
   return {
@@ -235,9 +234,11 @@ const selectedNodeIsExpanded = computed(() =>
   selectedNodeId.value ? expandedNodeIds.has(selectedNodeId.value) : false
 );
 const selectedNodeExpandActionLabel = computed(() => {
-  if (!selectedNodeId.value) return 'Expand';
-  if (rootAccountId.value === selectedNodeId.value) return selectedNodeIsExpanded.value ? 'Expanded' : 'Expand';
-  return selectedNodeIsExpanded.value ? 'Collapse' : 'Expand';
+  if (!selectedNodeId.value) return t('tracing.expandNode');
+  if (rootAccountId.value === selectedNodeId.value) {
+    return t(selectedNodeIsExpanded.value ? 'tracing.expandedNode' : 'tracing.expandNode');
+  }
+  return t(selectedNodeIsExpanded.value ? 'tracing.collapseNode' : 'tracing.expandNode');
 });
 const controlsLocked = computed(() => state.loadingSeed);
 const selectedNodeExpandDisabled = computed(
@@ -288,7 +289,7 @@ const rejectedReasonGroups = computed<RejectionReasonGroup[]>(() => {
   const rejectedTransactions = Array.from(transactionStatesMap.values()).filter((transaction) => transaction.status === 'Rejected');
 
   for (const transaction of rejectedTransactions) {
-    const reason = rejectionReasonByHash.get(transaction.hash) ?? 'Unavailable';
+    const reason = rejectionReasonByHash.get(transaction.hash) ?? t('tracing.rejectionUnavailable');
     const existing = groups.get(reason);
     if (existing) {
       existing.count += 1;
@@ -510,23 +511,6 @@ function rebuildTransactionStatesFromEvents(eventsToLoad: readonly TraceEvent[])
   }
 }
 
-function hasOpaqueRejectionTag(message: string): boolean {
-  return /(?:InstructionExecutionError|ValidationFail|FindError|TransactionRejectionReason)\(\d+\)/.test(message);
-}
-
-function decodeTransactionRejectionReason(value: unknown): string {
-  if (!value || typeof value !== 'object') return 'Unavailable';
-  const reason = value as { message?: unknown, encoded?: unknown, json?: unknown };
-  const toriiMessage = typeof reason.message === 'string' ? reason.message.trim() : '';
-  const encoded = typeof reason.encoded === 'string' ? reason.encoded : '';
-  const decodedFallback = formatTransactionRejectionReason({ encoded, json: reason.json ?? null }).trim();
-
-  if (toriiMessage.length > 0 && !hasOpaqueRejectionTag(toriiMessage)) return toriiMessage;
-  if (decodedFallback.length > 0) return decodedFallback;
-  if (toriiMessage.length > 0) return toriiMessage;
-  return 'Unavailable';
-}
-
 async function hydrateRejectedReasons() {
   const rejectedHashes = Array.from(transactionStatesMap.values())
     .filter((transaction) => transaction.status === 'Rejected')
@@ -542,15 +526,15 @@ async function hydrateRejectedReasons() {
       try {
         const response = await http.fetchTransaction(hash);
         if (response.status !== SUCCESSFUL_FETCHING) {
-          rejectionReasonByHash.set(hash, 'Unavailable');
-          rejectedReasonLookupError.value = 'Some rejection details are unavailable.';
+          rejectionReasonByHash.set(hash, t('tracing.rejectionUnavailable'));
+          rejectedReasonLookupError.value = t('tracing.rejectionDetailsUnavailable');
           return;
         }
-        const reason = decodeTransactionRejectionReason(response.data.rejection_reason);
+        const reason = response.data.rejection_reason?.message ?? t('tracing.rejectionUnavailable');
         rejectionReasonByHash.set(hash, reason);
       } catch {
-        rejectionReasonByHash.set(hash, 'Unavailable');
-        rejectedReasonLookupError.value = 'Some rejection details are unavailable.';
+        rejectionReasonByHash.set(hash, t('tracing.rejectionUnavailable'));
+        rejectedReasonLookupError.value = t('tracing.rejectionDetailsUnavailable');
       } finally {
         rejectionReasonLookupsInFlight.delete(hash);
         rejectedReasonLookupCount.value = Math.max(0, rejectedReasonLookupCount.value - 1);
@@ -570,7 +554,7 @@ function reportTracingAsyncError(message: string, error: unknown) {
 function triggerHydrateRejectedReasons() {
   hydrateRejectedReasons().catch((error) => {
     console.error('[TracingWorkspace] Failed to hydrate rejection reasons', error);
-    rejectedReasonLookupError.value = 'Some rejection details are unavailable.';
+    rejectedReasonLookupError.value = t('tracing.rejectionDetailsUnavailable');
   });
 }
 
@@ -663,7 +647,7 @@ function syncCursorSetsFromState() {
 }
 
 function enqueueAccount(accountId: string, depth: number) {
-  const normalized = normalizeLooseAccountLiteral(accountId);
+  const normalized = normalizeToriiAccountSelectorLiteral(accountId);
   if (!normalized) return;
   if (completedAccountIds.has(normalized)) return;
   const existing = cursors.value.find((cursor) => cursor.accountId === normalized);
@@ -984,7 +968,7 @@ function toggleNodeExpansion(nodeId: string) {
 function openSeedFromDraft() {
   const value = seedDraft.value.trim();
   if (!value) return;
-  const normalizedValue = seedDraft.type === 'account' ? normalizeLooseAccountLiteral(value) : value;
+  const normalizedValue = seedDraft.type === 'account' ? normalizeToriiAccountSelectorLiteral(value) : value;
   if (!normalizedValue) {
     state.error = t('searchUnsupported');
     return;
@@ -1164,13 +1148,43 @@ async function onImportInputChanged(event: Event) {
   }
 }
 
+const RISK_FLAG_MESSAGE_KEYS = {
+  high_fan_out: 'tracing.riskSignals.highFanOut',
+  high_fan_in: 'tracing.riskSignals.highFanIn',
+  hub_activity: 'tracing.riskSignals.hubActivity',
+  high_activity: 'tracing.riskSignals.highActivity',
+  rapid_hops: 'tracing.riskSignals.rapidHops',
+  manual_risky_label: 'tracing.riskSignals.manualRiskyLabel',
+} as const;
+
+function formatRiskFlags(flags: readonly string[]): string {
+  if (flags.length === 0) return '-';
+  return flags
+    .map((flag) => {
+      const key = RISK_FLAG_MESSAGE_KEYS[flag as keyof typeof RISK_FLAG_MESSAGE_KEYS];
+      return key ? t(key) : t('tracing.riskSignals.unknown', { flag });
+    })
+    .join(', ');
+}
+
+
 function formatRelativeAge(timestampMs: number): string {
   const delta = Math.max(0, Date.now() - timestampMs);
-  if (delta < 1_000) return 'now';
-  if (delta < 60_000) return `${Math.floor(delta / 1_000)}s`;
-  if (delta < 3_600_000) return `${Math.floor(delta / 60_000)}m`;
-  if (delta < 86_400_000) return `${Math.floor(delta / 3_600_000)}h`;
-  return `${Math.floor(delta / 86_400_000)}d`;
+  if (delta < 1_000) return t('time.now');
+  if (delta < 60_000) {
+    const seconds = Math.floor(delta / 1_000);
+    return t(seconds === 1 ? 'time.secAgo' : 'time.secsAgo', [seconds]);
+  }
+  if (delta < 3_600_000) {
+    const minutes = Math.floor(delta / 60_000);
+    return t(minutes === 1 ? 'time.minAgo' : 'time.minsAgo', [minutes]);
+  }
+  if (delta < 86_400_000) {
+    const hours = Math.floor(delta / 3_600_000);
+    return t(hours === 1 ? 'time.hourAgo' : 'time.hoursAgo', [hours]);
+  }
+  const days = Math.floor(delta / 86_400_000);
+  return t(days === 1 ? 'time.dayAgo' : 'time.daysAgo', [days]);
 }
 
 loadLabelsFromStorage();
@@ -1190,24 +1204,13 @@ watch(
 
 <template>
   <div class="tracing-page">
-    <BaseContentBlock
-      :title="$t('tracing.title')"
-      class="tracing-page__block"
-    >
+    <BaseContentBlock :title="$t('tracing.title')" class="tracing-page__block">
       <template #header-action>
         <div class="tracing-page__actions">
-          <BaseButton
-            bordered
-            :disabled="!state.initialized || controlsLocked"
-            @click="toggleScan"
-          >
+          <BaseButton bordered :disabled="!state.initialized || controlsLocked" @click="toggleScan">
             {{ state.running ? $t('tracing.pause') : $t('tracing.resume') }}
           </BaseButton>
-          <BaseButton
-            bordered
-            :disabled="controlsLocked"
-            @click="clearTrace"
-          >
+          <BaseButton bordered :disabled="controlsLocked" @click="clearTrace">
             {{ $t('tracing.clear') }}
           </BaseButton>
           <BaseButton
@@ -1217,10 +1220,7 @@ watch(
           >
             {{ $t('tracing.exportBundle') }}
           </BaseButton>
-          <BaseButton
-            bordered
-            @click="triggerBundleImport"
-          >
+          <BaseButton bordered @click="triggerBundleImport">
             {{ $t('tracing.importBundle') }}
           </BaseButton>
           <input
@@ -1229,15 +1229,12 @@ watch(
             type="file"
             accept="application/json"
             @change="onImportInputChanged"
-          >
+          />
         </div>
       </template>
 
       <div class="tracing-page__seed">
-        <select
-          v-model="seedDraft.type"
-          data-test="trace-seed-type"
-        >
+        <select v-model="seedDraft.type" data-test="trace-seed-type">
           <option value="account">
             {{ $t('tracing.seedAccount') }}
           </option>
@@ -1250,11 +1247,8 @@ watch(
           :placeholder="$t('tracing.seedPlaceholder')"
           data-test="trace-seed-value"
           @keyup.enter="openSeedFromDraft"
-        >
-        <BaseButton
-          bordered
-          @click="openSeedFromDraft"
-        >
+        />
+        <BaseButton bordered @click="openSeedFromDraft">
           {{ $t('tracing.startTrace') }}
         </BaseButton>
       </div>
@@ -1267,29 +1261,17 @@ watch(
         <span>{{ $t('tracing.activeCursors') }}: {{ cursors.filter((item) => !item.exhausted).length }}</span>
       </div>
 
-      <div
-        v-if="state.loadingSeed"
-        class="tracing-page__loading"
-      >
+      <div v-if="state.loadingSeed" class="tracing-page__loading">
         <BaseLoading />
       </div>
 
-      <div
-        v-if="state.error"
-        class="tracing-page__error row-text"
-      >
+      <div v-if="state.error" class="tracing-page__error row-text">
         {{ state.error }}
       </div>
 
-      <BaseTabs
-        v-model="workspaceTab"
-        :items="WORKSPACE_TABS"
-      />
+      <BaseTabs v-model="workspaceTab" :items="WORKSPACE_TABS" />
 
-      <div
-        v-if="workspaceTab === 'graph'"
-        class="tracing-page__workspace"
-      >
+      <div v-if="workspaceTab === 'graph'" class="tracing-page__workspace">
         <div class="tracing-page__graph">
           <div class="tracing-page__graph-actions">
             <BaseButton
@@ -1323,12 +1305,7 @@ watch(
               }"
             >
               <div class="tracing-page__node-menu-header">
-                <BaseHash
-                  :hash="selectedNode.id"
-                  type="short"
-                  :link="`/accounts/${selectedNode.id}`"
-                  copy
-                />
+                <BaseHash :hash="selectedNode.id" type="short" :link="`/accounts/${selectedNode.id}`" copy />
                 <BaseButton
                   bordered
                   data-test="trace-node-menu-expand"
@@ -1341,7 +1318,7 @@ watch(
 
               <div class="tracing-page__node-menu-flows">
                 <section class="tracing-page__node-menu-group">
-                  <span class="h-sm">Inflow</span>
+                  <span class="h-sm">{{ $t('tracing.inflow') }}</span>
                   <ul
                     v-if="selectedNodeIncomingFlows.length"
                     class="tracing-page__node-menu-list"
@@ -1359,19 +1336,14 @@ watch(
                       >
                         {{ flow.accountId }}
                       </button>
-                      <span class="row-text-monospace">x{{ flow.count }}</span>
+                      <span class="row-text-monospace">{{ $t('tracing.flowCount', { count: flow.count }) }}</span>
                     </li>
                   </ul>
-                  <p
-                    v-else
-                    class="row-text"
-                  >
-                    No inflows yet
-                  </p>
+                  <p v-else class="row-text">{{ $t('tracing.noInflows') }}</p>
                 </section>
 
                 <section class="tracing-page__node-menu-group">
-                  <span class="h-sm">Outflow</span>
+                  <span class="h-sm">{{ $t('tracing.outflow') }}</span>
                   <ul
                     v-if="selectedNodeOutgoingFlows.length"
                     class="tracing-page__node-menu-list"
@@ -1389,15 +1361,10 @@ watch(
                       >
                         {{ flow.accountId }}
                       </button>
-                      <span class="row-text-monospace">x{{ flow.count }}</span>
+                      <span class="row-text-monospace">{{ $t('tracing.flowCount', { count: flow.count }) }}</span>
                     </li>
                   </ul>
-                  <p
-                    v-else
-                    class="row-text"
-                  >
-                    No outflows yet
-                  </p>
+                  <p v-else class="row-text">{{ $t('tracing.noOutflows') }}</p>
                 </section>
               </div>
             </div>
@@ -1406,25 +1373,13 @@ watch(
           <div class="tracing-page__path">
             <span class="h-sm">{{ $t('tracing.shortestPath') }}</span>
             <div class="tracing-page__path-controls">
-              <input
-                v-model="pathStart"
-                :placeholder="$t('tracing.pathStart')"
-              >
-              <input
-                v-model="pathEnd"
-                :placeholder="$t('tracing.pathEnd')"
-              >
-              <BaseButton
-                bordered
-                @click="runPathSearch"
-              >
+              <input v-model="pathStart" :placeholder="$t('tracing.pathStart')" />
+              <input v-model="pathEnd" :placeholder="$t('tracing.pathEnd')" />
+              <BaseButton bordered @click="runPathSearch">
                 {{ $t('tracing.findPath') }}
               </BaseButton>
             </div>
-            <p
-              v-if="pathResult"
-              class="row-text-monospace"
-            >
+            <p v-if="pathResult" class="row-text-monospace">
               {{ pathResult.join(' -> ') }}
             </p>
           </div>
@@ -1434,44 +1389,41 @@ watch(
           <div class="tracing-page__section">
             <span class="h-sm">{{ $t('tracing.selectedNode') }}</span>
             <div v-if="selectedNode">
-              <BaseHash
-                :hash="selectedNode.id"
-                type="short"
-                :link="`/accounts/${selectedNode.id}`"
-                copy
-              />
-              <p class="row-text">
-                {{ $t('tracing.riskScore') }}: {{ selectedNode.risk.score }}
-              </p>
-              <p class="row-text">
-                {{ $t('tracing.riskFlags') }}: {{ selectedNode.risk.flags.join(', ') || '-' }}
-              </p>
+              <BaseHash :hash="selectedNode.id" type="short" :link="`/accounts/${selectedNode.id}`" copy />
+              <p class="row-text">{{ $t('tracing.riskScore') }}: {{ selectedNode.risk.score }}</p>
+              <p class="row-text">{{ $t('tracing.riskFlags') }}: {{ formatRiskFlags(selectedNode.risk.flags) }}</p>
               <div class="tracing-page__label-editor">
                 <input
                   :value="selectedNodeLabel.tag"
                   :placeholder="$t('tracing.labelTag')"
-                  @input="(event) => updateManualLabel({ tag: (event.target as HTMLInputElement).value, risky: selectedNodeLabel.risky })"
-                >
+                  @input="
+                    (event) =>
+                      updateManualLabel({
+                        tag: (event.target as HTMLInputElement).value,
+                        risky: selectedNodeLabel.risky,
+                      })
+                  "
+                />
                 <label class="row-text">
                   <input
                     type="checkbox"
                     :checked="selectedNodeLabel.risky"
-                    @change="(event) => updateManualLabel({ tag: selectedNodeLabel.tag, risky: (event.target as HTMLInputElement).checked })"
-                  >
+                    @change="
+                      (event) =>
+                        updateManualLabel({
+                          tag: selectedNodeLabel.tag,
+                          risky: (event.target as HTMLInputElement).checked,
+                        })
+                    "
+                  />
                   {{ $t('tracing.labelRisky') }}
                 </label>
-                <BaseButton
-                  bordered
-                  @click="clearManualLabel"
-                >
+                <BaseButton bordered @click="clearManualLabel">
                   {{ $t('tracing.clearLabel') }}
                 </BaseButton>
               </div>
             </div>
-            <p
-              v-else
-              class="row-text"
-            >
+            <p v-else class="row-text">
               {{ $t('tracing.noNodeSelected') }}
             </p>
           </div>
@@ -1479,15 +1431,8 @@ watch(
           <div class="tracing-page__section">
             <span class="h-sm">{{ $t('transactions.transactions') }}</span>
             <div class="tracing-page__transaction-filters">
-              <select
-                v-model="transactionStatusFilter"
-                data-test="trace-status-filter"
-              >
-                <option
-                  v-for="option in transactionStatusFilterOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
+              <select v-model="transactionStatusFilter" data-test="trace-status-filter">
+                <option v-for="option in transactionStatusFilterOptions" :key="option.value" :value="option.value">
                   {{ option.label }}
                 </option>
               </select>
@@ -1495,7 +1440,7 @@ watch(
                 v-model="transactionHashFilter"
                 :placeholder="$t('transactions.transactionHash')"
                 data-test="trace-hash-filter"
-              >
+              />
               <BaseButton
                 bordered
                 :disabled="transactionStatusFilter === 'all' && transactionHashFilter.trim().length === 0"
@@ -1505,23 +1450,14 @@ watch(
               </BaseButton>
             </div>
 
-            <ul
-              v-if="filteredTransactionStates.length"
-              class="tracing-page__list"
-              data-test="trace-transaction-list"
-            >
+            <ul v-if="filteredTransactionStates.length" class="tracing-page__list" data-test="trace-transaction-list">
               <li
                 v-for="transaction in filteredTransactionStates.slice(0, 200)"
                 :key="transaction.hash"
                 class="tracing-page__event-item tracing-page__transaction-item"
               >
                 <div class="tracing-page__transaction-row">
-                  <BaseHash
-                    :hash="transaction.hash"
-                    type="short"
-                    :link="`/transactions/${encodeURIComponent(transaction.hash)}`"
-                    copy
-                  />
+                  <BaseHash :hash="transaction.hash" type="short" :link="`/transactions/${transaction.hash}`" copy />
                   <span :class="statusBadgeClass(transaction.status)">
                     {{ formatStatusLabel(transaction.status) }}
                   </span>
@@ -1530,7 +1466,12 @@ watch(
                   #{{ transaction.latestBlock }} · {{ formatRelativeAge(transaction.latestSeenMs) }}
                 </div>
                 <div class="row-text">
-                  Instructions: {{ transaction.instructionCount }} · Events: {{ transaction.eventCount }}
+                  {{
+                    $t('tracing.transactionActivity', {
+                      instructions: transaction.instructionCount,
+                      events: transaction.eventCount,
+                    })
+                  }}
                 </div>
                 <div class="row-text-monospace">
                   {{ formatParticipants(transaction.participants) }}
@@ -1547,33 +1488,16 @@ watch(
                 </div>
               </li>
             </ul>
-            <p
-              v-else
-              class="row-text"
-            >
-              No transactions match current filter.
-            </p>
+            <p v-else class="row-text">{{ $t('tracing.noTransactionsMatch') }}</p>
           </div>
 
           <div class="tracing-page__section">
             <span class="h-sm">{{ $t('transactions.rejectedReason') }}</span>
-            <div
-              v-if="rejectedReasonLookupInProgress"
-              class="row-text"
-            >
-              Loading rejection details...
-            </div>
-            <div
-              v-if="rejectedReasonLookupError"
-              class="tracing-page__warning row-text"
-            >
+            <div v-if="rejectedReasonLookupInProgress" class="row-text">{{ $t('tracing.loadingRejections') }}</div>
+            <div v-if="rejectedReasonLookupError" class="tracing-page__warning row-text">
               {{ rejectedReasonLookupError }}
             </div>
-            <ul
-              v-if="rejectedReasonGroups.length"
-              class="tracing-page__list"
-              data-test="trace-rejection-groups"
-            >
+            <ul v-if="rejectedReasonGroups.length" class="tracing-page__list" data-test="trace-rejection-groups">
               <li
                 v-for="group in rejectedReasonGroups"
                 :key="group.reason"
@@ -1582,11 +1506,9 @@ watch(
                 <p class="row-text">
                   {{ group.reason }}
                 </p>
-                <p class="row-text">
-                  Transactions: {{ group.count }}
-                </p>
+                <p class="row-text">{{ $t('tracing.transactionCount', { count: group.count }) }}</p>
                 <p class="row-text-monospace">
-                  Authorities: {{ formatParticipants(group.authorities) }}
+                  {{ $t('tracing.authorities', { authorities: formatParticipants(group.authorities) }) }}
                 </p>
                 <div class="tracing-page__hash-list">
                   <BaseHash
@@ -1594,44 +1516,41 @@ watch(
                     :key="hash"
                     :hash
                     type="short"
-                    :link="`/transactions/${encodeURIComponent(hash)}`"
+                    :link="`/transactions/${hash}`"
                     copy
                   />
                 </div>
               </li>
             </ul>
-            <p
-              v-else
-              class="row-text"
-            >
-              No rejected transactions in current trace.
-            </p>
+            <p v-else class="row-text">{{ $t('tracing.noRejectedTransactions') }}</p>
           </div>
 
           <div class="tracing-page__section">
             <span class="h-sm">{{ $t('tracing.recentEvents') }}</span>
             <ul class="tracing-page__list">
-              <li
-                v-for="event in displayEvents"
-                :key="event.id"
-                class="tracing-page__event-item"
-              >
+              <li v-for="event in displayEvents" :key="event.id" class="tracing-page__event-item">
                 <div class="tracing-page__event-header">
                   <BaseHash
                     :hash="event.transactionHash"
                     type="short"
-                    :link="`/transactions/${encodeURIComponent(event.transactionHash)}`"
+                    :link="`/transactions/${event.transactionHash}`"
                     copy
                   />
                   <span :class="statusBadgeClass(event.transactionStatus)">
                     {{ formatStatusLabel(event.transactionStatus) }}
                   </span>
                 </div>
-                <div class="row-text-monospace">
-                  {{ event.source }} -> {{ event.target }}
-                </div>
+                <div class="row-text-monospace">{{ event.source }} -> {{ event.target }}</div>
                 <div class="row-text">
-                  {{ event.variant }} · #{{ event.block }} · idx {{ event.instructionIndex }} · {{ formatRelativeAge(event.createdAtMs) }}
+                  {{ event.variant }} ·
+                  {{
+                    $t('tracing.eventPosition', {
+                      block: event.block,
+                      index: event.instructionIndex,
+                    })
+                  }}
+                  ·
+                  {{ formatRelativeAge(event.createdAtMs) }}
                 </div>
               </li>
             </ul>
@@ -1639,17 +1558,11 @@ watch(
         </div>
       </div>
 
-      <div
-        v-else
-        class="tracing-page__import"
-      >
+      <div v-else class="tracing-page__import">
         <p class="row-text">
           {{ $t('tracing.importHint') }}
         </p>
-        <BaseButton
-          bordered
-          @click="triggerBundleImport"
-        >
+        <BaseButton bordered @click="triggerBundleImport">
           {{ $t('tracing.importBundle') }}
         </BaseButton>
       </div>

@@ -22,7 +22,9 @@ vi.mock('@/shared/lib/explorer-read-auth', () => ({
   },
 }));
 
-const { blockWindowRetention, RETAINED_WINDOW_MAX_AGE_MS } = await import('./block-window-retention');
+const { blockWindowRetention, publicBlockWindowKey, RETAINED_WINDOW_MAX_AGE_MS } = await import('./block-window-retention');
+
+const NETWORK_ID = 'hash:4978D0BD15FC32B834672B27BBD8A03653B1DF060A1EEE7E9374D29AF3886D91#6774';
 
 const T0 = Date.UTC(2026, 9, 25, 5, 0, 0);
 
@@ -124,5 +126,34 @@ describe('blockWindowRetention', () => {
     retention.save({ samples: samples(1, 2), reachedGenesis: true, readAt: T0, acquiredAt: T0, cursor: null, target: 2 });
     expect(window.localStorage.length).toBe(0);
     expect(retention.load()).toBeNull();
+  });
+});
+
+describe('publicBlockWindowKey', () => {
+  it('names the exact canonical network and Torii endpoint', () => {
+    const key = publicBlockWindowKey('blocks', NETWORK_ID, 'https://torii.example/base')();
+    expect(key).toBe(`iroha-history-v1:blocks:${encodeURIComponent(NETWORK_ID)}:${encodeURIComponent('https://torii.example/base')}`);
+    expect(publicBlockWindowKey('blocks', NETWORK_ID, 'http://127.0.0.1:8080')()).not.toBe(key);
+  });
+
+  it.each([
+    ['a missing NetworkId', undefined, 'https://torii.example'],
+    ['a NetworkId with a wrong checksum', NETWORK_ID.replace('#6774', '#0000'), 'https://torii.example'],
+    ['an endpoint with credentials', NETWORK_ID, 'https://reader:secret@torii.example'],
+    ['a non-HTTP endpoint', NETWORK_ID, 'ws://torii.example'],
+    ['an unparseable endpoint', NETWORK_ID, 'torii.example'],
+  ])('refuses %s', (_case, networkId, toriiUrl) => {
+    expect(publicBlockWindowKey('blocks', networkId, toriiUrl)()).toBeNull();
+  });
+
+  it('stops naming the window for a signed-in or changed reader', () => {
+    reader.isPublic = false;
+    expect(publicBlockWindowKey('blocks', NETWORK_ID, 'https://torii.example')()).toBeNull();
+
+    reader.isPublic = true;
+    const key = publicBlockWindowKey('blocks', NETWORK_ID, 'https://torii.example');
+    expect(key()).not.toBeNull();
+    reader.revision += 1;
+    expect(key()).toBeNull();
   });
 });

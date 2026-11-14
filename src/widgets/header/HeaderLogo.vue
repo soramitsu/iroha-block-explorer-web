@@ -1,18 +1,20 @@
 <template>
-  <RouterLink
+  <BaseLink
     to="/"
     class="header-logo"
+    aria-label="Hyperledger Iroha"
   >
-    <img
-      :src="logoSrc"
+    <Logo
       class="header-logo__img"
-      alt="Hyperledger Iroha"
-    >
-  </RouterLink>
+      aria-hidden="true"
+      focusable="false"
+    />
+  </BaseLink>
 </template>
 
 <script setup lang="ts">
-import logoSrc from '/hyperledger_iroha_final.svg?url';
+import BaseLink from '@/shared/ui/components/BaseLink.vue';
+import Logo from '@/assets/hyperledger_iroha_final.svg';
 </script>
 
 <style lang="scss">
@@ -36,4 +38,5 @@ import logoSrc from '/hyperledger_iroha_final.svg?url';
     }
   }
 }
+html.dark .header-logo__img .st4 { fill: #e9e9e9; }
 </style>

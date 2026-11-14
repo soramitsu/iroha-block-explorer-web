@@ -22,6 +22,21 @@ test.each([
   ],
   [
     {
+      reversed: false,
+      items: 0,
+      totalItems: 15,
+      page: 4,
+      pageSize: 10,
+      activePage: 4,
+    },
+    {
+      start: 0,
+      end: 0,
+      total: 15,
+    },
+  ],
+  [
+    {
       reversed: true,
       items: 10,
       totalItems: 30,
@@ -210,10 +225,10 @@ test.each([
 );
 
 describe('BasePagination accessibility', () => {
-  function mountPagination(page: number, totalItems = 35) {
+  function mountPagination(page: number, totalItems = 35, items = 10) {
     return mount(BasePagination, {
       props: {
-        items: 10,
+        items,
         page,
         pageSize: 10,
         reversed: false,
@@ -263,6 +278,39 @@ describe('BasePagination accessibility', () => {
     expect(next.attributes('aria-label')).toBe('Next page');
     await previous.trigger('click');
     expect(wrapper.emitted('update:page')?.at(-1)).toEqual([3]);
+  });
+
+  it('caps navigable pages to the Torii fetch window while retaining the exact total', () => {
+    const wrapper = mount(BasePagination, {
+      props: {
+        items: 20,
+        page: 25,
+        pageSize: 20,
+        reversed: false,
+        totalItems: 1_000,
+        maxFetchSize: 500,
+      },
+      global: { plugins: [i18n] },
+    });
+
+    expect(wrapper.text()).toContain('481-500 of 1000');
+    expect(wrapper.get('[data-test="fetch-window-limit"]').text()).toContain('500');
+    expect(
+      wrapper.findAll('button.base-pagination__item-numbers-number').some((button) => button.text() === '25')
+    ).toBe(true);
+    expect(
+      wrapper.findAll('button.base-pagination__item-numbers-number').some((button) => button.text() === '26')
+    ).toBe(false);
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="next"]').element.disabled).toBe(true);
+  });
+
+  it('keeps a page-one recovery control for an empty out-of-range page', async () => {
+    const wrapper = mountPagination(3, 7, 0);
+    expect(wrapper.text()).toContain('0-0 of 7');
+    const pageOne = wrapper.get('button.base-pagination__item-numbers-number');
+    expect(pageOne.text()).toBe('1');
+    await pageOne.trigger('click');
+    expect(wrapper.emitted('update:page')?.at(-1)).toEqual([1]);
   });
 });
 

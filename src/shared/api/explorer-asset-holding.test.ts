@@ -3,7 +3,12 @@ import { ExplorerAsset, CollectionPage } from './schemas';
 
 const account = 'testuﾛ1NﾎHﾋiｳwDｻWﾋｿｿeﾙｾｱ2VﾛﾌfｦfVbmﾍnwﾉﾉtQAﾍ7Rﾆ7UXM3T';
 const definition = '6TEAJqbb8oEPmLncoNiMRbLEK6tw';
-const holding = { id: `${definition}#${account}`, definition_id: definition, account_id: account, value: '24999.99245' };
+const holding = {
+  id: `${definition}#${account}`,
+  definition_id: definition,
+  account_id: account,
+  value: '24999.99245',
+};
 
 describe('native Explorer account asset holding', () => {
   it('parses the exact current four-field DTO without fabricating display metadata', () => {
@@ -17,14 +22,19 @@ describe('native Explorer account asset holding', () => {
   });
 
   it('retains the continuation cursor and decimal precision in the SDK collection model', () => {
-    const page = CollectionPage(ExplorerAsset).parse({ items: [{ ...holding, value: '9007199254740993.0000000000000000000000000001' }], nextCursor: 'native_cursor' });
+    const page = CollectionPage(ExplorerAsset).parse({
+      items: [{ ...holding, value: '9007199254740993.0000000000000000000000000001' }],
+      nextCursor: 'native_cursor',
+    });
     expect(page.nextCursor).toBe('native_cursor');
     expect(page.items[0].value.toFixed()).toBe('9007199254740993.0000000000000000000000000001');
   });
 
   it('preserves the shipped enriched metadata and its name/alias binding checks', () => {
     expect(ExplorerAsset.parse({ ...holding, asset_name: 'XOR', asset_alias: 'xor#universal' }).asset_name).toBe('XOR');
-    expect(ExplorerAsset.safeParse({ ...holding, asset_name: 'USD', asset_alias: 'xor#universal' }).success).toBe(false);
+    expect(ExplorerAsset.safeParse({ ...holding, asset_name: 'USD', asset_alias: 'xor#universal' }).success).toBe(
+      false
+    );
   });
 
   it.each([

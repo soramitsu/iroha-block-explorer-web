@@ -11,86 +11,96 @@ import BaseContentBlock from './BaseContentBlock.vue';
 import BaseResourceState from './BaseResourceState.vue';
 import DataField from './DataField.vue';
 
-const props = defineProps<{ blockHeight: number, transactionHash: string }>();
+const props = defineProps<{ blockHeight: number; transactionHash: string }>();
 const resource = setupAsyncData(() => http.fetchTransactionProof(props.transactionHash));
-const proof = computed(() => resource.data?.status === SUCCESSFUL_FETCHING ? resource.data.data : null);
-const agreement = computed(() => proof.value ? transactionProofAgreement(proof.value, {
-  transactionHash: props.transactionHash, blockHeight: props.blockHeight, networkId: getRuntimeConfig().networkId,
-}) : null);
-const rawProof = computed(() => proof.value ? stringifyLosslessJson(proof.value, undefined, 2) : '');
-watch(() => [props.blockHeight, props.transactionHash], () => resource.refetch());
+const proof = computed(() => (resource.data?.status === SUCCESSFUL_FETCHING ? resource.data.data : null));
+const agreement = computed(() =>
+  proof.value
+    ? transactionProofAgreement(proof.value, {
+        transactionHash: props.transactionHash,
+        blockHeight: props.blockHeight,
+        networkId: getRuntimeConfig().networkId,
+      })
+    : null
+);
+const rawProof = computed(() => (proof.value ? stringifyLosslessJson(proof.value, undefined, 2) : ''));
+watch(
+  () => [props.blockHeight, props.transactionHash],
+  () => resource.refetch()
+);
 </script>
 
 <template>
-  <BaseContentBlock title="Transaction evidence">
+  <BaseContentBlock :title="$t('transactions.evidence.title')">
     <template #header-action>
-      <BaseButton
-        bordered
-        data-test="evidence-retry"
-        :disabled="resource.isLoading"
-        @click="resource.refetch()"
-      >
-        Refresh evidence
+      <BaseButton bordered data-test="evidence-retry" :disabled="resource.isLoading" @click="resource.refetch()">
+        {{ $t('transactions.evidence.refresh') }}
       </BaseButton>
     </template>
     <BaseResourceState
       :snapshot="resource.snapshot"
-      loading-label="Loading transaction evidence"
-      error-label="Transaction evidence could not be loaded"
-      retry-label="Retry evidence"
+      :loading-label="$t('transactions.evidence.loading')"
+      :error-label="$t('transactions.evidence.loadError')"
+      :retry-label="$t('transactions.evidence.retry')"
       @retry="resource.refetch()"
     >
       <template #not-found>
         <p data-test="transaction-proof-unavailable">
-          This transaction proof is unavailable to the current reader. For a private data space, use Read access to connect an authorized wallet.
+          {{ $t('transactions.evidence.proofUnavailable') }}
         </p>
       </template>
-      <div
-        v-if="proof"
-        class="transaction-evidence"
-        data-test="transaction-proof-available"
-      >
+      <div v-if="proof" class="transaction-evidence" data-test="transaction-proof-available">
         <p>
-          These inclusion paths and consensus certificate cover this transaction. They are supplied by the node;
-          this browser does not independently verify Merkle paths or validator signatures against a trusted checkpoint.
+          {{ $t('transactions.evidence.scope') }}
         </p>
-        <strong
-          data-test="transaction-proof-claim"
-          :class="{ 'transaction-evidence__error': !agreement?.matches }"
-        >
-          {{ agreement?.matches ? 'Identifiers match · finality not verified here' : 'Evidence identity mismatch' }}
+        <strong data-test="transaction-proof-claim" :class="{ 'transaction-evidence__error': !agreement?.matches }">
+          {{
+            $t(
+              agreement?.matches
+                ? 'transactions.evidence.nodeProvidedUnverified'
+                : 'transactions.evidence.doesNotMatchProof'
+            )
+          }}
         </strong>
         <div class="transaction-evidence__grid">
           <DataField
-            title="Requested transaction"
-            :value="agreement?.transactionMatches ? 'Matches proof entry' : 'Does not match proof entry'"
+            :title="$t('transactions.evidence.requestedTransaction')"
+            :value="
+              $t(
+                agreement?.transactionMatches
+                  ? 'transactions.evidence.matchesProof'
+                  : 'transactions.evidence.doesNotMatchProof'
+              )
+            "
           />
           <DataField
-            title="Network identity"
-            :value="agreement?.networkMatches ? 'Matches configured network' : 'Does not match configured network'"
+            :title="$t('ux.network')"
+            :value="
+              $t(
+                agreement?.networkMatches
+                  ? 'transactions.evidence.matchesReference'
+                  : 'transactions.evidence.doesNotMatchReference'
+              )
+            "
           />
           <DataField
-            title="Block height"
-            :value="agreement?.heightMatches ? proof.block_height : 'Does not match requested height'"
+            :title="$t('transactions.evidence.proofHeight')"
+            :value="agreement?.heightMatches ? proof.block_height : $t('transactions.evidence.doesNotMatchHeight')"
           />
+          <DataField :title="$t('transactions.evidence.blockHash')" :hash="proof.transaction.block_hash" copy />
           <DataField
-            title="Block hash"
-            :hash="proof.transaction.block_hash"
-            copy
-          />
-          <DataField
-            title="Transaction entry hash"
+            :title="$t('transactions.evidence.transactionEntryHash')"
             :hash="proof.transaction.entrypoint_hash"
             copy
           />
           <DataField
-            title="Execution output hash"
+            :title="$t('transactions.evidence.executionOutputHash')"
             :hash="proof.transaction.output_hash"
             copy
           />
         </div>
         <details data-test="transaction-proof-raw">
-          <summary>Transaction inclusion paths and consensus certificate</summary>
+          <summary>{{ $t('transactions.evidence.canonicalProof') }}</summary>
           <pre>{{ rawProof }}</pre>
         </details>
       </div>
@@ -105,9 +115,24 @@ watch(() => [props.blockHeight, props.transactionHash], () => resource.refetch()
   gap: 20px;
   color: theme-color('content-primary');
   line-height: 1.6;
-  &__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-  &__error { color: theme-color('error'); }
-  summary { cursor: pointer; }
-  pre { margin-top: 12px; max-height: 480px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  &__error {
+    color: theme-color('error');
+  }
+  summary {
+    cursor: pointer;
+  }
+  pre {
+    margin-top: 12px;
+    max-height: 480px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+  }
 }
 </style>

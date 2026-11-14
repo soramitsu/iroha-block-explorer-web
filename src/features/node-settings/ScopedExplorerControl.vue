@@ -70,9 +70,9 @@ import { onClickOutside } from '@vueuse/core';
 import { useNodeSettingsDropdown } from '@/shared/ui/composables/header-portal';
 import { PORTAL_ID } from '@/shared/ui/consts';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
-import { getRuntimeConfig } from '@/shared/runtime-config';
 import {
   getConfiguredToriiBaseUrl,
+  isToriiBaseUrlForced,
   setRouteScopedToriiBaseUrl,
 } from '@/shared/api';
 import {
@@ -87,7 +87,7 @@ import {
 } from '@/shared/lib/explorer-scope';
 
 const dropdown = useNodeSettingsDropdown();
-const forcedNode = getRuntimeConfig().toriiForceBaseUrl === true;
+const forcedNode = computed(() => isToriiBaseUrlForced());
 const dropdownTarget = ref<HTMLElement | null>(null);
 
 const { scope, pushGlobal, router } = useScopedExplorerNavigation();
@@ -152,7 +152,7 @@ onClickOutside(
 );
 
 const activeNodeLabel = computed(() => {
-  if (forcedNode) return deriveNodeLabel(getConfiguredToriiBaseUrl());
+  if (forcedNode.value) return deriveNodeLabel(getConfiguredToriiBaseUrl());
   const scopedValue = currentScope.value;
   if (!scopedValue) return '-';
   const matched = nodes.value.find((item) => item.url === scopedValue.torii);
@@ -173,6 +173,7 @@ function replaceScope(nextScope: ExplorerRouteScope) {
 }
 
 function switchNode(node: DataspacePublicNodeEntry) {
+  if (forcedNode.value) return;
   const scopedValue = currentScope.value;
   const context = scopedContext.value;
   if (!scopedValue || !context) return;
@@ -231,6 +232,7 @@ function exitScopedExplorer() {
 
   &__dropdown {
     width: size(66);
+    max-width: calc(100vw - 24px);
     background: theme-color('surface');
     border: 1px solid theme-color('border-primary');
     border-radius: size(2);
@@ -270,7 +272,7 @@ function exitScopedExplorer() {
 
     &[data-active] {
       border-color: color-mix(in srgb, theme-color('primary') 55%, theme-color('border-primary'));
-      box-shadow: 0 0 0 1px color-mix(in srgb, theme-color('primary') 35%, transparent) inset;
+      border-color: theme-color('primary');
     }
   }
 

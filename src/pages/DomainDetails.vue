@@ -2,7 +2,7 @@
 import { useRouter } from 'vue-router';
 import { computed, reactive, ref, watch } from 'vue';
 import * as http from '@/shared/api';
-import type { Account, AccountSearchParams, AssetDefinition, NFT } from '@/shared/api/schemas';
+import type { Account, AccountSearchParams, ExplorerAssetDefinition, NFT } from '@/shared/api/schemas';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import DataField from '@/shared/ui/components/DataField.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
@@ -19,7 +19,7 @@ import { useI18n } from 'vue-i18n';
 import BaseTabs from '@/shared/ui/components/BaseTabs.vue';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { getPreferredAccountId } from '@/shared/lib/account-id';
+import { getDisplayedAccountId } from '@/shared/lib/account-id';
 import { normalizeAssetDefinitionSelectorLiteral } from '@/shared/lib/asset-definition-literal';
 import { getAssetDefinitionDisplayName } from '@/shared/lib/asset-definition-id';
 import { parseOptionalFilterCatching } from '@/shared/lib/optional-filter';
@@ -61,13 +61,10 @@ watch([() => assetsListState.limit, () => assetsTab.value], () => {
   assetsListState.cursor = null;
 });
 
-watch(
-  domainId,
-  (next) => {
-    assetsListState.domain = next;
-    assetsListState.cursor = null;
-  }
-);
+watch(domainId, (next) => {
+  assetsListState.domain = next;
+  assetsListState.cursor = null;
+});
 
 const assetsListScope = useParamScope(
   () => {
@@ -75,7 +72,11 @@ const assetsListScope = useParamScope(
 
     return {
       key: JSON.stringify(assetsListState),
-      payload: assetsListState,
+      payload: {
+        cursor: assetsListState.cursor,
+        limit: assetsListState.limit,
+        owning_domain: assetsListState.domain,
+      },
     };
   },
   ({ payload }) => setupAsyncData(() => http.fetchAssetDefinitions(payload))
@@ -90,8 +91,9 @@ const assetsPagination = computed(() =>
     ? assetsListScope.value.expose.data.data
     : null
 );
-const assetDefinitionRowKey = (item: AssetDefinition) => item.id.toString();
-const domainAssetDefinitionName = (assetDefinition: AssetDefinition) => getAssetDefinitionDisplayName(assetDefinition);
+const assetDefinitionRowKey = (item: ExplorerAssetDefinition) => item.id;
+const domainAssetDefinitionName = (assetDefinition: ExplorerAssetDefinition) =>
+  getAssetDefinitionDisplayName(assetDefinition);
 
 const NFTsListScope = useParamScope(
   () => {
@@ -145,13 +147,10 @@ watch(accountAssetFilter, () => {
   accountsListState.cursor = null;
 });
 
-watch(
-  domainId,
-  (next) => {
-    accountsListState.domain = next;
-    accountsListState.cursor = null;
-  }
-);
+watch(domainId, (next) => {
+  accountsListState.domain = next;
+  accountsListState.cursor = null;
+});
 
 const accountsListScope = useParamScope(
   () => {
@@ -186,7 +185,7 @@ const accountsPagination = computed(() =>
     ? accountsListScope.value.expose.data.data
     : null
 );
-const accountDisplayId = (item: Account) => getPreferredAccountId(item);
+const accountDisplayId = (item: Account) => getDisplayedAccountId(item.id);
 const accountLink = (item: Account) => `/accounts/${encodeURIComponent(accountDisplayId(item))}`;
 const accountRowKey = (item: Account) => accountDisplayId(item);
 
@@ -209,25 +208,19 @@ const domainAssetsSection = computed(() => {
 <template>
   <div class="domain-details">
     <div class="domain-details__native">
-      <BaseContentBlock
-        :title="$t('domain')"
-        class="domain-details__native-information"
-      >
+      <BaseContentBlock :title="$t('domain')" class="domain-details__native-information">
         <template #default>
           <BaseResourceState
             :snapshot="domainSnapshot"
-            loading-label="Loading domain"
-            not-found-label="Domain not found"
-            error-label="Domain could not be loaded"
-            retry-label="Retry domain"
+            :loading-label="$t('domains.resource.loading')"
+            :not-found-label="$t('domains.resource.notFound')"
+            :error-label="$t('domains.resource.loadError')"
+            :retry-label="$t('domains.resource.retry')"
             @retry="domainScope.expose.refetch()"
           >
             <div v-if="domain">
               <div class="domain-details__native-information-row">
-                <DataField
-                  :title="$t('domains.domainId')"
-                  :hash="domainId"
-                />
+                <DataField :title="$t('domains.domainId')" :hash="domainId" />
 
                 <DataField
                   :title="$t('domains.ownedBy')"
@@ -248,22 +241,12 @@ const domainAssetsSection = computed(() => {
         </template>
       </BaseContentBlock>
 
-      <BaseContentBlock
-        v-if="domain"
-        :title="domainAssetsSection.title"
-        class="domain-details__native-assets"
-      >
+      <BaseContentBlock v-if="domain" :title="domainAssetsSection.title" class="domain-details__native-assets">
         <template #header-action>
-          <BaseTabs
-            v-model="assetsTab"
-            :items="ASSETS_OPTIONS"
-          />
+          <BaseTabs v-model="assetsTab" :items="ASSETS_OPTIONS" />
         </template>
         <template #default>
-          <span
-            v-if="domainAssetsSection.isZero"
-            class="domain-details__native-assets_empty row-text"
-          >
+          <span v-if="domainAssetsSection.isZero" class="domain-details__native-assets_empty row-text">
             {{ domainAssetsSection.zeroTitle }}
           </span>
           <BaseTable
@@ -279,20 +262,14 @@ const domainAssetsSection = computed(() => {
             :breakpoint="960"
           >
             <template #header>
-              <div
-                class="domain-details__native-assets-list-row"
-                role="presentation"
-              >
+              <div class="domain-details__native-assets-list-row" role="presentation">
                 <span class="h-sm" role="columnheader">{{ $t('name') }}</span>
                 <span class="h-sm" role="columnheader">{{ $t('mintable') }}</span>
               </div>
             </template>
 
             <template #row="{ item }">
-              <div
-                class="domain-details__native-assets-list-row"
-                role="presentation"
-              >
+              <div class="domain-details__native-assets-list-row" role="presentation">
                 <div role="cell">
                   <BaseLink :to="`/assets/${encodeURIComponent(item.id.toString())}`">
                     {{ domainAssetDefinitionName(item) }}
@@ -331,19 +308,13 @@ const domainAssetsSection = computed(() => {
             :breakpoint="960"
           >
             <template #header>
-              <div
-                class="domain-details__native-nfts-list-row"
-                role="presentation"
-              >
+              <div class="domain-details__native-nfts-list-row" role="presentation">
                 <span class="h-sm" role="columnheader">{{ $t('name') }}</span>
               </div>
             </template>
 
             <template #row="{ item }">
-              <div
-                class="domain-details__native-nfts-list-row"
-                role="presentation"
-              >
+              <div class="domain-details__native-nfts-list-row" role="presentation">
                 <div role="cell">
                   <BaseLink :to="`/nfts/${encodeURIComponent(item.id.toString())}`">
                     {{ nftDisplayName(item) }}
@@ -367,32 +338,19 @@ const domainAssetsSection = computed(() => {
       </BaseContentBlock>
     </div>
 
-    <div
-      v-if="domain"
-      class="domain-details__accounts"
-    >
+    <div v-if="domain" class="domain-details__accounts">
       <BaseContentBlock :title="$t('domains.domainAccounts')">
         <template #default>
           <div class="domain-details__accounts-filters">
             <label>
               <span class="label">{{ $t('accounts.filters.assetLabel') }}</span>
-              <input
-                v-model="accountAssetFilter"
-                type="text"
-                :placeholder="$t('accounts.filters.assetPlaceholder')"
-              >
-              <small
-                v-if="accountAssetFilterError"
-                class="domain-details__accounts-error"
-              >
+              <input v-model="accountAssetFilter" type="text" :placeholder="$t('accounts.filters.assetPlaceholder')" />
+              <small v-if="accountAssetFilterError" class="domain-details__accounts-error">
                 {{ accountAssetFilterError }}
               </small>
             </label>
           </div>
-          <span
-            v-if="!domainAccounts"
-            class="domain-details__accounts_empty row-text"
-          >
+          <span v-if="!domainAccounts" class="domain-details__accounts_empty row-text">
             {{ $t('domains.domainDoesntHaveAnyAccounts') }}
           </span>
           <BaseTable
@@ -408,19 +366,13 @@ const domainAssetsSection = computed(() => {
             :breakpoint="960"
           >
             <template #header>
-              <div
-                class="domain-details__accounts-row"
-                role="presentation"
-              >
+              <div class="domain-details__accounts-row" role="presentation">
                 <span class="h-sm" role="columnheader">{{ $t('accounts.accountId') }}</span>
               </div>
             </template>
 
             <template #row="{ item }">
-              <div
-                class="domain-details__accounts-row"
-                role="presentation"
-              >
+              <div class="domain-details__accounts-row" role="presentation">
                 <div role="cell">
                   <BaseHash
                     :hash="accountDisplayId(item)"
@@ -637,10 +589,10 @@ const domainAssetsSection = computed(() => {
       }
     }
 
-  &-error {
-    color: theme-color('error');
-    font-size: size(1.3);
-  }
+    &-error {
+      color: theme-color('error');
+      font-size: size(1.3);
+    }
 
     .content-row {
       padding: 0 size(4);

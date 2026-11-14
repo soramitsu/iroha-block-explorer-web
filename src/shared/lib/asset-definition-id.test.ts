@@ -22,13 +22,14 @@ describe('asset definition id helpers', () => {
     });
   });
 
-  it('falls back to human-readable name fields when no alias exists', () => {
+  it('uses the authoritative full-definition name when no alias is bound', () => {
     const literal = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
 
     expect(
       describeAssetDefinitionId({
         id: literal,
-        asset_name: 'Treasury Points',
+        name: 'Treasury Points',
+        alias: null,
       })
     ).toEqual({
       literal,
@@ -37,7 +38,9 @@ describe('asset definition id helpers', () => {
       alias: null,
       dataspace: null,
     });
-    expect(getAssetDefinitionDisplayName({ id: literal, asset_name: 'Treasury Points' })).toBe('Treasury Points');
+    expect(getAssetDefinitionDisplayName({ id: literal, name: 'Treasury Points', alias: null })).toBe(
+      'Treasury Points'
+    );
   });
 
   it('parses alias selectors when only the selector string is available', () => {
@@ -66,10 +69,10 @@ describe('asset definition id helpers', () => {
     });
   });
 
-  it('keeps canonical base58 ids from object payloads when no alias metadata exists', () => {
+  it('keeps canonical base58 ids from exact explorer-definition summaries', () => {
     const literal = '66owaQmAQMuHxPzxUN3bqZ6FJfDa';
 
-    expect(describeAssetDefinitionId({ id: literal })).toEqual({
+    expect(describeAssetDefinitionId({ id: literal, owning_domain: null })).toEqual({
       literal,
       name: literal,
       domain: null,
@@ -78,8 +81,8 @@ describe('asset definition id helpers', () => {
     });
   });
 
-  it('returns empty fields for non-stringable values', () => {
-    expect(describeAssetDefinitionId(null)).toEqual({
+  it('returns empty fields for an empty selector', () => {
+    expect(describeAssetDefinitionId('')).toEqual({
       literal: '',
       name: '',
       domain: null,

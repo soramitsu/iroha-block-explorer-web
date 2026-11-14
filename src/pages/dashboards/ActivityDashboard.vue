@@ -182,6 +182,7 @@ import { DASHBOARD_BLOCK_WINDOW, blockWindowRetention } from '@/shared/ui/compos
 import { useBoundedScan } from '@/shared/ui/composables/useBoundedScan';
 import { useRouteQueryState } from '@/shared/ui/composables/useRouteQueryState';
 import { fetchTransactionSamples } from '@/shared/api';
+import { TRANSACTION_EXECUTABLES } from '@/shared/api/schemas';
 import {
   dayHourHeatmap,
   durationHistogram,
@@ -210,7 +211,7 @@ const TRANSACTION_SAMPLE = 500;
 /** New blocks bring new transactions; the sample follows the head at most this often. */
 const SAMPLE_REFRESH_MS = 30_000;
 const HEATMAP_DAYS = 7;
-const EXECUTABLES = ['Instructions', 'ContractCall', 'Ivm', 'IvmProved', 'Batch'] as const;
+const EXECUTABLES = TRANSACTION_EXECUTABLES;
 
 const { t, locale } = useI18n();
 const { route, updateRouteQuery } = useRouteQueryState();

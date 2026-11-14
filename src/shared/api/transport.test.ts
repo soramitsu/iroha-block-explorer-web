@@ -78,7 +78,9 @@ describe('Torii request cancellation and deadline', () => {
     const override = new AbortController();
     fetchMock.mockResolvedValue(stalled());
     const response = await fetchToriiWithDeadline(
-      new Request(url, { signal: original.signal }), { signal: override.signal }, policy
+      new Request(url, { signal: original.signal }),
+      { signal: override.signal },
+      policy
     );
     const rejected = expect(response.text()).rejects.toMatchObject({ name: 'AbortError' });
     override.abort();
@@ -90,7 +92,11 @@ describe('Torii request cancellation and deadline', () => {
     const original = new AbortController();
     original.abort();
     fetchMock.mockResolvedValue(new Response('done'));
-    const response = await fetchToriiWithDeadline(new Request(url, { signal: original.signal }), { signal: null }, policy);
+    const response = await fetchToriiWithDeadline(
+      new Request(url, { signal: original.signal }),
+      { signal: null },
+      policy
+    );
     expect(await response.text()).toBe('done');
   });
 
@@ -118,7 +124,9 @@ describe('Torii request cancellation and deadline', () => {
   it('keeps the same deadline active after headers through body consumption', async () => {
     const cancelled = vi.fn();
     fetchMock.mockImplementation(async () => {
-      await new Promise(resolve => { setTimeout(resolve, 700); });
+      await new Promise((resolve) => {
+        setTimeout(resolve, 700);
+      });
       return stalled(cancelled);
     });
     const pending = request();
@@ -133,8 +141,9 @@ describe('Torii request cancellation and deadline', () => {
 
   it('includes every retry delay in one total deadline', async () => {
     fetchMock.mockImplementation(async () => new Response('busy', { status: 503 }));
-    const rejected = expect(request({}, { retryCount: 5, retryBaseDelayMs: 2_000 }))
-      .rejects.toBeInstanceOf(RequestTimeoutError);
+    const rejected = expect(request({}, { retryCount: 5, retryBaseDelayMs: 2_000 })).rejects.toBeInstanceOf(
+      RequestTimeoutError
+    );
     await vi.advanceTimersByTimeAsync(policy.timeoutMs);
     await rejected;
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -143,8 +152,9 @@ describe('Torii request cancellation and deadline', () => {
   it('does not start another attempt when cancelled during retry backoff', async () => {
     fetchMock.mockImplementation(async () => new Response('busy', { status: 503 }));
     const caller = new AbortController();
-    const rejected = expect(request({ signal: caller.signal }, { retryBaseDelayMs: 100 }))
-      .rejects.toMatchObject({ name: 'AbortError' });
+    const rejected = expect(request({ signal: caller.signal }, { retryBaseDelayMs: 100 })).rejects.toMatchObject({
+      name: 'AbortError',
+    });
     await vi.advanceTimersByTimeAsync(50);
     caller.abort();
     await rejected;
@@ -175,11 +185,12 @@ describe('Torii request cancellation and deadline', () => {
 });
 
 describe('Torii bounded read retries', () => {
-  it.each([502, 503, 504, 522, 524])('cancels HTTP %i body before retrying an anonymous read', async status => {
+  it.each([502, 503, 504, 522, 524])('cancels HTTP %i body before retrying an anonymous read', async (status) => {
     const cancelled = vi.fn();
-    fetchMock.mockResolvedValueOnce(new Response(new ReadableStream({ cancel: cancelled }), { status }))
+    fetchMock
+      .mockResolvedValueOnce(new Response(new ReadableStream({ cancel: cancelled }), { status }))
       .mockResolvedValueOnce(new Response('{"items":[]}'));
-    const pending = request({ headers: { Accept: 'application/json' } }).then(response => response.json());
+    const pending = request({ headers: { Accept: 'application/json' } }).then((response) => response.json());
     await vi.runAllTimersAsync();
     expect(await pending).toEqual({ items: [] });
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -195,14 +206,16 @@ describe('Torii bounded read retries', () => {
   });
 
   it.each([
-    new Error('application failure'), new DOMException('cancelled', 'AbortError'), new SyntaxError('schema failure'),
-  ])('does not retry $name failures', async error => {
+    new Error('application failure'),
+    new DOMException('cancelled', 'AbortError'),
+    new SyntaxError('schema failure'),
+  ])('does not retry $name failures', async (error) => {
     fetchMock.mockRejectedValue(error);
     await expect(request()).rejects.toBe(error);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it.each([400, 401, 403, 404, 409, 429, 500])('does not retry HTTP %i', async status => {
+  it.each([400, 401, 403, 404, 409, 429, 500])('does not retry HTTP %i', async (status) => {
     fetchMock.mockResolvedValue(new Response('error', { status }));
     const response = await request();
     expect(response.status).toBe(status);
@@ -211,13 +224,20 @@ describe('Torii bounded read retries', () => {
   });
 
   const oneShotRequests: RequestInit[] = [
-    { method: 'POST', body: 'same-body' }, { method: 'PUT' }, { redirect: 'error' }, { credentials: 'include' },
-    { headers: { Authorization: 'Bearer test-only' } }, { headers: { 'X-Iroha-Nonce': 'test-only' } },
-    { headers: { 'X-Iroha-Account': 'test-only' } }, { headers: { 'X-Iroha-Operator': 'test-only' } },
-    { headers: { 'Idempotency-Key': 'test-only' } }, { headers: { Cookie: 'test-only' } },
-    { headers: { 'X-API-Key': 'test-only' } }, { headers: { 'X-API-Token': 'test-only' } },
+    { method: 'POST', body: 'same-body' },
+    { method: 'PUT' },
+    { redirect: 'error' },
+    { credentials: 'include' },
+    { headers: { Authorization: 'Bearer test-only' } },
+    { headers: { 'X-Iroha-Nonce': 'test-only' } },
+    { headers: { 'X-Iroha-Account': 'test-only' } },
+    { headers: { 'X-Iroha-Operator': 'test-only' } },
+    { headers: { 'Idempotency-Key': 'test-only' } },
+    { headers: { Cookie: 'test-only' } },
+    { headers: { 'X-API-Key': 'test-only' } },
+    { headers: { 'X-API-Token': 'test-only' } },
   ];
-  it.each(oneShotRequests)('does not replay a one-shot or authenticated request: %j', async init => {
+  it.each(oneShotRequests)('does not replay a one-shot or authenticated request: %j', async (init) => {
     fetchMock.mockResolvedValue(new Response('busy', { status: 503 }));
     const response = await request(init);
     expect(response.status).toBe(503);
@@ -234,7 +254,15 @@ describe('Torii bounded read retries', () => {
 
   it('never replays a response after a body-stream failure', async () => {
     const failure = new TypeError('stream disconnected');
-    fetchMock.mockResolvedValue(new Response(new ReadableStream({ start(controller) { controller.error(failure); } })));
+    fetchMock.mockResolvedValue(
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(failure);
+          },
+        })
+      )
+    );
     const response = await request();
     await expect(response.text()).rejects.toBe(failure);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -250,7 +278,11 @@ describe('Torii bounded read retries', () => {
 
   it('rejects unbounded runtime policy before issuing any request', async () => {
     for (const change of [
-      { timeoutMs: 0 }, { timeoutMs: Infinity }, { retryCount: 6 }, { retryCount: 1.5 }, { retryBaseDelayMs: 30_001 },
+      { timeoutMs: 0 },
+      { timeoutMs: Infinity },
+      { retryCount: 6 },
+      { retryCount: 1.5 },
+      { retryBaseDelayMs: 30_001 },
     ]) {
       await expect(request({}, change)).rejects.toBeInstanceOf(TypeError);
     }
@@ -261,7 +293,9 @@ describe('Torii bounded read retries', () => {
 describe('Response semantics', () => {
   it('preserves status, headers, URL, redirect metadata and cloning', async () => {
     const original = new Response('body', {
-      status: 201, statusText: 'Created', headers: { 'Content-Type': 'application/json', 'X-Test': 'preserved' },
+      status: 201,
+      statusText: 'Created',
+      headers: { 'Content-Type': 'application/json', 'X-Test': 'preserved' },
     });
     Object.defineProperties(original, { url: { value: url }, redirected: { value: true }, type: { value: 'cors' } });
     fetchMock.mockResolvedValue(original);

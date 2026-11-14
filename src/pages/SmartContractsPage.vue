@@ -1,10 +1,7 @@
 <template>
-  <BaseContentBlock
-    :title="$t('contracts.title')"
-    class="smart-contracts-page"
-  >
+  <BaseContentBlock :title="$t('contracts.title')" class="smart-contracts-page">
     <p class="smart-contracts-page__hint">
-      Inspect deployed contract instances, committed calls, indexed event history, and live contract events.
+      {{ $t('contracts.explorerHint') }}
     </p>
 
     <BaseTabs
@@ -14,260 +11,147 @@
       @update:model-value="selectTab"
     />
 
-    <form
-      v-if="activeTab !== 'deployments'"
-      class="smart-contracts-page__filters"
-      data-test="contract-filters"
-      @submit.prevent="applyFilters"
-    >
+    <form class="smart-contracts-page__filters" data-test="contract-filters" @submit.prevent="applyFilters">
       <label>
-        <span>Authority</span>
+        <span>{{ $t('contracts.filters.authority') }}</span>
         <input
           v-model="filterDraft.authority"
           name="authority"
-          placeholder="Account ID or alias"
-        >
+          :placeholder="$t('contracts.filters.authorityPlaceholder')"
+        />
       </label>
       <label>
-        <span>Contract address</span>
+        <span>{{ $t('contracts.filters.contractAddress') }}</span>
         <input
           v-model="filterDraft.contract_address"
           name="contract_address"
-          placeholder="tairac1…"
-        >
+          :placeholder="$t('contracts.filters.contractAddressPlaceholder')"
+        />
       </label>
       <label v-if="activeTab === 'activity'">
-        <span>Contract alias</span>
+        <span>{{ $t('contracts.filters.contractAlias') }}</span>
         <input
           v-model="filterDraft.contract_alias"
           name="contract_alias"
-          placeholder="router"
-        >
+          :placeholder="$t('contracts.filters.contractAliasPlaceholder')"
+        />
       </label>
       <label v-if="activeTab === 'activity'">
-        <span>Entrypoint</span>
+        <span>{{ $t('contracts.filters.entrypoint') }}</span>
         <input
           v-model="filterDraft.contract_entrypoint"
           name="contract_entrypoint"
-          placeholder="swap"
-        >
+          :placeholder="$t('contracts.filters.entrypointPlaceholder')"
+        />
       </label>
       <template v-else>
         <label>
-          <span>Event kind</span>
+          <span>{{ $t('contracts.filters.eventKind') }}</span>
           <input
             v-model="filterDraft.event_kind"
             name="event_kind"
-            placeholder="swap_filled"
-          >
+            :placeholder="$t('contracts.filters.eventKindPlaceholder')"
+          />
         </label>
         <label>
-          <span>Participant</span>
+          <span>{{ $t('contracts.filters.participant') }}</span>
           <input
             v-model="filterDraft.participant"
             name="participant"
-            placeholder="Account ID or alias"
-          >
+            :placeholder="$t('contracts.filters.participantPlaceholder')"
+          />
         </label>
         <label>
-          <span>Asset</span>
+          <span>{{ $t('contracts.filters.asset') }}</span>
           <input
             v-model="filterDraft.asset_id"
             name="asset_id"
-            placeholder="Asset ID or alias"
-          >
+            :placeholder="$t('contracts.filters.assetPlaceholder')"
+          />
         </label>
         <label>
-          <span>Provenance</span>
-          <select
-            v-model="filterDraft.provenance"
-            name="provenance"
-          >
-            <option value="">Any</option>
-            <option value="emitted">Emitted</option>
+          <span>{{ $t('contracts.filters.provenance') }}</span>
+          <select v-model="filterDraft.provenance" name="provenance">
+            <option value="">{{ $t('contracts.filters.any') }}</option>
+            <option value="emitted">{{ $t('contracts.filters.emitted') }}</option>
           </select>
         </label>
       </template>
       <label>
-        <span>Result</span>
-        <select
-          v-model="filterDraft.result_ok"
-          name="result_ok"
-        >
-          <option value="">Any</option>
-          <option value="true">Succeeded</option>
-          <option value="false">Failed</option>
+        <span>{{ $t('contracts.filters.result') }}</span>
+        <select v-model="filterDraft.result_ok" name="result_ok">
+          <option value="">{{ $t('contracts.filters.any') }}</option>
+          <option value="true">{{ $t('contracts.filters.succeeded') }}</option>
+          <option value="false">{{ $t('contracts.filters.failed') }}</option>
         </select>
       </label>
       <label>
-        <span>Since (Unix ms)</span>
-        <input
-          v-model="filterDraft.since_timestamp_ms"
-          name="since_timestamp_ms"
-          inputmode="numeric"
-          placeholder="0"
-        >
+        <span>{{ $t('contracts.filters.since') }}</span>
+        <input v-model="filterDraft.since_timestamp_ms" name="since_timestamp_ms" inputmode="numeric" placeholder="0" />
       </label>
       <label>
-        <span>Until (Unix ms)</span>
+        <span>{{ $t('contracts.filters.until') }}</span>
         <input
           v-model="filterDraft.until_timestamp_ms"
           name="until_timestamp_ms"
           inputmode="numeric"
           placeholder="1767225599999"
-        >
+        />
       </label>
       <div class="smart-contracts-page__filter-actions">
-        <BaseButton
-          native-type="submit"
-          bordered
-        >
-          Apply filters
+        <BaseButton native-type="submit" bordered>
+          {{ $t('contracts.filters.apply') }}
         </BaseButton>
-        <BaseButton
-          native-type="button"
-          line
-          data-test="clear-contract-filters"
-          @click="clearFilters"
-        >
-          Clear
+        <BaseButton native-type="button" line data-test="clear-contract-filters" @click="clearFilters">
+          {{ $t('contracts.filters.clear') }}
         </BaseButton>
       </div>
     </form>
 
     <BaseResourceState
-      v-if="activeTab === 'deployments'"
-      :snapshot="deploymentSnapshot"
-      loading-label="Loading deployments…"
-      not-found-label="No contract deployments found."
-      error-label="Contract deployments could not be loaded."
-      @retry="retryDeployments"
-    >
-      <template #default="{ data }">
-        <BaseTable
-          v-model:cursor="deploymentCursor"
-          v-model:page-size="deploymentLimit"
-          :loading="false"
-          pagination-mode="cursor"
-          :cursor-pagination="data"
-          :items="data.items"
-          :row-key="deploymentRowKey"
-          container-class="smart-contracts-page__container"
-          row-pointer
-          @click:row="openDeployment"
-        >
-          <template #header>
-            <div
-              class="smart-contracts-page__row smart-contracts-page__row--deployments"
-              role="presentation"
-            >
-              <span class="h-sm" role="columnheader">Contract</span>
-              <span class="h-sm" role="columnheader">Code hash</span>
-              <span class="h-sm" role="columnheader">Deployer</span>
-              <span class="h-sm" role="columnheader">Block</span>
-              <span class="h-sm" role="columnheader">Created</span>
-              <span class="h-sm" role="columnheader">Transaction</span>
-            </div>
-          </template>
-          <template #row="{ item }">
-            <div
-              class="smart-contracts-page__row smart-contracts-page__row--deployments"
-              role="presentation"
-            >
-              <div role="cell">
-                <BaseHash
-                  :hash="item.contractAddress"
-                  :type="addressHashType"
-                  copy
-                />
-                <small v-if="item.contractAlias">{{ item.contractAlias }}</small>
-              </div>
-              <div role="cell">
-                <BaseHash
-                  :hash="item.codeHash ?? '—'"
-                  :type="hashType"
-                  :copy="Boolean(item.codeHash)"
-                />
-              </div>
-              <div role="cell">
-                <BaseHash
-                  :hash="item.authority"
-                  :link="contractAccountPath(item.authority) ?? undefined"
-                  :type="hashType"
-                  copy
-                />
-              </div>
-              <div role="cell">
-                <BaseLink :to="`/blocks/${item.block}`">
-                  {{ item.block }}
-                </BaseLink>
-              </div>
-              <div role="cell">
-                <time :datetime="item.createdAt.toISOString()">
-                  {{ defaultFormat(item.createdAt) }}
-                </time>
-              </div>
-              <div role="cell">
-                <BaseHash
-                  :hash="item.transactionHash"
-                  :link="transactionPath(item.transactionHash)"
-                  :type="hashType"
-                  copy
-                />
-              </div>
-            </div>
-          </template>
-        </BaseTable>
-      </template>
-    </BaseResourceState>
-
-    <BaseResourceState
-      v-else-if="activeTab === 'activity'"
+      v-if="activeTab === 'activity'"
       :snapshot="activitySnapshot"
-      loading-label="Loading contract activity…"
-      not-found-label="No committed contract calls match these filters."
-      :retry-label="activityParams.ok ? 'Retry' : 'Clear invalid filters'"
+      :loading-label="$t('contracts.states.loadingActivity')"
+      :not-found-label="$t('contracts.states.noActivity')"
+      :error-label="activityErrorLabel"
+      :retry-label="
+        !pagination.ok
+          ? $t('table.resetPagination')
+          : activityParams.ok
+            ? $t('contracts.states.retry')
+            : $t('contracts.filters.clearInvalid')
+      "
       @retry="retryActivity"
     >
-      <template #error="{ problem }">
-        <span>{{ problem.message }}</span>
-      </template>
       <template #default="{ data }">
         <BaseTable
           v-model:cursor="cursor"
           v-model:page-size="limit"
-          pagination-mode="cursor"
           :loading="false"
+          pagination-mode="cursor"
           :cursor-pagination="data"
           :items="data.items"
           :row-key="activityRowKey"
           container-class="smart-contracts-page__container"
         >
           <template #header>
-            <div
-              class="smart-contracts-page__row smart-contracts-page__row--activity"
-              role="presentation"
-            >
-              <span class="h-sm" role="columnheader">Contract / entrypoint</span>
-              <span class="h-sm" role="columnheader">Authority</span>
-              <span class="h-sm" role="columnheader">Result</span>
-              <span class="h-sm" role="columnheader">Timestamp</span>
-              <span class="h-sm" role="columnheader">Transaction</span>
-              <span class="h-sm" role="columnheader">Decoded call data</span>
+            <div class="smart-contracts-page__row smart-contracts-page__row--activity" role="presentation">
+              <span class="h-sm" role="columnheader">{{ $t('contracts.columns.contractEntrypoint') }}</span>
+              <span class="h-sm" role="columnheader">{{ $t('contracts.columns.authority') }}</span>
+              <span class="h-sm" role="columnheader">{{ $t('contracts.columns.result') }}</span>
+              <span class="h-sm" role="columnheader">{{ $t('contracts.columns.timestamp') }}</span>
+              <span class="h-sm" role="columnheader">{{ $t('contracts.columns.transaction') }}</span>
+              <span class="h-sm" role="columnheader">{{ $t('contracts.columns.decodedCallData') }}</span>
             </div>
           </template>
           <template #row="{ item }">
-            <div
-              class="smart-contracts-page__row smart-contracts-page__row--activity"
-              role="presentation"
-            >
+            <div class="smart-contracts-page__row smart-contracts-page__row--activity" role="presentation">
               <div class="smart-contracts-page__stack" role="cell">
-                <BaseHash
-                  :hash="item.contract_address"
-                  :type="addressHashType"
-                  copy
-                />
-                <small>{{ item.contract_alias ?? 'No alias' }} · {{ item.contract_entrypoint ?? 'Unknown entrypoint' }}</small>
+                <BaseHash :hash="item.contract_address" :type="addressHashType" copy />
+                <small>
+                  {{ $t('contracts.noAlias') }} ·
+                  {{ item.contract_entrypoint ?? $t('contracts.unknownEntrypoint') }}
+                </small>
               </div>
               <div role="cell">
                 <BaseHash
@@ -284,13 +168,10 @@
                 :class="item.result_ok ? 'smart-contracts-page__result--ok' : 'smart-contracts-page__result--failed'"
                 role="cell"
               >
-                {{ item.result_ok ? 'Succeeded' : 'Failed' }}
+                {{ item.result_ok ? $t('contracts.filters.succeeded') : $t('contracts.filters.failed') }}
               </span>
               <div role="cell">
-                <time
-                  v-if="item.timestamp_ms !== undefined"
-                  :datetime="new Date(item.timestamp_ms).toISOString()"
-                >
+                <time v-if="item.timestamp_ms !== undefined" :datetime="new Date(item.timestamp_ms).toISOString()">
                   {{ defaultFormat(new Date(item.timestamp_ms)) }}
                 </time>
                 <span v-else>—</span>
@@ -305,14 +186,14 @@
               </div>
               <div role="cell">
                 <details v-if="item.contract_payload !== undefined || item.fee_payment !== undefined">
-                  <summary>View decoded data</summary>
+                  <summary>{{ $t('contracts.decoded.view') }}</summary>
                   <div class="smart-contracts-page__decoded">
                     <section v-if="item.contract_payload !== undefined">
-                      <strong>Contract payload</strong>
+                      <strong>{{ $t('contracts.decoded.contractPayload') }}</strong>
                       <BaseJson :value="jsonRecord(item.contract_payload)" />
                     </section>
                     <section v-if="item.fee_payment !== undefined">
-                      <strong>Fee payment</strong>
+                      <strong>{{ $t('contracts.decoded.feePayment') }}</strong>
                       <BaseJson :value="jsonRecord(item.fee_payment)" />
                     </section>
                   </div>
@@ -326,16 +207,13 @@
     </BaseResourceState>
 
     <template v-else>
-      <section
-        class="smart-contracts-page__live"
-        aria-labelledby="contract-live-events-title"
-      >
+      <section class="smart-contracts-page__live" aria-labelledby="contract-live-events-title">
         <div class="smart-contracts-page__live-header">
           <div>
             <h3 id="contract-live-events-title">
-              Live events
+              {{ $t('contracts.live.title') }}
             </h3>
-            <p>One non-replayable Torii stream using the filters below.</p>
+            <p>{{ $t('contracts.live.hint') }}</p>
           </div>
           <div class="smart-contracts-page__live-actions">
             <BaseButton
@@ -345,7 +223,7 @@
               data-test="start-contract-stream"
               @click="startLiveEvents"
             >
-              Start live stream
+              {{ $t('contracts.live.start') }}
             </BaseButton>
             <BaseButton
               v-if="streamState.status === 'connecting' || streamState.status === 'live'"
@@ -353,7 +231,7 @@
               data-test="stop-contract-stream"
               @click="stopLiveEvents"
             >
-              Stop
+              {{ $t('contracts.live.stop') }}
             </BaseButton>
             <BaseButton
               v-if="streamState.status === 'stale'"
@@ -361,31 +239,27 @@
               data-test="resync-contract-stream"
               @click="resyncLiveEvents"
             >
-              Reload history and resync
+              {{ $t('contracts.live.resync') }}
             </BaseButton>
           </div>
         </div>
 
-        <p
-          v-if="streamState.status === 'connecting'"
-          class="smart-contracts-page__stream-status"
-          role="status"
-        >
-          Connecting to Torii…
+        <p v-if="streamState.status === 'connecting'" class="smart-contracts-page__stream-status" role="status">
+          {{ $t('contracts.live.connecting') }}
         </p>
         <p
           v-else-if="streamState.status === 'live'"
           class="smart-contracts-page__stream-status smart-contracts-page__stream-status--live"
           role="status"
         >
-          Live · {{ liveEvents.length }} event{{ liveEvents.length === 1 ? '' : 's' }} retained
+          {{
+            $t(liveEvents.length === 1 ? 'contracts.live.oneRetained' : 'contracts.live.manyRetained', {
+              count: liveEvents.length,
+            })
+          }}
         </p>
-        <p
-          v-else-if="streamState.status === 'stopped'"
-          class="smart-contracts-page__stream-status"
-          role="status"
-        >
-          Stream stopped by the user.
+        <p v-else-if="streamState.status === 'stopped'" class="smart-contracts-page__stream-status" role="status">
+          {{ $t('contracts.live.stopped') }}
         </p>
         <div
           v-else-if="streamState.status === 'stale'"
@@ -393,36 +267,27 @@
           role="alert"
           data-test="contract-stream-stale"
         >
-          <strong>Live view is stale.</strong>
-          <span>{{ streamState.message }}</span>
-          <span v-if="streamState.code">Code: {{ streamState.code }}</span>
+          <strong>{{ $t('contracts.live.stale') }}</strong>
+          <span>{{ $t('contracts.live.streamFailed') }}</span>
+          <span v-if="streamState.code">{{ $t('contracts.live.code', { code: streamState.code }) }}</span>
           <span v-if="streamState.droppedMessages !== null">
-            Dropped messages: {{ streamState.droppedMessages }}
+            {{ $t('contracts.live.dropped', { count: streamState.droppedMessages }) }}
           </span>
-          <span>This stream cannot replay and will not reconnect automatically.</span>
+          <span>{{ $t('contracts.live.noReplay') }}</span>
         </div>
 
-        <div
-          v-if="liveEvents.length > 0"
-          class="smart-contracts-page__live-events"
-        >
-          <article
-            v-for="event in liveEvents"
-            :key="event.event_id"
-            class="smart-contracts-page__live-event"
-          >
+        <div v-if="liveEvents.length > 0" class="smart-contracts-page__live-events">
+          <article v-for="event in liveEvents" :key="event.event_id" class="smart-contracts-page__live-event">
             <div>
               <strong>{{ event.event_kind }}</strong>
-              <small>{{ event.provenance }} · block {{ event.block_height }}</small>
+              <small>
+                {{ contractProvenanceLabel(event.provenance) }} ·
+                {{ $t('contracts.live.block', { height: event.block_height }) }}
+              </small>
             </div>
-            <BaseHash
-              :hash="event.execution_hash_hex"
-              :link="transactionPath(event.execution_hash_hex)"
-              :type="hashType"
-              copy
-            />
+            <BaseHash :hash="event.execution_hash_hex" :link="transactionPath(event.execution_hash_hex)" :type="hashType" copy />
             <details v-if="event.payload !== undefined || event.numeric_fields !== undefined">
-              <summary>Decoded event data</summary>
+              <summary>{{ $t('contracts.live.decodedEvent') }}</summary>
               <BaseJson :value="jsonRecord(event.payload ?? event.numeric_fields)" />
             </details>
           </article>
@@ -430,68 +295,58 @@
       </section>
 
       <h3 class="smart-contracts-page__history-title">
-        Indexed event history
+        {{ $t('contracts.live.history') }}
       </h3>
       <BaseResourceState
         :snapshot="eventSnapshot"
-        loading-label="Loading contract events…"
-        not-found-label="No indexed contract events match these filters."
-        :retry-label="eventParams.ok ? 'Retry' : 'Clear invalid filters'"
+        :loading-label="$t('contracts.states.loadingEvents')"
+        :not-found-label="$t('contracts.states.noEvents')"
+        :error-label="eventErrorLabel"
+        :retry-label="
+          !pagination.ok
+            ? $t('table.resetPagination')
+            : eventParams.ok
+              ? $t('contracts.states.retry')
+              : $t('contracts.filters.clearInvalid')
+        "
         @retry="retryEvents"
       >
-        <template #error="{ problem }">
-          <span>{{ problem.message }}</span>
-        </template>
         <template #default="{ data }">
           <BaseTable
             v-model:cursor="cursor"
             v-model:page-size="limit"
-          pagination-mode="cursor"
             :loading="false"
-            :cursor-pagination="data"
+            pagination-mode="cursor"
+          :cursor-pagination="data"
             :items="data.items"
-            :row-key="eventRowKey"
+              :row-key="eventRowKey"
             container-class="smart-contracts-page__container"
           >
             <template #header>
-              <div
-                class="smart-contracts-page__row smart-contracts-page__row--events"
-                role="presentation"
-              >
-                <span class="h-sm" role="columnheader">Event</span>
-                <span class="h-sm" role="columnheader">Contract</span>
-                <span class="h-sm" role="columnheader">Participants / assets</span>
-                <span class="h-sm" role="columnheader">Result</span>
-                <span class="h-sm" role="columnheader">Block</span>
-                <span class="h-sm" role="columnheader">Transaction</span>
-                <span class="h-sm" role="columnheader">Decoded event data</span>
+              <div class="smart-contracts-page__row smart-contracts-page__row--events" role="presentation">
+                <span class="h-sm" role="columnheader">{{ $t('contracts.columns.event') }}</span>
+                <span class="h-sm" role="columnheader">{{ $t('contracts.columns.contract') }}</span>
+                <span class="h-sm" role="columnheader">{{ $t('contracts.columns.participantsAssets') }}</span>
+                <span class="h-sm" role="columnheader">{{ $t('contracts.columns.result') }}</span>
+                <span class="h-sm" role="columnheader">{{ $t('contracts.columns.block') }}</span>
+                <span class="h-sm" role="columnheader">{{ $t('contracts.columns.transaction') }}</span>
+                <span class="h-sm" role="columnheader">{{ $t('contracts.columns.decodedEventData') }}</span>
               </div>
             </template>
             <template #row="{ item }">
-              <div
-                class="smart-contracts-page__row smart-contracts-page__row--events"
-                role="presentation"
-              >
+              <div class="smart-contracts-page__row smart-contracts-page__row--events" role="presentation">
                 <div class="smart-contracts-page__stack" role="cell">
-                  <BaseHash
-                    :hash="item.event_id"
-                    :type="hashType"
-                    copy
-                  />
-                  <small>{{ item.event_kind }} · {{ item.provenance }}</small>
-                  <time
-                    v-if="item.timestamp_ms !== undefined"
-                    :datetime="new Date(item.timestamp_ms).toISOString()"
-                  >
+                  <BaseHash :hash="item.event_id" :type="hashType" copy />
+                  <small>
+                    {{ item.event_kind }} · {{ contractProvenanceLabel(item.provenance) }}
+                  </small>
+                  <time v-if="item.timestamp_ms !== undefined" :datetime="new Date(item.timestamp_ms).toISOString()">
                     {{ defaultFormat(new Date(item.timestamp_ms)) }}
                   </time>
                 </div>
                 <div class="smart-contracts-page__stack" role="cell">
-                  <BaseHash
-                    :hash="item.contract_address"
-                    :type="addressHashType"
-                    copy
-                  />
+                  <BaseHash :hash="item.contract_address" :type="addressHashType" copy />
+                  <small>{{ $t('contracts.noAlias') }}</small>
                   <BaseHash
                     v-if="item.authority"
                     :hash="item.authority"
@@ -500,26 +355,14 @@
                   />
                 </div>
                 <div class="smart-contracts-page__related" role="cell">
-                  <template
-                    v-for="participant in item.participants ?? []"
-                    :key="`participant:${participant}`"
-                  >
-                    <BaseLink
-                      v-if="contractAccountPath(participant)"
-                      :to="contractAccountPath(participant)!"
-                    >
+                  <template v-for="participant in item.participants ?? []" :key="`participant:${participant}`">
+                    <BaseLink v-if="contractAccountPath(participant)" :to="contractAccountPath(participant)!">
                       {{ participant }}
                     </BaseLink>
                     <span v-else>{{ participant }}</span>
                   </template>
-                  <template
-                    v-for="asset in item.asset_ids ?? []"
-                    :key="`asset:${asset}`"
-                  >
-                    <BaseLink
-                      v-if="contractAssetPath(asset)"
-                      :to="contractAssetPath(asset)!"
-                    >
+                  <template v-for="asset in item.asset_ids ?? []" :key="`asset:${asset}`">
+                    <BaseLink v-if="contractAssetPath(asset)" :to="contractAssetPath(asset)!">
                       {{ asset }}
                     </BaseLink>
                     <span v-else>{{ asset }}</span>
@@ -531,42 +374,35 @@
                   :class="item.result_ok ? 'smart-contracts-page__result--ok' : 'smart-contracts-page__result--failed'"
                   role="cell"
                 >
-                  {{ item.result_ok ? 'Succeeded' : 'Failed' }}
+                  {{ item.result_ok ? $t('contracts.filters.succeeded') : $t('contracts.filters.failed') }}
                 </span>
                 <div class="smart-contracts-page__stack" role="cell">
                   <BaseLink :to="`/blocks/${item.block_height}`">
                     {{ item.block_height }}
                   </BaseLink>
-                  <BaseHash
-                    :hash="item.block_hash_hex"
-                    :type="hashType"
-                    copy
-                  />
+                  <BaseHash :hash="item.block_hash_hex" :type="hashType" copy />
                 </div>
                 <div role="cell">
-                  <BaseHash
-                    :hash="item.execution_hash_hex"
-                    :link="transactionPath(item.execution_hash_hex)"
-                    :type="hashType"
-                    copy
-                  />
+                  <BaseHash :hash="item.execution_hash_hex" :link="transactionPath(item.execution_hash_hex)" :type="hashType" copy />
                 </div>
                 <div role="cell">
                   <details
-                    v-if="item.payload !== undefined || item.numeric_fields !== undefined || item.fee_payment !== undefined"
+                    v-if="
+                      item.payload !== undefined || item.numeric_fields !== undefined || item.fee_payment !== undefined
+                    "
                   >
-                    <summary>View decoded data</summary>
+                    <summary>{{ $t('contracts.decoded.view') }}</summary>
                     <div class="smart-contracts-page__decoded">
                       <section v-if="item.payload !== undefined">
-                        <strong>Payload</strong>
+                        <strong>{{ $t('contracts.decoded.payload') }}</strong>
                         <BaseJson :value="jsonRecord(item.payload)" />
                       </section>
                       <section v-if="item.numeric_fields !== undefined">
-                        <strong>Numeric fields</strong>
+                        <strong>{{ $t('contracts.decoded.numericFields') }}</strong>
                         <BaseJson :value="jsonRecord(item.numeric_fields)" />
                       </section>
                       <section v-if="item.fee_payment !== undefined">
-                        <strong>Fee payment</strong>
+                        <strong>{{ $t('contracts.decoded.feePayment') }}</strong>
                         <BaseJson :value="jsonRecord(item.fee_payment)" />
                       </section>
                     </div>
@@ -584,9 +420,10 @@
 
 <script setup lang="ts">
 import { computed, onScopeDispose, reactive, ref, shallowRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useParamScope } from '@vue-kakuyaku/core';
 import * as http from '@/shared/api';
-import type { ContractActivity, ContractEvent, CollectionContinuation } from '@/shared/api/schemas';
+import type { ContractActivity, ContractEvent } from '@/shared/api/schemas';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
@@ -597,12 +434,8 @@ import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
 import BaseTable from '@/shared/ui/components/BaseTable.vue';
 import BaseTabs from '@/shared/ui/components/BaseTabs.vue';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
-import type { ResourceSnapshot } from '@/shared/utils/resource-state';
-import { apiProblemFromError } from '@/shared/utils/resource-state';
 import { useAdaptiveHash } from '@/shared/ui/composables/useAdaptiveHash';
 import { useCursorListRouteQuery } from '@/shared/ui/composables/useListRouteQuery';
-import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
-import { extractSmartContractDeployment, type SmartContractDeployment } from '@/shared/lib/smart-contracts';
 import {
   appendLiveContractEvent,
   contractAccountPath,
@@ -615,15 +448,17 @@ import {
   parseContractEventSearchParams,
   parseContractExplorerTab,
   unwrapContractListSnapshot,
+  type ContractFilterValidationCode,
+  type ContractFilterValidationIssue,
   type ContractStreamState,
 } from '@/shared/lib/contract-explorer';
 import { firstRouteQueryValue, type RouteQueryPatchValue } from '@/shared/lib/route-query';
 import { defaultFormat } from '@/shared/lib/time';
 
+const { t } = useI18n();
 const tabs = [
-  { value: 'deployments', label: 'Deployments' },
-  { value: 'activity', label: 'Activity' },
-  { value: 'events', label: 'Events' },
+  { value: 'activity', i18nKey: 'contracts.tabs.activity' },
+  { value: 'events', i18nKey: 'contracts.tabs.events' },
 ];
 const filterKeys = [
   'authority',
@@ -639,9 +474,22 @@ const filterKeys = [
   'until_timestamp_ms',
 ] as const;
 const eventOnlyFilterKeys = ['event_kind', 'participant', 'asset_id', 'provenance'] as const;
+const contractValidationKeys = {
+  providedOnce: 'contracts.validation.providedOnce',
+  stringValue: 'contracts.validation.stringValue',
+  nonEmpty: 'contracts.validation.nonEmpty',
+  canonicalInteger: 'contracts.validation.canonicalInteger',
+  safeIntegerRange: 'contracts.validation.safeIntegerRange',
+  canonicalAccountId: 'contracts.validation.canonicalAccountId',
+  canonicalContractAddress: 'contracts.validation.canonicalContractAddress',
+  canonicalContractAlias: 'contracts.validation.canonicalContractAlias',
+  noritoStringValue: 'contracts.validation.noritoStringValue',
+  booleanValue: 'contracts.validation.booleanValue',
+  timestampOrder: 'contracts.validation.timestampOrder',
+  provenanceValue: 'contracts.validation.provenanceValue',
+} as const satisfies Record<ContractFilterValidationCode, string>;
 
-const navigation = useScopedExplorerNavigation();
-const { route, cursor, limit, updateListQuery } = useCursorListRouteQuery();
+const { route, cursor, limit, pagination, resetPagination, updateListQuery } = useCursorListRouteQuery();
 const activeTab = computed(() => parseContractExplorerTab(route.query.tab));
 const hashType = useAdaptiveHash({ xxl: 'full', xl: 'full', lg: 'medium', xs: 'two-line' }, 'short');
 const addressHashType = useAdaptiveHash({ xxl: 'full', xl: 'full', lg: 'medium', md: 'short' }, 'two-line');
@@ -663,11 +511,9 @@ watch(
 function selectTab(value: string) {
   const next = parseContractExplorerTab(value);
   const patch: Record<string, RouteQueryPatchValue> = {
-    tab: next === 'deployments' ? null : next,
+    tab: next === 'activity' ? null : next,
   };
-  if (next === 'deployments') {
-    for (const key of filterKeys) patch[key] = null;
-  } else if (next === 'activity') {
+  if (next === 'activity') {
     for (const key of eventOnlyFilterKeys) patch[key] = null;
   } else {
     patch.contract_entrypoint = null;
@@ -677,111 +523,97 @@ function selectTab(value: string) {
 }
 
 function applyFilters() {
-  const relevant = activeTab.value === 'activity'
-    ? filterKeys.filter((key) => !eventOnlyFilterKeys.includes(key as (typeof eventOnlyFilterKeys)[number]))
-    : filterKeys.filter((key) => key !== 'contract_entrypoint' && key !== 'contract_alias');
+  const relevant =
+    activeTab.value === 'activity'
+      ? filterKeys.filter((key) => !eventOnlyFilterKeys.includes(key as (typeof eventOnlyFilterKeys)[number]))
+      : filterKeys.filter((key) => key !== 'contract_entrypoint' && key !== 'contract_alias');
   const patch = Object.fromEntries(filterKeys.map((key) => [key, null])) as Record<string, RouteQueryPatchValue>;
-  for (const key of relevant) patch[key] = filterDraft[key].trim() || null;
+  for (const key of relevant) patch[key] = filterDraft[key] || null;
   updateListQuery(patch).catch(() => {});
 }
 
 function clearFilters() {
-  const patch = Object.fromEntries([...filterKeys, 'module'].map((key) => [key, null])) as Record<string, null>;
+  const patch = Object.fromEntries(filterKeys.map((key) => [key, null])) as Record<string, null>;
   updateListQuery(patch).catch(() => {});
 }
 
-const deploymentCursor = ref<string | null>(null);
-const deploymentLimit = ref(10);
-const deploymentQuery = computed(() => ({
-  cursor: deploymentCursor.value,
-  limit: deploymentLimit.value,
-  kind: 'ActivateContractInstance',
-}));
-const deploymentScope = useParamScope(
-  () => ({
-    key: JSON.stringify({ tab: activeTab.value, ...deploymentQuery.value }),
-    payload: { params: deploymentQuery.value, active: activeTab.value === 'deployments' },
-  }),
-  ({ payload }) => setupAsyncData(
-    () => http.fetchInstructions(payload.params),
-    { immediate: payload.active }
-  )
-);
-
-interface DeploymentList {
-  items: SmartContractDeployment[]
-  nextCursor: CollectionContinuation['nextCursor']
+function contractFilterValidationMessage(issues: readonly ContractFilterValidationIssue[]) {
+  const details = issues.map((issue) => t(contractValidationKeys[issue.code], { ...issue.params })).join('; ');
+  return t('contracts.validation.invalidFilters', { details });
 }
 
-const deploymentSnapshot = computed<ResourceSnapshot<DeploymentList>>(() => {
-  const snapshot = deploymentScope.value.expose.snapshot;
-  if (snapshot.status !== 'ready') return snapshot as ResourceSnapshot<DeploymentList>;
-  if (snapshot.data.status !== SUCCESSFUL_FETCHING) {
-    return { status: 'error', problem: apiProblemFromError(snapshot.data) };
-  }
-  const items = snapshot.data.data.items.flatMap((instruction) => {
-    const deployment = extractSmartContractDeployment(instruction);
-    return deployment ? [deployment] : [];
-  });
-  if (items.length === 0) return { status: 'not-found' };
-  return {
-    status: 'ready',
-    data: { items, nextCursor: snapshot.data.data.nextCursor },
-    isRefreshing: snapshot.isRefreshing,
-    refreshError: snapshot.refreshError,
-  };
-});
+function contractProvenanceLabel(provenance: ContractEvent['provenance']) {
+  return t(`contracts.filters.${provenance}`);
+}
 
-const activityParams = computed(() =>
-  parseContractActivitySearchParams(route.query, cursor.value, limit.value)
+const activityParams = computed(() => parseContractActivitySearchParams(route.query, cursor.value, limit.value));
+const paginationError = computed(() =>
+  pagination.value.ok ? undefined : t('table.invalidCursorPagination')
+);
+const activityListValid = computed(() => pagination.value.ok && activityParams.value.ok);
+const activityErrorLabel = computed(
+  () =>
+    paginationError.value ??
+    (activityParams.value.ok
+      ? t('contracts.states.activityError')
+      : contractFilterValidationMessage(activityParams.value.issues))
 );
 const activityScope = useParamScope(
   () => ({
-    key: JSON.stringify({ tab: activeTab.value, params: activityParams.value }),
+    key: JSON.stringify({ tab: activeTab.value, pagination: pagination.value, params: activityParams.value }),
     payload: {
       params: activityParams.value.ok ? activityParams.value.value : null,
-      active: activeTab.value === 'activity' && activityParams.value.ok,
+      active: activeTab.value === 'activity' && activityListValid.value,
     },
   }),
-  ({ payload }) => setupAsyncData(
-    () => http.fetchContractActivity(payload.params!),
-    { immediate: payload.active }
-  )
+  ({ payload }) => setupAsyncData(() => http.fetchContractActivity(payload.params!), { immediate: payload.active })
 );
-const activitySnapshot = computed(() => unwrapContractListSnapshot(
-  activityScope.value.expose.snapshot,
-  activityParams.value.ok ? undefined : activityParams.value.error
-));
+const activitySnapshot = computed(() =>
+  unwrapContractListSnapshot(activityScope.value.expose.snapshot, {
+    invalidListResponse: t('contracts.states.invalidListResponse'),
+    validationError:
+      paginationError.value ??
+      (activityParams.value.ok ? undefined : contractFilterValidationMessage(activityParams.value.issues)),
+  })
+);
 
-const eventParams = computed(() =>
-  parseContractEventSearchParams(route.query, cursor.value, limit.value)
+const eventParams = computed(() => parseContractEventSearchParams(route.query, cursor.value, limit.value));
+const eventListValid = computed(() => pagination.value.ok && eventParams.value.ok);
+const eventErrorLabel = computed(
+  () =>
+    paginationError.value ??
+    (eventParams.value.ok
+      ? t('contracts.states.eventError')
+      : contractFilterValidationMessage(eventParams.value.issues))
 );
 const eventScope = useParamScope(
   () => ({
-    key: JSON.stringify({ tab: activeTab.value, params: eventParams.value }),
+    key: JSON.stringify({ tab: activeTab.value, pagination: pagination.value, params: eventParams.value }),
     payload: {
       params: eventParams.value.ok ? eventParams.value.value : null,
-      active: activeTab.value === 'events' && eventParams.value.ok,
+      active: activeTab.value === 'events' && eventListValid.value,
     },
   }),
-  ({ payload }) => setupAsyncData(
-    () => http.fetchContractEvents(payload.params!),
-    { immediate: payload.active }
-  )
+  ({ payload }) => setupAsyncData(() => http.fetchContractEvents(payload.params!), { immediate: payload.active })
 );
-const eventSnapshot = computed(() => unwrapContractListSnapshot(
-  eventScope.value.expose.snapshot,
-  eventParams.value.ok ? undefined : eventParams.value.error
-));
+const eventSnapshot = computed(() =>
+  unwrapContractListSnapshot(eventScope.value.expose.snapshot, {
+    invalidListResponse: t('contracts.states.invalidListResponse'),
+    validationError:
+      paginationError.value ??
+      (eventParams.value.ok ? undefined : contractFilterValidationMessage(eventParams.value.issues)),
+  })
+);
 
 const liveEvents = shallowRef<ContractEvent[]>([]);
 const streamState = ref<ContractStreamState>({ status: 'idle' });
 let streamController: AbortController | null = null;
 let streamGeneration = 0;
 
-const liveFilterKey = computed(() => eventParams.value.ok
-  ? JSON.stringify(contractEventFiltersFromSearchParams(eventParams.value.value))
-  : eventParams.value.error
+const liveFilterKey = computed(() =>
+  eventParams.value.ok
+    ? JSON.stringify(contractEventFiltersFromSearchParams(eventParams.value.value))
+    : JSON.stringify(eventParams.value.issues)
 );
 
 function resetLiveEvents() {
@@ -815,9 +647,7 @@ async function startLiveEvents() {
       streamState.value = { status: 'live' };
     }
     if (generation === streamGeneration && !controller.signal.aborted) {
-      streamState.value = contractStreamStaleState(
-        new Error('The contract event stream ended unexpectedly and cannot be resumed.')
-      );
+      streamState.value = contractStreamStaleState(new Error(t('contracts.live.streamEnded')));
     }
   } catch (error) {
     if (generation !== streamGeneration) return;
@@ -836,35 +666,29 @@ function stopLiveEvents() {
 }
 
 async function resyncLiveEvents() {
-  if (!eventParams.value.ok) return;
+  if (!eventListValid.value) return;
   const result = await eventScope.value.expose.refetch();
   if (result?.status !== SUCCESSFUL_FETCHING) {
-    streamState.value = contractStreamStaleState(new Error('History reload failed; the live view remains stale.'));
+    streamState.value = contractStreamStaleState(new Error(t('contracts.live.historyReloadFailed')));
     return;
   }
   await startLiveEvents();
 }
 
-function retryDeployments() {
-  deploymentScope.value.expose.refetch().catch(() => {});
-}
-
 function retryActivity() {
-  if (!activityParams.value.ok) clearFilters();
+  if (!pagination.value.ok) resetPagination().catch(() => {});
+  else if (!activityParams.value.ok) clearFilters();
   else activityScope.value.expose.refetch().catch(() => {});
 }
 
 function retryEvents() {
-  if (!eventParams.value.ok) clearFilters();
+  if (!pagination.value.ok) resetPagination().catch(() => {});
+  else if (!eventParams.value.ok) clearFilters();
   else eventScope.value.expose.refetch().catch(() => {});
 }
 
 function transactionPath(hash: string) {
   return `/transactions/${encodeURIComponent(hash)}`;
-}
-
-function deploymentRowKey(item: SmartContractDeployment) {
-  return `${item.transactionHash}:${item.index}`;
 }
 
 function activityRowKey(item: ContractActivity) {
@@ -873,10 +697,6 @@ function activityRowKey(item: ContractActivity) {
 
 function eventRowKey(item: ContractEvent) {
   return item.event_id;
-}
-
-function openDeployment(item: SmartContractDeployment) {
-  navigation.push(transactionPath(item.transactionHash)).catch(() => {});
 }
 
 onScopeDispose(() => {
@@ -963,10 +783,6 @@ onScopeDispose(() => {
     display: grid;
     gap: size(1.5);
     align-items: start;
-
-    &--deployments {
-      grid-template-columns: 2fr 1.2fr 1.5fr 0.5fr 1fr 1.2fr;
-    }
 
     &--activity {
       grid-template-columns: 1.8fr 1.3fr 0.6fr 1fr 1.2fr 1.4fr;

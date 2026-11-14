@@ -1,6 +1,6 @@
 # Dashboard performance closeout — 2026-11-15
 
-This record closes the source and evidence trail for EX-325 and EX-327–330.
+This record closes the source and evidence trail for EX-347, EX-349 and EX-357–EX-359.
 It follows the [rollout record](taira-dashboard-rollout-2026-10-25.md) and
 the [implementation report](dashboard-performance-2026-10-25.md). No
 feature was rebuilt, and no validator or public site was changed. Evidence
@@ -12,7 +12,7 @@ is retained in `output/closeout-20261115/`.
   uncommitted working tree. That source is now commit `8bd7692`. All 22
   source and implementation-report files match the frozen candidate's
   per-file SHA-256 record (`output/taira-dashboard-deploy-20261025/explorer-candidate.json`).
-  The EX-311 OVH staging note from 2026-10-28 belongs to separate work and
+  The EX-333 OVH staging note from 2026-10-28 belongs to separate work and
   was left out of that commit.
 - A rebuild of those bytes on 2026-11-15, with Node 24.19.0 and pnpm 10.11.0,
   reproduces all 204 built files byte for byte (`rebuild-vs-deployed.json`).
@@ -50,22 +50,70 @@ A read-only check on 2026-11-14 at 16:02 UTC found that
 - `index.html` was last modified on 2026-11-08 at 05:41:46 GMT. It now has
   SHA-256 `81d6af83…`, `SOURCE_REV` `a267f2423c4e728901f6a2f1cdccbe69319c277d`
   and `SOURCE_WORKTREE` `clean`.
-- That revision was not found in this repository, its GitHub origin, the
-  sibling repositories, or the local deploy records and session transcripts
-  searched.
-- The live build still routes `/dashboards/{network,activity,ledger}` and
-  adds a Governance dashboard chunk that this repository does not contain.
+- That revision is `origin/master`'s merge "Merge current explorer release
+  and restore Taira transaction display" (EX-350, EX-353–EX-356). It merged
+  `ff5b219` with the dashboard base `2021914`, so it predates this branch's
+  2026-10-25 commits. During the 2026-11-14 check it was not reachable from
+  this checkout or through the GitHub API; it was fetched later.
+- The live build routes the same three dashboards. The Governance dashboard
+  chunk is not a difference: `src/pages/GovernanceDashboard.vue` has been in
+  this repository since 2026-06. An earlier version of this record said
+  otherwise; that claim came from a faulty search.
 - Its block projection omits `hash`, block windows read 64-row pages, and
   the retained block window is absent. Bounded collection scans read 100
-  rows. The Explorer-side EX-330 changes are therefore not live, while the
+  rows. The Explorer-side EX-359 changes are therefore not live, while the
   native changes are.
 - 202 of the 206 published candidate files still return their original
   bytes, but the current `index.html` does not reference the old entry
   chunks.
 
-This repository did not publish the 2026-11-08 build. Restoring
-`20261025T114146Z` or a successor would replace another release, so it
-needs the owner's decision. That decision is tracked as EX-331.
+On 2026-11-15 the owner chose to merge `origin/master` into this branch and
+republish from it (EX-360).
+
+## Merge with `origin/master`
+
+This is the first release, so no backwards-compatibility code was kept.
+The 33 conflicted files were resolved as follows:
+
+- **Locales (25 files).** All take `origin`'s reviewed translations
+  (EX-354). `origin` already had `definitionsByBalances`. All 26 locale
+  files match `origin` and have exactly `en.json`'s keys.
+- **`vite.config.mts`.** Takes `origin`'s single allow-listed `/v1` dev
+  proxy; the old `/status`, `/metrics` and `/peers` proxies stay deleted.
+  The keep-alive agent is kept.
+- **`src/shared/api/index.ts`.** Takes `origin`'s import order. Block
+  samples keep their canonical block hash type.
+- **`Dataspaces.vue`.** Keeps `sortedRows[0]`. The rows are already
+  filtered by catalog membership, so the second registered-lane lookup was
+  redundant and is removed.
+- **`ActivityDashboard.vue`.** Keeps the typed hour-coverage map.
+- **`Econometrics.test.ts`.** Takes `origin`, which retired holder-snapshot
+  persistence. This branch's storage-isolation stub and persistence test
+  covered that removed code, so they are deleted.
+- **`dashboard-api.test.ts`.** Keeps the block hash, in `origin`'s
+  formatting. The projection-rejection row uses a canonical hash plus an
+  unprojected field, so rejection can only come from the projection.
+- **`Dataspaces.test.ts`.** Takes `origin`'s naming.
+- **`ROADMAP.md`.** Starts from `origin`'s renumbered table. Base rows
+  EX-311, EX-325, EX-326 and EX-327 became EX-333, EX-347, EX-348 and
+  EX-349; they carry this branch's updates. This branch's new rows EX-328
+  to EX-331 became EX-357 to EX-360. References in this branch's records
+  and source comments were renumbered to match.
+
+`origin` deleted `src/shared/lib/history-cache.ts` when it retired the
+persisted-history fallbacks. The dashboard block window was its only
+remaining consumer, so it now owns that privacy-scoped key function, with
+its own tests. The window is shown as unreconciled until its tip matches a
+fresh head read by hash, so it is not a fallback. The transaction-history
+caches stay deleted. `origin`'s localized-copy check flagged that key's
+template string, so it has an exact-value allowlist entry.
+
+On the merged tree, these all pass (`output/closeout-20261115/merge/`):
+SDK integrity, typecheck, ESLint with zero errors, roadmap validation (360
+rows), the localized-copy check, the production build, bundle budgets
+(startup 421,602 of 540,000 gzip bytes) and the diff check. Unit tests could
+not start: at host load averages of about 300, every Vitest worker missed
+its fixed five-second start limit.
 
 ## Final review
 
@@ -99,9 +147,9 @@ diff on 2026-11-15 found the following:
    ignored but not removed. Each endpoint keeps one overwritten entry of up
    to about 2,512 rows.
 
-## EX-326
+## EX-348
 
-EX-326 remains blocked. Current Torii history cursors bind a snapshot height
+EX-348 remains blocked. Current Torii history cursors bind a snapshot height
 and hash internally, but an initial request cannot name a shared snapshot.
 Independent first pages therefore cannot be pinned to one snapshot and
 reader visibility, and parallel height ranges could combine inconsistent
@@ -113,4 +161,4 @@ views. Further acceleration is not warranted now:
 - A cold 1,000-block feed takes ten sequential 100-row pages, about 4.7 s.
 - An upstream snapshot-start contract would need a new Torii API and another
   validator rollout.
-- The Explorer-side EX-330 changes are not currently live (EX-331).
+- The Explorer-side EX-359 changes are not currently live (EX-360).

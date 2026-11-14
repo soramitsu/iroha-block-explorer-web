@@ -90,6 +90,7 @@ const apiMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/shared/api', () => ({
+  isToriiBaseUrlForced: () => false,
   fetchBlocks: vi.fn(),
   useToriiAvailability: apiMocks.useToriiAvailability,
   retryToriiFailover: apiMocks.retryToriiFailover,

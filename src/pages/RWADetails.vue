@@ -112,10 +112,10 @@ function nodeAvailableQuantity(node: RWA | null): string | null {
       <template #default>
         <BaseResourceState
           :snapshot="rwaSnapshot"
-          loading-label="Loading RWA provenance"
-          not-found-label="RWA not found"
-          error-label="RWA provenance could not be loaded"
-          retry-label="Retry RWA provenance"
+          :loading-label="$t('assets.resource.loadingRwaProvenance')"
+          :not-found-label="$t('assets.resource.rwaNotFound')"
+          :error-label="$t('assets.resource.rwaProvenanceLoadError')"
+          :retry-label="$t('assets.resource.retryRwaProvenance')"
           @retry="rwaScope.expose.refetch()"
         >
           <div v-if="rwa">
@@ -384,7 +384,7 @@ function nodeAvailableQuantity(node: RWA | null): string | null {
     border: 1px solid color-mix(in srgb, theme-color('primary') 35%, theme-color('border-primary'));
     border-radius: size(1.25);
     background: color-mix(in srgb, theme-color('surface') 94%, white);
-    box-shadow: 0 8px 20px rgba(theme-color('primary'), 0.08);
+    box-shadow: none;
     pointer-events: none;
   }
 
@@ -408,20 +408,12 @@ function nodeAvailableQuantity(node: RWA | null): string | null {
     padding: size(2);
     border: 1px solid theme-color('border-primary');
     border-radius: size(2);
-    background: linear-gradient(
-      165deg,
-      color-mix(in srgb, theme-color('surface') 97%, white),
-      color-mix(in srgb, theme-color('surface-variant') 92%, white)
-    );
-    box-shadow:
-      0 16px 30px rgba(theme-color('primary'), 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    background: theme-color('surface');
+    box-shadow: none;
 
     &[data-root] {
       border-color: color-mix(in srgb, theme-color('primary') 58%, theme-color('border-primary'));
-      box-shadow:
-        0 18px 34px rgba(theme-color('primary'), 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      box-shadow: none;
     }
 
     &[data-placeholder] {

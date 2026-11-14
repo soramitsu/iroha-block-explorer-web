@@ -5,8 +5,15 @@ import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 
 const hoisted = vi.hoisted(() => ({
   fetchPeersInfoMock: vi.fn(),
-  fetchOnlinePeersMock: vi.fn(),
-  fetchTelemetryPropagationMock: vi.fn(),
+  protectedDiagnosticRequests: {
+    fetchNetworkMetrics: vi.fn(),
+    fetchToriiMetricsText: vi.fn(),
+    fetchSumeragiStatus: vi.fn(),
+    streamSumeragiStatus: vi.fn(),
+    fetchSumeragiTelemetry: vi.fn(),
+    fetchOnlinePeers: vi.fn(),
+    fetchTelemetryPropagation: vi.fn(),
+  },
   peersSample: [
     {
       url: 'https://node-a',
@@ -26,7 +33,6 @@ const hoisted = vi.hoisted(() => ({
       peers_reported: 2,
     },
   ] satisfies PeerPropagation[],
-  onlinePeersSample: ['ed0120peerA@10.0.0.1:1337', '10.0.0.2:1337'],
 }));
 
 const peersSample = hoisted.peersSample;
@@ -42,8 +48,7 @@ const telemetryMock = {
 vi.mock('@/shared/api', () => {
   return {
     fetchPeersInfo: hoisted.fetchPeersInfoMock,
-    fetchOnlinePeers: hoisted.fetchOnlinePeersMock,
-    fetchTelemetryPropagation: hoisted.fetchTelemetryPropagationMock,
+    ...hoisted.protectedDiagnosticRequests,
   };
 });
 
@@ -77,24 +82,15 @@ describe('usePeersTelemetry', () => {
       status: SUCCESSFUL_FETCHING,
       data: hoisted.peersSample,
     });
-    hoisted.fetchOnlinePeersMock.mockReset().mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: hoisted.onlinePeersSample,
-    });
-    hoisted.fetchTelemetryPropagationMock.mockReset().mockResolvedValue({
-      status: SUCCESSFUL_FETCHING,
-      data: hoisted.propagationSample,
-    });
+    for (const request of Object.values(hoisted.protectedDiagnosticRequests)) {
+      request.mockReset();
+    }
     telemetryMock.streamStatus.value = 'CONNECTING';
     telemetryMock.streamedMetrics.value = null;
     telemetryMock.metrics.value = null;
   });
 
   it('hydrates peers from the SSE bootstrap payload', async () => {
-    hoisted.fetchOnlinePeersMock.mockResolvedValueOnce({
-      status: SUCCESSFUL_FETCHING,
-      data: [],
-    });
     telemetryMock.streamStatus.value = 'OPEN';
     const {
       peers,
@@ -102,7 +98,6 @@ describe('usePeersTelemetry', () => {
       recentEvents,
       isPeersLoading,
       peerDataSource,
-      fallbackPeersCount,
       lastPeerSampleAtMs,
     } = usePeersTelemetry();
 
@@ -119,10 +114,19 @@ describe('usePeersTelemetry', () => {
     expect(propagation.value).toHaveLength(1);
     expect(propagation.value[0]?.spread_ms).toBe(45);
     expect(peerDataSource.value).toBe('LIVE_SSE');
-    expect(fallbackPeersCount.value).toBe(0);
     expect(lastPeerSampleAtMs.value).not.toBeNull();
     expect(recentEvents.value.some((event) => event.kind === 'sse_first')).toBe(true);
     expect(isPeersLoading.value).toBe(false);
+  });
+
+  it('uses only the public peers snapshot and never requests protected diagnostics', async () => {
+    usePeersTelemetry();
+    await flushAll();
+
+    expect(hoisted.fetchPeersInfoMock).toHaveBeenCalledTimes(1);
+    for (const request of Object.values(hoisted.protectedDiagnosticRequests)) {
+      expect(request).not.toHaveBeenCalled();
+    }
   });
 
   it('merges SSE peer status updates', async () => {
@@ -168,44 +172,27 @@ describe('usePeersTelemetry', () => {
     expect(propagation.value[1]?.spread_ms).toBe(80);
   });
 
-  it('hydrates peers from /peers when peer telemetry payloads are empty', async () => {
-    hoisted.fetchPeersInfoMock.mockResolvedValueOnce({
-      status: SUCCESSFUL_FETCHING,
-      data: [],
-    });
+  it('keeps only the latest authoritative propagation history', async () => {
+    const { propagation } = usePeersTelemetry();
 
-    const {
-      peers,
-      recentEvents,
-      isPeersLoading,
-      peerDataSource,
-      fallbackPeersCount,
-      lastPeerSampleAtMs,
-    } = usePeersTelemetry();
-    await flushAll();
+    for (let block = 1; block <= 70; block += 1) {
+      telemetryMock.streamedMetrics.value = {
+        kind: 'propagation',
+        block,
+        first_seen_at_ms: block * 1_000,
+        last_seen_at_ms: block * 1_000 + 10,
+        spread_ms: 10,
+        peers_reported: 2,
+      };
+      await nextTick();
+    }
 
-    expect(peers.value).toHaveLength(2);
-    expect(peers.value[0]?.info?.url).toBe('http://10.0.0.1:1337');
-    expect(peers.value[0]?.info?.config?.public_key).toBe('ed0120peerA');
-    expect(peers.value[1]?.info?.url).toBe('http://10.0.0.2:1337');
-    expect(peers.value[1]?.info?.connected).toBe(true);
-    expect(peerDataSource.value).toBe('FALLBACK');
-    expect(fallbackPeersCount.value).toBe(2);
-    expect(lastPeerSampleAtMs.value).not.toBeNull();
-    expect(recentEvents.value.some((event) => event.kind === 'fallback_peers')).toBe(true);
-    expect(isPeersLoading.value).toBe(false);
+    expect(propagation.value).toHaveLength(64);
+    expect(propagation.value[0]?.block).toBe(7);
+    expect(propagation.value.at(-1)?.block).toBe(70);
   });
 
   it('stores snapshot and live updates in newest-first event order', async () => {
-    hoisted.fetchOnlinePeersMock.mockResolvedValueOnce({
-      status: SUCCESSFUL_FETCHING,
-      data: [],
-    });
-    hoisted.fetchTelemetryPropagationMock.mockResolvedValueOnce({
-      status: SUCCESSFUL_FETCHING,
-      data: [],
-    });
-
     const { recentEvents } = usePeersTelemetry();
     await flushAll();
 
@@ -225,69 +212,6 @@ describe('usePeersTelemetry', () => {
     expect(recentEvents.value.some((event) => event.kind === 'snapshot_peers_info')).toBe(true);
   });
 
-  it('does not override telemetry peer info with /peers fallback entries', async () => {
-    hoisted.fetchPeersInfoMock.mockResolvedValueOnce({
-      status: SUCCESSFUL_FETCHING,
-      data: [
-        {
-          url: 'http://10.0.0.1:1337',
-          connected: true,
-          telemetry_unsupported: false,
-          config: {
-            public_key: 'ed0120Telemetry',
-            queue_capacity: 10,
-            network_block_gossip_size: 8,
-            network_block_gossip_period: { ms: 1000 },
-            network_tx_gossip_size: 8,
-            network_tx_gossip_period: { ms: 1000 },
-          },
-          location: null,
-          connected_peers: null,
-        },
-      ] satisfies PeerInfo[],
-    });
-    hoisted.fetchOnlinePeersMock.mockResolvedValueOnce({
-      status: SUCCESSFUL_FETCHING,
-      data: ['ed0120Fallback@10.0.0.1:1337'],
-    });
-
-    const { peers, peerDataSource, fallbackPeersCount } = usePeersTelemetry();
-    await flushAll();
-
-    expect(peers.value).toHaveLength(1);
-    expect(peers.value[0]?.info?.url).toBe('http://10.0.0.1:1337');
-    expect(peers.value[0]?.info?.config?.public_key).toBe('ed0120Telemetry');
-    expect(peers.value[0]?.info?.config?.queue_capacity).toBe(10);
-    expect(peerDataSource.value).toBe('SNAPSHOT');
-    expect(fallbackPeersCount.value).toBe(0);
-  });
-
-  it('reports MIXED source when snapshot and fallback rows coexist', async () => {
-    hoisted.fetchPeersInfoMock.mockResolvedValueOnce({
-      status: SUCCESSFUL_FETCHING,
-      data: [
-        {
-          url: 'http://10.0.0.1:1337',
-          connected: true,
-          telemetry_unsupported: false,
-          config: null,
-          location: null,
-          connected_peers: null,
-        },
-      ] satisfies PeerInfo[],
-    });
-    hoisted.fetchOnlinePeersMock.mockResolvedValueOnce({
-      status: SUCCESSFUL_FETCHING,
-      data: ['ed0120Fallback@10.0.0.2:1337'],
-    });
-
-    const { peers, peerDataSource, fallbackPeersCount } = usePeersTelemetry();
-    await flushAll();
-
-    expect(peers.value).toHaveLength(2);
-    expect(peerDataSource.value).toBe('MIXED');
-    expect(fallbackPeersCount.value).toBe(1);
-  });
 });
 
 async function flushAll() {

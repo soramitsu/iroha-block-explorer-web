@@ -58,7 +58,7 @@ const BaseTableStub = defineComponent({
   props: {
     items: { type: Array, default: () => [] },
   },
-  emits: ['update:cursor', 'update:pageSize'],
+  emits: ['update:page', 'update:pageSize'],
   template: `
     <div data-test="base-table">
       <slot name="header" />
@@ -127,11 +127,11 @@ describe('Blocks data smoke', () => {
 
   const mockBlocks = [
     {
-      hash: '0xblock-1',
+      hash: 'a'.repeat(64),
       height: 321,
       created_at: new Date('2024-02-02T00:00:00Z'),
       prev_block_hash: null,
-      transactions_hash: '0xprev',
+      transactions_hash: 'b'.repeat(64),
       transactions_rejected: 1,
       transactions_total: 7,
     },
@@ -141,7 +141,13 @@ describe('Blocks data smoke', () => {
     fetchBlocksMock.mockResolvedValue({
       status: SUCCESSFUL_FETCHING,
       data: {
-        pagination: { limit: 10, snapshot_height: 321, snapshot_hash: 'ab'.repeat(32), next_cursor: null, has_more: false },
+        pagination: {
+          limit: 10,
+          snapshot_height: 321,
+          snapshot_hash: 'c'.repeat(64),
+          next_cursor: null,
+          has_more: false,
+        },
         items: mockBlocks,
       },
     });
@@ -161,12 +167,15 @@ describe('Blocks data smoke', () => {
     await flushPromises();
 
     const fetchArgs = fetchBlocksMock.mock.calls.at(-1)?.[0];
-    expect(fetchArgs).toEqual({ cursor: null, limit: 10 });
+    expect(fetchArgs?.cursor).toBeNull();
+    expect(fetchArgs?.limit).toBe(10);
+    expect(fetchArgs).not.toHaveProperty('page');
+    expect(fetchArgs).not.toHaveProperty('per_page');
 
     const rowsText = wrapper.find('[data-test="base-table-rows"]').text();
     expect(rowsText).toContain(String(mockBlocks[0].height));
     expect(rowsText).toContain(mockBlocks[0].hash);
 
     expect(connectStreamMock).toHaveBeenCalledWith(mockBlocks[0].height + 1);
-  }, 20000);
+  });
 });

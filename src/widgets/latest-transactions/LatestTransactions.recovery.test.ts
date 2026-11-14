@@ -3,7 +3,6 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, ref } from 'vue';
 import LatestTransactions from './LatestTransactions.vue';
 import { i18n } from '@/shared/lib/localization';
-import { historyCacheKey } from '@/shared/lib/history-cache';
 import type { Transaction } from '@/shared/api/schemas';
 
 const mocks = vi.hoisted(() => ({ fetchLatestTransactions: vi.fn() }));
@@ -114,24 +113,6 @@ describe('LatestTransactions authoritative snapshot recovery', () => {
     expect(mocks.fetchLatestTransactions).toHaveBeenCalledTimes(2);
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     expect(wrapper.text()).toContain(transaction.hash);
-  });
-
-  it('continues recovery while cached rows exist, then accepts an authoritative empty snapshot', async () => {
-    stream.status.value = 'OPEN';
-    cache.set(historyCacheKey('latest-transactions', networkId, toriiUrl)!, JSON.stringify({
-      version: 1,
-      updated_at_ms: Date.now(),
-      items: [transaction],
-    }));
-    mocks.fetchLatestTransactions.mockResolvedValueOnce(failure()).mockResolvedValueOnce(snapshot());
-    const wrapper = render();
-    await flushPromises();
-    expect(wrapper.text()).toContain(transaction.hash);
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(mocks.fetchLatestTransactions).toHaveBeenCalledTimes(2);
-    expect(wrapper.find('.latest-transactions__row').exists()).toBe(false);
-    await vi.advanceTimersByTimeAsync(10_000);
-    expect(mocks.fetchLatestTransactions).toHaveBeenCalledTimes(2);
   });
 
   it('does not repeatedly poll a successful empty snapshot on an open stream', async () => {

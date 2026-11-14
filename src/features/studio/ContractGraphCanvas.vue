@@ -33,6 +33,7 @@
 
 <script setup lang="ts">
 import { markRaw, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   VueFlow,
   addEdge,
@@ -76,6 +77,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   diagnostics: () => [],
 });
+const { t } = useI18n();
 
 const emit = defineEmits<{
   'update:modelValue': [value: KotodamaStudioGraphDocumentV2['graph']]
@@ -135,7 +137,7 @@ function buildGraphModel(
   return {
     nodes: nextNodes.map((node) => {
       const data = node.data ?? {
-        title: 'Untitled',
+        title: t('studio.graph.untitledNode'),
         detail: '',
         kind: 'note' as const,
         config: {},
@@ -226,13 +228,12 @@ function isValidConnection(connection: Connection | Edge): boolean {
     version: 2,
     updatedAt: new Date(0).toISOString(),
     metadata: {
-      title: 'Graph',
+      title: t('studio.graph.validationTitle'),
       dataspace: 'universal',
       authority: 'operator@studio.main',
       chainId: 'wonderland',
       description: '',
     },
-    legacy: null,
     graph: buildGraphModel(),
   }, {
     id: 'id' in connection ? connection.id : undefined,
@@ -329,9 +330,7 @@ function handleNodeClick(event: NodeMouseEvent) {
   display: grid;
   overflow: hidden;
   border-radius: size(1.25);
-  background:
-    radial-gradient(circle at 10% 0%, rgba(55, 97, 129, 0.12), transparent 32%),
-    linear-gradient(180deg, rgba(252, 249, 244, 0.98), rgba(242, 237, 228, 0.98));
+  background: theme-color('surface');
 
   &__flow {
     min-height: 680px;
@@ -367,7 +366,7 @@ function handleNodeClick(event: NodeMouseEvent) {
   .vue-flow__controls {
     border-radius: size(1);
     overflow: hidden;
-    box-shadow: 0 14px 24px rgba(42, 38, 34, 0.12);
+    box-shadow: none;
   }
 
   .vue-flow__controls-button {
@@ -379,14 +378,12 @@ function handleNodeClick(event: NodeMouseEvent) {
   .vue-flow__minimap {
     background: rgba(255, 252, 246, 0.9);
     border-radius: size(1);
-    box-shadow: 0 14px 28px rgba(42, 38, 34, 0.12);
+    box-shadow: none;
   }
 }
 
 html.dark .contract-graph-canvas {
-  background:
-    radial-gradient(circle at 10% 0%, rgba(75, 113, 143, 0.18), transparent 34%),
-    linear-gradient(180deg, rgba(37, 32, 29, 0.98), rgba(27, 24, 22, 0.98));
+  background: theme-color('surface');
 
   .vue-flow__edge-path,
   .vue-flow__connection-path {

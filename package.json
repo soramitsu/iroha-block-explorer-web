@@ -9,7 +9,6 @@
   "scripts": {
     "postinstall": "node ./scripts/verify-iroha-sdk.mjs",
     "dev": "vite",
-    "dev:serve-mock-metrics": "deno run -N -E=DEBUG ./serve-mock-metrics.ts",
     "build": "node ./scripts/verify-iroha-sdk.mjs && run-s typecheck build:vite",
     "build:vite": "vite build",
     "check:bundle": "node ./scripts/check-bundle-budget.mjs",
