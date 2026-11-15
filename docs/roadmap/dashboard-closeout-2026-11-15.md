@@ -101,8 +101,8 @@ worktree was clean.
   500-transaction sample. Ledger read 16 domains, 4 asset definitions and a
   bounded 1,000-account sample. Every Torii read returned HTTP 200, with no
   alerts and no console errors.
-- **Not verified.** Unit tests on the merged tree had not run at
-  publication; see the merge gates below.
+- **Unit tests.** These had not run at publication. They passed
+  afterwards on the same code; see the merge gates below.
 
 `origin`'s development proxy allow-list covers none of the
 `POST /v1/explorer/*/query` collection reads the SDK issues. It also lacks
@@ -151,9 +151,15 @@ template string, so it has an exact-value allowlist entry.
 On the merged tree, these all pass (`output/closeout-20261115/merge/`):
 SDK integrity, typecheck, ESLint with zero errors, roadmap validation (360
 rows), the localized-copy check, the production build, bundle budgets
-(startup 421,602 of 540,000 gzip bytes) and the diff check. Unit tests could
-not start: at host load averages of about 300, every Vitest worker missed
-its fixed five-second start limit.
+(startup 421,602 of 540,000 gzip bytes) and the diff check.
+
+Unit tests could not start before publication: at host load averages of
+about 300, every Vitest worker missed its fixed five-second start limit.
+After the host restarted, the full suite ran on 2026-11-15 at `54ee99f`,
+whose code is identical to merge `8e006ad` and published HEAD `d0f6d4f`.
+It passed 2,114 tests in 183 files, with the one opt-in GPG integration test
+skipped (`merge/unit-full.log`). That includes 35 block-window composable
+tests, 13 retention and cache-key tests and 4 block-window cache tests.
 
 ## Final review
 
