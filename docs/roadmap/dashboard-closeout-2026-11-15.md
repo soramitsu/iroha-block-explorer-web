@@ -70,6 +70,46 @@ A read-only check on 2026-11-14 at 16:02 UTC found that
 On 2026-11-15 the owner chose to merge `origin/master` into this branch and
 republish from it (EX-360).
 
+## Republication
+
+The merged release `20261114T231342Z` is live at
+`https://taira-explorer.sora.org`. It was built from merge `8e006ad` and
+recorded at HEAD `d0f6d4f`, which changes only `.claude/launch.json`; the
+worktree was clean.
+
+- **Publisher.** The maintained `png2-deploy poc web taira-explorer` path,
+  on the approved OVH host only, with a dry run first (`publish.log`,
+  `publish-dry-run.log`). The previous release `20261108T054146Z` is kept,
+  so `poc rollback web taira-explorer` restores it. The keep-three policy
+  pruned `20261025T114146Z`, whose source remains commit `8bd7692`.
+- **Config.** The checked-in `png2-deploy` ledger still describes the
+  2026-10-19 network (`E2EC52C5…#15D5`), so `poc web-config` would render a
+  wrong NetworkId. The release uses the existing Taira config instead. Its
+  NetworkId, `hash:4978D0BD…#6774`, equals the hash of Taira's genesis block
+  as read from public Torii on 2026-11-15.
+- **Public files.** All 202 checked files match the candidate byte for byte
+  (`release-candidate.json`, `public-verification.json`), including
+  `config.json`, `SOURCE_REV` and `SOURCE_WORKTREE`. All six checked routes
+  serve the new `index.html`.
+- **Before publication.** The exact `dist/` bundle was previewed locally,
+  with `/v1`, `/status` and `/metrics` forwarded to public Taira and no
+  mocked data. The homepage and all three dashboards rendered live data.
+  Activity reused Network's 250-block window and read only the missing 750
+  blocks: seven 100-row pages and one 50-row page.
+- **After publication.** On the public site, Network read 250 blocks with
+  none unreadable and 3 peers. Activity read 1,000 blocks and a
+  500-transaction sample. Ledger read 16 domains, 4 asset definitions and a
+  bounded 1,000-account sample. Every Torii read returned HTTP 200, with no
+  alerts and no console errors.
+- **Not verified.** Unit tests on the merged tree had not run at
+  publication; see the merge gates below.
+
+`origin`'s development proxy allow-list covers none of the
+`POST /v1/explorer/*/query` collection reads the SDK issues. It also lacks
+`/status`, which the app still requests. `vite dev` therefore cannot load
+the homepage or dashboards; production is unaffected, because it calls
+Torii directly.
+
 ## Merge with `origin/master`
 
 This is the first release, so no backwards-compatibility code was kept.
@@ -161,4 +201,4 @@ views. Further acceleration is not warranted now:
 - A cold 1,000-block feed takes ten sequential 100-row pages, about 4.7 s.
 - An upstream snapshot-start contract would need a new Torii API and another
   validator rollout.
-- The Explorer-side EX-359 changes are not currently live (EX-360).
+- The Explorer-side EX-359 changes have been live again since release `20261114T231342Z` (EX-360).
