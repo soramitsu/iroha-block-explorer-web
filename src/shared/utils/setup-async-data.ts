@@ -1,5 +1,5 @@
-import { computed, reactive, ref, shallowRef } from 'vue';
-import { useIntervalFn } from '@vueuse/core';
+import { computed, reactive, ref, shallowRef, watch } from 'vue';
+import { useDocumentVisibility, useIntervalFn } from '@vueuse/core';
 import {
   apiProblemFromError,
   resourceResultProblem,
@@ -22,9 +22,12 @@ export function setupAsyncData<K>(
   const pending = ref(false);
   const snapshot = shallowRef<ResourceSnapshot<K>>({ status: 'idle' });
   let requestGeneration = 0;
+  // Polling starts one interval after setup, whether or not `immediate` runs.
+  let lastRunAt = Date.now();
 
   async function run(): Promise<K | undefined> {
     const generation = ++requestGeneration;
+    lastRunAt = Date.now();
     pending.value = true;
     snapshot.value = data.value === undefined
       ? { status: 'initial-loading' }
@@ -64,19 +67,30 @@ export function setupAsyncData<K>(
   }
 
   const pollInterval = options?.interval;
-  const shouldPoll = Boolean(pollInterval && Number.isFinite(pollInterval) && pollInterval > 0);
-  if (shouldPoll) {
-    useIntervalFn(
-      () => {
-        if (pending.value) return;
-        if (options?.pollWhen && !options.pollWhen()) return;
-        run();
-      },
+  if (pollInterval !== undefined && Number.isFinite(pollInterval) && pollInterval > 0) {
+    // Nobody sees a hidden page, so it sends Torii no polls. When the page is
+    // shown again it refreshes at once if a poll came due meanwhile.
+    const visibility = useDocumentVisibility();
+    const poll = () => {
+      if (pending.value) return;
+      if (options?.pollWhen && !options.pollWhen()) return;
+      run();
+    };
+    const poller = useIntervalFn(
+      poll,
       pollInterval,
-      // Keep polling active from startup, but never fire the callback immediately.
-      // The initial fetch is controlled exclusively by `immediate`.
-      { immediate: true, immediateCallback: false }
+      // Never fire the callback immediately: the initial fetch is controlled
+      // exclusively by `immediate`.
+      { immediate: visibility.value !== 'hidden', immediateCallback: false }
     );
+    watch(visibility, (state) => {
+      if (state === 'hidden') {
+        poller.pause();
+        return;
+      }
+      if (Date.now() - lastRunAt >= pollInterval) poll();
+      poller.resume();
+    });
   }
 
   if (shouldRunImmediately) run();

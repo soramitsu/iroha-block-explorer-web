@@ -71,6 +71,129 @@ function copyBuildPublicAssets(publicRoot: string): Plugin {
   };
 }
 
+const VITE_PRELOAD_HELPER_ID = '\0vite/preload-helper.js';
+const IROHA_SDK_MODULE_PATTERN = /\/javascript\/iroha_js\/|\/node_modules\/@iroha\/iroha-js\//u;
+
+/** Assign stable named chunks to heavy dependencies and to the entry's preload runtime. */
+export function explorerManualChunk(id: string): string | undefined {
+  const moduleId = id.replaceAll('\\', '/');
+  // The entry needs Vite's dynamic-import helper before it can request the
+  // runtime configuration. Left to Rollup, the helper was merged into the
+  // iroha-sdk chunk, which made that request wait for the whole SDK.
+  if (moduleId === VITE_PRELOAD_HELPER_ID) return 'preload-helper';
+  if (/\/node_modules\/(?:vue|vue-router|vue-i18n)\//u.test(moduleId)) return 'vue';
+  if (moduleId.includes('/node_modules/blockly/')) return 'studio-blockly';
+  if (moduleId.includes('/node_modules/@vue-flow/')) return 'studio-flow';
+  if (moduleId.includes('/node_modules/vue-json-pretty/')) return 'json-viewer';
+  if (IROHA_SDK_MODULE_PATTERN.test(moduleId)) return 'iroha-sdk';
+  if (/\/node_modules\/(?:@vueuse\/core|@iroha\/core|zod|date-fns|date-fns-tz|bignumber\.js)\//u.test(moduleId))
+    return 'vendor';
+  return undefined;
+}
+
+interface BootGraphChunk {
+  type: 'chunk'
+  fileName: string
+  imports: readonly string[]
+  dynamicImports: readonly string[]
+  moduleIds: readonly string[]
+  viteMetadata?: { importedCss: ReadonlySet<string> }
+}
+
+type BootGraphBundle = Readonly<Record<string, { type: string }>>;
+
+function bootGraphChunk(bundle: BootGraphBundle, fileName: string): BootGraphChunk {
+  const item = bundle[fileName];
+  if (!item || item.type !== 'chunk') throw new Error(`Boot chunk is missing from the bundle: ${fileName}`);
+  return item as BootGraphChunk;
+}
+
+/** Breadth-first static import closure, in a deterministic discovery order. */
+function staticChunkClosure(bundle: BootGraphBundle, roots: readonly string[], seen = new Set<string>()): string[] {
+  const order: string[] = [];
+  const pending = [...roots];
+  while (pending.length > 0) {
+    const fileName = pending.shift() as string;
+    if (seen.has(fileName)) continue;
+    seen.add(fileName);
+    order.push(fileName);
+    pending.push(...bootGraphChunk(bundle, fileName).imports);
+  }
+  return order;
+}
+
+/**
+ * Chunks the entry imports dynamically at boot, with their static imports and CSS,
+ * minus what the entry HTML already loads. Every dynamic import of the entry is
+ * a boot step (the bundle budget counts them the same way).
+ */
+export function collectBootPreloadFiles(
+  bundle: BootGraphBundle,
+  entryFileName: string
+): { scripts: string[], styles: string[] } {
+  const entry = bootGraphChunk(bundle, entryFileName);
+  const loaded = new Set<string>();
+  const entryClosure = staticChunkClosure(bundle, [entryFileName], loaded);
+  const loadedStyles = new Set(entryClosure.flatMap((fileName) => [
+    ...(bootGraphChunk(bundle, fileName).viteMetadata?.importedCss ?? []),
+  ]));
+  const scripts = staticChunkClosure(bundle, entry.dynamicImports, loaded);
+  const styles = [...new Set(scripts.flatMap((fileName) => [
+    ...(bootGraphChunk(bundle, fileName).viteMetadata?.importedCss ?? []),
+  ]))].filter((fileName) => !loadedStyles.has(fileName));
+  return { scripts, styles };
+}
+
+/** Bundled Iroha SDK modules the entry must evaluate before its own code runs. */
+export function entryStaticSdkModules(bundle: BootGraphBundle, entryFileName: string): string[] {
+  return staticChunkClosure(bundle, [entryFileName])
+    .flatMap((fileName) => bootGraphChunk(bundle, fileName).moduleIds)
+    .filter((moduleId) => IROHA_SDK_MODULE_PATTERN.test(moduleId.replaceAll('\\', '/')));
+}
+
+/**
+ * Fetch every boot chunk from the document instead of one dependency level
+ * per round trip. `modulepreload` downloads and compiles without evaluating,
+ * so no API module runs before the runtime configuration is valid.
+ */
+function preloadBootChunks(): Plugin {
+  let base = '/';
+  return {
+    name: 'explorer-boot-preload',
+    apply: 'build',
+    configResolved(config) {
+      base = config.base;
+    },
+    transformIndexHtml: {
+      order: 'post',
+      handler(_html, context) {
+        if (!context.bundle || !context.chunk) throw new Error('The HTML entry chunk is unavailable for boot preloading');
+        const sdkModules = entryStaticSdkModules(context.bundle, context.chunk.fileName);
+        if (sdkModules.length > 0) {
+          throw new Error(`The entry must not wait for the Iroha SDK before loading its runtime configuration: ${sdkModules[0]}`);
+        }
+        const { scripts, styles } = collectBootPreloadFiles(context.bundle, context.chunk.fileName);
+        return [
+          ...scripts.map((fileName) => ({
+            tag: 'link',
+            attrs: { rel: 'modulepreload', crossorigin: true, href: `${base}${fileName}` },
+            injectTo: 'head' as const,
+          })),
+          // Boot stylesheets are linked outright: Vite's preload helper finds
+          // them and does not wait for a second load. A style preload would
+          // stay unused until the configuration and API load, which Chrome
+          // reports as an unused preload on slow networks.
+          ...styles.map((fileName) => ({
+            tag: 'link',
+            attrs: { rel: 'stylesheet', crossorigin: true, href: `${base}${fileName}` },
+            injectTo: 'head' as const,
+          })),
+        ];
+      },
+    },
+  };
+}
+
 const EXPLORER_PROXY_GET_PATHS = [
   /^\/v1\/parameters$/u,
   /^\/v1\/soracles\/(?:feeds(?:\/[^/]+\/history)?|defi\/attestations\/latest)$/u,
@@ -189,20 +312,7 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1200,
       rollupOptions: {
         output: {
-          manualChunks(id) {
-            const moduleId = id.replaceAll('\\', '/');
-            if (/\/node_modules\/(?:vue|vue-router|vue-i18n)\//u.test(moduleId)) return 'vue';
-            if (moduleId.includes('/node_modules/blockly/')) return 'studio-blockly';
-            if (moduleId.includes('/node_modules/@vue-flow/')) return 'studio-flow';
-            if (moduleId.includes('/node_modules/vue-json-pretty/')) return 'json-viewer';
-            if (moduleId.includes('/javascript/iroha_js/') || moduleId.includes('/node_modules/@iroha/iroha-js/'))
-              return 'iroha-sdk';
-            if (
-              /\/node_modules\/(?:@vueuse\/core|@iroha\/core|zod|date-fns|date-fns-tz|bignumber\.js)\//u.test(moduleId)
-            )
-              return 'vendor';
-            return undefined;
-          },
+          manualChunks: explorerManualChunk,
         },
       },
     },
@@ -213,6 +323,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       copyBuildPublicAssets(path.resolve(configDirectory, 'public')),
+      preloadBootChunks(),
       vue(),
       svg({
         svgoConfig: {

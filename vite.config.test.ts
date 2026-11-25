@@ -5,7 +5,111 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import explorerConfig, { collectBuildPublicAssets, isExplorerToriiProxyRequestAllowed } from './vite.config.mts';
+import explorerConfig, {
+  collectBootPreloadFiles,
+  collectBuildPublicAssets,
+  entryStaticSdkModules,
+  explorerManualChunk,
+  isExplorerToriiProxyRequestAllowed,
+} from './vite.config.mts';
+
+function chunk(
+  fileName: string,
+  graph: { imports?: string[], dynamicImports?: string[], css?: string[], moduleIds?: string[] } = {}
+) {
+  return {
+    type: 'chunk',
+    fileName,
+    imports: graph.imports ?? [],
+    dynamicImports: graph.dynamicImports ?? [],
+    moduleIds: graph.moduleIds ?? [],
+    viteMetadata: { importedCss: new Set(graph.css ?? []) },
+  };
+}
+
+function bundleOf(...chunks: ReturnType<typeof chunk>[]) {
+  return Object.fromEntries(chunks.map((item) => [item.fileName, item]));
+}
+
+// The Explorer's boot shape: the entry loads config first, then imports the
+// API, App, router and locale modules, which share the SDK and Vue chunks.
+const bootBundle = bundleOf(
+  chunk('_assets/index.js', {
+    imports: ['_assets/vue.js', '_assets/vendor.js', '_assets/preload-helper.js'],
+    dynamicImports: ['_assets/api.js', '_assets/App.js', '_assets/router.js'],
+    css: ['_assets/index.css'],
+  }),
+  chunk('_assets/vue.js'),
+  chunk('_assets/vendor.js', { imports: ['_assets/vue.js'] }),
+  chunk('_assets/preload-helper.js'),
+  chunk('_assets/api.js', {
+    imports: ['_assets/index.js', '_assets/iroha-sdk.js', '_assets/vendor.js'],
+    moduleIds: ['/repo/src/shared/api/index.ts'],
+  }),
+  chunk('_assets/iroha-sdk.js', { moduleIds: ['/repo/node_modules/@iroha/iroha-js/src/index.js'] }),
+  chunk('_assets/App.js', { imports: ['_assets/api.js', '_assets/scope.js'], css: ['_assets/App.css', '_assets/index.css'] }),
+  chunk('_assets/scope.js', { imports: ['_assets/preload-helper.js'], css: ['_assets/App.css'] }),
+  chunk('_assets/router.js', { imports: ['_assets/preload-helper.js'], dynamicImports: ['_assets/HomePage.js'] }),
+  chunk('_assets/HomePage.js', { imports: ['_assets/api.js'], css: ['_assets/HomePage.css'] })
+);
+
+describe('Explorer boot chunk graph', () => {
+  it('preloads every boot chunk and stylesheet the entry HTML does not already load', () => {
+    expect(collectBootPreloadFiles(bootBundle, '_assets/index.js')).toEqual({
+      scripts: ['_assets/api.js', '_assets/App.js', '_assets/router.js', '_assets/iroha-sdk.js', '_assets/scope.js'],
+      styles: ['_assets/App.css'],
+    });
+  });
+
+  it('leaves route chunks to the router and preloads nothing for an entry without boot imports', () => {
+    const preload = collectBootPreloadFiles(bootBundle, '_assets/index.js');
+    expect(preload.scripts).not.toContain('_assets/HomePage.js');
+    expect(preload.styles).not.toContain('_assets/HomePage.css');
+
+    const staticOnly = bundleOf(chunk('_assets/index.js', { imports: ['_assets/vue.js'] }), chunk('_assets/vue.js'));
+    expect(collectBootPreloadFiles(staticOnly, '_assets/index.js')).toEqual({ scripts: [], styles: [] });
+  });
+
+  it('rejects a graph that references a chunk missing from the bundle', () => {
+    const broken = bundleOf(chunk('_assets/index.js', { dynamicImports: ['_assets/missing.js'] }));
+    expect(() => collectBootPreloadFiles(broken, '_assets/index.js'))
+      .toThrow('Boot chunk is missing from the bundle: _assets/missing.js');
+    expect(() => collectBootPreloadFiles({ 'index.css': { type: 'asset' } }, 'index.css'))
+      .toThrow('Boot chunk is missing from the bundle: index.css');
+  });
+
+  it('finds SDK modules the entry would have to evaluate before requesting its configuration', () => {
+    expect(entryStaticSdkModules(bootBundle, '_assets/index.js')).toEqual([]);
+
+    const regressed = {
+      ...bootBundle,
+      '_assets/index.js': chunk('_assets/index.js', { imports: ['_assets/vue.js', '_assets/iroha-sdk.js'] }),
+    };
+    expect(entryStaticSdkModules(regressed, '_assets/index.js'))
+      .toEqual(['/repo/node_modules/@iroha/iroha-js/src/index.js']);
+  });
+
+  it('gives the preload helper its own chunk and keeps the named dependency chunks', () => {
+    expect(explorerManualChunk('\0vite/preload-helper.js')).toBe('preload-helper');
+    expect(explorerManualChunk('/repo/node_modules/@iroha/iroha-js/dist/torii-browser.js')).toBe('iroha-sdk');
+    expect(explorerManualChunk('C:\\repo\\javascript\\iroha_js\\src\\index.js')).toBe('iroha-sdk');
+    expect(explorerManualChunk('/repo/node_modules/vue-router/dist/vue-router.mjs')).toBe('vue');
+    expect(explorerManualChunk('/repo/node_modules/zod/v4/index.js')).toBe('vendor');
+    expect(explorerManualChunk('/repo/node_modules/@vue-flow/core/dist/index.mjs')).toBe('studio-flow');
+    expect(explorerManualChunk('/repo/src/shared/api/index.ts')).toBeUndefined();
+  });
+
+  it('registers the boot preload plugin for production builds only', async () => {
+    if (typeof explorerConfig !== 'function') {
+      throw new TypeError('expected the Explorer Vite config to be environment-aware');
+    }
+    const config = await explorerConfig({ command: 'build', mode: 'production', isSsrBuild: false, isPreview: false });
+    expect(config.plugins).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'explorer-boot-preload', apply: 'build' }),
+    ]));
+  });
+});
+
 
 describe('Vite Torii proxy', () => {
   it.each([

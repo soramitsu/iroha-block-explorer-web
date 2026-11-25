@@ -86,13 +86,13 @@ import BaseButton from '@/shared/ui/components/BaseButton.vue';
 import BaseContentBlock from '@/shared/ui/components/BaseContentBlock.vue';
 import BaseLoading from '@/shared/ui/components/BaseLoading.vue';
 import BaseResourceState from '@/shared/ui/components/BaseResourceState.vue';
-import { computed, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
 import TimeStamp from '@/shared/ui/components/TimeStamp.vue';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
 import { useBlockStream } from '@/shared/ui/composables/useBlockStream';
 import { classifySampleFreshness } from '@/shared/lib/freshness';
-import { useIntervalFn } from '@vueuse/core';
+import { useSharedNow } from '@/shared/ui/composables/useSharedNow';
 import { useScopedExplorerNavigation } from '@/shared/ui/composables/useExplorerScopeNavigation';
 
 const navigation = useScopedExplorerNavigation();
@@ -115,11 +115,7 @@ const isInitialLoading = computed(() => setup.isLoading && blocks.value.length =
 const availability = http.useToriiAvailability();
 const showAvailabilityNotice = computed(() => availability.state.value !== 'healthy');
 const availabilityNoticeKey = computed(() => `settings.nodeHealth.${availability.state.value}`);
-const nowMs = ref(Date.now());
-
-useIntervalFn(() => {
-  nowMs.value = Date.now();
-}, 1000);
+const nowMs = useSharedNow();
 
 const latestSampleDate = computed<Date | null>(() => {
   if (!blocks.value.length) return null;

@@ -1,7 +1,7 @@
 import { countTimeDifference } from '@/shared/lib/time';
 import type { MaybeRefOrGetter } from 'vue';
-import { reactive, ref, watch, toValue } from 'vue';
-import { useIntervalFn } from '@vueuse/shared';
+import { reactive, toValue, watchEffect } from 'vue';
+import { useSharedNow } from '@/shared/ui/composables/useSharedNow';
 
 export type TimeAgo =
   | { precision: 'seconds', value: number }
@@ -9,34 +9,18 @@ export type TimeAgo =
   | { precision: 'hours', value: number }
   | { precision: 'days', value: number };
 
-export function useTimeAgo(
-  date: MaybeRefOrGetter<Date>,
-  options?: {
-    refreshInterval?: number
-    detailedSeconds?: boolean
-  }
-) {
-  const now = ref(Date.now());
+/** Time elapsed since `date`, advanced by the page's shared one-second clock. */
+export function useTimeAgo(date: MaybeRefOrGetter<Date>) {
+  const now = useSharedNow();
   const result = reactive<TimeAgo>({ precision: 'seconds', value: 0 });
 
-  const interval = ref(options?.refreshInterval ?? 1000);
-  useIntervalFn(() => {
-    now.value = Date.now();
-  }, interval);
-
-  watch(
-    now,
-    () => {
-      const { precision, value } = countTimeDifference(now.value, toValue(date), options?.detailedSeconds);
-
-      if (precision === 'days') interval.value = 1000 * 60 * 60;
-      else if (precision !== 'seconds') interval.value = 1000 * 60;
-
-      result.precision = precision;
-      result.value = value;
-    },
-    { immediate: true }
-  );
+  // Unchanged values are not re-rendered, so an hour-old row costs one
+  // subtraction per tick and no DOM work.
+  watchEffect(() => {
+    const { precision, value } = countTimeDifference(now.value, toValue(date));
+    result.precision = precision;
+    result.value = value;
+  });
 
   return result;
 }
