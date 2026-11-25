@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { flushPromises } from '@vue/test-utils';
 import { effectScope, nextTick } from 'vue';
 import { setupAsyncData } from './setup-async-data';
@@ -13,6 +13,23 @@ function deferred<T>() {
 
   return { promise, resolve, reject };
 }
+
+function setPageVisibility(state: DocumentVisibilityState) {
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+  document.dispatchEvent(new Event('visibilitychange'));
+}
+
+async function settle(ms = 0) {
+  await vi.advanceTimersByTimeAsync(ms);
+  await flushPromises();
+  await nextTick();
+}
+
+afterEach(() => {
+  // Restore jsdom's own visibility getter and real timers after each test.
+  delete (document as { visibilityState?: DocumentVisibilityState }).visibilityState;
+  vi.useRealTimers();
+});
 
 describe('setupAsyncData', () => {
   it('exposes an initial error without starting a hidden retry loop', async () => {
@@ -279,5 +296,100 @@ describe('setupAsyncData', () => {
 
     scope.stop();
     vi.useRealTimers();
+  });
+  it('sends no polls while the page is hidden and refreshes on return once a poll came due', async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn<() => Promise<number>>().mockResolvedValue(1);
+    const scope = effectScope();
+    scope.run(() => {
+      setupAsyncData(fetcher, { interval: 5000 });
+    });
+    await settle();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    setPageVisibility('hidden');
+    await settle(20_000);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    setPageVisibility('visible');
+    await settle();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+
+    await settle(5000);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    scope.stop();
+  });
+
+  it('does not refresh on return when the last fetch is newer than the interval', async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn<() => Promise<number>>().mockResolvedValue(1);
+    const scope = effectScope();
+    scope.run(() => {
+      setupAsyncData(fetcher, { interval: 5000 });
+    });
+    await settle(2000);
+    setPageVisibility('hidden');
+    await settle(1000);
+    setPageVisibility('visible');
+    await settle();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    // The interval restarts when the page is shown again.
+    await settle(4999);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await settle(1);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    scope.stop();
+  });
+
+  it('still loads once in a page opened in the background, then polls only after it is shown', async () => {
+    vi.useFakeTimers();
+    setPageVisibility('hidden');
+    const fetcher = vi.fn<() => Promise<number>>().mockResolvedValue(1);
+    let api!: ReturnType<typeof setupAsyncData<number>>;
+    const scope = effectScope();
+    scope.run(() => {
+      api = setupAsyncData(fetcher, { interval: 5000 });
+    });
+    await settle(15_000);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(api.data).toBe(1);
+
+    setPageVisibility('visible');
+    await settle();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    scope.stop();
+  });
+
+  it('keeps pollWhen authoritative when the page is shown again', async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn<() => Promise<number>>().mockResolvedValue(1);
+    const scope = effectScope();
+    scope.run(() => {
+      setupAsyncData(fetcher, { interval: 5000, pollWhen: () => false });
+    });
+    await settle();
+    setPageVisibility('hidden');
+    await settle(20_000);
+    setPageVisibility('visible');
+    await settle(5000);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    scope.stop();
+  });
+
+  it('stops polling and visibility handling when its scope is disposed', async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn<() => Promise<number>>().mockResolvedValue(1);
+    const scope = effectScope();
+    scope.run(() => {
+      setupAsyncData(fetcher, { interval: 5000 });
+    });
+    await settle();
+    scope.stop();
+    setPageVisibility('hidden');
+    await settle(20_000);
+    setPageVisibility('visible');
+    await settle(5000);
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });

@@ -113,7 +113,8 @@ import TimeStamp from '@/shared/ui/components/TimeStamp.vue';
 import { useParamScope } from '@vue-kakuyaku/core';
 import { setupAsyncData } from '@/shared/utils/setup-async-data';
 import { SUCCESSFUL_FETCHING } from '@/shared/api/consts';
-import { useIntervalFn, useThrottleFn } from '@vueuse/core';
+import { useThrottleFn } from '@vueuse/core';
+import { useSharedNow } from '@/shared/ui/composables/useSharedNow';
 import { Transaction as TransactionSchema } from '@/shared/api/schemas';
 import type { Transaction as TransactionDto, TransactionStatus as TransactionStatusType } from '@/shared/api/schemas';
 import {
@@ -177,7 +178,7 @@ const isInitialLoading = computed(() => isLoading.value && transactions.value.le
 const availability = http.useToriiAvailability();
 const showAvailabilityNotice = computed(() => availability.state.value !== 'healthy');
 const availabilityNoticeKey = computed(() => `settings.nodeHealth.${availability.state.value}`);
-const nowMs = ref(Date.now());
+const nowMs = useSharedNow();
 
 const latestTransaction = computed<TransactionDto | null>(() => {
   const raw = transactionsStream.data.value;
@@ -210,10 +211,6 @@ const latestSampleToneKey = computed(() => latestSampleToneKeyMap[latestSampleTo
 const scheduleTransactionsReload = useThrottleFn(() => {
   if (isLoading.value) return;
   scope.value?.expose.refetch?.();
-}, 1000);
-
-useIntervalFn(() => {
-  nowMs.value = Date.now();
 }, 1000);
 
 watch(

@@ -6,6 +6,7 @@
     "contract-view": 5000,
     "iroha-sdk": 150000,
     "json-viewer": 15000,
+    "preload-helper": 1500,
     "studio-flow": 85000,
     "transaction-instructions": 5000,
     "vendor": 48000,
