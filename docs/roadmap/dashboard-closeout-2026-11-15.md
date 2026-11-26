@@ -108,7 +108,8 @@ worktree was clean.
 `POST /v1/explorer/*/query` collection reads the SDK issues. It also lacks
 `/status`, which the app still requests. `vite dev` therefore cannot load
 the homepage or dashboards; production is unaffected, because it calls
-Torii directly.
+Torii directly. (Resolved for the homepage and dashboards in EX-362 on
+2026-11-25.)
 
 ## Merge with `origin/master`
 
@@ -181,8 +182,11 @@ diff on 2026-11-15 found the following:
    pass on the final tree, and ESLint passes on the changed files. The block-window cache tests were not
    re-run: Vitest's fixed five-second worker start limit kept failing under
    the host load, and that file is unchanged since its 2026-10-25 run. For
-   the same reason the full suite was not repeated on the final tree. This
-   change is not deployed.
+   the same reason the full suite was not repeated on the final tree. The
+   fix is commit `e767703`. It first shipped in the merged release
+   `20261114T231342Z`, whose candidate was built from merge `8e006ad`, which contains it
+   (`merge/release-candidate.json`; see Republication). An earlier version
+   of this record said it was not deployed (corrected 2026-11-25).
 2. **Not reachable.** Torii rejects a continuation whose snapshot hash no
    longer matches the chain (`InvalidSnapshot`). After a same-genesis reset,
    an older-page read therefore fails visibly instead of mixing two chains.

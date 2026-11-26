@@ -98,16 +98,22 @@ SDK or application release qualification.
 
 ## Development
 
-Frontend talks directly to Torii. By default it targets `${window.location.origin}/v1/explorer`, matching the current
-routes exposed by the upstream `../iroha` repo.
+Frontend talks directly to Torii. Without a `toriiBaseUrl` in `config.json`, a `VITE_API_URL` or a node saved in the
+node selector, it uses the page's own origin as the Torii origin, matching the current routes exposed by the upstream
+`../iroha` repo.
 
-Set `VITE_API_URL` to point at a different Torii instance (for example `http://127.0.0.1:8080/v1/explorer`) when
-developing against a remote node. Vite’s dev server proxies `/v1` plus Torii root endpoints used by the app (`/status`,
-`/metrics`, `/peers`) to `http://127.0.0.1:29080` by default (override with `VITE_TORII_PROXY_TARGET`), so running Torii
-locally on that port works without extra flags. Adjust the proxy rules in `vite.config.mts` if your setup differs.
+Set `VITE_API_URL` to a different Torii origin, with no path (for example `http://127.0.0.1:8080`), when developing
+against a remote node. Vite’s dev server forwards only the Torii requests the Explorer issues to `http://127.0.0.1:29080`
+by default (override with `VITE_TORII_PROXY_TARGET`): the allow-listed `/v1` routes in `vite.config.mts`, including the
+read-only collection queries behind the home page and the Network, Activity and Ledger dashboards
+(`POST /v1/explorer/{blocks,transactions,transactions/latest,accounts,domains,asset-definitions}/query`) and the Connect
+WebSocket, and exactly `GET /status`. Other requests to `/v1` or `/status` get a 404 from the dev server, and root routes
+such as `/metrics`, `/health` and `/status/*` never reach Torii. To read through the proxy, create `public/config.json`
+pointing at the dev server itself, for example `"toriiBaseUrl": "http://localhost:5173"` with `"toriiForceBaseUrl": true`
+and the network's `networkPrefix` (see the runtime config section below). The Network dashboard's `/status` read needs
+a Torii built with telemetry whose profile serves it.
 The production `Caddyfile` now only serves the built Explorer; there is no `/api` reverse proxy because all data is
-fetched directly from Torii’s `/v1/explorer/*`, `/v1/*` app API endpoints, and root `/status`/`/metrics`/`/peers`
-endpoints.
+fetched directly from Torii’s `/v1/explorer/*` and `/v1/*` app API endpoints and its root `/status` endpoint.
 
 ## Runtime config (`config.json`)
 

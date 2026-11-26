@@ -3,7 +3,8 @@
 import { mkdtemp, mkdir, rm, writeFile, symlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import type { ProxyOptions } from 'vite';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import explorerConfig, {
   collectBootPreloadFiles,
@@ -111,8 +112,24 @@ describe('Explorer boot chunk graph', () => {
 });
 
 
+// Every Torii read the home page and the Network, Activity and Ledger
+// dashboards make, as traced through the installed SDK.
+const DASHBOARD_TORII_READS = [
+  ['GET', '/status'],
+  ['POST', '/v1/explorer/blocks/query'],
+  ['POST', '/v1/explorer/transactions/latest/query'],
+  ['POST', '/v1/explorer/transactions/query'],
+  ['POST', '/v1/explorer/domains/query'],
+  ['POST', '/v1/explorer/asset-definitions/query'],
+  ['POST', '/v1/explorer/accounts/query'],
+  ['GET', '/v1/explorer/blocks/stream'],
+  ['GET', '/v1/explorer/transactions/stream'],
+  ['GET', '/v1/telemetry/live'],
+] as const;
+
 describe('Vite Torii proxy', () => {
   it.each([
+    '/status',
     '/v1/parameters',
     '/v1/soracles/feeds',
     '/v1/soracles/feeds/price_xor_usd/history',
@@ -138,12 +155,19 @@ describe('Vite Torii proxy', () => {
     expect(isExplorerToriiProxyRequestAllowed('GET', url)).toBe(true);
   });
 
-  it.each(['/v1/connect/session', '/v1/multisig/spec', '/v1/multisig/proposals/query'])(
-    'allows the exact Explorer POST route %s',
-    (url) => {
-      expect(isExplorerToriiProxyRequestAllowed('POST', url)).toBe(true);
-    }
-  );
+  it.each([
+    '/v1/connect/session',
+    '/v1/multisig/spec',
+    '/v1/multisig/proposals/query',
+    '/v1/explorer/blocks/query',
+    '/v1/explorer/transactions/latest/query',
+    '/v1/explorer/transactions/query',
+    '/v1/explorer/domains/query',
+    '/v1/explorer/asset-definitions/query',
+    '/v1/explorer/accounts/query',
+  ])('allows the exact Explorer POST route %s', (url) => {
+    expect(isExplorerToriiProxyRequestAllowed('POST', url)).toBe(true);
+  });
 
   it.each([
     ['GET', '/metrics'],
@@ -171,34 +195,159 @@ describe('Vite Torii proxy', () => {
     ['GET', '/v1/connect/session'],
     ['POST', '/v1/explorer/transactions'],
     ['DELETE', '/v1/connect/session/session-id'],
+    // Only the status snapshot itself, and only GET.
+    ['GET', '/status/blocks'],
+    ['GET', '/status/peers'],
+    ['GET', '/status/'],
+    ['GET', '/statuses'],
+    ['GET', '/health'],
+    ['POST', '/status'],
+    ['HEAD', '/status'],
+    // Query routes these views do not read stay closed, the signed query endpoint included.
+    ['POST', '/v1/query'],
+    ['POST', '/v1/explorer/assets/query'],
+    ['POST', '/v1/explorer/nfts/query'],
+    ['POST', '/v1/explorer/rwas/query'],
+    ['POST', '/v1/explorer/instructions/query'],
+    ['POST', '/v1/explorer/instructions/latest/query'],
+    ['POST', '/v1/accounts/query'],
+    ['POST', '/v1/domains/query'],
+    ['POST', '/v1/assets/definitions/query'],
+    ['POST', '/v1/transactions/query'],
+    ['POST', '/v1/repo/agreements/query'],
+    ['POST', '/v1/subscriptions/query'],
+    ['POST', '/v1/contracts/activity/query'],
+    ['POST', '/v1/accounts/account%40domain/permissions/query'],
+    ['POST', '/v1/explorer/blocks/query/'],
+    ['POST', '/v1/explorer/blocks/query/extra'],
+    // The allowed query routes take POST only.
+    ['PUT', '/v1/explorer/blocks/query'],
+    ['PATCH', '/v1/explorer/transactions/query'],
+    ['DELETE', '/v1/explorer/accounts/query'],
+    ['HEAD', '/v1/explorer/transactions/latest/query'],
+    ['OPTIONS', '/v1/explorer/domains/query'],
+    // Including GET, although four of them would otherwise match a GET detail route.
+    ['GET', '/v1/explorer/blocks/query'],
+    ['GET', '/v1/explorer/transactions/query'],
+    ['GET', '/v1/explorer/transactions/latest/query'],
+    ['GET', '/v1/explorer/domains/query'],
+    ['GET', '/v1/explorer/asset-definitions/query'],
+    ['GET', '/v1/explorer/accounts/query'],
   ])('denies a non-Explorer proxy request %s %s', (method, url) => {
     expect(isExplorerToriiProxyRequestAllowed(method, url)).toBe(false);
   });
 
-  it('wires the strict request allowlist into the Vite proxy', async () => {
-    if (typeof explorerConfig !== 'function') {
-      throw new TypeError('expected the Explorer Vite config to be environment-aware');
+  it.each([
+    ['GET', '/v1/connect/ws?sid=test&role=app', true],
+    ['GET', '/v1/explorer/health', false],
+    ['GET', '/v1/explorer/blocks/stream', false],
+    ['GET', '/v1/telemetry/live', false],
+    ['GET', '/status', false],
+    ['GET', '/v1/connect/ws/', false],
+    ['POST', '/v1/connect/ws', false],
+  ])('allows a WebSocket upgrade %s %s only for the Connect socket (%s)', (method, url, allowed) => {
+    expect(isExplorerToriiProxyRequestAllowed(method, url, true)).toBe(allowed);
+  });
+
+  it.each([
+    ['GET', '/status/../status'],
+    ['GET', '/v1/explorer/blocks/%2e%2e/accounts'],
+    ['POST', '/v1/explorer/blocks/./query'],
+    ['POST', '/v1/query/../explorer/blocks/query'],
+    ['POST', '/v1/query/%2e%2e/explorer/blocks/query'],
+    ['POST', '/v1/query\\..\\explorer/blocks/query'],
+  ])('denies %s %s, which URL parsing would rewrite into an allowed route', (method, url) => {
+    const rewritten = new URL(url, 'http://explorer.invalid').pathname;
+    expect(rewritten).not.toBe(url);
+    expect(isExplorerToriiProxyRequestAllowed(method, rewritten)).toBe(true);
+    expect(isExplorerToriiProxyRequestAllowed(method, url)).toBe(false);
+  });
+
+  describe('through the configured development proxy', () => {
+    let proxy: Record<string, string | ProxyOptions>;
+
+    beforeAll(async () => {
+      if (typeof explorerConfig !== 'function') {
+        throw new TypeError('expected the Explorer Vite config to be environment-aware');
+      }
+      const config = await explorerConfig({ command: 'serve', mode: 'test', isSsrBuild: false, isPreview: false });
+      if (!config.server?.proxy) throw new TypeError('expected a Torii development proxy');
+      proxy = config.server.proxy;
+    });
+
+    /**
+     * Vite 7's routing (`doesProxyContextMatchUrl` and the proxy middleware):
+     * the first key matching the request URL wins, a `^` key as a RegExp and
+     * any key as a literal prefix. An upgrade only considers keys with
+     * WebSockets enabled and reaches `bypass` without a response. The bypass
+     * then forwards (`undefined`) or answers 404 (`false`).
+     */
+    async function proxyDecision(
+      method: string,
+      url: string,
+      upgrade = false
+    ): Promise<'forwarded' | 'refused' | 'not proxied'> {
+      const context = Object.keys(proxy).find((key) => {
+        const options = proxy[key];
+        if (upgrade && (typeof options === 'string' || !(options.ws || /^wss?:/u.test(String(options.target))))) {
+          return false;
+        }
+        return (key[0] === '^' && new RegExp(key).test(url)) || url.startsWith(key);
+      });
+      if (context === undefined) return 'not proxied';
+      const options = proxy[context];
+      if (typeof options === 'string' || !options.bypass) throw new TypeError(`expected a guarded proxy for ${context}`);
+      const request = { method, url, headers: upgrade ? { connection: 'Upgrade', upgrade: 'websocket' } : {} };
+      const result = await options.bypass(request as never, upgrade ? undefined : ({} as never), options);
+      if (result === false) return 'refused';
+      if (result === undefined) return 'forwarded';
+      throw new TypeError(`unexpected bypass result for ${method} ${url}`);
     }
 
-    const config = await explorerConfig({
-      command: 'serve',
-      mode: 'test',
-      isSsrBuild: false,
-      isPreview: false,
+    it('sends the V1 routes and the status snapshot to one Torii, upgrading WebSockets only under V1', () => {
+      expect(Object.keys(proxy)).toEqual(['/v1', '^/status(?:\\?|$)']);
+      const v1 = proxy['/v1'];
+      const status = proxy['^/status(?:\\?|$)'];
+      if (typeof v1 === 'string' || typeof status === 'string') throw new TypeError('expected proxy options');
+      expect(v1.target).toBe(status.target);
+      expect(v1.agent).toBe(status.agent);
+      expect(v1).toMatchObject({ changeOrigin: true, ws: true });
+      expect(status).toMatchObject({ changeOrigin: true });
+      expect(status.ws).toBeUndefined();
     });
 
-    const proxy = config.server?.proxy?.['/v1'];
-    expect(proxy).toMatchObject({
-      changeOrigin: true,
-      ws: true,
+    it.each(DASHBOARD_TORII_READS)('forwards the dashboard read %s %s to Torii', async (method, url) => {
+      expect(await proxyDecision(method, url)).toBe('forwarded');
     });
-    if (!proxy || typeof proxy === 'string' || !proxy.bypass) throw new TypeError('expected a guarded V1 proxy');
-    expect(await proxy.bypass({ method: 'GET', url: '/v1/explorer/health' } as never, undefined, proxy)).toBe(
-      undefined
-    );
-    expect(await proxy.bypass({ method: 'GET', url: '/metrics' } as never, undefined, proxy)).toBe(false);
-    expect(config.server?.proxy).not.toHaveProperty('/status');
-    expect(config.server?.proxy).not.toHaveProperty('/metrics');
+
+    it.each([
+      ['POST', '/status', 'refused'],
+      ['HEAD', '/status', 'refused'],
+      ['GET', '/status/blocks', 'not proxied'],
+      ['GET', '/status/peers', 'not proxied'],
+      ['GET', '/statuses', 'not proxied'],
+      ['GET', '/metrics', 'not proxied'],
+      ['GET', '/health', 'not proxied'],
+      ['GET', '/peers', 'not proxied'],
+      ['GET', '/v1/status', 'refused'],
+      ['GET', '/v1/metrics', 'refused'],
+      ['POST', '/v1/query', 'refused'],
+      ['POST', '/v1/explorer/assets/query', 'refused'],
+      ['PUT', '/v1/explorer/blocks/query', 'refused'],
+      ['GET', '/v1/explorer/blocks/query', 'refused'],
+      ['POST', '/v1/query/../explorer/blocks/query', 'refused'],
+    ])('keeps %s %s from Torii (%s)', async (method, url, decision) => {
+      expect(await proxyDecision(method, url)).toBe(decision);
+    });
+
+    it.each([
+      ['/v1/connect/ws?sid=test&role=app', 'forwarded'],
+      ['/v1/explorer/health', 'refused'],
+      ['/v1/explorer/transactions/stream', 'refused'],
+      ['/status', 'not proxied'],
+    ])('routes a WebSocket upgrade to %s as %s', async (url, decision) => {
+      expect(await proxyDecision('GET', url, true)).toBe(decision);
+    });
   });
 
   it('reserves root config.json for the signed deployment injector', async () => {
