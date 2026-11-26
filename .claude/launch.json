@@ -19,6 +19,18 @@
         "output/closeout-20261115/merge/vite.preview-dist.mts"
       ],
       "port": 5200
+    },
+    {
+      "name": "explorer-dev-taira",
+      "runtimeExecutable": "/usr/bin/env",
+      "runtimeArgs": [
+        "VITE_TORII_PROXY_TARGET=https://taira.sora.org",
+        "./node_modules/.bin/vite",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
+      "port": 5173
     }
   ]
 }

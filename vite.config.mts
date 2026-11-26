@@ -1,5 +1,12 @@
 /// <reference types="vitest" />
-import { defineConfig, loadEnv, defaultClientConditions, defaultClientMainFields, type Plugin } from 'vite';
+import {
+  defineConfig,
+  loadEnv,
+  defaultClientConditions,
+  defaultClientMainFields,
+  type Plugin,
+  type ProxyOptions,
+} from 'vite';
 import { Agent as HttpAgent } from 'node:http';
 import { Agent as HttpsAgent } from 'node:https';
 import { configDefaults } from 'vitest/config';
@@ -195,6 +202,9 @@ function preloadBootChunks(): Plugin {
 }
 
 const EXPLORER_PROXY_GET_PATHS = [
+  // The reporting peer's status snapshot, polled by the Network dashboard.
+  // Torii's `/status/blocks` and `/status/peers` scalars and `/metrics` stay closed.
+  /^\/status$/u,
   /^\/v1\/parameters$/u,
   /^\/v1\/soracles\/(?:feeds(?:\/[^/]+\/history)?|defi\/attestations\/latest)$/u,
   /^\/v1\/confidential\/assets\/[^/]+\/transitions$/u,
@@ -217,12 +227,38 @@ const EXPLORER_PROXY_GET_PATHS = [
   /^\/v1\/connect\/ws$/u,
 ] as const;
 
-const EXPLORER_PROXY_POST_PATHS = new Set(['/v1/connect/session', '/v1/multisig/spec', '/v1/multisig/proposals/query']);
+const EXPLORER_PROXY_POST_PATHS = new Set([
+  '/v1/connect/session',
+  '/v1/multisig/spec',
+  '/v1/multisig/proposals/query',
+  // Read-only collection queries the installed SDK sends as `POST <collection>/query`
+  // for the home page and the Network, Activity and Ledger dashboards. Torii
+  // answers each with its bounded Explorer query handler. Every other query
+  // route stays closed, including the signed `/v1/query`.
+  '/v1/explorer/blocks/query', // home latest blocks; Network and Activity block windows
+  '/v1/explorer/transactions/latest/query', // home latest transactions
+  '/v1/explorer/transactions/query', // Activity transaction sample
+  '/v1/explorer/domains/query', // Ledger
+  '/v1/explorer/asset-definitions/query', // Ledger
+  '/v1/explorer/accounts/query', // Ledger
+]);
 
-/** Restrict the development proxy to requests issued by current Explorer capabilities. */
+// Vite reads a proxy key that starts with `^` as a RegExp and any other key as
+// a URL prefix. Torii's root routes share no prefix, so the status snapshot gets
+// an anchored key and no other root path reaches the proxy.
+const EXPLORER_PROXY_STATUS_CONTEXT = '^/status(?:\\?|$)';
+
+// The Connect socket is the only route the Explorer opens as a WebSocket.
+const EXPLORER_PROXY_WEBSOCKET_PATH = '/v1/connect/ws';
+
+/**
+ * Restrict the development proxy to requests issued by current Explorer capabilities.
+ * `upgrade` marks a protocol-upgrade (WebSocket) request.
+ */
 export function isExplorerToriiProxyRequestAllowed(
   method: string | undefined,
-  requestUrl: string | undefined
+  requestUrl: string | undefined,
+  upgrade = false
 ): boolean {
   if (!method || !requestUrl) return false;
   let pathname: string;
@@ -231,9 +267,18 @@ export function isExplorerToriiProxyRequestAllowed(
   } catch {
     return false;
   }
+  // `URL` resolves dot segments and backslashes, but the proxy forwards the
+  // request target as sent. Check that same spelling, so a rewritten path
+  // cannot pass as an allowed route and reach Torii as another.
+  if (requestUrl.split('?', 1)[0] !== pathname) return false;
 
   const normalizedMethod = method.toUpperCase();
-  if (normalizedMethod === 'GET') return EXPLORER_PROXY_GET_PATHS.some((pattern) => pattern.test(pathname));
+  if (upgrade) return normalizedMethod === 'GET' && pathname === EXPLORER_PROXY_WEBSOCKET_PATH;
+  // A POST route never doubles as a GET read, although `blocks/query`, for
+  // example, would otherwise match the `blocks/{id}` detail route.
+  if (normalizedMethod === 'GET') {
+    return !EXPLORER_PROXY_POST_PATHS.has(pathname) && EXPLORER_PROXY_GET_PATHS.some((pattern) => pattern.test(pathname));
+  }
   if (normalizedMethod === 'POST') return EXPLORER_PROXY_POST_PATHS.has(pathname);
   return false;
 }
@@ -247,6 +292,17 @@ export default defineConfig(({ mode }) => {
   const toriiProxyAgent = toriiProxyTarget.startsWith('https:')
     ? new HttpsAgent({ keepAlive: true })
     : new HttpAgent({ keepAlive: true });
+  const toriiProxy: ProxyOptions = {
+    target: toriiProxyTarget,
+    agent: toriiProxyAgent,
+    changeOrigin: true,
+    // Vite consults this for ordinary requests and for WebSocket upgrades,
+    // which carry an `Upgrade` header (browsers never send one otherwise).
+    bypass: (request) =>
+      isExplorerToriiProxyRequestAllowed(request.method, request.url, Boolean(request.headers?.upgrade))
+        ? undefined
+        : false,
+  };
   const rawAppBasePath = (env.VITE_APP_BASE_PATH || '/').trim();
   const appBasePath =
     rawAppBasePath === '' || rawAppBasePath === '/' ? '/' : `/${rawAppBasePath.replace(/^\/+|\/+$/g, '')}/`;
@@ -267,13 +323,8 @@ export default defineConfig(({ mode }) => {
     } : {}),
     server: {
       proxy: {
-        '/v1': {
-          target: toriiProxyTarget,
-          agent: toriiProxyAgent,
-          changeOrigin: true,
-          ws: true,
-          bypass: (request) => (isExplorerToriiProxyRequestAllowed(request.method, request.url) ? undefined : false),
-        },
+        '/v1': { ...toriiProxy, ws: true },
+        [EXPLORER_PROXY_STATUS_CONTEXT]: toriiProxy,
       },
     },
     test: {
